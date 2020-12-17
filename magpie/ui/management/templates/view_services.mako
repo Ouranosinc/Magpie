@@ -1,4 +1,5 @@
 <%inherit file="magpie.ui.home:templates/template.mako"/>
+<%namespace name="panel" file="magpie.ui.management:templates/panel_scripts.mako"/>
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
@@ -125,17 +126,9 @@
 </table>
 
 <div class="tabs-panel">
-    <div class="tab-panel-selector">
-        %for svc_type in svc_types:
-            % if cur_svc_type == svc_type:
-                <a class="tab current-tab"
-                   href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
-            % else:
-                <a class="tab theme"
-                   href="${request.route_url('view_services', cur_svc_type=svc_type)}">${svc_type}</a>
-            % endif
-        %endfor
-    </div>
+    ${panel.render_tab_selector(cur_svc_type, [
+        (svc_type, request.route_url("view_services", cur_svc_type=svc_type)) for svc_type in svc_types
+    ])}
 
     <div class="current-tab-panel">
         <table class="simple-list">

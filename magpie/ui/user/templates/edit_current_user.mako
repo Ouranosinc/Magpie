@@ -32,16 +32,16 @@
 
 <div class="alert alert-danger" id="EditService_UserSelfDeleteAlert">
     <h3 class="alert-title-danger">Danger!</h3>
-    <div class="alert-info">
-        <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
-             alt="" class="icon-error icon-color-invert"/>
+    <div class="alert-danger">
         <div class="alert-text">
-            Delete your account?
+            <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                 alt="" class="icon-error icon-color-invert"/>
+            &nbsp;Delete your account?
         </div>
     </div>
     <p>
         This operation will delete your account and its associated permissions as well as log you out of Magpie.
-        This is irreversible.
+        All data linked to your account will also be lost. <br> This is irreversible.
     </p>
     <p>Do you want to continue?</p>
     <form id="delete_user" action="${request.path}" method="post">
@@ -61,14 +61,14 @@
         <span class="panel-value">[${user_name}]</span>
         <span class="panel-heading-button">
             <input value="Delete Account" name="delete"
-				%if user_name in MAGPIE_FIXED_USERS:
-					class="button delete disabled" type="button" disabled
-				%else:
-				    type="button"
+                %if user_name in MAGPIE_FIXED_USERS:
+                    class="button delete disabled" type="button" disabled
+                %else:
+                    type="button"
                     class="button delete"
                     onclick="document.getElementById('EditService_UserSelfDeleteAlert').style.display = 'block'"
-				%endif
-			>
+                %endif
+            >
         </span>
     </div>
     <div class="panel-body">

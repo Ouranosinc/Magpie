@@ -183,6 +183,35 @@ class RunOptionDecorator(object):
         return make_run_option_decorator(RunOption(name, description=description))
 
 
+class TestVersion(LooseVersion):
+    """
+    Special version supporting ``latest`` keyword to ignore safeguard check of :func:`warn_version` during development.
+
+    .. seealso::
+        Environment variable ``MAGPIE_TEST_VERSION`` should be set with the desired version or ``latest`` to evaluate
+        even new features above the last tagged version.
+    """
+    def __init__(self, vstring):
+        if isinstance(vstring, (TestVersion, LooseVersion)):
+            self.version = vstring.version
+            return
+        if vstring == "latest":
+            self.version = vstring  # noqa
+            return
+        super(TestVersion, self).__init__(vstring)
+
+    def _cmp(self, other):
+        if not isinstance(other, TestVersion):
+            other = TestVersion(other)
+        if self.version == "latest" and other.version == "latest":
+            return 0
+        if self.version == "latest":
+            return 1
+        if other.version == "latest":
+            return -1
+        return super(TestVersion, self)._cmp(other)
+
+
 @six.add_metaclass(SingletonMeta)
 class NullType(object):
     """
@@ -346,7 +375,7 @@ def get_json_body(response):
 def get_service_types_for_version(version):
     # type: (Str) -> List[ServiceInterface]
     available_service_types = set(services.SERVICE_TYPE_DICT.keys())
-    if LooseVersion(version) <= LooseVersion("0.6.1"):
+    if TestVersion(version) <= TestVersion("0.6.1"):
         available_service_types = available_service_types - {ServiceAccess.service_type}
     return list(sorted(available_service_types))
 
@@ -368,7 +397,7 @@ def warn_version(test, functionality, version, skip=True, older=False):
         test_version = test
     else:
         test_version = TestSetup.get_Version(test)
-    min_req = LooseVersion(test_version) < LooseVersion(version)
+    min_req = TestVersion(test_version) < TestVersion(version)
     if min_req or (not min_req and older):
         if min_req:
             msg = "Functionality [{}] not yet implemented in version [{}], upgrade [>={}] required to test." \
@@ -855,7 +884,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
         body = response.text
 
     if response.status_code >= 400:
-        v2_and_up = not bool(version) or LooseVersion(version) >= LooseVersion("2")
+        v2_and_up = not bool(version) or TestVersion(version) >= TestVersion("2")
         if not v2_and_up and response.status_code not in [401, 404, 500]:
             return body  # older API error response did not all have the full request details
 
@@ -925,7 +954,7 @@ def check_error_param_structure(body,                                   # type: 
     check_val_type(body, dict)
     check_val_is_in("param", body)
     version = version or __meta__.__version__
-    if LooseVersion(version) >= LooseVersion("0.6.3"):
+    if TestVersion(version) >= TestVersion("0.6.3"):
         check_val_type(body["param"], dict)
         check_val_is_in("value", body["param"])
         if param_name_exists or param_name is not null:
@@ -985,11 +1014,11 @@ class TestSetup(object):
     # pylint: disable=C0103,invalid-name
 
     @staticmethod
-    def get_Version(test_case, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> Str
+    def get_Version(test_case, real_version=False, override_headers=null, override_cookies=null):
+        # type: (AnyMagpieTestCaseType, bool, Optional[HeadersType], Optional[CookiesType]) -> Str
         """
         Obtains the `Magpie` version of the test instance (local or remote). This version can then be used in
-        combination with :class:`LooseVersion` comparisons or :func:`warn_version` to toggle test execution of certain
+        combination with :class:`TestVersion` comparisons or :func:`warn_version` to toggle test execution of certain
         test cases that have version-dependant format, conditions or feature changes.
 
         This is useful *mostly* for remote server tests which could be out-of-sync compared to the current source code.
@@ -1000,11 +1029,21 @@ class TestSetup(object):
         .. seealso::
             - :func:`warn_version`
 
+        :param real_version:
+            Force request to retrieve the API version as defined in metadata.
+            Otherwise, version can be either overridden by ``MAGPIE_TEST_VERSION``, the current Test Suite, or the API
+            version, whichever is found first.
+        :param override_headers: headers for request to override any stored ones from Test Suite.
+        :param override_cookies: cookies for request to override any stored ones from Test Suite.
         :raises AssertionError: if the response cannot successfully retrieve the test instance version.
         """
-        version = getattr(test_case, "version", None)
-        if version:
-            return version
+        if not real_version:
+            version = get_constant("MAGPIE_TEST_VERSION")
+            if version:
+                return version
+            version = getattr(test_case, "version", None)
+            if version:
+                return version
         app_or_url = get_app_or_url(test_case)
         resp = test_request(app_or_url, "GET", "/version",
                             headers=override_headers if override_headers is not null else test_case.json_headers,
@@ -1189,7 +1228,7 @@ class TestSetup(object):
         :param resource_display_name: display name of the resource to validate.
         :raises AssertionError: failing condition
         """
-        if LooseVersion(test_case.version) >= LooseVersion("0.6.3"):
+        if TestVersion(test_case.version) >= TestVersion("0.6.3"):
             if resource_display_name is null:
                 resource_display_name = resource_name
             check_val_is_in("resource", body)
@@ -1290,22 +1329,22 @@ class TestSetup(object):
         check_val_type(service["public_url"], six.string_types)
         check_val_type(service["permission_names"], list)
         svc_res_id = service["resource_id"]
-        if LooseVersion(test_case.version) >= LooseVersion("0.7.0"):
+        if TestVersion(test_case.version) >= TestVersion("0.7.0"):
             check_val_is_in("service_sync_type", service)
             check_val_type(service["service_sync_type"], OPTIONAL_STRING_TYPES)
         if has_private_url:
             check_val_is_in("service_url", service)
             check_val_type(service["service_url"], six.string_types)
-        elif not has_private_url and LooseVersion(test_case.version) >= LooseVersion("0.7.0"):
+        elif not has_private_url and TestVersion(test_case.version) >= TestVersion("0.7.0"):
             check_val_not_in("service_url", service,
                              msg="Services under user routes shouldn't show private url.")
-        if LooseVersion(test_case.version) >= LooseVersion("2.0.0"):
+        if TestVersion(test_case.version) >= TestVersion("2.0.0"):
             if not skip_permissions or override_permissions is not null:
                 if override_permissions is null:
                     check_val_not_equal(len(service["permission_names"]), 0,
                                         msg="Service-scoped route must always provide all allowed permissions.")
                     permissions = SERVICE_TYPE_DICT[service["service_type"]].permissions
-                    if LooseVersion(test_case.version) < LooseVersion("3.0"):
+                    if TestVersion(test_case.version) < TestVersion("3.0"):
                         override_permissions = [perm.value for perm in permissions]
                     else:
                         override_permissions = TestSetup.get_PermissionNames(test_case, permissions, combinations=True)
@@ -1518,7 +1557,7 @@ class TestSetup(object):
         version = TestSetup.get_Version(test_case)
         if not isinstance(permissions, (list, set, tuple)):
             permissions = [permissions]
-        if combinations and LooseVersion(version) >= LooseVersion("3.0"):
+        if combinations and TestVersion(version) >= TestVersion("3.0"):
             permissions = [PermissionSet(*perm_combo) for perm_combo in itertools.product(permissions, Access, Scope)]
         else:
             permissions = [PermissionSet(perm) for perm in permissions]
@@ -1527,7 +1566,7 @@ class TestSetup(object):
             perm_impl = permission.implicit_permission
             if perm_impl is not None:
                 perm_names.add(perm_impl)
-            if LooseVersion(version) >= LooseVersion("3.0"):
+            if TestVersion(version) >= TestVersion("3.0"):
                 perm_names.add(permission.explicit_permission)
         return list(perm_names)
 
@@ -1551,7 +1590,7 @@ class TestSetup(object):
         """
         body = override_body
         if override_body:
-            if LooseVersion(test_case.version) >= LooseVersion("0.6.3"):
+            if TestVersion(test_case.version) >= TestVersion("0.6.3"):
                 # skip if sub-element was already extracted and provided as input override_body
                 if "resource_id" not in body:
                     body = body.get("resource") or body.get("service")
@@ -1584,7 +1623,7 @@ class TestSetup(object):
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         json_body = get_json_body(resp)
         svc_getter = "service"
-        if LooseVersion(test_case.version) < LooseVersion("0.9.1"):
+        if TestVersion(test_case.version) < TestVersion("0.9.1"):
             svc_getter = svc_name
         return json_body[svc_getter]
 
@@ -1692,7 +1731,7 @@ class TestSetup(object):
                                 headers=override_headers if override_headers is not null else test_case.json_headers,
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
             body = check_response_basic_info(resp, 200, expected_method="GET")
-            if LooseVersion(test_case.version) < LooseVersion("0.9.1"):
+            if TestVersion(test_case.version) < TestVersion("0.9.1"):
                 body.update({"service": body[svc_name]})
                 body.pop(svc_name)
             return body
@@ -1888,7 +1927,7 @@ class TestSetup(object):
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
             body = check_response_basic_info(resp)
         version = override_version if override_version is not null else TestSetup.get_Version(test_case)
-        if LooseVersion(version) >= LooseVersion("0.6.3"):
+        if TestVersion(version) >= TestVersion("0.6.3"):
             check_val_is_in("user", body)
             body = body["user"]
         return body or {}

@@ -9,16 +9,21 @@ Changes
 
 * Nothing yet.
 
-`3.3.1 <https://github.com/Ouranosinc/Magpie/tree/3.3.1>`_ (2020-12-02)
+`3.4.0 <https://github.com/Ouranosinc/Magpie/tree/3.4.0>`_ (2020-12-09)
 ------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add option to delete the user's own account.
+* Add option to delete the ``User``'s own account.
+* Add ``MAGPIE_TEST_VERSION`` to control (override) the local version to consider against test `safeguards`.
+  Allows development of *future* versions using ``MAGPIE_TEST_VERSION=latest``.
+* Add documentation about testing methodologies and setup configuration.
+* Bump version of ``Twitcher`` to ``v0.5.4`` to provide Docker image with integrated ``MagpieAdapter`` using
+  performance fix (see PR `bird-house/twitcher#98 <https://github.com/bird-house/twitcher/pull/98>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* N/A
+* Fix inconsistent UI spacing of *tabs* for panel selector and employ mako function to avoid duplicated code fragments.
 
 `3.3.0 <https://github.com/Ouranosinc/Magpie/tree/3.3.0>`_ (2020-11-25)
 ------------------------------------------------------------------------------------
@@ -29,9 +34,9 @@ Features / Changes
   (resolves `#369 <https://github.com/Ouranosinc/Magpie/issues/369>`_).
 * Ensure that general programming internal errors are not bubbled up in UI error page.
 * Add function to parse output body and redact potential leaks of flagged fields.
-* Align HTML format and structure of all edit forms portions of `Users`, `Groups` and `Services` UI pages to simplify
-  and unify their rendering.
-* Add inline UI error messages to `User` edition fields.
+* Align HTML format and structure of all edit forms portions of ``Users``, ``Groups`` and ``Services`` UI pages to
+  simplify and unify their rendering.
+* Add inline UI error messages to ``User`` edition fields.
 * Improve resolution of `Twitcher` URL using ``TWITCHER_HOST`` explicitly provided  setting (or environment variable)
   before falling back to default ``HOSTNAME`` value.
 * Employ `Pyramid`'s local thread registry to resolve application settings if not explicitly provided to

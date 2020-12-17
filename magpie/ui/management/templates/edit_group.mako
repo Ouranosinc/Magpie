@@ -1,4 +1,5 @@
 <%inherit file="magpie.ui.management:templates/tree_scripts.mako"/>
+<%namespace name="panel" file="magpie.ui.management:templates/panel_scripts.mako"/>
 <%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
 
 <%block name="breadcrumb">
@@ -163,18 +164,10 @@
 <h3>Permissions</h3>
 
 <div class="tabs-panel">
-
-    <div class="tab-panel-selector">
-        %for svc_type in svc_types:
-            % if cur_svc_type == svc_type:
-                <a class="tab current-tab"
-                   href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
-            % else:
-                <a class="tab theme"
-                   href="${request.route_url('edit_group', group_name=group_name, cur_svc_type=svc_type)}">${svc_type}</a>
-            % endif
-        %endfor
-    </div>
+    ${panel.render_tab_selector(cur_svc_type, [
+        (svc_type, request.route_url("edit_group", group_name=group_name, cur_svc_type=svc_type))
+        for svc_type in svc_types
+    ])}
 
     <div class="current-tab-panel">
         <div class="clear underline"></div>
