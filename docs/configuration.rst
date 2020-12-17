@@ -145,6 +145,17 @@ a combined configuration as follows.
         group: my-group  # will reference above group
         action: create
 
+    webhooks:
+      create :
+        - <url1>
+        - <url2>
+        - ...
+      delete :
+        - <url1>
+        - <url2>
+        - ...
+
+
 
 For backward compatibility reasons, `Magpie` will first look for separate files to load each section individually.
 To enforce using a combined file as above, either provide ``MAGPIE_CONFIG_PATH = <path>/config.yml`` or ensure that each
@@ -159,6 +170,10 @@ definitions from multiple files, meaning that ``providers`` are first registered
 creation. Otherwise defaults are assumed and only the specified user or group name are employed. Please refer to files
 `providers.cfg`_ and `permissions.cfg`_ for further details about specific formatting and behaviour of each available
 field.
+
+A section for ``webhooks`` has also been added to the combined configuration file. This section defines a list of
+urls that should be called when either creating or deleting a user. The webhooks urls are responsible for any extra
+steps that should be taken on external services during the user creation/deletion.
 
 Settings and Constants
 ----------------------
