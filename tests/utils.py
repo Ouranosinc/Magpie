@@ -15,7 +15,7 @@ import requests.exceptions
 import six
 from pyramid.config import Configurator
 from pyramid.response import Response
-from pyramid.httpexceptions import HTTPException, HTTPInternalServerError
+from pyramid.httpexceptions import HTTPException
 from pyramid.settings import asbool
 from pyramid.testing import DummyRequest, setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
@@ -281,12 +281,12 @@ def get_test_webhook_app():
     """
     def webhook_request(request):
         # Simulates a webhook url call
-        user = request.POST['user_name']
-        temp_url = request.POST['temp_url']
+        user = request.POST["user_name"]
+        temp_url = request.POST["temp_url"]
 
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
-        return Response("Successful webhook url for user " + user)
+        return Response("Successful webhook url with user " + user + " and temp_url " + temp_url)
 
     def get_status(request):
         # Returns the status number
@@ -300,31 +300,30 @@ def get_test_webhook_app():
         settings = config.registry.settings
         # Initialize status
         settings["webhook_status"] = 0
-        config.add_route('webhook', '/webhook')
-        config.add_route('get_status', '/get_status')
-        config.add_route('reset_status', '/reset_status')
-        config.add_view(webhook_request, route_name='webhook', request_method="POST", request_param="user_name")
-        config.add_view(get_status, route_name='get_status', request_method="GET")
-        config.add_view(reset_status, route_name='reset_status', request_method="POST")
-        app = config.make_wsgi_app()
+        config.add_route("webhook", "/webhook")
+        config.add_route("get_status", "/get_status")
+        config.add_route("reset_status", "/reset_status")
+        config.add_view(webhook_request, route_name="webhook", request_method="POST", request_param="user_name")
+        config.add_view(get_status, route_name="get_status", request_method="GET")
+        config.add_view(reset_status, route_name="reset_status", request_method="POST")
+        webhook_app_instance = config.make_wsgi_app()
 
     def webhook_app():
         try:
             webhook_url_info = urlparse(get_constant("MAGPIE_TEST_USER_WEBHOOK_URL"))
-            serve(app, host=webhook_url_info.hostname, port=webhook_url_info.port)
-        except OSError as e:
-            if e.errno == EADDRINUSE:
+            serve(webhook_app_instance, host=webhook_url_info.hostname, port=webhook_url_info.port)
+        except OSError as exception:
+            if exception.errno == EADDRINUSE:
                 # The app is already running, we just need to reset the webhook status for a new test.
-                resp = requests.post(get_constant('MAGPIE_TEST_USER_WEBHOOK_URL') + '/reset_status')
+                resp = requests.post(get_constant("MAGPIE_TEST_USER_WEBHOOK_URL") + "/reset_status")
                 check_response_basic_info(resp, 200, expected_method="POST")
                 return
-            else:
-                raise
+            raise
 
     x = threading.Thread(target=webhook_app, daemon=True)
     x.start()
 
-    return app
+    return webhook_app_instance
 
 
 def get_hostname(test_item):

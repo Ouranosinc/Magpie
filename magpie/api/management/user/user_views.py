@@ -143,13 +143,13 @@ def delete_user_view(request):
     config_path = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
                                raise_missing=False, raise_not_set=False, print_missing=True)
     if config_path:
-        webhook_configs = get_all_configs(config_path, 'webhooks', allow_missing=True)
+        webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
         for cfg in webhook_configs:
-            if 'delete' in cfg.keys() and len(cfg['delete']) > 0:
+            if "delete" in cfg.keys() and len(cfg["delete"]) > 0:
                 # Execute all webhook requests
-                pool = multiprocessing.Pool(processes=len(cfg['delete']))
-                args = [(url, user.user_name) for url in cfg['delete']]
-                result = pool.starmap_async(uu.webhook_request, args, error_callback=uu.webhook_error_callback)
+                pool = multiprocessing.Pool(processes=len(cfg["delete"]))
+                args = [(url, user.user_name) for url in cfg["delete"]]
+                pool.starmap_async(uu.webhook_request, args, error_callback=uu.webhook_error_callback)
 
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 

@@ -10,7 +10,6 @@ from pyramid.httpexceptions import (
     HTTPForbidden,
     HTTPInternalServerError,
     HTTPNotFound,
-    HTTPFailedDependency,
     HTTPOk
 )
 from ziggurat_foundations.models.services.group import GroupService
@@ -21,7 +20,6 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.api.exception import raise_http
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
@@ -118,13 +116,13 @@ def create_user(user_name, password, email, group_name, db_session):
     config_path = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
                                raise_missing=False, raise_not_set=False, print_missing=True)
     if config_path:
-        webhook_configs = get_all_configs(config_path, 'webhooks', allow_missing=True)
+        webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
         for cfg in webhook_configs:
-            if 'create' in cfg.keys() and len(cfg['create']) > 0:
+            if "create" in cfg.keys() and len(cfg["create"]) > 0:
                 # Execute all webhook requests
-                pool = multiprocessing.Pool(processes=len(cfg['create']))
-                args = [(url, user_name) for url in cfg['create']]
-                result = pool.starmap_async(webhook_request, args, error_callback=webhook_error_callback)
+                pool = multiprocessing.Pool(processes=len(cfg["create"]))
+                args = [(url, user_name) for url in cfg["create"]]
+                pool.starmap_async(webhook_request, args, error_callback=webhook_error_callback)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": uf.format_user(new_user, new_user_groups)})
@@ -136,16 +134,16 @@ def webhook_request(webhook_url, user_name):
     """
     # TODO: create a real temp_url that will be called if the webhook service has an error
     #  this would also set the user's status to 0
-    resp = requests.post(webhook_url, data={'user_name': user_name, 'temp_url': 'temp_url:80/todo'})
+    requests.post(webhook_url, data={"user_name": user_name, "temp_url": "temp_url:80/todo"})
 
 
-def webhook_error_callback(r):
+def webhook_error_callback(exception):
     """
     Error callback function called if an error occurs in the webhook_call function
     """
     # TODO : (related to TODO in webhook_call function) handle errors occuring in the thread for the webhook_call
     #  change user's status to 0?
-    LOGGER.error(str(r))
+    LOGGER.error(str(exception))
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session, overwrite=False):

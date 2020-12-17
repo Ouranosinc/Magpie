@@ -7,7 +7,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add a list of webhook urls, defined in the configuration, that will be called when creating or deleting a user.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* N/A
 
 `3.4.0 <https://github.com/Ouranosinc/Magpie/tree/3.4.0>`_ (2020-12-09)
 ------------------------------------------------------------------------------------
