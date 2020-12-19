@@ -2448,8 +2448,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_GetUserResourcePermissions_EffectivePermissions_ScopedHierarchyResolution(self):
         """
-        Validates that :term:`Effective Resolution` works when scoped subsets of :term:`Resources` have alternating
-        :term:`Applied Permission` with opposite :class:`Access` modifiers.
+        Validates that :term:`Effective Permissions` resolution works when scoped subsets of :term:`Resource` have
+        alternating :term:`Applied Permissions` with opposite :class:`Access` modifiers.
 
         The resolution of permissions should consider the *closest* scope to the targeted :term:`Resource`, but still
         consider higher priority :term:`User` or :term:`Group` when also defined.

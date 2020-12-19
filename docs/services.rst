@@ -78,7 +78,7 @@ On top of the above methods, the following attributes must be defined.
         :Term:`Allowed Permissions`, their type and further nested children :term:`Resource`.
     * - :attr:`ServiceInterface.params_expected` |br| (``List[str]``)
       - Represents specific parameter names that can be preprocessed during HTTP request parsing to ease following
-        resolution of :term:`ACL` use-cases. Employed most notably by :term:`Services` based on
+        resolution of :term:`ACL` use cases. Employed most notably by :term:`Service` implementations based on
         :class:`magpie.services.ServiceOWS`.
 
 
@@ -156,7 +156,7 @@ ServiceTHREDDS
 
 The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceTHREDDS`. It refers to a
 remote data server named `Thematic Real-time Environmental Distributed Data Services` (`THREDDS`_). The :term:`Service`
-employs two (2) types of :term:`Resources`, namely :class:`magpie.models.Directory` and :class:`magpie.models.File`.
+employs two (2) types of :term:`Resource`, namely :class:`magpie.models.Directory` and :class:`magpie.models.File`.
 All the directory resources can be nested any number of times, and files can only reside as leaves of the hierarchy,
 similarly to a traditional file system. The :term:`Allowed Permissions` on both the :term:`Service` itself or any of
 its children :term:`Resource` are :attr:`Permission.BROWSE`, :attr:`Permission.READ`, and :attr:`Permission.WRITE`
@@ -291,8 +291,8 @@ will favor entries in ``metadata_type`` over ``data_type``.
 
 After resolution of the content type from ``<prefix_type>``, the resolution of any amount of
 :class:`magpie.models.Directory` :term:`Resource` will be attempted. Any missing children directory :term:`Resource`
-will terminate the lookup process immediately, and :term:`ACL` will be resolved considering :attr:`Scope.RECURSIVE` if
-any applicable parent :term:`Resources` for the given :term:`Permission` selected by ``<prefix_type>`` and from where
+will terminate the lookup process immediately, and :term:`ACL` will be resolved considering :attr:`Scope.RECURSIVE` of
+any applicable parent :term:`Resource` for the given :term:`Permission` selected by ``<prefix_type>`` and from where
 lookup stopped.
 
 Once the last element of the path is reached, the ``file_patterns`` will be applied against ``<file>`` in order to

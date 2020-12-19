@@ -1379,7 +1379,7 @@ class TestSetup(object):
         """
         Creates a :term:`Service` and nested N-depth :term:`Resource` hierarchy.
 
-        The number of sub-:term:`Resources` to create under the :term:`Service` will be equal to the number of
+        The number of sub-:term:`Resource` to create under the :term:`Service` will be equal to the number of
         elements in lists :paramref:`override_resource_names` and :paramref:`override_resource_types` if specified
         (must be equal lengths), or using :paramref:`resource_depth` value with randomly generated names.
 
