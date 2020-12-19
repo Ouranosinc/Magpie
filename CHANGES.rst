@@ -10,14 +10,13 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``Group`` priority to resolve inherited permission resolution in case of multiple entries from different
-  group membership of the evaluated user.
+  group memberships of the evaluated ``User``.
 * Add ``reason`` field to returned ``Permission`` objects to help better comprehend the provenance of a composed
   set of permissions from ``User`` and its multiple ``Group`` memberships.
-* Add ``Group`` priority to resolve inherited permission resolution in case of multiple entries from different
-  ``Group`` membership of the evaluated ``User``.
 * Make *special* ``MAGPIE_ANONYMOUS_GROUP`` have less priority than other *generic* ``Group`` to allow reverting
   public ``DENY`` permission by one of those more specific ``Group`` with ``ALLOW`` permission.
 * Simplify and combine multiple permission resolution steps into ``PermissionSet.resolve`` method.
+* Resolve permissions according to *closest* ``Resource`` scope against applicable priorities.
 * Update documentation with more permission resolution concepts and examples.
 
 Bug Fixes
@@ -129,7 +128,7 @@ Bug Fixes
   take effect. Same fix applied for ``ServiceTHREDDS`` for corresponding directory and file typed ``Resource``.
 * Propagate SSL verify option of generated service definition if provided to `Twitcher` obtained from ``MagpieAdapter``.
 * Adjust and validate parsing of ``ServiceWPS`` request using ``POST`` XML body
-  (fixes `157 <https://github.com/Ouranosinc/Magpie/issues/157>`_).
+  (fixes `#157 <https://github.com/Ouranosinc/Magpie/issues/157>`_).
 
 `3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
 ------------------------------------------------------------------------------------

@@ -550,23 +550,24 @@ for ``reason`` field. Following pseudo-code presents the overall procedure.
     (1.1)   target ← resource to resolve access or closest one (when non existing)
     (1.2)   match  ← enabled if target exists, otherwise disabled
     (1.3)   found  ← "no-permissions"
-    (2)     if user is member of MAGPIE_ADMIN_GROUP
-    (2.1)       found ← allow
-    (2.2)       (done)
+    (2)     // Verify administrative access
+    (2.1)   if user is member of MAGPIE_ADMIN_GROUP
+    (2.2)       found ← allow
+    (2.3)       (done)
     (3)     // Resolve until completion
     (3.1)   while not (done)
-    (3.1)       get applied permissions on target
-    (3.2)       resolve(applied permissions, match)     // see Inherited Permissions resolution
-    (4)         if resolved priority > found priority
-    (4.1)           found ← resolved permission
-    (5)         // Lookup stop rewinding conditions
-    (5.1)       if found == user direct permission      // highest permission found
-    (5.2)           (done)
-    (5.3)       if target == service                    // top of hierarchy reached
-    (5.4)           (done)
-    (6)         // Rewind parent resource to continue resolution
-    (6.1)       target ← parent(target)
-    (6.2)       match  ← disabled
+    (3.2)       get applied permissions on target
+    (3.3)       resolve(applied permissions, match)     // see Inherited Permissions resolution
+    (3.4)       if resolved priority > found priority
+    (3.5)           found ← resolved permission
+    (4)         // Verify stopping rewind conditions
+    (4.1)       if found == user direct permission      // highest permission found
+    (4.2)           (done)
+    (4.3)       if target == service                    // top of hierarchy reached
+    (4.4)           (done)
+    (5)         // Rewind parent resource to continue resolution
+    (5.1)       target ← parent(target)
+    (5.2)       match  ← disabled
     (done)  return found
 
 .. seealso::
@@ -779,41 +780,44 @@ It is recommended to have a general understanding of all the concepts by going t
 describe them individually and in more details.
 
 We start by defining the following :term:`Service` and :term:`Resource` hierarchy. We employ the `ServiceAPI`_
-implementation that only allows one type of :term:`Resource` (``route``), and that easily converts path elements into
-the given hierarchy. In this case, every :term:`Resource` can be applied with either :attr:`Permission.READ` (``r``) or
-:attr:`Permission.WRITE` (``w``). For a compact display, we indicate :attr:`Access.ALLOW` (``A``),
-:attr:`Access.DENY` (``D``), :attr:`Scope.MATCH` (``M``) and :attr:`Scope.RECURSIVE` (``R``) using the
-``[name]-[access]-[scope]`` representation for :term:`Applied Permissions`.
+implementation that only allows one type of :term:`Resource` (i.e.: ``route``), and that easily converts path elements
+into the given hierarchy. In this case, every :term:`Resource` can be applied with either :attr:`Permission.READ`
+(``r``) or :attr:`Permission.WRITE` (``w``).
+For a compact display, we indicate :attr:`Access.ALLOW` (``A``), :attr:`Access.DENY` (``D``),
+:attr:`Scope.MATCH` (``M``) and :attr:`Scope.RECURSIVE` (``R``) using the ``[name]-[access]-[scope]``
+representation for :term:`Applied Permissions`.
 
-                                  | TestUser      | TestGroup1    | TestGroup2    | Anonymous
-                                  | [user]        | [group]       | [group]       | [group] (special)
-==================================+=======+=======+=======+=======+=======+=======+=======+==============
-service-A [api]                   | r-A-M |       |       |       |       |       |       |
-    resource-1 [route]            |       |       |       |       |       |       | r-D-R |
-        [unspecified-1]           |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -
-        resource-2 [route]        |       |       |       |       | r-A-R |       |       |
-            resource-3 [route]    |       | w-D-M |       |       |       |       |       |
-                [unspecified-2]   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -
+.. code-block::
+
+    Resource Hierarchy                | TestUser      | TestGroup1    | TestGroup2    | Anonymous
+                                      | [user]        | [group]       | [group]       | [special-group]
+    ==================================+=======+=======+=======+=======+=======+=======+=======+========
+    service-A [api]                   | r-A-M |       |       |       |       |       |       | w-A-R
+        resource-1 [route]            |       |       |       |       |       |       | r-D-R |
+            [unspecified-1]           |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -
+            resource-2 [route]        |       |       |       | w-A-R | r-A-R |       |       | w-D-R
+                [unspecified-2]       |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -
+                resource-3 [route]    |       | w-D-M |       |       |       |       |       |
+                    [unspecified-3]   |   -   |   -   |   -   |   -   |   -   |   -   |   -   |   -
+        resource-4 [route]            |       |       | r-D-R |       | r-A-R |       |       | w-D-R
+            resource-5 [route]        |       |       |       |       | r-A-R |       |       |
 
 .. note::
     Items with ``[unspecified-#]`` identifiers are employed to indicate path element that would land onto
     non existing :term:`Resource` (e.g.: ``/service-A/resource-1/Unknown`` mapped to ``[unspecified-1]``), but that
     will still obtain :term:`Effective Permissions` affected by any applied :attr:`Scope.RECURSIVE` modifier on parent
     :term:`Resource` locations (i.e.: resources that *would* be its parent if it did exist). Because ``[unspecified-#]``
-    items do not exist, there cannot be any corresponding :term:`Applied Permissions` on them, as indicated by ``-``.
+    items do not exist, there cannot be any corresponding :term:`Applied Permissions` on them, as indicated
+    by ``-`` mark.
 
 Presented below is the resolved :term:`Effective Permissions` matrix of ``TestUser`` considering above definitions.
-
-.. todo: permission resolution example with >2 group that contradict, >2 groups that have redundant (same) permissions
-.. todo: permission resolution example with some Group ALLOW > anonymous DENY
-.. todo: permission resolution example that includes simultaneously recursive/match, allow/deny and user/multi-group
 
 .. |check| unicode:: U+2713
 .. |cross| unicode:: U+2715
 
 .. list-table::
     :header-rows: 1
-    :widths: 20,10,10,60
+    :widths: 5,5,5,85
 
     * - Target
       - Permission
@@ -822,49 +826,94 @@ Presented below is the resolved :term:`Effective Permissions` matrix of ``TestUs
     * - ``service-A``
       - ``read``
       - |check|
-      - Granted access because the :term:`Direct Permission` on ``service-A`` takes precedence over everything.
+      - Access is granted because the :term:`Direct Permission` on ``service-A`` takes precedence over everything.
+        Only ``TestUser`` has this permission, other users in ``TestGroup1``, ``TestGroup2`` and public access are
+        all denied, unless other user also has some explicit permission or other group membership that grants access.
     * - ``service-A``
       - ``write``
-      -
-      -
+      - |check|
+      - Access is granted because of the :term:`Inherited Permissions` from ``MAGPIE_ANONYMOUS_GROUP``.
+        In this case, anyone will obtain public access, not only ``TestUser``.
     * - ``resource-1``
       - ``read``
-      -
-      -
+      - |cross|
+      - :term:`Applied Permission` with recursively denied access for ``MAGPIE_ANONYMOUS_GROUP`` makes
+        ``resource-1`` *publicly* inaccessible for reading. Since the other ``read`` permission on parent ``service-A``
+        is affected to ``match`` scope, it does not propagate its scope onto ``resource-1`` for resolution.
     * - ``resource-1``
       - ``write``
-      -
-      -
+      - |check|
+      - No :term:`Applied Permissions` is defined directly on ``resource-1``, but the inherited scope from
+        ``service-1`` makes it *publicly* writable with ``MAGPIE_ANONYMOUS_GROUP`` permission.
     * - ``resource-2``
       - ``read``
-      -
-      -
+      - |check|
+      - ``TestUser`` obtains access from its membership from ``TestGroup2`` that allows access.
+        It overrides ``MAGPIE_ANONYMOUS_GROUP`` defined access on ``resource-1`` by group priority.
     * - ``resource-2``
       - ``write``
-      -
-      -
+      - |check|
+      - Similarly to previous case, ``TestGroup1`` grants access over ``MAGPIE_ANONYMOUS_GROUP`` denied access.
     * - ``resource-3``
       - ``read``
-      -
-      -
+      - |check|
+      - ``TestUser`` obtains access again from its membership to ``TestGroup2`` that allows recursive ``read`` access.
+        Contrary to ``resource-2`` that only resolved group priority, scope inheritance is also involved in this case.
     * - ``resource-3``
       - ``write``
       - |cross|
-      - Explicit denied access by :term:`Direct Permission` onto ``resource-3`` overrides anything specified at higher
-        level in the hierarchy.
+      - Explicit denied access by :term:`Direct Permissions` onto ``resource-3`` overrides anything specified at higher
+        level in the hierarchy. Although granted access is defined by ``TestGroup1`` at higher level, user permission
+        takes precedence over :term:`Inherited Permissions`.
     * - ``[unspecified-1]``
       - ``read``
-      -
-      -
+      - |cross|
+      - Because the resource does not exist, this path element can only inherit from recursive parent scope.
+        The only applicable permission is the denied ``read`` access on ``resource-1`` for ``MAGPIE_ANONYMOUS_GROUP``.
+        The resource is therefore blocked. Not having any permission would result by default to the same refused access.
     * - ``[unspecified-1]``
       - ``write``
-      -
-      -
+      - |check|
+      - Special ``MAGPIE_ANONYMOUS_GROUP`` provides recursive access, and therefore publicly allows ``write`` access to
+        this path segment. Any combination of ``/service-A/resource-1/<ANYTHING>`` will allow writing operations.
     * - ``[unspecified-2]``
       - ``read``
-      -
-      -
+      - |check|
+      - All values matching this position are allowed because of ``TestGroup2`` recursive access, as previous cases.
     * - ``[unspecified-2]``
       - ``write``
-      -
-      -
+      - |check|
+      - All values are again allowed **except** ``resource-3``. Because that entry exists and has explicit deny for
+        ``TestUser``, it will be blocked. Another unspecified value at same position will not be blocked.
+    * - ``[unspecified-3]``
+      - ``read``
+      - |check|
+      - As all other resources nested under ``resource-2``, ``TestGroup2`` memberships grants access to this location
+        for reading. The permission will also keep propagating indefinitely, allowing even deeper request path such
+        as ``/service-A/resource-1/resource-2/a/b/c/d``.
+    * - ``[unspecified-3]``
+      - ``write``
+      - |check|
+      - Although access was explicitly denied to ``TestUser`` on ``resource-3``, scope ``match`` does not propagate
+        to lower resources. Anything at this level inherits from allowed access of ``TestGroup1`` membership.
+        Non ``TestGroup1`` members are still forbidden access due to recursive denial on ``MAGPIE_ANONYMOUS_GROUP``.
+    * - ``resource-4``
+      - ``read``
+      - |cross|
+      - Both groups ``TestGroup1`` and ``TestGroup2`` contradict (one deny and the other allow). Because they have
+        equal group priority, the resolved permission favors denied access.
+    * - ``resource-4``
+      - ``write``
+      - |check|
+      - Allowed from ``MAGPIE_ANONYMOUS_GROUP`` recursive access.
+    * - ``resource-5``
+      - ``read``
+      - |check|
+      - Although both groups ``TestGroup1`` and ``TestGroup2`` specify opposite permissions on parent ``resource-4``,
+        the definition on ``resource-5`` from ``TestGroup2`` is *closer* than the ``TestGroup1`` denied access. The
+        allowed access takes precedence in this case because of scoped access that is not overridden by equal priority
+        groups at higher hierarchy levels.
+    * - ``resource-5``
+      - ``write``
+      - |check|
+      - Allowed from ``MAGPIE_ANONYMOUS_GROUP`` recursive access.
