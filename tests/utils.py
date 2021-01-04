@@ -275,7 +275,7 @@ def get_app_or_url(test_item):
     return app_or_url
 
 
-def get_test_webhook_app():
+def get_test_webhook_app(webhook_url):
     """
     Instantiate a local test application used for the prehook for user creation and deletion.
     """
@@ -310,12 +310,12 @@ def get_test_webhook_app():
 
     def webhook_app():
         try:
-            webhook_url_info = urlparse(get_constant("MAGPIE_TEST_USER_WEBHOOK_URL"))
+            webhook_url_info = urlparse(webhook_url)
             serve(webhook_app_instance, host=webhook_url_info.hostname, port=webhook_url_info.port)
         except OSError as exception:
             if exception.errno == EADDRINUSE:
                 # The app is already running, we just need to reset the webhook status for a new test.
-                resp = requests.post(get_constant("MAGPIE_TEST_USER_WEBHOOK_URL") + "/reset_status")
+                resp = requests.post(webhook_url + "/reset_status")
                 check_response_basic_info(resp, 200, expected_type=CONTENT_TYPE_HTML, expected_method="POST")
                 return
             raise

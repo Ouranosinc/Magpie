@@ -99,7 +99,16 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
 
     @classmethod
     def setUpClass(cls):
-        cls.app = utils.get_test_magpie_app()
+        cls.base_webhook_url = "http://localhost:8080"
+        cls.webhook_tmp_config = tempfile.NamedTemporaryFile(mode="w")
+        # write default config with empty values, webhooks will be overwritten for each specific test setup
+        data = {
+            "webhooks": {},
+            "providers": "",
+            "permissions": ""
+        }
+        yaml.dump(data, cls.webhook_tmp_config, default_flow_style=False)
+        cls.app = utils.get_test_magpie_app({"magpie.config_path": cls.webhook_tmp_config.name})
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
@@ -111,154 +120,152 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         cls.check_requirements()
         cls.setup_test_values()
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.webhook_tmp_config.close()
+
     def test_Webhook_CreateUser(self):
         """
         Test creating a user using multiple webhooks.
         """
-        # Create temporary config for testing webhooks
-        with tempfile.NamedTemporaryFile(mode="wt") as tmp_config:
-            base_webhook_url = get_constant("MAGPIE_TEST_USER_WEBHOOK_URL")
-            create_webhook_url = base_webhook_url + "/webhook"
-            data = {
-                "webhooks":
-                    # Use two identical urls to simulate having multiple webhook urls
-                    {"create": [create_webhook_url, create_webhook_url]}}
-            yaml.dump(data, tmp_config, default_flow_style=False)
+        # Write temporary config for testing webhooks
+        create_webhook_url = self.base_webhook_url + "/webhook"
+        data = {
+            "webhooks":
+                # Use two identical urls to simulate having multiple webhook urls
+                {"create": [create_webhook_url, create_webhook_url]}
+        }
+        with open(self.webhook_tmp_config.name, 'w') as stream:
+            yaml.safe_dump(data, stream, default_flow_style=False)
 
-            with mock.patch.dict(os.environ, {"MAGPIE_CONFIG_PATH": tmp_config.name}):
-                utils.get_test_webhook_app()
+        utils.get_test_webhook_app(self.base_webhook_url)
 
-                utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
-                # Wait for the webhook requests to complete
-                sleep(1)
+        # Wait for the webhook requests to complete
+        sleep(1)
 
-                # Check if both webhook requests have completed successfully
-                resp = requests.get(base_webhook_url + "/get_status")
-                assert resp.text == "2"
+        # Check if both webhook requests have completed successfully
+        resp = requests.get(self.base_webhook_url + "/get_status")
+        assert resp.text == "2"
 
-                # Check if user creation was successful
-                users = utils.TestSetup.get_RegisteredUsersList(self)
-                utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
+        # Check if user creation was successful
+        users = utils.TestSetup.get_RegisteredUsersList(self)
+        utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
     def test_Webhook_CreateUser_FailingUrl(self):
         """
         Test creating a user using a failing webhook url.
         """
-        # Create temporary config for testing webhooks
-        with tempfile.NamedTemporaryFile(mode="wt") as tmp_config:
-            create_webhook_url = "failing_url"
-            data = {"webhooks": {"create": [create_webhook_url]}}
-            yaml.dump(data, tmp_config, default_flow_style=False)
+        # Write temporary config for testing webhooks
+        create_webhook_url = "failing_url"
+        data = {"webhooks": {"create": [create_webhook_url]}}
+        with open(self.webhook_tmp_config.name, 'w') as stream:
+            yaml.dump(data, stream, default_flow_style=False)
 
-            with mock.patch.dict(os.environ, {"MAGPIE_CONFIG_PATH": tmp_config.name}):
-                utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
-                # Wait for the webhook requests to complete
-                sleep(1)
+        # Wait for the webhook requests to complete
+        sleep(1)
 
-                # Check if user creation was successful even if the webhook failed
-                users = utils.TestSetup.get_RegisteredUsersList(self)
-                utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
+        # Check if user creation was successful even if the webhook failed
+        users = utils.TestSetup.get_RegisteredUsersList(self)
+        utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
     def test_Webhook_CreateUser_EmptyUrl(self):
         """
         Test creating a user with an empty webhook url.
         """
-        # Create temporary config for testing webhooks
-        with tempfile.NamedTemporaryFile(mode="wt") as tmp_config:
-            data = {"webhooks": {"create": []}}
-            yaml.dump(data, tmp_config, default_flow_style=False)
+        # Write temporary config for testing webhooks
+        data = {"webhooks": {"create": []}}
+        with open(self.webhook_tmp_config.name, 'w') as stream:
+            yaml.dump(data, stream, default_flow_style=False)
 
-            with mock.patch.dict(os.environ, {"MAGPIE_CONFIG_PATH": tmp_config.name}):
-                utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
-                # Wait for the webhook requests to complete
-                sleep(1)
+        # Wait for the webhook requests to complete
+        sleep(1)
 
-                # Check if user creation was successful even if no webhook were defined in the config
-                users = utils.TestSetup.get_RegisteredUsersList(self)
-                utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
+        # Check if user creation was successful even if no webhook were defined in the config
+        users = utils.TestSetup.get_RegisteredUsersList(self)
+        utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
     def test_Webhook_DeleteUser(self):
         """
         Test deleting a user using multiple webhooks.
         """
-        # Create temporary config for testing webhooks
-        with tempfile.NamedTemporaryFile(mode="wt") as tmp_config:
-            base_webhook_url = get_constant("MAGPIE_TEST_USER_WEBHOOK_URL")
-            delete_webhook_url = base_webhook_url + "/webhook"
-            data = {
-                "webhooks":
-                    # Use two identical urls to simulate having multiple webhook urls
-                    {"delete": [delete_webhook_url, delete_webhook_url]}}
-            yaml.dump(data, tmp_config, default_flow_style=False)
+        # Write temporary config for testing webhooks
+        delete_webhook_url = self.base_webhook_url + "/webhook"
+        data = {
+            "webhooks":
+                # Use two identical urls to simulate having multiple webhook urls
+                {"delete": [delete_webhook_url, delete_webhook_url]}}
 
-            with mock.patch.dict(os.environ, {"MAGPIE_CONFIG_PATH": tmp_config.name}):
-                utils.get_test_webhook_app()
-                # create the test user first
-                utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        with open(self.webhook_tmp_config.name, 'w') as stream:
+            yaml.dump(data, stream, default_flow_style=False)
 
-                # Webhooks shouldn't have been called during the user creation
-                sleep(1)
-                resp = requests.get(base_webhook_url + "/get_status")
-                assert resp.text == "0"
+        utils.get_test_webhook_app(self.base_webhook_url)
+        # create the test user first
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
-                # delete the test user, webhooks should be called during this delete request
-                path = "/users/{usr}".format(usr=self.test_user_name)
-                resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
-                utils.check_response_basic_info(resp, 200, expected_method="GET")
-                utils.TestSetup.check_NonExistingTestUser(self)
+        # Webhooks shouldn't have been called during the user creation
+        sleep(1)
+        resp = requests.get(self.base_webhook_url + "/get_status")
+        assert resp.text == "0"
 
-                # Wait for the webhook requests to complete and check their success
-                sleep(1)
-                resp = requests.get(base_webhook_url + "/get_status")
-                assert resp.text == "2"
+        # delete the test user, webhooks should be called during this delete request
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.TestSetup.check_NonExistingTestUser(self)
+
+        # Wait for the webhook requests to complete and check their success
+        sleep(1)
+        resp = requests.get(self.base_webhook_url + "/get_status")
+        assert resp.text == "2"
 
     def test_Webhook_DeleteUser_FailingUrl(self):
         """
         Test deleting a user using a failing webhook url.
         """
-        # Create temporary config for testing webhooks
-        with tempfile.NamedTemporaryFile(mode="wt") as tmp_config:
-            delete_webhook_url = "failing_url"
-            data = {"webhooks": {"delete": [delete_webhook_url]}}
-            yaml.dump(data, tmp_config, default_flow_style=False)
+        # Write temporary config for testing webhooks
+        delete_webhook_url = "failing_url"
+        data = {"webhooks": {"delete": [delete_webhook_url]}}
+        with open(self.webhook_tmp_config.name, 'w') as stream:
+            yaml.dump(data, stream, default_flow_style=False)
 
-            with mock.patch.dict(os.environ, {"MAGPIE_CONFIG_PATH": tmp_config.name}):
-                # create the test user first
-                utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        # create the test user first
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
-                # delete the test user, webhooks should be called during the request
-                path = "/users/{usr}".format(usr=self.test_user_name)
-                resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
+        # delete the test user, webhooks should be called during the request
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
 
-                # Check if user deletion was successful even if the webhook failed
-                sleep(1)
-                utils.check_response_basic_info(resp, 200, expected_method="GET")
-                utils.TestSetup.check_NonExistingTestUser(self)
+        # Check if user deletion was successful even if the webhook failed
+        sleep(1)
+        utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.TestSetup.check_NonExistingTestUser(self)
 
     def test_Webhook_DeleteUser_EmptyUrl(self):
         """
         Test deleting a user with an empty webhook url.
         """
-        # Create temporary config for testing webhooks
-        with tempfile.NamedTemporaryFile(mode="wt") as tmp_config:
-            data = {"webhooks": {"delete": []}}
-            yaml.dump(data, tmp_config, default_flow_style=False)
+        # Write temporary config for testing webhooks
+        data = {"webhooks": {"delete": []}}
+        with open(self.webhook_tmp_config.name, 'w') as stream:
+            yaml.dump(data, stream, default_flow_style=False)
 
-            with mock.patch.dict(os.environ, {"MAGPIE_CONFIG_PATH": tmp_config.name}):
-                # create the test user first
-                utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        # create the test user first
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
-                # delete the test user, webhooks should be called during the request
-                path = "/users/{usr}".format(usr=self.test_user_name)
-                resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
+        # delete the test user, webhooks should be called during the request
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
 
-                # Check if user deletion was successful even if no webhooks were defined in the config
-                sleep(1)
-                utils.check_response_basic_info(resp, 200, expected_method="GET")
-                utils.TestSetup.check_NonExistingTestUser(self)
+        # Check if user deletion was successful even if no webhooks were defined in the config
+        sleep(1)
+        utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.TestSetup.check_NonExistingTestUser(self)
 
 
 @runner.MAGPIE_TEST_API
