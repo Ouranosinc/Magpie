@@ -149,7 +149,7 @@ def delete_user_view(request):
                 # Execute all webhook requests
                 pool = multiprocessing.Pool(processes=len(cfg["delete"]))
                 args = [(url, user.user_name) for url in cfg["delete"]]
-                pool.starmap_async(uu.webhook_request, args, error_callback=uu.webhook_error_callback)
+                pool.starmap_async(ar.webhook_request, args, error_callback=ar.webhook_error_callback)
 
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 

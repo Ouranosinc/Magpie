@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import requests
 import six
 from pyramid.authentication import Authenticated, IAuthenticationPolicy
 from pyramid.httpexceptions import (
@@ -344,3 +345,23 @@ def get_query_param(request, case_insensitive_key, default=None):
         if param.lower() == case_insensitive_key:
             return request.params.get(param)
     return default
+
+
+def webhook_request(webhook_url, user_name):
+    # type: (Str, Str) -> None
+    """
+    Sends a webhook request using the input url.
+    """
+    # TODO: create a real temp_url that will be called if the webhook service has an error
+    #  this would also set the user's status to 0
+    requests.post(webhook_url, data={"user_name": user_name, "temp_url": "temp_url:80/todo"})
+
+
+def webhook_error_callback(exception):
+    # type: (requests.exceptions) -> None
+    """
+    Error callback function called if an error occurs in the webhook_call function.
+    """
+    # TODO : (related to TODO in webhook_call function) handle errors occuring in the thread for the webhook_call
+    #  change user's status to 0?
+    LOGGER.error(str(exception))

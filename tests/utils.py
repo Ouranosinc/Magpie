@@ -316,7 +316,7 @@ def get_test_webhook_app():
             if exception.errno == EADDRINUSE:
                 # The app is already running, we just need to reset the webhook status for a new test.
                 resp = requests.post(get_constant("MAGPIE_TEST_USER_WEBHOOK_URL") + "/reset_status")
-                check_response_basic_info(resp, 200, expected_method="POST")
+                check_response_basic_info(resp, 200, expected_type=CONTENT_TYPE_HTML, expected_method="POST")
                 return
             raise
 

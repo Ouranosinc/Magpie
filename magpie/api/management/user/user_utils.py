@@ -1,7 +1,6 @@
 import multiprocessing
 from typing import TYPE_CHECKING
 
-import requests
 import six
 from pyramid.httpexceptions import (
     HTTPBadRequest,
@@ -19,6 +18,7 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 
 from magpie import models
 from magpie.api import exception as ax
+from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
@@ -122,30 +122,10 @@ def create_user(user_name, password, email, group_name, db_session):
                 # Execute all webhook requests
                 pool = multiprocessing.Pool(processes=len(cfg["create"]))
                 args = [(url, user_name) for url in cfg["create"]]
-                pool.starmap_async(webhook_request, args, error_callback=webhook_error_callback)
+                pool.starmap_async(ar.webhook_request, args, error_callback=ar.webhook_error_callback)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": uf.format_user(new_user, new_user_groups)})
-
-
-def webhook_request(webhook_url, user_name):
-    # type: (Str, Str) -> None
-    """
-    Sends a webhook request using the input url.
-    """
-    # TODO: create a real temp_url that will be called if the webhook service has an error
-    #  this would also set the user's status to 0
-    requests.post(webhook_url, data={"user_name": user_name, "temp_url": "temp_url:80/todo"})
-
-
-def webhook_error_callback(exception):
-    # type: (requests.exceptions) -> None
-    """
-    Error callback function called if an error occurs in the webhook_call function.
-    """
-    # TODO : (related to TODO in webhook_call function) handle errors occuring in the thread for the webhook_call
-    #  change user's status to 0?
-    LOGGER.error(str(exception))
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session, overwrite=False):
