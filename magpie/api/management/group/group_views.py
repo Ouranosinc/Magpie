@@ -34,7 +34,7 @@ def create_group_view(request):
     return gu.create_group(group_name, group_desc, group_disc, request.db)
 
 
-@s.GroupAPI.get(tags=[s.GroupsTag], response_schemas=s.Group_GET_responses)
+@s.GroupAPI.get(schema=s.Group_GET_RequestSchema(), tags=[s.GroupsTag], response_schemas=s.Group_GET_responses)
 @view_config(route_name=s.GroupAPI.name, request_method="GET")
 def get_group_view(request):
     """
@@ -110,7 +110,8 @@ def delete_group_view(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.Group_DELETE_OkResponseSchema.description)
 
 
-@s.GroupUsersAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupUsers_GET_responses)
+@s.GroupUsersAPI.get(schema=s.GroupUsers_GET_RequestSchema(), tags=[s.GroupsTag],
+                     response_schemas=s.GroupUsers_GET_responses)
 @view_config(route_name=s.GroupUsersAPI.name, request_method="GET")
 def get_group_users_view(request):
     """
@@ -124,7 +125,8 @@ def get_group_users_view(request):
                          content={"user_names": sorted(user_names)})
 
 
-@s.GroupServicesAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupServices_GET_responses)
+@s.GroupServicesAPI.get(schema=s.GroupServices_GET_RequestSchema(), tags=[s.GroupsTag],
+                        response_schemas=s.GroupServices_GET_responses)
 @view_config(route_name=s.GroupServicesAPI.name, request_method="GET")
 def get_group_services_view(request):
     """
@@ -134,7 +136,8 @@ def get_group_services_view(request):
     return gu.get_group_services_response(group, request.db)
 
 
-@s.GroupServicePermissionsAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupServicePermissions_GET_responses)
+@s.GroupServicePermissionsAPI.get(schema=s.GroupServicePermissions_GET_RequestSchema(), tags=[s.GroupsTag],
+                                  response_schemas=s.GroupServicePermissions_GET_responses)
 @view_config(route_name=s.GroupServicePermissionsAPI.name, request_method="GET")
 def get_group_service_permissions_view(request):
     """
@@ -199,7 +202,8 @@ def delete_group_service_permission_name_view(request):
     return gu.delete_group_resource_permission_response(group, service, permission, db_session=request.db)
 
 
-@s.GroupResourcesAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupResources_GET_responses)
+@s.GroupResourcesAPI.get(schema=s.GroupResources_GET_RequestSchema(), tags=[s.GroupsTag],
+                         response_schemas=s.GroupResources_GET_responses)
 @view_config(route_name=s.GroupResourcesAPI.name, request_method="GET")
 def get_group_resources_view(request):
     """
@@ -214,7 +218,8 @@ def get_group_resources_view(request):
                          content={"resources": grp_res_json})
 
 
-@s.GroupResourcePermissionsAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupResourcePermissions_GET_responses)
+@s.GroupResourcePermissionsAPI.get(schema=s.GroupResourcePermissions_GET_RequestSchema(), tags=[s.GroupsTag],
+                                   response_schemas=s.GroupResourcePermissions_GET_responses)
 @view_config(route_name=s.GroupResourcePermissionsAPI.name, request_method="GET")
 def get_group_resource_permissions_view(request):
     """
@@ -279,7 +284,8 @@ def delete_group_resource_permission_name_view(request):
     return gu.delete_group_resource_permission_response(group, resource, permission, db_session=request.db)
 
 
-@s.GroupServiceResourcesAPI.get(tags=[s.GroupsTag], response_schemas=s.GroupServiceResources_GET_responses)
+@s.GroupServiceResourcesAPI.get(schema=s.GroupServiceResources_GET_RequestSchema(), tags=[s.GroupsTag],
+                                response_schemas=s.GroupServiceResources_GET_responses)
 @view_config(route_name=s.GroupServiceResourcesAPI.name, request_method="GET")
 def get_group_service_resources_view(request):
     """

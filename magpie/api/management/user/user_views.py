@@ -4,7 +4,6 @@ User Views, both for specific user-name provided as request path variable and sp
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
-from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
 

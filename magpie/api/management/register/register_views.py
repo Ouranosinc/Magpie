@@ -41,7 +41,8 @@ def get_discoverable_groups_view(request):
                          detail=s.RegisterGroups_GET_OkResponseSchema.description)
 
 
-@s.RegisterGroupAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
+@s.RegisterGroupAPI.get(schema=s.RegisterGroup_GET_RequestSchema,
+                        tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
                         response_schemas=s.RegisterGroup_GET_responses)
 @view_config(route_name=s.RegisterGroupAPI.name, request_method="GET", permission=Authenticated)
 def get_discoverable_group_info_view(request):
@@ -92,8 +93,9 @@ def leave_discoverable_group_view(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.RegisterGroup_DELETE_OkResponseSchema.description)
 
 
-@s.TemporaryUrlAPI.get(tags=[s.RegisterTag], response_schemas=s.TemporaryURL_GET_responses)
-@view_config(route_name=s.RegisterGroupAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+@s.TemporaryUrlAPI.get(schema=s.TemporaryURL_GET_RequestSchema, tags=[s.RegisterTag],
+                       response_schemas=s.TemporaryURL_GET_responses)
+@view_config(route_name=s.TemporaryUrlAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
 def handle_temporary_url(request):
     """
     Handles the operation according to the provided temporary URL token.
@@ -104,6 +106,6 @@ def handle_temporary_url(request):
     tmp_url = models.TemporaryToken.by_token(token, db_session=db_session)
     ax.verify_param(tmp_url, not_none=True,
                     http_error=HTTPNotFound, content={"token": str(token)},
-                    msg_on_fail=s.TemporaryUrl_GET_NotFoundResponseSchema.description)
+                    msg_on_fail=s.TemporaryURL_GET_NotFoundResponseSchema.description)
     ru.handle_temporary_token(tmp_url, db_session=db_session)
-    return ax.valid_http(http_success=HTTPOk, detail=s.TemporaryUrl_GET_OkResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)

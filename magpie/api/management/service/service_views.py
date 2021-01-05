@@ -109,7 +109,7 @@ def register_service_view(request):
     return su.create_service(service_name, service_type, service_url, service_push, service_cfg, db_session=request.db)
 
 
-@s.ServiceAPI.patch(schema=s.Service_PATCH_RequestBodySchema(), tags=[s.ServicesTag],
+@s.ServiceAPI.patch(schema=s.Service_PATCH_RequestSchema(), tags=[s.ServicesTag],
                     response_schemas=s.Service_PATCH_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="PATCH")
 def update_service_view(request):

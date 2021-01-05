@@ -28,7 +28,6 @@ from ziggurat_foundations.models.user_resource_permission import UserResourcePer
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
 from magpie.api import exception as ax
-from magpie.api import schemas as s
 from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.utils import get_magpie_url
@@ -439,6 +438,7 @@ class TemporaryToken(BaseModel, Base):
     group = relationship("Group", foreign_keys=[group_id])
 
     def url(self, settings=None):
+        from magpie.api import schemas as s
         return get_magpie_url(settings) + s.TemporaryUrlAPI.path.format(token=self.token)
 
     def expired(self):
