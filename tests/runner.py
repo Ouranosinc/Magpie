@@ -42,6 +42,7 @@ MAGPIE_TEST_LOCAL = RunOptionDecorator("MAGPIE_TEST_LOCAL", "tests running on lo
 MAGPIE_TEST_API = RunOptionDecorator("MAGPIE_TEST_API", "magpie API operations")
 MAGPIE_TEST_CLI = RunOptionDecorator("MAGPIE_TEST_CLI", "magpie CLI operations")
 MAGPIE_TEST_UI = RunOptionDecorator("MAGPIE_TEST_UI", "magpie UI operations")
+MAGPIE_TEST_WEBHOOKS = RunOptionDecorator("MAGPIE_TEST_WEBHOOKS", "magpie webhooks operations")
 MAGPIE_TEST_UTILS = RunOptionDecorator("MAGPIE_TEST_UTILS", "magpie utility functions")
 MAGPIE_TEST_FUNCTIONAL = RunOptionDecorator("MAGPIE_TEST_FUNCTIONAL", "functional operations sequence")
 MAGPIE_TEST_AUTH_ADMIN = RunOptionDecorator("MAGPIE_TEST_AUTH_ADMIN", "operations that require admin-level access")
