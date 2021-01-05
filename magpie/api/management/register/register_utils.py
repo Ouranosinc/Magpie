@@ -1,12 +1,14 @@
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
+from pyramid.httpexceptions import HTTPForbidden, HTTPGone, HTTPNotFound, HTTPInternalServerError, HTTPNotImplemented
 from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.user import UserService
 
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.models import Group
-from magpie.utils import CONTENT_TYPE_JSON
+from magpie.api.management.user import user_utils as uu
+from magpie import models
+from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum
 
 if TYPE_CHECKING:
     from typing import List
@@ -16,19 +18,52 @@ if TYPE_CHECKING:
     from magpie.typedefs import Str
 
 
+class TokenOperation(ExtendedEnum):
+    """
+    Supported operations by the temporary tokens.
+    """
+    GROUP_ACCEPT_TERMS = "group-accept-terms"
+    USER_PASSWORD_RESET = "user-password-reset"
+
+
+def handle_temporary_token(tmp_token, db_session):
+    # type: (models.TemporaryToken, Session) -> None
+    """
+    Handles the operation according to the provided temporary token.
+    """
+    if tmp_token.expired():
+        token = tmp_token.token
+        tmp_token.delete(db_session)
+        ax.raise_http(HTTPGone, content={"token": str(token)}, detail=s.TemporaryUrl_GET_GoneResponseSchema.description)
+    ax.verify_param(tmp_token.operation, is_in=True, param_compare=TokenOperation.values(),
+                    param_name="token", http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
+    if tmp_token.operation == TokenOperation.GROUP_ACCEPT_TERMS:
+        ax.verify_param(tmp_token.group, not_none=True,
+                        http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
+        ax.verify_param(tmp_token.user, not_none=True,
+                        http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
+        uu.assign_user_group(tmp_token.user, tmp_token.group, db_session)
+    if tmp_token.operation == TokenOperation.USER_PASSWORD_RESET:
+        ax.verify_param(tmp_token.user, not_none=True,
+                        http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
+        # TODO: reset procedure
+        ax.raise_http(HTTPNotImplemented, detail="Not Implemented")
+    tmp_token.delete(db_session)
+
+
 def get_discoverable_groups(db_session):
-    # type: (Session) -> List[Group]
+    # type: (Session) -> List[models.Group]
     """
     Get all existing group that are marked as publicly discoverable from the database.
     """
     groups = ax.evaluate_call(
-        lambda: [grp for grp in GroupService.all(Group, db_session=db_session) if grp.discoverable],
+        lambda: [grp for grp in GroupService.all(models.Group, db_session=db_session) if grp.discoverable],
         http_error=HTTPForbidden, msg_on_fail=s.RegisterGroups_GET_ForbiddenResponseSchema.description)
     return groups
 
 
 def get_discoverable_group_by_name(group_name, db_session):
-    # type: (Str, Session) -> Group
+    # type: (Str, Session) -> models.Group
     """
     Obtains the requested discoverable group by name.
 

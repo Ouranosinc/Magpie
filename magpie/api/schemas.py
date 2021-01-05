@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 import colander
 import six
+import uuid
 from cornice import Service
 from cornice.service import get_services
 from cornice_swagger.swagger import CorniceSwagger
@@ -11,6 +12,7 @@ from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPForbidden,
     HTTPFound,
+    HTTPGone,
     HTTPInternalServerError,
     HTTPMethodNotAllowed,
     HTTPNotAcceptable,
@@ -273,7 +275,9 @@ VersionAPI = Service(
 HomepageAPI = Service(
     path="/",
     name="homepage")
-
+TemporaryUrlAPI = Service(
+    path="tmp/{token}",
+    name="temporary_url")
 
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",
@@ -322,6 +326,10 @@ ServiceNameParameter = colander.SchemaNode(
     colander.String(),
     description="Registered service name.",
     example="my-wps")
+TokenParameter = colander.SchemaNode(
+    colander.String(),
+    description="Temporary URL token.",
+    example=str(uuid.uuid4()))
 
 
 class AcceptType(colander.SchemaNode):
@@ -2560,6 +2568,25 @@ RegisterGroup_DELETE_ForbiddenResponseSchema = UserGroup_DELETE_ForbiddenRespons
 RegisterGroup_DELETE_NotFoundResponseSchema = UserGroup_DELETE_NotFoundResponseSchema
 
 
+class TemporaryUrl_GET_RequestSchema(BaseRequestSchemaAPI):
+    token = TokenParameter
+
+
+class TemporaryUrl_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Successful operation from provided temporary URL token."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class TemporaryUrl_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Could not find any operation matching temporary URL token."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class TemporaryUrl_GET_GoneResponseSchema(BaseResponseSchemaAPI):
+    description = "Temporary URL token is expired."
+    body = BaseResponseBodySchema(code=HTTPGone.code, description=description)
+
+
 class Session_GET_ResponseBodySchema(BaseResponseBodySchema):
     user = UserBodySchema(missing=colander.drop)
     authenticated = colander.SchemaNode(
@@ -3381,6 +3408,13 @@ RegisterGroup_DELETE_responses = {
     "401": UnauthorizedResponseSchema(),
     "403": RegisterGroup_DELETE_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": RegisterGroup_DELETE_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+TemporaryUrl_GET_responses = {
+    "200": TemporaryUrl_GET_OkResponseSchema(),
+    "404": TemporaryUrl_GET_NotFoundResponseSchema(),
+    "410": TemporaryUrl_GET_GoneResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Providers_GET_responses = {

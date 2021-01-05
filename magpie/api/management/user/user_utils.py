@@ -160,6 +160,23 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     return ax.valid_http(http_success=http_success, content=err_content, detail=http_detail)
 
 
+def assign_user_group(user, group, db_session):
+    # type: (models.User, models.Group, Session) -> None
+    """
+    Creates a user-group relationship (user membership to a group).
+
+    :returns: nothing - user-group is created.
+    :raises HTTPError: corresponding error matching problem encountered.
+    """
+    ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, with_param=False,
+                    http_error=HTTPConflict, content={"user_name": user.user_name, "group_name": group.group_name},
+                    msg_on_fail=s.UserGroups_POST_ConflictResponseSchema.description)
+    ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
+                     fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
+                     msg_on_fail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
+                     content={"user_name": user.user_name, "group_name": group.group_name})
+
+
 def delete_user_group(user, group, db_session):
     # type: (models.User, models.Group, Session) -> None
     """

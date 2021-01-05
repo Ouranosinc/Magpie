@@ -7,7 +7,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add URL endpoint to receive temporary tokens to complete pending operations.
 
 `3.5.0 <https://github.com/Ouranosinc/Magpie/tree/3.5.0>`_ (2021-01-06)
 ------------------------------------------------------------------------------------

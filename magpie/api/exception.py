@@ -45,6 +45,7 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 # utility parameter validation regexes for 'matches' argument
 PARAM_REGEX = r"^[A-Za-z0-9]+(?:[\s_\-\.][A-Za-z0-9]+)*$"    # request parameters
 EMAIL_REGEX = colander.EMAIL_RE
+UUID_REGEX = colander.UUID_REGEX
 URL_REGEX = colander.URL_REGEX
 INDEX_REGEX = r"^[0-9]+$"
 

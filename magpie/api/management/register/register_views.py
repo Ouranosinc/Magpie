@@ -1,7 +1,15 @@
 from typing import TYPE_CHECKING
 
 from pyramid.authentication import Authenticated
-from pyramid.httpexceptions import HTTPConflict, HTTPCreated, HTTPForbidden, HTTPInternalServerError, HTTPOk
+from pyramid.httpexceptions import (
+    HTTPConflict,
+    HTTPCreated,
+    HTTPForbidden,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk
+)
+from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.view import view_config
 
 from magpie import models
@@ -82,3 +90,20 @@ def leave_discoverable_group_view(request):
     group = ru.get_discoverable_group_by_name(group.group_name, db_session=request.db)
     uu.delete_user_group(user, group, request.db)
     return ax.valid_http(http_success=HTTPOk, detail=s.RegisterGroup_DELETE_OkResponseSchema.description)
+
+
+@s.TemporaryUrlAPI.get(tags=[s.RegisterTag], response_schemas=s.TemporaryURL_GET_responses)
+@view_config(route_name=s.RegisterGroupAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+def handle_temporary_url(request):
+    """
+    Handles the operation according to the provided temporary URL token.
+    """
+    token = ar.get_value_matchdict_checked(request, key="token", pattern=ax.UUID_REGEX)
+    token = token.split(":")[-1]  # remove optional prefix if any
+    db_session = request.db
+    tmp_url = models.TemporaryToken.by_token(token, db_session=db_session)
+    ax.verify_param(tmp_url, not_none=True,
+                    http_error=HTTPNotFound, content={"token": str(token)},
+                    msg_on_fail=s.TemporaryUrl_GET_NotFoundResponseSchema.description)
+    ru.handle_temporary_token(tmp_url, db_session=db_session)
+    return ax.valid_http(http_success=HTTPOk, detail=s.TemporaryUrl_GET_OkResponseSchema.description)

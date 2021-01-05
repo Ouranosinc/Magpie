@@ -162,20 +162,8 @@ def assign_user_group_view(request):
     Assign a user to a group.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-
-    group_name = ar.get_value_multiformat_body_checked(request, "group_name")
-    group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
-                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                             msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
-    ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
-                    msg_on_fail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
-    ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, with_param=False,
-                    http_error=HTTPConflict, content={"user_name": user.user_name, "group_name": group.group_name},
-                    msg_on_fail=s.UserGroups_POST_ConflictResponseSchema.description)
-    ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
-                     fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                     msg_on_fail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
-                     content={"user_name": user.user_name, "group_name": group.group_name})
+    group = ar.get_group_matchdict_checked(request)
+    uu.assign_user_group(user, group, db_session=request.db)
     return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
                          content={"user_name": user.user_name, "group_name": group.group_name})
 
