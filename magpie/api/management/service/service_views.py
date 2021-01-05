@@ -39,7 +39,7 @@ def get_service_types_view(request):  # noqa: F811
                          detail=s.ServiceTypes_GET_OkResponseSchema.description)
 
 
-@s.ServiceTypeAPI.get(schema=s.ServiceTypes_GET_RequestSchema(), tags=[s.ServicesTag],
+@s.ServiceTypeAPI.get(schema=s.ServiceTypes_GET_RequestSchema, tags=[s.ServicesTag],
                       response_schemas=s.ServiceType_GET_responses)
 @view_config(route_name=s.ServiceTypeAPI.name, request_method="GET")
 def get_services_by_type_view(request):
@@ -49,7 +49,7 @@ def get_services_by_type_view(request):
     return get_services_runner(request)
 
 
-@s.ServicesAPI.get(schema=s.Services_GET_RequestSchema(), tags=[s.ServicesTag],
+@s.ServicesAPI.get(schema=s.Services_GET_RequestSchema, tags=[s.ServicesTag],
                    response_schemas=s.Services_GET_responses)
 @view_config(route_name=s.ServicesAPI.name, request_method="GET")
 def get_services_view(request):
@@ -93,7 +93,7 @@ def get_services_runner(request):
                          detail=s.Services_GET_OkResponseSchema.description)
 
 
-@s.ServicesAPI.post(schema=s.Services_POST_RequestBodySchema(), tags=[s.ServicesTag],
+@s.ServicesAPI.post(schema=s.Services_POST_RequestBodySchema, tags=[s.ServicesTag],
                     response_schemas=s.Services_POST_responses)
 @view_config(route_name=s.ServicesAPI.name, request_method="POST")
 def register_service_view(request):
@@ -109,7 +109,7 @@ def register_service_view(request):
     return su.create_service(service_name, service_type, service_url, service_push, service_cfg, db_session=request.db)
 
 
-@s.ServiceAPI.patch(schema=s.Service_PATCH_RequestSchema(), tags=[s.ServicesTag],
+@s.ServiceAPI.patch(schema=s.Service_PATCH_RequestSchema, tags=[s.ServicesTag],
                     response_schemas=s.Service_PATCH_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="PATCH")
 def update_service_view(request):
@@ -181,7 +181,7 @@ def get_service_view(request):
                          content={"service": service_info})
 
 
-@s.ServiceAPI.delete(schema=s.Service_DELETE_RequestSchema(), tags=[s.ServicesTag],
+@s.ServiceAPI.delete(schema=s.Service_DELETE_RequestSchema, tags=[s.ServicesTag],
                      response_schemas=s.Service_DELETE_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="DELETE")
 def unregister_service_view(request):
@@ -222,7 +222,7 @@ def get_service_permissions_view(request):
                          content=format_permissions(svc_perms, PermissionType.ALLOWED))
 
 
-@s.ServiceResourceAPI.delete(schema=s.ServiceResource_DELETE_RequestSchema(), tags=[s.ServicesTag],
+@s.ServiceResourceAPI.delete(schema=s.ServiceResource_DELETE_RequestSchema, tags=[s.ServicesTag],
                              response_schemas=s.ServiceResource_DELETE_responses)
 @view_config(route_name=s.ServiceResourceAPI.name, request_method="DELETE")
 def delete_service_resource_view(request):
@@ -232,7 +232,8 @@ def delete_service_resource_view(request):
     return ru.delete_resource(request)
 
 
-@s.ServiceResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceResources_GET_responses)
+@s.ServiceResourcesAPI.get(schema=s.ServiceResources_GET_RequestSchema, tags=[s.ServicesTag],
+                           response_schemas=s.ServiceResources_GET_responses)
 @view_config(route_name=s.ServiceResourcesAPI.name, request_method="GET")
 def get_service_resources_view(request):
     """
@@ -277,7 +278,8 @@ def create_service_resource_view(request):
                               parent_id=parent_id, db_session=db_session)
 
 
-@s.ServiceTypeResourcesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypeResources_GET_responses)
+@s.ServiceTypeResourcesAPI.get(schema=s.ServiceTypeResources_GET_RequestSchema, tags=[s.ServicesTag],
+                               response_schemas=s.ServiceTypeResources_GET_responses)
 @view_config(route_name=s.ServiceTypeResourcesAPI.name, request_method="GET")
 def get_service_type_resources_view(request):
     """
@@ -299,7 +301,8 @@ def get_service_type_resources_view(request):
                          content={"resource_types": _get_resource_types_info(resource_types_names)})
 
 
-@s.ServiceTypeResourceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypeResourceTypes_GET_responses)
+@s.ServiceTypeResourceTypesAPI.get(schema=s.ServiceTypeResourceTypes_GET_RequestSchema, tags=[s.ServicesTag],
+                                   response_schemas=s.ServiceTypeResourceTypes_GET_responses)
 @view_config(route_name=s.ServiceTypeResourceTypesAPI.name, request_method="GET")
 def get_service_type_resource_types_view(request):
     """

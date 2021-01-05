@@ -950,6 +950,10 @@ class Resources_ResponseBodySchema(BaseResponseBodySchema):
     resources = ResourcesSchemaNode()
 
 
+class Resource_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = Resource_RequestPathSchema()
+
+
 class Resource_MatchDictCheck_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     description = "Resource query by id refused by db."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
@@ -988,8 +992,8 @@ class Resource_PATCH_RequestBodySchema(colander.MappingSchema):
 
 
 class Resource_PATCH_RequestSchema(BaseRequestSchemaAPI):
+    path = Resource_RequestPathSchema()
     body = Resource_PATCH_RequestBodySchema()
-    resource_id = ResourceIdParameter
 
 
 class Resource_PATCH_ResponseBodySchema(BaseResponseBodySchema):
@@ -1036,8 +1040,8 @@ class Resource_DELETE_RequestBodySchema(colander.MappingSchema):
 
 
 class Resource_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    path = Resource_RequestPathSchema()
     body = Resource_DELETE_RequestBodySchema()
-    resource_id = ResourceIdParameter
 
 
 class Resource_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
@@ -1107,6 +1111,10 @@ class Resources_POST_NotFoundResponseSchema(BaseResponseSchemaAPI):
 class Resources_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
     description = "Resource name already exists at requested tree level for creation."
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class ResourcePermissions_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = Resource_RequestPathSchema()
 
 
 class ResourcePermissions_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1467,6 +1475,10 @@ ServiceResource_DELETE_ForbiddenResponseSchema = Resource_DELETE_ForbiddenRespon
 ServiceResource_DELETE_OkResponseSchema = Resource_DELETE_OkResponseSchema
 
 
+class ServiceResources_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = Service_RequestPathSchema()
+
+
 class ServiceResources_GET_ResponseBodySchema(BaseResponseBodySchema):
     service_name = Resource_ServiceWithChildrenResourcesContainerBodySchema(name="{service_name}")
 
@@ -1474,6 +1486,10 @@ class ServiceResources_GET_ResponseBodySchema(BaseResponseBodySchema):
 class ServiceResources_GET_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Get service resources successful."
     body = ServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class ServiceTypeResources_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = ServiceType_RequestPathSchema()
 
 
 class ServiceTypeResourceInfo(colander.MappingSchema):
@@ -1515,6 +1531,10 @@ class ServiceTypeResources_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 class ServiceTypeResources_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Invalid 'service_type' does not exist to obtain its resource types."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class ServiceTypeResourceTypes_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = ServiceType_RequestPathSchema()
 
 
 class ServiceTypeResourceTypes_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1669,6 +1689,7 @@ class User_PATCH_RequestBodySchema(colander.MappingSchema):
 
 
 class User_PATCH_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
     body = User_PATCH_RequestBodySchema()
 
 
@@ -1690,6 +1711,10 @@ class User_PATCH_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 class User_PATCH_ConflictResponseSchema(BaseResponseSchemaAPI):
     description = "New name user already exists."
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class User_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
 
 
 class User_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1727,6 +1752,7 @@ class User_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
 
 
 class User_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
     body = colander.MappingSchema(default={})
 
 
@@ -1740,24 +1766,8 @@ class User_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class UserGroup_Check_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Invalid group name to associate to user."
-    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
-
-
-class UserGroup_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Group query was refused by db."
-    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
-
-
-class UserGroup_Check_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Group for new user doesn't exist."
-    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
-
-
-class UserGroup_Check_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Failed to add user-group to db."
-    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+class UserGroups_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
 
 
 class UserGroups_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1834,6 +1844,26 @@ class UserGroups_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
     body = UserGroups_POST_ConflictResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
+class UserGroup_Check_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid group name to associate to user."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class UserGroup_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Group query was refused by db."
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class UserGroup_Check_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Group for new user doesn't exist."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class UserGroup_Check_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Failed to add user-group to db."
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
 class UserGroup_DELETE_RequestSchema(BaseRequestSchemaAPI):
     body = colander.MappingSchema(default={})
 
@@ -1860,6 +1890,7 @@ class UserResources_GET_QuerySchema(QueryRequestSchemaAPI):
 
 
 class UserResources_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
     querystring = UserResources_GET_QuerySchema()
 
 
@@ -1904,6 +1935,7 @@ class UserResourcePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
 
 
 class UserResourcePermissions_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = UserResource_RequestPathSchema()
     querystring = UserResourcePermissions_GET_QuerySchema()
 
 

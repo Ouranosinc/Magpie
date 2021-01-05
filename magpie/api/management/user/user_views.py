@@ -36,7 +36,7 @@ def get_users_view(request):
                          detail=s.Users_GET_OkResponseSchema.description)
 
 
-@s.UsersAPI.post(schema=s.Users_POST_RequestSchema(), tags=[s.UsersTag], response_schemas=s.Users_POST_responses)
+@s.UsersAPI.post(schema=s.Users_POST_RequestSchema, tags=[s.UsersTag], response_schemas=s.Users_POST_responses)
 @view_config(route_name=s.UsersAPI.name, request_method="POST")
 def create_user_view(request):
     """
@@ -49,8 +49,8 @@ def create_user_view(request):
     return uu.create_user(user_name, password, email, group_name, db_session=request.db)
 
 
-@s.UserAPI.patch(schema=s.User_PATCH_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_PATCH_responses)
-@s.LoggedUserAPI.patch(schema=s.User_PATCH_RequestSchema(), tags=[s.LoggedUserTag],
+@s.UserAPI.patch(schema=s.User_PATCH_RequestSchema, tags=[s.UsersTag], response_schemas=s.User_PATCH_responses)
+@s.LoggedUserAPI.patch(schema=s.User_PATCH_RequestSchema, tags=[s.LoggedUserTag],
                        response_schemas=s.LoggedUser_PATCH_responses)
 @view_config(route_name=s.UserAPI.name, request_method="PATCH", permission=MAGPIE_LOGGED_PERMISSION)
 def update_user_view(request):
@@ -106,9 +106,10 @@ def update_user_view(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.Users_PATCH_OkResponseSchema.description)
 
 
-@s.UserAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.User_GET_responses)
-@s.LoggedUserAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
-                     response_schemas=s.LoggedUser_GET_responses)
+@s.UserAPI.get(schema=s.User_GET_RequestSchema, tags=[s.UsersTag],
+               response_schemas=s.User_GET_responses, api_security=s.SecurityEveryoneAPI)
+@s.LoggedUserAPI.get(schema=s.User_GET_RequestSchema, tags=[s.LoggedUserTag],
+                     response_schemas=s.LoggedUser_GET_responses, api_security=s.SecurityEveryoneAPI)
 @view_config(route_name=s.UserAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_view(request):
     """
@@ -119,8 +120,8 @@ def get_user_view(request):
                          detail=s.User_GET_OkResponseSchema.description)
 
 
-@s.UserAPI.delete(schema=s.User_DELETE_RequestSchema(), tags=[s.UsersTag], response_schemas=s.User_DELETE_responses)
-@s.LoggedUserAPI.delete(schema=s.User_DELETE_RequestSchema(), tags=[s.LoggedUserTag],
+@s.UserAPI.delete(schema=s.User_DELETE_RequestSchema, tags=[s.UsersTag], response_schemas=s.User_DELETE_responses)
+@s.LoggedUserAPI.delete(schema=s.User_DELETE_RequestSchema, tags=[s.LoggedUserTag],
                         response_schemas=s.LoggedUser_DELETE_responses)
 @view_config(route_name=s.UserAPI.name, request_method="DELETE", permission=MAGPIE_LOGGED_PERMISSION)
 def delete_user_view(request):
@@ -137,9 +138,10 @@ def delete_user_view(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 
 
-@s.UserGroupsAPI.get(tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI, response_schemas=s.UserGroups_GET_responses)
-@s.LoggedUserGroupsAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
-                           response_schemas=s.LoggedUserGroups_GET_responses)
+@s.UserGroupsAPI.get(schema=s.UserGroups_GET_RequestSchema, tags=[s.UsersTag],
+                     response_schemas=s.UserGroups_GET_responses, api_security=s.SecurityEveryoneAPI)
+@s.LoggedUserGroupsAPI.get(schema=s.UserGroups_GET_RequestSchema, tags=[s.LoggedUserTag],
+                           response_schemas=s.LoggedUserGroups_GET_responses, api_security=s.SecurityEveryoneAPI)
 @view_config(route_name=s.UserGroupsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_groups_view(request):
     """
@@ -151,9 +153,9 @@ def get_user_groups_view(request):
                          detail=s.UserGroups_GET_OkResponseSchema.description)
 
 
-@s.UserGroupsAPI.post(schema=s.UserGroups_POST_RequestSchema(), tags=[s.UsersTag],
+@s.UserGroupsAPI.post(schema=s.UserGroups_POST_RequestSchema, tags=[s.UsersTag],
                       response_schemas=s.UserGroups_POST_responses)
-@s.LoggedUserGroupsAPI.post(schema=s.UserGroups_POST_RequestSchema(), tags=[s.LoggedUserTag],
+@s.LoggedUserGroupsAPI.post(schema=s.UserGroups_POST_RequestSchema, tags=[s.LoggedUserTag],
                             response_schemas=s.LoggedUserGroups_POST_responses)
 @view_config(route_name=s.UserGroupsAPI.name, request_method="POST")
 def assign_user_group_view(request):
@@ -167,9 +169,9 @@ def assign_user_group_view(request):
                          content={"user_name": user.user_name, "group_name": group.group_name})
 
 
-@s.UserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema(), tags=[s.UsersTag],
+@s.UserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema, tags=[s.UsersTag],
                        response_schemas=s.UserGroup_DELETE_responses)
-@s.LoggedUserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema(), tags=[s.LoggedUserTag],
+@s.LoggedUserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema, tags=[s.LoggedUserTag],
                              response_schemas=s.LoggedUserGroup_DELETE_responses)
 @view_config(route_name=s.UserGroupAPI.name, request_method="DELETE")
 def delete_user_group_view(request):
@@ -264,9 +266,9 @@ def get_user_resource_permissions_view(request):
                                                      effective_permissions=effective_perms)
 
 
-@s.UserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema(), tags=[s.UsersTag],
+@s.UserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema, tags=[s.UsersTag],
                                    response_schemas=s.UserResourcePermissions_POST_responses)
-@s.LoggedUserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema(), tags=[s.LoggedUserTag],
+@s.LoggedUserResourcePermissionsAPI.post(schema=s.UserResourcePermissions_POST_RequestSchema, tags=[s.LoggedUserTag],
                                          response_schemas=s.LoggedUserResourcePermissions_POST_responses)
 @view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="POST")
 def create_user_resource_permissions_view(request):
@@ -279,9 +281,9 @@ def create_user_resource_permissions_view(request):
     return uu.create_user_resource_permission_response(user, resource, permission, request.db, overwrite=False)
 
 
-@s.UserResourcePermissionsAPI.put(schema=s.UserResourcePermissions_PUT_RequestSchema(), tags=[s.UsersTag],
+@s.UserResourcePermissionsAPI.put(schema=s.UserResourcePermissions_PUT_RequestSchema, tags=[s.UsersTag],
                                   response_schemas=s.UserResourcePermissions_PUT_responses)
-@s.LoggedUserResourcePermissionsAPI.put(schema=s.UserResourcePermissions_PUT_RequestSchema(), tags=[s.LoggedUserTag],
+@s.LoggedUserResourcePermissionsAPI.put(schema=s.UserResourcePermissions_PUT_RequestSchema, tags=[s.LoggedUserTag],
                                         response_schemas=s.LoggedUserResourcePermissions_PUT_responses)
 @view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="PUT")
 def replace_user_resource_permissions_view(request):
@@ -296,9 +298,9 @@ def replace_user_resource_permissions_view(request):
     return uu.create_user_resource_permission_response(user, resource, permission, request.db, overwrite=True)
 
 
-@s.UserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema(), tags=[s.UsersTag],
+@s.UserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema, tags=[s.UsersTag],
                                      response_schemas=s.UserResourcePermissions_DELETE_responses)
-@s.LoggedUserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema(),
+@s.LoggedUserResourcePermissionsAPI.delete(schema=s.UserResourcePermissions_DELETE_RequestSchema,
                                            tags=[s.LoggedUserTag],
                                            response_schemas=s.LoggedUserResourcePermissions_DELETE_responses)
 @view_config(route_name=s.UserResourcePermissionsAPI.name, request_method="DELETE")
@@ -312,9 +314,9 @@ def delete_user_resource_permissions_view(request):
     return uu.delete_user_resource_permission_response(user, resource, permission, request.db)
 
 
-@s.UserResourcePermissionAPI.delete(schema=s.UserResourcePermissionName_DELETE_RequestSchema(), tags=[s.UsersTag],
+@s.UserResourcePermissionAPI.delete(schema=s.UserResourcePermissionName_DELETE_RequestSchema, tags=[s.UsersTag],
                                     response_schemas=s.UserResourcePermissionName_DELETE_responses)
-@s.LoggedUserResourcePermissionAPI.delete(schema=s.UserResourcePermissionName_DELETE_RequestSchema(),
+@s.LoggedUserResourcePermissionAPI.delete(schema=s.UserResourcePermissionName_DELETE_RequestSchema,
                                           tags=[s.LoggedUserTag],
                                           response_schemas=s.LoggedUserResourcePermissionName_DELETE_responses)
 @view_config(route_name=s.UserResourcePermissionAPI.name, request_method="DELETE")
@@ -328,10 +330,10 @@ def delete_user_resource_permission_name_view(request):
     return uu.delete_user_resource_permission_response(user, resource, permission, request.db)
 
 
-@s.UserServicesAPI.get(tags=[s.UsersTag], schema=s.UserServices_GET_RequestSchema,
-                       api_security=s.SecurityEveryoneAPI, response_schemas=s.UserServices_GET_responses)
-@s.LoggedUserServicesAPI.get(tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
-                             response_schemas=s.LoggedUserServices_GET_responses)
+@s.UserServicesAPI.get(schema=s.UserServices_GET_RequestSchema, tags=[s.UsersTag],
+                       response_schemas=s.UserServices_GET_responses, api_security=s.SecurityEveryoneAPI)
+@s.LoggedUserServicesAPI.get(schema=s.UserServices_GET_RequestSchema, tags=[s.LoggedUserTag],
+                             response_schemas=s.LoggedUserServices_GET_responses, api_security=s.SecurityEveryoneAPI)
 @view_config(route_name=s.UserServicesAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_services_view(request):
     """
@@ -352,10 +354,10 @@ def get_user_services_view(request):
                          detail=s.UserServices_GET_OkResponseSchema.description)
 
 
-@s.UserServicePermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
+@s.UserServicePermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema(),
                                  tags=[s.UsersTag], api_security=s.SecurityEveryoneAPI,
                                  response_schemas=s.UserServicePermissions_GET_responses)
-@s.LoggedUserServicePermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema,
+@s.LoggedUserServicePermissionsAPI.get(schema=s.UserServicePermissions_GET_RequestSchema(),
                                        tags=[s.LoggedUserTag], api_security=s.SecurityEveryoneAPI,
                                        response_schemas=s.LoggedUserServicePermissions_GET_responses)
 @view_config(route_name=s.UserServicePermissionsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
