@@ -90,11 +90,11 @@ employed by `Magpie`:
 
 .. _`resolved permissions`:
 - **Resolved Permissions**:
-    Specific interpretation of :term:`Inherited Permissions`_ when there are multiple :term:`Applied Permissions`
+    Specific interpretation of :term:`Inherited Permissions` when there are multiple :term:`Applied Permissions`
     combinations to the :term:`User` and/or his :term:`Group` memberships. The *resolution* of all those definitions
     are interpreted on a per-:term:`Resource` basis to obtain an equivalent and unique :term:`Permission` matching
     the one with highest priority, only for that localized scope. This resulting *resolved* :term:`Permission` reduces
-    the set of defined :term:`Inherited Permissions`_ such that other entries on the same :term:`Resource` can be
+    the set of defined :term:`Inherited Permissions` such that other entries on the same :term:`Resource` can be
     ignored as they are either redundant or conflicting but of lesser priority. The resolution considers the various
     priorities according to their associated :term:`User`, :term:`Group`, :class:`Access` and :class:`Scope` attributes.
     See `Extended Representation`_ section for details.
@@ -194,7 +194,7 @@ For the first matched of the above steps, the condition is compared to the speci
 Access is granted or denied respectively to met or insufficient privileges against the |request_access_table|_ table.
 
 Every time a :term:`User`-scoped request is executed, the targeted :term:`Context User` is resolved accordingly to
-either the explicit ``{user_name}}`` value provided, or the auto-resolved :py:data:`magpie.constants.MAGPIE_LOGGED_USER`
+either the explicit ``{user_name}`` value provided, or the auto-resolved :py:data:`magpie.constants.MAGPIE_LOGGED_USER`
 value that implicitly retrieves the :term:`Request User` as equal to the :term:`Context User`.
 
 .. note::
@@ -456,14 +456,16 @@ resolution.
 Below are the resolution steps which are applied for every distinct :term:`Permission` ``name`` over a given
 :term:`Resource` for which :term:`ACL` must be obtained:
 
-.. |steps_resolve_inherited| replace:: :term:`Inherited Permissions` resolution
+.. cannot use the 'term' in replace, or it breaks the reference link creation
+.. |steps_resolve_inherited| replace:: Inherited Permissions resolution
+.. _steps_resolve_inherited:
 
 .. container:: bordered-caption
 
-    |steps_resolve_inherited|
+    :term:`Inherited Permissions` resolution
 
 .. container:: bordered-content
-    :name: steps_resolve_inherited
+    :name: steps_resolve_inherited_block
 
     1. Any :term:`Direct Permissions` applied explicitly for the evaluated :term:`User` and :term:`Resource` combination
        are obtained. Any such :term:`Permission`, whether it is affected by :attr:`Access.ALLOW` or :attr:`Access.DENY`
@@ -505,25 +507,26 @@ When resolving only :term:`Inherited Permissions`, the procedure stops here and 
 was found, with the corresponding ``reason``. An empty set of :term:`Permission` is returned if none could be found.
 
 When instead resolving :term:`Effective Permissions`, there are additional steps to the above
-:term:`Inherited Permissions` resolution to consider special use-cases relative to administrative access as well as
+|steps_resolve_inherited|_ to consider special use-cases relative to administrative access as well as
 scoped inheritance over the :term:`Resource` tree. The following resolution priority is accomplished:
 
-
-.. |steps_resolve_effective| replace:: :term:`Effective Permissions` resolution
+.. cannot use the 'term' in replace, or it breaks the reference link creation
+.. |steps_resolve_effective| replace:: Effective Permissions resolution
+.. _steps_resolve_effective:
 
 .. container:: bordered-caption
 
-    |steps_resolve_effective|
+    :term:`Effective Permissions` resolution
 
 .. container:: bordered-content
-    :name: steps_resolve_effective
+    :name: steps_resolve_effective_block
 
     1. Resolve administrative access (i.e.: full access).
        [only during :term:`Effective Permissions`]
     2. Resolution of :term:`Direct Permissions`.
-       [same as step (1) of :term:`Inherited Permissions` resolution]
+       [same as step (1) of |steps_resolve_inherited|_]
     3. Resolution of :term:`Inherited Permissions` from :term:`Group` memberships.
-       [same as step (2) of :term:`Inherited Permissions` resolution]
+       [same as step (2) of |steps_resolve_inherited|_]
     4. Rewinding of the :term:`Resource` tree to consider scoped inheritance.
        [only during :term:`Effective Permissions`]
 
@@ -559,16 +562,12 @@ Once the hierarchy rewinding process completes, the resolved :class:`Access` is 
 could be found at that point, the result defaults to :attr:`Access.DENY`, and is indicated by ``"no-permission"``
 for ``reason`` field. Following pseudo-code presents the overall procedure.
 
-.. |algo_resolve_effective| replace:: :term:`Effective Permissions` algorithm
-
-.. .. container:: bordered-caption
-    |algo_resolve_effective|
-
-.. .. container:: bordered-content
-    :name: steps_resolve_inherited
+.. cannot use the 'term' in replace, or it breaks the reference link creation
+.. _algo_resolve_effective:
+.. |algo_resolve_effective| replace:: Effective Permissions algorithm
 
 .. code-block::
-    :name: algo_resolve_effective
+    :name: algo_resolve_effective_block
     :caption: |algo_resolve_effective|
 
     (1)     // Initialization
