@@ -199,7 +199,8 @@ html_theme = "nature"
 # theme further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    "navigation_depth": 3,  # TOC, RTD theme
+    "navigation_depth": 3,   # TOC, RTD theme
+    "body_max_width": 1200,  # really narrow default 850, we are in widescreen era
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

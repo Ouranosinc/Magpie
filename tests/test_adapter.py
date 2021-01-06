@@ -28,7 +28,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.AdminTestCase, ti.BaseTestCase):
         cls.setup_admin()
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
-        cls.check_requirements()
+        cls.login_admin()
 
         # following will be wiped on setup
         cls.test_user_name = "unittest-service-user"

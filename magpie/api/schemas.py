@@ -360,10 +360,17 @@ class QueryRequestSchemaAPI(colander.MappingSchema):
 QueryEffectivePermissions = colander.SchemaNode(
     colander.Boolean(), name="effective", default=False, missing=colander.drop,
     description="Obtain user's effective permissions resolved with corresponding service inheritance functionality. "
-                "(Note: group inheritance is enforced regardless of other query parameter values).")
+                "(Note: Group inheritance is enforced regardless of 'inherited' query parameter values.)")
 QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), name="inherited", default=False, missing=colander.drop,
-    description="Include the user's groups memberships inheritance to resolve permissions.")
+    description="Include the user's groups memberships inheritance to retrieve all possible permissions. "
+                "(Note: Duplicate, redundant or conflicting permissions can be obtained considering applied group"
+                " permissions individually. See 'combined' query parameter to resolve such cases.)")
+QueryCombinedGroupsPermissions = colander.SchemaNode(
+    colander.Boolean(), name="combined", default=False, missing=colander.drop,
+    description="Combines corresponding user and groups inherited permissions into one, and locally resolves "
+                "for every resource the applicable permission modifiers considering group precedence. "
+                "(Note: Group inheritance is enforced regardless of 'inherited' query parameter.)")
 QueryFilterResources = colander.SchemaNode(
     colander.Boolean(), name="filtered", default=False, missing=colander.drop,
     description="Filter returned resources only where user has permissions on, either directly or inherited by groups "
@@ -613,7 +620,13 @@ class PermissionObjectTypeSchema(PermissionObjectSchema):
     type = colander.SchemaNode(
         colander.String(),
         description="Permission type being displayed.",
-        example=PermissionType.ALLOWED.value
+        example=PermissionType.ALLOWED.value,
+    )
+    reason = colander.SchemaNode(
+        colander.String(),
+        description="Description of user or group where this permission originated from.",
+        example="user:123:my-user",
+        missing=colander.drop,
     )
 
 
@@ -1728,6 +1741,7 @@ class UserGroup_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
 
 class UserResources_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
+    combined = QueryCombinedGroupsPermissions
     filtered = QueryFilterResources
 
 
@@ -1771,6 +1785,7 @@ class UserResourcePermissions_Check_ErrorResponseSchema(BaseResponseSchemaAPI):
 
 class UserResourcePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
+    combined = QueryCombinedGroupsPermissions
     effective = QueryEffectivePermissions
 
 
@@ -1823,7 +1838,7 @@ class UserResourcePermissions_GET_BadRequestResourceTypeResponseSchema(BaseRespo
 
 
 class UserResourcePermissions_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Specified user not found to obtain resource permissions."
+    description = "Specified user or resource not found to obtain permissions."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
@@ -1946,6 +1961,7 @@ class UserServiceResources_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 class UserServiceResources_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
+    combined = QueryCombinedGroupsPermissions
 
 
 class UserServiceResources_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2014,6 +2030,7 @@ class UserServices_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 class UserServicePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
+    combined = QueryCombinedGroupsPermissions
 
 
 class UserServicePermissions_GET_RequestSchema(BaseRequestSchemaAPI):

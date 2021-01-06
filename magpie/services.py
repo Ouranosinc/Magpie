@@ -15,11 +15,20 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.owsrequest import ows_parser_factory
-from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
+from magpie.permissions import (
+    PERMISSION_REASON_ADMIN,
+    PERMISSION_REASON_DEFAULT,
+    PERMISSION_REASON_MULTIPLE,
+    Access,
+    Permission,
+    PermissionSet,
+    PermissionType,
+    Scope
+)
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
+    from typing import Collection, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 
     from pyramid.request import Request
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
@@ -276,18 +285,28 @@ class ServiceInterface(object):
         admin_group = get_constant("MAGPIE_ADMIN_GROUP", self.request)
         admin_group = GroupService.by_group_name(admin_group, db_session=db_session)
         if admin_group in user.groups:  # noqa
-            return [PermissionSet(perm, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE) for perm in permissions]
+            return [
+                PermissionSet(perm, access=Access.ALLOW, scope=Scope.MATCH,
+                              typ=PermissionType.EFFECTIVE, reason=PERMISSION_REASON_ADMIN)
+                for perm in permissions
+            ]
 
+        # level at which last permission was found, -1 if not found
+        # employed to resolve with *closest* scope and for applicable 'reason' combination on same level
+        effective_level = dict()  # type: Dict[Permission, Optional[int]]
+        current_level = 1   # one-based to avoid ``if level:`` check failing with zero
+        full_break = False
         # current and parent resource(s) recursive-scope
-        match = allow_match
-        while resource is not None:  # bottom-up until service is reached
+        while resource is not None and not full_break:  # bottom-up until service is reached
 
             # include both permissions set in database as well as defined directly on resource
             cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=db_session)
             cur_res_perms.extend(permission_to_pyramid_acls(resource.__acl__))
 
             for perm_name in requested_perms:
-                for perm_tup in cur_res_perms:
+                if full_break:
+                    break
+                for i, perm_tup in enumerate(cur_res_perms):
                     perm_set = PermissionSet(perm_tup)
 
                     # if user is owner (directly or via groups), all permissions are set,
@@ -300,45 +319,71 @@ class ServiceInterface(object):
                         #   ownership permissions since these can be attributed to *any user* while explicit deny are
                         #   definitely set by an admin-level user.
                         for perm in requested_perms:
-                            all_perm = PermissionSet(perm, perm_set.access, perm.scope, perm.type)
                             if perm_set.access == Access.DENY:
+                                all_perm = PermissionSet(perm, perm_set.access, perm.scope, PermissionType.OWNED)
                                 effective_perms[perm] = all_perm
                             else:
+                                all_perm = PermissionSet(perm, perm_set.access, perm.scope, PermissionType.OWNED)
                                 effective_perms.setdefault(perm, all_perm)
-                    # skip if the current permission must not be processed (at all or for the moment until next iter)
+                        full_break = True
+                        break
+                    # skip if the current permission must not be processed (at all or for the moment until next 'name')
                     elif perm_set.name not in requested_perms or perm_set.name != perm_name:
                         continue
-                    # only first resource can use match, parents are recursive-only
-                    if not match and perm_set.scope == Scope.MATCH:
+                    # only first resource can use match (if even enabled with found one), parents are recursive-only
+                    if not allow_match and perm_set.scope == Scope.MATCH:
+                        continue
+                    # pick the first permission if none was found up to this point
+                    prev_perm = effective_perms.get(perm_name)
+                    scope_level = effective_level.get(perm_name)
+                    if not prev_perm:
+                        effective_perms[perm_name] = perm_set
+                        effective_level[perm_name] = current_level
                         continue
 
-                    # less obvious use case for both of the following user/group blocks:
-                    #   no need to check explicitly for ALLOW since it was either already set during previous iteration
-                    #   (at that moment, perm=None) or DENY was already set, and DENY takes precedence over ALLOW anyway
-
                     # user direct permissions have priority over inherited ones from groups
-                    # if inherited permission was found during previous iteration, overwrite it with direct permission
+                    # if inherited permission was found during previous iteration, override it with direct permission
                     if perm_set.type == PermissionType.DIRECT:
-                        perm = effective_perms.get(perm_name)
-                        # explicit user direct DENY overrides user direct ALLOW if any already found
-                        # if inherited permission was previously set, user direct ALLOW has priority over inherited DENY
-                        # if permission name not already found, ALLOW/DENY is set regardless (first occurrence)
-                        if perm is None or perm.type == PermissionType.INHERITED or perm_set.access == Access.DENY:
+                        # - reset resolution scope of previous permission attributed to group as it takes precedence
+                        # - since there can't be more than one user permission-name per resource on a given level,
+                        #   scope resolution is done after applying this *closest* permission, ignore higher level ones
+                        if prev_perm.type == PermissionType.INHERITED or not scope_level:  #######################perm_set.access == Access.DENY:
                             effective_perms[perm_name] = perm_set
+                            effective_level[perm_name] = current_level
                         continue  # final decision for this user, skip any group permissions
 
-                    # otherwise check for group(s) inherited permission, all groups have equal priority
-                    # explicit group inherited DENY overrides group inherited ALLOW if permission name was already found
-                    # if permission name not already found, ALLOW/DENY is set regardless (first occurrence)
-                    perm = effective_perms.get(perm_name)
-                    if perm is None or (perm.type == PermissionType.INHERITED and perm_set.access == Access.DENY):
-                        effective_perms[perm_name] = perm_set
+                    # resolve prioritized permission according to ALLOW/DENY, scope and group priority
+                    # (see 'PermissionSet.resolve' method for extensive details)
+                    # skip if last permission is not on group to avoid redundant USER > GROUP check processed before
+                    elif prev_perm.type == PermissionType.INHERITED:
+                        # - If new permission to process is done against the previous permission from *same* tree-level,
+                        #   there is a possibility to combine equal priority groups. In such case, reason is 'MULTIPLE'.
+                        # - If not of equal priority, the appropriate permission is selected and reason is overridden
+                        #   accordingly by the new higher priority permission.
+                        # - If no permission was defined at all (first occurrence), also set it using current permission
+                        if scope_level in [None, current_level]:
+                            resolved_perm = PermissionSet.resolve(perm_set, prev_perm, context=PermissionType.EFFECTIVE)
+                            effective_perms[perm_name] = resolved_perm
+                            effective_level[perm_name] = current_level
+                        # - If new permission is at *different* tree-level, it applies only if the group has higher
+                        #   priority than the previous one, to respect the *closest* scope to the target resource.
+                        #   Same priorities are ignored as they were already resolved by *closest* scope above.
+                        # - Reset scope level with new permission such that another permission of same group priority as
+                        #   that could be processed in next iteration can be compared against it, to resolve 'access'
+                        #   priority between them.
+                        elif perm_set.group_priority > prev_perm.group_priority:
+                            effective_perms[perm_name] = perm_set
+                            effective_level[perm_name] = current_level
 
             # don't bother moving to parent if everything is resolved already
-            if len(effective_perms) == len(requested_perms):
+            #   can only assume nothing left to resolve if all permissions are direct on user (highest priority)
+            #   if any found permission is group inherited, higher level user permission could still override it
+            if (len(effective_perms) == len(requested_perms) and
+                    all(perm.type == PermissionType.DIRECT for perm in effective_perms.values())):
                 break
             # otherwise, move to parent if any available, since we are not done rewinding the resource tree
-            match = False
+            allow_match = False  # reset match not applicable anymore for following parent resources
+            current_level += 1
             if resource.parent_id:
                 resource = ResourceService.by_resource_id(resource.parent_id, db_session=db_session)
             else:
@@ -349,7 +394,9 @@ class ServiceInterface(object):
         missing_perms = set(permissions) - resolved_perms
         final_perms = set(effective_perms.values())  # type: Set[PermissionSet]
         for perm_name in missing_perms:
-            final_perms.add(PermissionSet(perm_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE))
+            perm = PermissionSet(perm_name, access=Access.DENY, scope=Scope.MATCH,
+                                 typ=PermissionType.EFFECTIVE, reason=PERMISSION_REASON_DEFAULT)
+            final_perms.add(perm)
         # enforce type and scope (use MATCH to make it explicit that it applies specifically for this resource)
         for perm in final_perms:
             perm.type = PermissionType.EFFECTIVE

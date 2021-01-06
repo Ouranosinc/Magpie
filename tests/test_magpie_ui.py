@@ -10,6 +10,7 @@ Tests for :mod:`magpie.ui` module.
 
 import re
 import unittest
+from typing import TYPE_CHECKING
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
@@ -19,6 +20,11 @@ from magpie.permissions import Access, Permission, PermissionSet, PermissionType
 from magpie.services import ServiceAPI, ServiceWPS
 from tests import runner, utils
 from tests.utils import TestVersion
+
+if TYPE_CHECKING:
+    from typing import Union
+
+    from magpie.typedefs import Str
 
 
 @runner.MAGPIE_TEST_UI
@@ -72,7 +78,7 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
         cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
         cls.version = utils.TestSetup.get_Version(cls)
         cls.setup_admin()
-        cls.check_requirements()
+        cls.login_admin()
         cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_ui-user-local",
                                           raise_missing=False, raise_not_set=False)
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_ui-group-local",
@@ -103,7 +109,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, use_ui_form_submit=True)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.setup_admin()
-        cls.check_requirements()
+        cls.login_admin()
 
         cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_ui-user-local",
                                           raise_missing=False, raise_not_set=False)
@@ -197,6 +203,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 
         # utilities for later tests
         def to_ui_permission(permission):
+            # type: (Union[Str, PermissionSet]) -> Str
             return permission.explicit_permission if isinstance(permission, PermissionSet) else ""
 
         def check_ui_resource_permissions(perm_form, resource_id, permissions):
@@ -216,10 +223,13 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 urp_path = "/users/{}/resources/{}/permissions".format(self.test_user_name, _r_id)
                 urp_resp = utils.test_request(self, "GET", urp_path)
                 urp_body = utils.check_response_basic_info(urp_resp)
-                ur_perms = [perm for perm in _r_perms if isinstance(perm, PermissionSet)]
+                ur_perms = [perm.json() for perm in _r_perms if isinstance(perm, PermissionSet)]
                 for perm in ur_perms:
-                    perm.type = PermissionType.DIRECT
-                utils.check_all_equal(urp_body["permissions"], [perms.json() for perms in ur_perms], any_order=True)
+                    perm["type"] = PermissionType.DIRECT.value
+                permissions = urp_body["permissions"]
+                for perm in permissions:
+                    perm.pop("reason", None)  # >= 3.4, don't care for this test
+                utils.check_all_equal(permissions, ur_perms, any_order=True)
 
         # 0. goto user edit page (default first service selected)
         path = "/ui/users/{}/default".format(self.test_user_name)
@@ -331,7 +341,7 @@ class TestCase_MagpieUI_UsersAuth_Remote(ti.Interface_MagpieUI_UsersAuth, unitte
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_missing=False, raise_not_set=False)
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_missing=False, raise_not_set=False)
         cls.setup_admin()
-        cls.check_requirements()
+        cls.login_admin()
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-user-auth_ui-user-remote",
                                           raise_missing=False, raise_not_set=False)
@@ -351,13 +361,14 @@ class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unitte
 
     @classmethod
     def setUpClass(cls):
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_missing=False, raise_not_set=False)
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_missing=False, raise_not_set=False)
         cls.url = get_constant("MAGPIE_TEST_REMOTE_SERVER_URL")
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
-        cls.require = "cannot run tests without logged in '{}' user".format(get_constant("MAGPIE_ADMIN_GROUP"))
+        cls.require = "cannot run tests without logged in '{}' user".format(cls.grp)
         cls.setup_admin()
-        cls.check_requirements()
+        cls.login_admin()
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_ui-user-remote",
                                           raise_missing=False, raise_not_set=False)

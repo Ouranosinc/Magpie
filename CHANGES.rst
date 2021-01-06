@@ -7,7 +7,27 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``Group`` priority to resolve inherited permission resolution in case of multiple entries from different
+  group memberships of the evaluated ``User``.
+* Add ``reason`` field to returned ``Permission`` objects to help better comprehend the provenance of a composed
+  set of permissions from ``User`` and its multiple ``Group`` memberships.
+* Make *special* ``MAGPIE_ANONYMOUS_GROUP`` have less priority than other *generic* ``Group`` to allow reverting
+  public ``DENY`` permission by one of those more specific ``Group`` with ``ALLOW`` permission.
+* Simplify and combine multiple permission resolution steps into ``PermissionSet.resolve`` method.
+* Resolve permissions according to *closest* ``Resource`` scope against applicable priorities.
+* Update documentation with more permission resolution concepts and examples.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix invalid submission of ``Group`` memberships from ``User`` edit UI page to ignore ``MAGPIE_ANONYMOUS_GROUP``
+  presence or omission since it cannot be edited regardless (blocked by API).
+* Fix session retrieval in case of erroneous cookie token provided in request and not matching any valid ``User``.
+  This could happen in case of previously valid ``User`` token employed right after it got deleted, making
+  corresponding ID unresolvable until invalidated by timeout or forgotten, or by plain forgery of invalid tokens.
+* Fix returned ``Group`` ID in response from creation request. Value was ``None`` and required second request to get
+  the actual value. The ID is returned immediately with expected value.
 
 `3.4.0 <https://github.com/Ouranosinc/Magpie/tree/3.4.0>`_ (2020-12-09)
 ------------------------------------------------------------------------------------
@@ -108,7 +128,7 @@ Bug Fixes
   take effect. Same fix applied for ``ServiceTHREDDS`` for corresponding directory and file typed ``Resource``.
 * Propagate SSL verify option of generated service definition if provided to `Twitcher` obtained from ``MagpieAdapter``.
 * Adjust and validate parsing of ``ServiceWPS`` request using ``POST`` XML body
-  (fixes `157 <https://github.com/Ouranosinc/Magpie/issues/157>`_).
+  (fixes `#157 <https://github.com/Ouranosinc/Magpie/issues/157>`_).
 
 `3.0.0 <https://github.com/Ouranosinc/Magpie/tree/3.0.0>`_ (2020-10-19)
 ------------------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+import math
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, Type
 
-    from magpie.typedefs import AccessControlListType, Str
+    from magpie.typedefs import AccessControlListType, GroupPriority, Str
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
@@ -41,6 +42,8 @@ def get_session_callable(request):
 
 
 class Group(GroupMixin, Base):
+    _priority = None
+
     def get_member_count(self, db_session=None):
         return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
 
@@ -50,6 +53,22 @@ class Group(GroupMixin, Base):
         Indicates if the group is discoverable for users to self-register to it.
         """
         return sa.Column(sa.Boolean(), default=False)
+
+    @property
+    def priority(self):
+        # type: () -> GroupPriority
+        """
+        Sorting priority weight of the group for resolving conflicting permissions.
+        """
+        if self._priority is not None:
+            return self._priority
+        if self.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP"):
+            self._priority = -1  # lowest of all for *special* public group
+        elif self.group_name == get_constant("MAGPIE_ADMIN_GROUP"):
+            self._priority = math.inf  # everything will be lower than admins
+        else:
+            self._priority = 0  # nothing can be lower/equal to anonymous, equal for any *generic* group
+        return self._priority
 
 
 class GroupPermission(GroupPermissionMixin, Base):

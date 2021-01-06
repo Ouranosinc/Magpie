@@ -39,6 +39,7 @@ def format_group(group, basic_info=False, public_info=False, db_session=None):
         if is_public:
             return info
         info["discoverable"] = grp.discoverable
+        info["priority"] = grp.priority
         info["member_count"] = grp.get_member_count(db_session)
         info["user_names"] = [usr.user_name for usr in grp.users]
         return info

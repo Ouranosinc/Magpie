@@ -206,7 +206,7 @@ class ManagementViews(BaseViews):
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
     def add_user(self):
-        groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_ANONYMOUS_GROUP", self.request))
         return_data = {"invalid_user_name": False, "invalid_user_email": False, "invalid_password": False,
                        # 'Invalid' used as default in case pre-checks did not find anything, but API returned 400
                        "reason_user_name": "Invalid", "reason_group_name": "Invalid", "reason_user_email": "Invalid",
@@ -234,7 +234,7 @@ class ManagementViews(BaseViews):
                 return_data["reason_user_email"] = "Conflict"
             if user_email == "":
                 return_data["invalid_user_email"] = True
-            if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH"):
+            if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH", self.request):
                 return_data["invalid_user_name"] = True
                 return_data["reason_user_name"] = "Too Long"
             if user_name in self.get_user_names():
@@ -292,7 +292,7 @@ class ManagementViews(BaseViews):
         inherit_grp_perms = self.request.matchdict.get("inherit_groups_permissions", False)
 
         own_groups = self.get_user_groups(user_name)
-        all_groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_USERS_GROUP"))
+        all_groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_USERS_GROUP", self.request))
 
         # TODO:
         #   Until the api is modified to make it possible to request from the RemoteResource table,
@@ -413,8 +413,9 @@ class ManagementViews(BaseViews):
 
             # edits to groups checkboxes
             if is_edit_group_membership:
+                anonymous_group = get_constant("MAGPIE_ANONYMOUS_GROUP", self.request)
                 selected_groups = self.request.POST.getall("member")
-                removed_groups = list(set(own_groups) - set(selected_groups))
+                removed_groups = list(set(own_groups) - set(selected_groups) - {anonymous_group})
                 new_groups = list(set(selected_groups) - set(own_groups))
                 for group in removed_groups:
                     path = schemas.UserGroupAPI.path.format(user_name=user_name, group_name=group)

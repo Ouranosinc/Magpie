@@ -22,7 +22,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, List, Optional, Union
+    from typing import Any, Iterable, List, Optional, Union
 
     from pyramid.request import Request
 
@@ -336,11 +336,14 @@ def get_value_matchdict_checked(request, key, check_type=six.string_types, patte
 
 
 def get_query_param(request, case_insensitive_key, default=None):
-    # type: (Request, Str, Optional[Any]) -> Any
+    # type: (Request, Union[Str, Iterable[Str]], Optional[Any]) -> Any
     """
     Retrieves a query string value by name (case insensitive), or returns the default if not present.
     """
+    if not isinstance(case_insensitive_key, (list, set, tuple)):
+        case_insensitive_key = [case_insensitive_key]
     for param in request.params:
-        if param.lower() == case_insensitive_key:
-            return request.params.get(param)
+        for key in case_insensitive_key:
+            if param.lower() == key.lower():
+                return request.params.get(param)
     return default

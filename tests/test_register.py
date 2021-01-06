@@ -54,7 +54,7 @@ class TestRegister(interfaces.BaseAdminTestCase, unittest.TestCase):
         cls.test_perm_grp_name = "test-group-perms-config"
 
     def setUp(self):
-        self.check_requirements()
+        self.login_admin()
         utils.TestSetup.delete_TestService(self, override_service_name=self.test_perm_svc_name)
         utils.TestSetup.delete_TestGroup(self, override_group_name=self.test_perm_grp_name)
 
