@@ -456,14 +456,14 @@ resolution.
 Below are the resolution steps which are applied for every distinct :term:`Permission` ``name`` over a given
 :term:`Resource` for which :term:`ACL` must be obtained:
 
-.. |algo_resolve_inherited| replace:: :term:`Inherited Permissions` resolution
+.. |steps_resolve_inherited| replace:: :term:`Inherited Permissions` resolution
 
 .. container:: bordered-caption
 
-    |algo_resolve_inherited|
+    |steps_resolve_inherited|
 
 .. container:: bordered-content
-    :name: algo_resolve_inherited
+    :name: steps_resolve_inherited
 
     1. Any :term:`Direct Permissions` applied explicitly for the evaluated :term:`User` and :term:`Resource` combination
        are obtained. Any such :term:`Permission`, whether it is affected by :attr:`Access.ALLOW` or :attr:`Access.DENY`
@@ -504,20 +504,45 @@ priority, and will therefore resolve conflicting :class:`Access` using the norma
 When resolving only :term:`Inherited Permissions`, the procedure stops here and provides the applicable result if any
 was found, with the corresponding ``reason``. An empty set of :term:`Permission` is returned if none could be found.
 
-When instead resolving :term:`Effective Permissions`, there is an additional pre-step to (1) that verifies if
-the :term:`User` is a member for ``MAGPIE_ADMIN_GROUP``. In such case, :attr:`Access.ALLOW` is immediately returned
-for every possible :term:`Allowed Permissions` for the targeted :term:`Resource` without further resolution involved.
+When instead resolving :term:`Effective Permissions`, there are additional steps to the above
+:term:`Inherited Permissions` resolution to consider special use-cases relative to administrative access as well as
+scoped inheritance over the :term:`Resource` tree. The following resolution priority is accomplished:
+
+
+.. |steps_resolve_effective| replace:: :term:`Effective Permissions` resolution
+
+.. container:: bordered-caption
+
+    |steps_resolve_effective|
+
+.. container:: bordered-content
+    :name: steps_resolve_effective
+
+    1. Resolve administrative access (i.e.: full access).
+       [only during :term:`Effective Permissions`]
+    2. Resolution of :term:`Direct Permissions`.
+       [same as step (1) of :term:`Inherited Permissions` resolution]
+    3. Resolution of :term:`Inherited Permissions` from :term:`Group` memberships.
+       [same as step (2) of :term:`Inherited Permissions` resolution]
+    4. Rewinding of the :term:`Resource` tree to consider scoped inheritance.
+       [only during :term:`Effective Permissions`]
+
+
+In this case, step (1) that verifies if the :term:`User` is a member for ``MAGPIE_ADMIN_GROUP``.
+In such case, :attr:`Access.ALLOW` is immediately returned for every possible :term:`Allowed Permissions` for the
+targeted :term:`Resource` without further resolution involved.
 The reason why this check is accomplished only during :term:`Effective Permissions` resolution is to avoid over
 populating the database with ``MAGPIE_ADMIN_GROUP`` :term:`Permission` for every possible :term:`Resource`. It can be
 noted that effectively, ``"administrator"`` reason will never be returned when requesting any other type of
-:term:`Permission`, as there is no need to explicitly define ``MAGPIE_ADMIN_GROUP`` :term:`Applied Permissions`.
-Furthermore, doing the pre-check step ensures that ``MAGPIE_ADMIN_GROUP`` members are always granted full access
+:term:`Permission` than when specifying ``effective=true`` query, as there is no need to explicitly define
+``MAGPIE_ADMIN_GROUP`` :term:`Applied Permissions`.
+Furthermore, doing this pre-check step ensures that ``MAGPIE_ADMIN_GROUP`` members are always granted full access
 regardless of any explicit :term:`Applied Permission` that could exist for that *special* :term:`Group`.
 
 When the :term:`User` is not a member of ``MAGPIE_ADMIN_GROUP``, :term:`Effective Permissions` would then pursue with
-the traditional resolution listed earlier. The resolution process continues by rewinding the parent :term:`Resource`
-hierarchy until the first :term:`Permission` is found, or until reaching the top-most :term:`Service`. Only on the
-first iteration (when the targeted :term:`Resource` is the same as the one looked for potential
+the traditional |steps_resolve_inherited|_ listed earlier. The resolution process continues by rewinding the parent
+:term:`Resource` hierarchy until the first :term:`Permission` is found, or until reaching the top-most :term:`Service`.
+Only on the first iteration (when the targeted :term:`Resource` is the same as the one looked for potential
 :term:`Inherited Permissions`) does :attr:`Scope.MATCH` take effect. Only :attr:`Scope.RECURSIVE` are considered
 afterwards.
 
@@ -527,20 +552,20 @@ When the first :term:`Permission` is found, the procedure *remembers* the :class
 :term:`Inherited Permissions`. Otherwise, the process continues rewinding further until an higher priority
 :term:`Group` or any :term:`Direct Permissions` are found. An higher priority would override the previously matched
 resolution scope and replaces the resolved :class:`Access`, while equal or lower priorities are ignored.
-Doing so ensures that any :term:`Applied Permissions` *closer* to the target :term:`Resource` are respected, unless a
+Doing so ensures that any :term:`Applied Permissions` *closer* to the targeted :term:`Resource` are respected, unless a
 more important :term:`User` or :term:`Group` precedence dictates otherwise.
 
 Once the hierarchy rewinding process completes, the resolved :class:`Access` is returned. If still no :term:`Permission`
 could be found at that point, the result defaults to :attr:`Access.DENY`, and is indicated by ``"no-permission"``
 for ``reason`` field. Following pseudo-code presents the overall procedure.
 
-.. |algo_resolve_effective| replace:: :term:`Effective Permissions` resolution
+.. |algo_resolve_effective| replace:: :term:`Effective Permissions` algorithm
 
 .. .. container:: bordered-caption
     |algo_resolve_effective|
 
 .. .. container:: bordered-content
-    :name: algo_resolve_inherited
+    :name: steps_resolve_inherited
 
 .. code-block::
     :name: algo_resolve_effective
