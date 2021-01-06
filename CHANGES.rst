@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`3.5.0 <https://github.com/Ouranosinc/Magpie/tree/3.5.0>`_ (2021-01-06)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``Group`` priority to resolve inherited permission resolution in case of multiple entries from different
