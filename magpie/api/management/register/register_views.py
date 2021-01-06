@@ -100,12 +100,12 @@ def handle_temporary_url(request):
     """
     Handles the operation according to the provided temporary URL token.
     """
-    token = ar.get_value_matchdict_checked(request, key="token", pattern=ax.UUID_REGEX)
-    token = token.split(":")[-1]  # remove optional prefix if any
+    str_token = ar.get_value_matchdict_checked(request, key="token", pattern=ax.UUID_REGEX)
+    str_token = str_token.split(":")[-1]  # remove optional prefix if any (e.g.: 'urn:uuid:')
     db_session = request.db
-    tmp_url = models.TemporaryToken.by_token(token, db_session=db_session)
-    ax.verify_param(tmp_url, not_none=True,
-                    http_error=HTTPNotFound, content={"token": str(token)},
+    tmp_token = models.TemporaryToken.by_token(str_token, db_session=db_session)
+    ax.verify_param(tmp_token, not_none=True,
+                    http_error=HTTPNotFound, content={"token": str(str_token)},
                     msg_on_fail=s.TemporaryURL_GET_NotFoundResponseSchema.description)
-    ru.handle_temporary_token(tmp_url, db_session=db_session)
+    ru.handle_temporary_token(tmp_token, db_session=db_session)
     return ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)

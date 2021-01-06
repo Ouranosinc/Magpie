@@ -32,9 +32,9 @@ def handle_temporary_token(tmp_token, db_session):
     Handles the operation according to the provided temporary token.
     """
     if tmp_token.expired():
-        token = tmp_token.token
-        tmp_token.delete(db_session)
-        ax.raise_http(HTTPGone, content={"token": str(token)}, detail=s.TemporaryUrl_GET_GoneResponseSchema.description)
+        str_token = str(tmp_token.token)
+        db_session.delete(tmp_token)
+        ax.raise_http(HTTPGone, content={"token": str_token}, detail=s.TemporaryURL_GET_GoneResponseSchema.description)
     ax.verify_param(tmp_token.operation, is_in=True, param_compare=TokenOperation.values(),
                     param_name="token", http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
     if tmp_token.operation == TokenOperation.GROUP_ACCEPT_TERMS:
@@ -48,7 +48,7 @@ def handle_temporary_token(tmp_token, db_session):
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         # TODO: reset procedure
         ax.raise_http(HTTPNotImplemented, detail="Not Implemented")
-    tmp_token.delete(db_session)
+    db_session.delete(tmp_token)
 
 
 def get_discoverable_groups(db_session):
