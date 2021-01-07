@@ -282,7 +282,9 @@ def get_test_webhook_app(webhook_url):
     def webhook_request(request):
         # Simulates a webhook url call
         user = request.POST["user_name"]
-        temp_url = request.POST["temp_url"]
+
+        #TODO: fix temp_url, should be optional? delete has no temp_url
+        #temp_url = request.POST["temp_url"]
 
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1

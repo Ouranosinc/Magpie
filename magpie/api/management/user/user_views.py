@@ -5,6 +5,7 @@ import multiprocessing
 
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
+from pyramid.threadlocal import get_current_registry
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -21,7 +22,7 @@ from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION
 from magpie.permissions import PermissionType, format_permissions
 from magpie.register import get_all_configs
 from magpie.services import SERVICE_TYPE_DICT
-from magpie.utils import get_logger
+from magpie.utils import get_logger, get_settings
 
 LOGGER = get_logger(__name__)
 
@@ -140,16 +141,12 @@ def delete_user_view(request):
                      http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
 
     # Check for webhook requests
-    config_path = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
-                               raise_missing=False, raise_not_set=False, print_missing=True)
-    if config_path:
-        webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
-        for cfg in webhook_configs:
-            if "delete" in cfg.keys() and len(cfg["delete"]) > 0:
-                # Execute all webhook requests
-                pool = multiprocessing.Pool(processes=len(cfg["delete"]))
-                args = [(url, user.user_name) for url in cfg["delete"]]
-                pool.starmap_async(ar.webhook_request, args, error_callback=ar.webhook_error_callback)
+    webhooks = get_settings(get_current_registry())["webhooks"]["delete_user"]
+    if len(webhooks) > 0:
+        # Execute all webhook requests
+        pool = multiprocessing.Pool(processes=len(webhooks))
+        args = [(webhook["url"], webhook["payload"], {"user_name": user.user_name}) for webhook in webhooks]
+        pool.starmap_async(ar.webhook_request, args, error_callback=ar.webhook_error_callback)
 
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 

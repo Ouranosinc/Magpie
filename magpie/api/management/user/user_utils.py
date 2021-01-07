@@ -11,6 +11,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
+from pyramid.threadlocal import get_current_registry
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -25,9 +26,8 @@ from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
-from magpie.register import get_all_configs
 from magpie.services import service_factory
-from magpie.utils import get_logger
+from magpie.utils import get_logger, get_settings
 
 LOGGER = get_logger(__name__)
 
@@ -113,16 +113,13 @@ def create_user(user_name, password, email, group_name, db_session):
         new_user_groups.append(anonym_grp_name)
 
     # Check for webhook requests
-    config_path = get_constant("MAGPIE_CONFIG_PATH", default_value=None,
-                               raise_missing=False, raise_not_set=False, print_missing=True)
-    if config_path:
-        webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
-        for cfg in webhook_configs:
-            if "create" in cfg.keys() and len(cfg["create"]) > 0:
-                # Execute all webhook requests
-                pool = multiprocessing.Pool(processes=len(cfg["create"]))
-                args = [(url, user_name) for url in cfg["create"]]
-                pool.starmap_async(ar.webhook_request, args, error_callback=ar.webhook_error_callback)
+    webhooks = get_settings(get_current_registry())["webhooks"]["create_user"]
+    if len(webhooks) > 0:
+        # Execute all webhook requests
+        pool = multiprocessing.Pool(processes=len(webhooks))
+        args = [(webhook["url"], webhook["payload"], {"user_name": user_name, "temp_url": "temp_url:80/todo"})
+                for webhook in webhooks]
+        pool.starmap_async(ar.webhook_request, args, error_callback=ar.webhook_error_callback)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": uf.format_user(new_user, new_user_groups)})

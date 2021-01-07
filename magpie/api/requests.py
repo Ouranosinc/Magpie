@@ -347,14 +347,27 @@ def get_query_param(request, case_insensitive_key, default=None):
     return default
 
 
-def webhook_request(webhook_url, user_name):
+def webhook_request(webhook_url, webhook_payload, params):
     # type: (Str, Str) -> None
     """
     Sends a webhook request using the input url.
     """
+    # Use default temp_url if it is not defined in the input parameters
+    # TODO
+    # if "temp_url" not in params:
+    #     params["temp_url"] = "temp_url:80/todo"
+
+    # These are the parameters permitted to use the template form in the webhook payload.
+    webhook_template_params = ["user_name", "temp_url"]
+
+    for template_param in webhook_template_params:
+        if template_param in params:
+            for k,v in webhook_payload.items():
+                webhook_payload[k] = v.replace("{" + template_param + "}", params[template_param])
+
     # TODO: create a real temp_url that will be called if the webhook service has an error
     #  this would also set the user's status to 0
-    requests.post(webhook_url, data={"user_name": user_name, "temp_url": "temp_url:80/todo"})
+    requests.post(webhook_url, data=webhook_payload)
 
 
 def webhook_error_callback(exception):
