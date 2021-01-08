@@ -30,13 +30,15 @@
 .. _LLNL: https://www.llnl.gov/
 .. _PCMDI: http://pcmdi.llnl.gov
 .. _SMHI: https://www.smhi.se
-.. _GitHub: https://developer.github.com/v3/#authentication
+.. _GitHub_AuthN: https://docs.github.com/developers/apps/identifying-and-authorizing-users-for-github-apps
+.. _Github_OAuthApp: https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/
 .. _WSO2: https://wso2.com/
+.. _WSO2_doc: https://docs.wso2.com/display/IS550/WSO2+Identity+Server+Documentation
 
 .. file/source references
 .. _configuration: configuration.rst
 .. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
-.. _`docker-compose.yml.example`: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
+.. _docker-compose.yml.example: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
 .. _magpie-cron: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 .. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
 .. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini

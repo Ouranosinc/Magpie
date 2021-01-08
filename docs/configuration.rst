@@ -771,14 +771,12 @@ this :term:`Authentication` procedure.
 GitHub Settings
 ~~~~~~~~~~~~~~~~~
 
-To use `GitHub`_ authentication provider, variables ``GITHUB_CLIENT_ID`` and ``GITHUB_CLIENT_SECRET`` must be
-configured. These settings correspond to the values retrieved from following steps described in
-`Creating an OAuth App`_.
+To use `GitHub_AuthN`_ authentication provider, variables ``GITHUB_CLIENT_ID`` and ``GITHUB_CLIENT_SECRET``
+must be configured. These settings correspond to the values retrieved from following steps described in
+`Creating an OAuth App <Github_OAuthApp`_.
 
 Furthermore, the callback URL used for configuring the OAuth application on Github must match the running `Magpie`
 instance URL. For this reason, the values of ``MAGPIE_URL``, ``MAGPIE_HOST`` and ``HOSTNAME`` must be considered.
-
-.. _Creating an OAuth App: https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/
 
 WSO2 Settings
 ~~~~~~~~~~~~~~~~~
@@ -792,7 +790,4 @@ To use `WSO2`_ authentication provider, following variables must be set:
 - ``WSO2_SSL_VERIFY``
 
 To configure your `Magpie` instance as a trusted application for ``WSO2`` (and therefore retrieve values of above
-parameters), please refer to `WSO2 Identity Server Documentation`_.
-
-
-.. _WSO2 Identity Server Documentation: https://docs.wso2.com/display/IS550/WSO2+Identity+Server+Documentation
+parameters), please refer to `WSO2 Identity Server Documentation <WSO2_doc>`_.
