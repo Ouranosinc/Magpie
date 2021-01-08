@@ -4,6 +4,7 @@ User Views, both for specific user-name provided as request path variable and sp
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
+from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
 
@@ -163,7 +164,13 @@ def assign_user_group_view(request):
     Assign a user to a group.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    group = ar.get_group_matchdict_checked(request)
+
+    group_name = ar.get_value_multiformat_body_checked(request, "group_name")
+    group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
+                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                             msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
+    ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
+                    msg_on_fail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
     uu.assign_user_group(user, group, db_session=request.db)
     return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
                          content={"user_name": user.user_name, "group_name": group.group_name})
