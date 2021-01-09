@@ -2061,8 +2061,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_GetUserResourcePermissions_MultipleGroupPermissions(self):
         """
-        Validate the merging strategy that produces ``inherited``, ``resolved`` and ``effective`` permissions with
-        query parameters considering user is member of *multiple groups* which each can have conflicting permission
+        Validate the merging strategy that produces ``inherited``, ``resolved`` and ``effective`` permissions with query
+        parameters considering user is member of *multiple groups* which each can have conflicting permission
         specifications on a corresponding resource.
 
         .. seealso::
@@ -2272,8 +2272,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_GetUserResourcePermissions_PermissionsHierarchyResolution(self):
         """
-        Extensive test validating combined resolution against user, *normal* group, and *special* group  priorities,
-        and considering that each combination has multi-level permission defined to resolve inheritance, as well as
+        Extensive test validating combined resolution against user, *normal* group, and *special* group  priorities, and
+        considering that each combination has multi-level permission defined to resolve inheritance, as well as
         Allow/Deny modifiers permutations applied on different level in the resources hierarchy.
 
         The hierarchy is defined for each case as::
@@ -2326,7 +2326,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # order is not really important for actual test, but they are somewhat placed by least to more specific,
         # and by least to more restrictive, for 1st/2nd resource, to help lookup during debug in case of problem
         combinations = [
-            # pylint: disable=E501
+            # pylint: disable=C0301
             #                +------------------------------------------------+-------------+ matching single-entry
             #                |                                                |             | (inherited/resolved)
             #      +---------c------+-------------+ matching single-entry     |             |
@@ -2334,15 +2334,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             #      v         v      v             v                           v             v
             #  items to create  |     expected permissions on service     |     expected permissions on resource    |  test
             #  (applied perms)  | inherited     resolved      effective   | inherited     resolved      effective   |  case
-            (a_n, p_A, a_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),  #  1
-            (a_n, p_A, a_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  2
-            (a_n, p_D, a_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),  #  3
-            (a_n, p_D, a_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  #  4
-            (a_n, p_A, g_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  #  5
-            (a_n, p_A, g_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  6
-            (a_n, p_D, g_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  #  7
-            (a_n, p_D, g_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  #  8
-            (a_n, p_A, u_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  #  9
+            (a_n, p_A, a_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),  # 01
+            (a_n, p_A, a_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  # 02
+            (a_n, p_D, a_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),  # 03
+            (a_n, p_D, a_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  # 04
+            (a_n, p_A, g_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 05
+            (a_n, p_A, g_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 06
+            (a_n, p_D, g_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 07
+            (a_n, p_D, g_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 08
+            (a_n, p_A, u_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 09
             (a_n, p_A, u_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 10
             (a_n, p_D, u_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 11
             (a_n, p_D, u_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 12
@@ -2535,8 +2535,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_GetUserResourcePermissions_EffectivePermissions_MatchWithinRecursiveResolution(self):
         """
-        Validates that :term:`Effective Resolution` works when :term:`Permission` with :attr:`Scope.MATCH` is defined
-        *within* a scope where a :term:`Permission` with :attr:`Scope.RECURSIVE` exists
+        Validates resolution of :term:`Effective Resolution` works when :term:`Permission` with :attr:`Scope.MATCH` is
+        defined *within* a scope where a :term:`Permission` with :attr:`Scope.RECURSIVE` exists
 
         Legend::
 

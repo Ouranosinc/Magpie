@@ -7,7 +7,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add URL endpoint to receive temporary tokens to complete pending operations.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix rendering of path parameter details within OpenAPI schemas.
 
 `3.5.0 <https://github.com/Ouranosinc/Magpie/tree/3.5.0>`_ (2021-01-06)
 ------------------------------------------------------------------------------------

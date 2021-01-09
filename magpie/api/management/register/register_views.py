@@ -1,7 +1,15 @@
 from typing import TYPE_CHECKING
 
 from pyramid.authentication import Authenticated
-from pyramid.httpexceptions import HTTPConflict, HTTPCreated, HTTPForbidden, HTTPInternalServerError, HTTPOk
+from pyramid.httpexceptions import (
+    HTTPConflict,
+    HTTPCreated,
+    HTTPForbidden,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk
+)
+from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.view import view_config
 
 from magpie import models
@@ -33,7 +41,8 @@ def get_discoverable_groups_view(request):
                          detail=s.RegisterGroups_GET_OkResponseSchema.description)
 
 
-@s.RegisterGroupAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
+@s.RegisterGroupAPI.get(schema=s.RegisterGroup_GET_RequestSchema,
+                        tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
                         response_schemas=s.RegisterGroup_GET_responses)
 @view_config(route_name=s.RegisterGroupAPI.name, request_method="GET", permission=Authenticated)
 def get_discoverable_group_info_view(request):
@@ -82,3 +91,21 @@ def leave_discoverable_group_view(request):
     group = ru.get_discoverable_group_by_name(group.group_name, db_session=request.db)
     uu.delete_user_group(user, group, request.db)
     return ax.valid_http(http_success=HTTPOk, detail=s.RegisterGroup_DELETE_OkResponseSchema.description)
+
+
+@s.TemporaryUrlAPI.get(schema=s.TemporaryURL_GET_RequestSchema, tags=[s.RegisterTag],
+                       response_schemas=s.TemporaryURL_GET_responses)
+@view_config(route_name=s.TemporaryUrlAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
+def handle_temporary_url(request):
+    """
+    Handles the operation according to the provided temporary URL token.
+    """
+    str_token = ar.get_value_matchdict_checked(request, key="token", pattern=ax.UUID_REGEX)
+    str_token = str_token.split(":")[-1]  # remove optional prefix if any (e.g.: 'urn:uuid:')
+    db_session = request.db
+    tmp_token = models.TemporaryToken.by_token(str_token, db_session=db_session)
+    ax.verify_param(tmp_token, not_none=True,
+                    http_error=HTTPNotFound, content={"token": str(str_token)},
+                    msg_on_fail=s.TemporaryURL_GET_NotFoundResponseSchema.description)
+    ru.handle_temporary_token(tmp_token, db_session=db_session)
+    return ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)

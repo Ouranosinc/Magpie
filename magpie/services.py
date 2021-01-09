@@ -18,7 +18,6 @@ from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import (
     PERMISSION_REASON_ADMIN,
     PERMISSION_REASON_DEFAULT,
-    PERMISSION_REASON_MULTIPLE,
     Access,
     Permission,
     PermissionSet,
@@ -28,7 +27,7 @@ from magpie.permissions import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Collection, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
+    from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
 
     from pyramid.request import Request
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
@@ -306,7 +305,7 @@ class ServiceInterface(object):
             for perm_name in requested_perms:
                 if full_break:
                     break
-                for i, perm_tup in enumerate(cur_res_perms):
+                for perm_tup in cur_res_perms:
                     perm_set = PermissionSet(perm_tup)
 
                     # if user is owner (directly or via groups), all permissions are set,
@@ -328,7 +327,7 @@ class ServiceInterface(object):
                         full_break = True
                         break
                     # skip if the current permission must not be processed (at all or for the moment until next 'name')
-                    elif perm_set.name not in requested_perms or perm_set.name != perm_name:
+                    if perm_set.name not in requested_perms or perm_set.name != perm_name:
                         continue
                     # only first resource can use match (if even enabled with found one), parents are recursive-only
                     if not allow_match and perm_set.scope == Scope.MATCH:
@@ -347,7 +346,7 @@ class ServiceInterface(object):
                         # - reset resolution scope of previous permission attributed to group as it takes precedence
                         # - since there can't be more than one user permission-name per resource on a given level,
                         #   scope resolution is done after applying this *closest* permission, ignore higher level ones
-                        if prev_perm.type == PermissionType.INHERITED or not scope_level:  #######################perm_set.access == Access.DENY:
+                        if prev_perm.type == PermissionType.INHERITED or not scope_level:
                             effective_perms[perm_name] = perm_set
                             effective_level[perm_name] = current_level
                         continue  # final decision for this user, skip any group permissions
@@ -355,7 +354,7 @@ class ServiceInterface(object):
                     # resolve prioritized permission according to ALLOW/DENY, scope and group priority
                     # (see 'PermissionSet.resolve' method for extensive details)
                     # skip if last permission is not on group to avoid redundant USER > GROUP check processed before
-                    elif prev_perm.type == PermissionType.INHERITED:
+                    if prev_perm.type == PermissionType.INHERITED:
                         # - If new permission to process is done against the previous permission from *same* tree-level,
                         #   there is a possibility to combine equal priority groups. In such case, reason is 'MULTIPLE'.
                         # - If not of equal priority, the appropriate permission is selected and reason is overridden
