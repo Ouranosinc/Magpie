@@ -27,7 +27,7 @@ from magpie.services import service_factory
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, Iterable, List, Optional
+    from typing import Iterable, List, Optional
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
@@ -171,7 +171,7 @@ def assign_user_group(user, group, db_session):
     ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, with_param=False,
                     http_error=HTTPConflict, content={"user_name": user.user_name, "group_name": group.group_name},
                     msg_on_fail=s.UserGroups_POST_ConflictResponseSchema.description)
-    ax.evaluate_call(lambda: request.db.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
+    ax.evaluate_call(lambda: db_session.add(models.UserGroup(group_id=group.id, user_id=user.id)),  # noqa
                      fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
                      content={"user_name": user.user_name, "group_name": group.group_name})

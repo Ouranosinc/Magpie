@@ -89,6 +89,7 @@ employed by `Magpie`:
         ``inherited`` (with ``ed``) is now the *official* parameter. The older variant remains supported and equivalent.
 
 .. _`resolved permissions`:
+
 - **Resolved Permissions**:
     Specific interpretation of :term:`Inherited Permissions` when there are multiple :term:`Applied Permissions`
     combinations to the :term:`User` and/or his :term:`Group` memberships. The *resolution* of all those definitions
@@ -803,7 +804,7 @@ This example will demonstrate the simultaneous resolution of all following conce
 It is recommended to have a general understanding of all the concepts by going though corresponding sections that
 describe them individually and in more details.
 
-We start by defining the following :term:`Service` and :term:`Resource` hierarchy. We employ the `ServiceAPI`_
+We start by defining the following :term:`Service` and :term:`Resource` hierarchy. We employ the :ref:`ServiceAPI`
 implementation that only allows one type of :term:`Resource` (i.e.: ``route``), and that easily converts path elements
 into the given hierarchy. In this case, every :term:`Resource` can be applied with either :attr:`Permission.READ`
 (``r``) or :attr:`Permission.WRITE` (``w``).

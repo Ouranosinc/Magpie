@@ -1342,6 +1342,7 @@ class TestSetup(object):
                                    ):                               # type: (...) -> JSON
         """
         Creates a two-level tree with the test resource nested *immediately* under the test service.
+
         Test service gets created if it did not exist beforehand, but its information are not returned.
 
         .. seealso::

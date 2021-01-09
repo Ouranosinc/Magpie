@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import HTTPForbidden, HTTPGone, HTTPNotFound, HTTPInternalServerError, HTTPNotImplemented
 from ziggurat_foundations.models.services.group import GroupService
-from ziggurat_foundations.models.services.user import UserService
 
 from magpie.api import exception as ax
 from magpie.api import schemas as s
@@ -23,7 +22,7 @@ class TokenOperation(ExtendedEnum):
     Supported operations by the temporary tokens.
     """
     GROUP_ACCEPT_TERMS = "group-accept-terms"
-    USER_PASSWORD_RESET = "user-password-reset"
+    USER_PASSWORD_RESET = "user-password-reset"  # nosec: B105
 
 
 def handle_temporary_token(tmp_token, db_session):

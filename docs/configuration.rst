@@ -753,7 +753,7 @@ this :term:`Authentication` procedure.
 |                                +-----------------------------------------------------------------------+
 |                                | *Swedish Meteorological and Hydrological Institute* (`SMHI`_)         |
 +--------------------------------+-----------------------------------------------------------------------+
-| ``OAuth2``                     | `GitHub`_ Authentication                                              |
+| ``OAuth2``                     | `GitHub_AuthN`_ Authentication                                        |
 |                                +-----------------------------------------------------------------------+
 |                                | `WSO2`_ Open Source Identity Server                                   |
 +--------------------------------+-----------------------------------------------------------------------+
@@ -773,7 +773,7 @@ GitHub Settings
 
 To use `GitHub_AuthN`_ authentication provider, variables ``GITHUB_CLIENT_ID`` and ``GITHUB_CLIENT_SECRET``
 must be configured. These settings correspond to the values retrieved from following steps described in
-`Creating an OAuth App <Github_OAuthApp`_.
+`Creating an OAuth App <Github_OAuthApp>`_.
 
 Furthermore, the callback URL used for configuring the OAuth application on Github must match the running `Magpie`
 instance URL. For this reason, the values of ``MAGPIE_URL``, ``MAGPIE_HOST`` and ``HOSTNAME`` must be considered.

@@ -198,7 +198,6 @@ class PermissionSet(object):
 
                 # not equivalent to raw sorting
                 list(sorted(permission_strings))
-
         """
         if not isinstance(other, PermissionSet):
             other = PermissionSet(other)

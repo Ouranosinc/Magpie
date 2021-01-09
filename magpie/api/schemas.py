@@ -268,7 +268,7 @@ HomepageAPI = Service(
     path="/",
     name="homepage")
 TemporaryUrlAPI = Service(
-    path="/tmp/{token}",
+    path="/tmp/{token}",  # nosec: B108
     name="temporary_url")
 
 
@@ -428,6 +428,7 @@ TAG_DESCRIPTIONS = {
 }
 
 # Header definitions
+
 
 class AcceptType(colander.SchemaNode):
     schema_type = colander.String

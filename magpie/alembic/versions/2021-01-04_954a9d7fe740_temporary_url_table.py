@@ -1,5 +1,5 @@
 """
-Temporary URL table
+Temporary URL table.
 
 Revision ID: 954a9d7fe740
 Revises: cfe64807c143
