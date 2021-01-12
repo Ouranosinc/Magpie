@@ -25,6 +25,7 @@ from magpie.api import schemas as s
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
+from magpie.api.webhooks import webhook_request
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
@@ -125,7 +126,7 @@ def create_user(user_name, password, email, group_name, db_session):
         pool = multiprocessing.Pool(processes=len(webhooks))
         args = [(webhook, {"user_name": user_name, "tmp_url": "tmp_url:80/todo"}, True)
                 for webhook in webhooks]
-        pool.starmap_async(ar.webhook_request, args)
+        pool.starmap_async(webhook_request, args)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": user_content})

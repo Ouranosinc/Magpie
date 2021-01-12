@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 from pyramid.settings import asbool
 from pyramid_beaker import set_cache_regions_from_settings
 
+from magpie.api.webhooks import WEBHOOK_KEYS, WEBHOOK_ACTIONS, HTTP_METHODS
 from magpie.cli.register_defaults import register_defaults
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
@@ -19,19 +20,6 @@ from magpie.security import get_auth_config
 from magpie.utils import get_logger, patch_magpie_url, print_log
 
 LOGGER = get_logger(__name__)
-
-WEBHOOK_KEYS = {
-    "name",
-    "action",
-    "method",
-    "url",
-    "payload"
-}
-WEBHOOK_ACTIONS = [
-    "create_user",
-    "delete_user"
-]
-HTTP_METHODS = ["GET", "OPTIONS", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
 
 def main(global_config=None, **settings):  # noqa: F811
