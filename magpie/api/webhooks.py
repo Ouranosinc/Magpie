@@ -1,11 +1,16 @@
+import multiprocessing
+
+from pyramid.threadlocal import get_current_registry
 import requests
 import transaction
 
+from magpie.api.schemas import UserWebhookErrorStatus
 from magpie.constants import MAGPIE_INI_FILE_PATH
 from magpie.db import get_db_session_from_config_ini
 from magpie import models
-from magpie.utils import get_logger
+from magpie.utils import get_logger, get_settings
 
+# List of keys that should be found for a single webhook item in the config
 WEBHOOK_KEYS = {
     "name",
     "action",
@@ -13,25 +18,46 @@ WEBHOOK_KEYS = {
     "url",
     "payload"
 }
+
+# List of possible actions associated with a webhook
+WEBHOOK_CREATE_USER_ACTION = "create_user"
+WEBHOOK_DELETE_USER_ACTION = "delete_user"
 WEBHOOK_ACTIONS = [
-    "create_user",
-    "delete_user"
+    WEBHOOK_CREATE_USER_ACTION,
+    WEBHOOK_DELETE_USER_ACTION
 ]
+
+# These are the parameters permitted to use the template form in the webhook payload.
+WEBHOOK_TEMPLATE_PARAMS = ["user_name", "tmp_url"]
+
 HTTP_METHODS = ["GET", "OPTIONS", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
 LOGGER = get_logger(__name__)
 
 
-def webhook_request(webhook_config, params, update_user_status_on_error=False):
+def process_webhook_requests(action, payload, update_user_status_on_error=False):
+    """
+    Checks the config for any webhooks that correspond to the input action, and prepares corresponding requests
+    :param action: tag identifying which webhooks to use in the config
+    :param payload: dictionary containing the parameters used for the request
+    :param update_user_status_on_error: update the user status or not in case of a webhook error
+    """
+    # Check for webhook requests
+    webhooks = get_settings(get_current_registry())["webhooks"][action]
+    if len(webhooks) > 0:
+        # Execute all webhook requests
+        pool = multiprocessing.Pool(processes=len(webhooks))
+        args = [(webhook, payload, update_user_status_on_error) for webhook in webhooks]
+        pool.starmap_async(send_webhook_request, args)
+
+
+def send_webhook_request(webhook_config, params, update_user_status_on_error=False):
     # type: (Dict, Dict, bool) -> None
     """
-    Sends a webhook request using the input url.
+    Sends a single webhook request using the input config.
     """
-    # These are the parameters permitted to use the template form in the webhook payload.
-    webhook_template_params = ["user_name", "tmp_url"]
-
     # Replace each instance of template parameters if a corresponding value was defined in input
-    for template_param in webhook_template_params:
+    for template_param in WEBHOOK_TEMPLATE_PARAMS:
         if template_param in params:
             for k,v in webhook_config["payload"].items():
                 webhook_config["payload"][k] = v.replace("{" + template_param + "}", params[template_param])
@@ -51,5 +77,5 @@ def webhook_update_error_status(user_name):
     """
     # find user and change its status to 0 to indicate a webhook error happened
     db_session = get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
-    db_session.query(models.User).filter(models.User.user_name == user_name).update({"status": 0})
+    db_session.query(models.User).filter(models.User.user_name == user_name).update({"status": UserWebhookErrorStatus})
     transaction.commit()

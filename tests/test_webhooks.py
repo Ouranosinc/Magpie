@@ -14,6 +14,8 @@ import yaml
 
 import requests
 
+from magpie.api.schemas import UserWebhookErrorStatus
+from magpie.api.webhooks import WEBHOOK_CREATE_USER_ACTION, WEBHOOK_DELETE_USER_ACTION
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils
@@ -78,14 +80,14 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": "create_user",
+                    "action": WEBHOOK_CREATE_USER_ACTION,
                     "method": "POST",
                     "url": create_webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
                 },
                 {
                     "name": "test_webhook_2",
-                    "action": "create_user",
+                    "action": WEBHOOK_CREATE_USER_ACTION,
                     "method": "POST",
                     "url": create_webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
@@ -154,7 +156,7 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": "create_user",
+                    "action": WEBHOOK_CREATE_USER_ACTION,
                     "method": "POST",
                     "url": webhook_fail_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
@@ -186,7 +188,7 @@ class TestWebhooks(unittest.TestCase):
             resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             info = utils.TestSetup.get_UserInfo(self, override_body=body)
-            utils.check_val_equal(info["status"], 0)
+            utils.check_val_equal(info["status"], UserWebhookErrorStatus)
 
     def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
         """
@@ -198,7 +200,7 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": "create_user",
+                    "action": WEBHOOK_CREATE_USER_ACTION,
                     "method": "POST",
                     "url": webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
@@ -228,7 +230,7 @@ class TestWebhooks(unittest.TestCase):
             resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             info = utils.TestSetup.get_UserInfo(self, override_body=body)
-            utils.check_val_equal(info["status"], 0)
+            utils.check_val_equal(info["status"], UserWebhookErrorStatus)
 
     def test_Webhook_DeleteUser(self):
         """
@@ -240,14 +242,14 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": "delete_user",
+                    "action": WEBHOOK_DELETE_USER_ACTION,
                     "method": "POST",
                     "url": delete_webhook_url,
                     "payload": {"user_name": "{user_name}"}
                 },
                 {
                     "name": "test_webhook_2",
-                    "action": "delete_user",
+                    "action": WEBHOOK_DELETE_USER_ACTION,
                     "method": "POST",
                     "url": delete_webhook_url,
                     "payload": {"user_name": "{user_name}"}
@@ -331,7 +333,7 @@ class TestFailingWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook_app",
-                    "action": "create_user",
+                    "action": WEBHOOK_CREATE_USER_ACTION,
                     "method": "POST",
                     "url": create_webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}

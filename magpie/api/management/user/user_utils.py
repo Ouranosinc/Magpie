@@ -1,4 +1,3 @@
-import multiprocessing
 from typing import TYPE_CHECKING
 
 import six
@@ -11,7 +10,6 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
-from pyramid.threadlocal import get_current_registry
 import transaction
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -20,16 +18,15 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 
 from magpie import models
 from magpie.api import exception as ax
-from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
-from magpie.api.webhooks import webhook_request
+from magpie.api.webhooks import process_webhook_requests, WEBHOOK_CREATE_USER_ACTION
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
-from magpie.utils import get_logger, get_settings
+from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -119,14 +116,8 @@ def create_user(user_name, password, email, group_name, db_session):
     # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
     transaction.commit()
 
-    # Check for webhook requests
-    webhooks = get_settings(get_current_registry())["webhooks"]["create_user"]
-    if len(webhooks) > 0:
-        # Execute all webhook requests
-        pool = multiprocessing.Pool(processes=len(webhooks))
-        args = [(webhook, {"user_name": user_name, "tmp_url": "tmp_url:80/todo"}, True)
-                for webhook in webhooks]
-        pool.starmap_async(webhook_request, args)
+    # Process any webhook requests
+    process_webhook_requests(WEBHOOK_CREATE_USER_ACTION, {"user_name": user_name, "tmp_url": "tmp_url:80/todo"}, True)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": user_content})

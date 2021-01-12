@@ -98,6 +98,10 @@ def service_api_route_info(service_api, **kwargs):
 _LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
 LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
 
+# Values for the 'status' field in the Users database
+UserOKStatus = 1
+UserWebhookErrorStatus = 0
+
 SwaggerGenerator = Service(
     path="/json",
     name="swagger_schema_json")
