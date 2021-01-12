@@ -136,7 +136,8 @@ class TestWebhooks(unittest.TestCase):
 
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
-            # Wait for the webhook requests to complete
+            # Wait for the potential webhook requests to complete
+            # In this case, there should be no webhook request to execute
             sleep(1)
 
             # Check if user creation was successful even if no webhook were defined in the config

@@ -30,7 +30,7 @@ WEBHOOK_ACTIONS = [
 # These are the parameters permitted to use the template form in the webhook payload.
 WEBHOOK_TEMPLATE_PARAMS = ["user_name", "tmp_url"]
 
-HTTP_METHODS = ["GET", "OPTIONS", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
+HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
 LOGGER = get_logger(__name__)
 
@@ -66,6 +66,7 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
         resp = requests.request(webhook_config["method"], webhook_config["url"], data=webhook_config["payload"])
         resp.raise_for_status()
     except requests.exceptions.RequestException as e:
+        LOGGER.error(f"An exception has occured with the webhook : {webhook_config['name']}")
         LOGGER.error(str(e))
         if "user_name" in params.keys() and update_user_status_on_error:
             webhook_update_error_status(params["user_name"])

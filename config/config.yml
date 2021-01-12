@@ -37,11 +37,11 @@ groups:
 
 # Definitions of all the webhooks urls that will be called when creating or deleting a users.
 webhooks:
-  create :
-    - <url1>
-    - <url2>
-    - ...
-  delete :
-    - <url1>
-    - <url2>
-    - ...
+  - name: <webhook_name>
+    action: create_user | remove_user
+    method: GET | HEAD | POST | PUT | PATCH | DELETE
+    url: <location>
+    payload: # add any parameters required with the webhook url here
+      <param_name> : <param_value>
+      ...
+
