@@ -279,16 +279,30 @@ def get_test_webhook_app(webhook_url):
     """
     Instantiate a local test application used for the prehook for user creation and deletion.
     """
-    def webhook_request(request):
-        # Simulates a webhook url call
+    def webhook_create_request(request):
+        # Simulates a webhook url call during user creation
         user = request.POST["user_name"]
-
-        #TODO: fix temp_url, should be optional? delete has no temp_url
-        #temp_url = request.POST["temp_url"]
+        tmp_url = request.POST["tmp_url"]
 
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
-        return Response("Successful webhook url with user " + user + " and temp_url " + temp_url)
+        return Response("Successful webhook url with user " + user + " and tmp_url " + tmp_url)
+
+    def webhook_delete_request(request):
+        # Simulates a webhook url call during user deletion
+        user = request.POST["user_name"]
+
+        # Status is incremented to count the number of successful test webhooks
+        settings["webhook_status"] += 1
+        return Response("Successful webhook url with user " + user)
+
+    def webhook_fail_request(request):
+        # Simulates a webhook url call during user creation
+        user = request.POST["user_name"]
+        tmp_url = request.POST["tmp_url"]
+
+        #TODO: call tmp_url
+        return Response()
 
     def get_status(request):
         # Returns the status number
@@ -302,10 +316,17 @@ def get_test_webhook_app(webhook_url):
         settings = config.registry.settings
         # Initialize status
         settings["webhook_status"] = 0
-        config.add_route("webhook", "/webhook")
+        config.add_route("webhook_create", "/webhook_create")
+        config.add_route("webhook_delete", "/webhook_delete")
+        config.add_route("webhook_fail", "/webhook_fail")
         config.add_route("get_status", "/get_status")
         config.add_route("reset_status", "/reset_status")
-        config.add_view(webhook_request, route_name="webhook", request_method="POST", request_param="user_name")
+        config.add_view(webhook_create_request, route_name="webhook_create",
+                        request_method="POST", request_param=("user_name", "tmp_url"))
+        config.add_view(webhook_delete_request, route_name="webhook_delete",
+                        request_method="POST", request_param="user_name")
+        config.add_view(webhook_fail_request, route_name="webhook_fail",
+                        request_method="POST", request_param=("user_name", "tmp_url"))
         config.add_view(get_status, route_name="get_status", request_method="GET")
         config.add_view(reset_status, route_name="reset_status", request_method="POST")
         webhook_app_instance = config.make_wsgi_app()

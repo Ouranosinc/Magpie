@@ -20,7 +20,6 @@ from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
 from magpie.permissions import PermissionType, format_permissions
-from magpie.register import get_all_configs
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger, get_settings
 
@@ -145,8 +144,8 @@ def delete_user_view(request):
     if len(webhooks) > 0:
         # Execute all webhook requests
         pool = multiprocessing.Pool(processes=len(webhooks))
-        args = [(webhook["url"], webhook["payload"], {"user_name": user.user_name}) for webhook in webhooks]
-        pool.starmap_async(ar.webhook_request, args, error_callback=ar.webhook_error_callback)
+        args = [(webhook, {"user_name": user.user_name}) for webhook in webhooks]
+        pool.starmap_async(ar.webhook_request, args)
 
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 

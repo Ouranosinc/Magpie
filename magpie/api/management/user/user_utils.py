@@ -12,6 +12,7 @@ from pyramid.httpexceptions import (
     HTTPOk
 )
 from pyramid.threadlocal import get_current_registry
+import transaction
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -112,17 +113,22 @@ def create_user(user_name, password, email, group_name, db_session):
         _add_to_group(new_user, _get_group(anonym_grp_name))
         new_user_groups.append(anonym_grp_name)
 
+    user_content = uf.format_user(new_user, new_user_groups)
+
+    # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
+    transaction.commit()
+
     # Check for webhook requests
     webhooks = get_settings(get_current_registry())["webhooks"]["create_user"]
     if len(webhooks) > 0:
         # Execute all webhook requests
         pool = multiprocessing.Pool(processes=len(webhooks))
-        args = [(webhook["url"], webhook["payload"], {"user_name": user_name, "temp_url": "temp_url:80/todo"})
+        args = [(webhook, {"user_name": user_name, "tmp_url": "tmp_url:80/todo"}, True)
                 for webhook in webhooks]
-        pool.starmap_async(ar.webhook_request, args, error_callback=ar.webhook_error_callback)
+        pool.starmap_async(ar.webhook_request, args)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
-                         content={"user": uf.format_user(new_user, new_user_groups)})
+                         content={"user": user_content})
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session, overwrite=False):

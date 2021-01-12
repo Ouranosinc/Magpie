@@ -10,6 +10,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPUnprocessableEntity
 )
+import transaction
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -17,7 +18,8 @@ from ziggurat_foundations.models.services.user import UserService
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.constants import get_constant
+from magpie.constants import get_constant, MAGPIE_INI_FILE_PATH
+from magpie.db import get_db_session_from_config_ini
 from magpie.permissions import PermissionSet
 from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
@@ -347,34 +349,34 @@ def get_query_param(request, case_insensitive_key, default=None):
     return default
 
 
-def webhook_request(webhook_url, webhook_payload, params):
-    # type: (Str, Str) -> None
+def webhook_request(webhook_config, params, update_user_status_on_error=False):
+    # type: (Dict, Dict, bool) -> None
     """
     Sends a webhook request using the input url.
     """
-    # Use default temp_url if it is not defined in the input parameters
-    # TODO
-    # if "temp_url" not in params:
-    #     params["temp_url"] = "temp_url:80/todo"
-
     # These are the parameters permitted to use the template form in the webhook payload.
-    webhook_template_params = ["user_name", "temp_url"]
+    webhook_template_params = ["user_name", "tmp_url"]
 
+    # Replace each instance of template parameters if a corresponding value was defined in input
     for template_param in webhook_template_params:
         if template_param in params:
-            for k,v in webhook_payload.items():
-                webhook_payload[k] = v.replace("{" + template_param + "}", params[template_param])
+            for k,v in webhook_config["payload"].items():
+                webhook_config["payload"][k] = v.replace("{" + template_param + "}", params[template_param])
 
-    # TODO: create a real temp_url that will be called if the webhook service has an error
-    #  this would also set the user's status to 0
-    requests.post(webhook_url, data=webhook_payload)
+    try:
+        resp = requests.request(webhook_config["method"], webhook_config["url"], data=webhook_config["payload"])
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        LOGGER.error(str(e))
+        if "user_name" in params.keys() and update_user_status_on_error:
+            webhook_update_error_status(params["user_name"])
 
 
-def webhook_error_callback(exception):
-    # type: (requests.exceptions) -> None
+def webhook_update_error_status(user_name):
     """
-    Error callback function called if an error occurs in the webhook_call function.
+    Updates the user's status to indicate an error occured with the webhook requests
     """
-    # TODO : (related to TODO in webhook_call function) handle errors occuring in the thread for the webhook_call
-    #  change user's status to 0?
-    LOGGER.error(str(exception))
+    # find user and change its status to 0 to indicate a webhook error happened
+    db_session = get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
+    db_session.query(models.User).filter(models.User.user_name == user_name).update({"status": 0})
+    transaction.commit()

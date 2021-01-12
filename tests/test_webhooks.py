@@ -18,6 +18,8 @@ from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils
 
+BASE_WEBHOOK_URL = "http://localhost:8080"
+
 
 @runner.MAGPIE_TEST_WEBHOOKS
 @runner.MAGPIE_TEST_LOCAL
@@ -33,7 +35,6 @@ class TestWebhooks(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.base_webhook_url = "http://localhost:8080"
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
@@ -49,7 +50,8 @@ class TestWebhooks(unittest.TestCase):
         Cleans up the test user after a test
         """
         utils.check_or_try_logout_user(self)
-        self.headers, self.cookies = utils.check_or_try_login_user(self.app, username=self.usr, password=self.pwd)
+        self.headers, self.cookies = utils.check_or_try_login_user(self.app, self.usr, self.pwd,
+                                                                   use_ui_form_submit=True)
         utils.TestSetup.delete_TestUser(self)
         utils.TestSetup.delete_TestGroup(self)
 
@@ -59,14 +61,19 @@ class TestWebhooks(unittest.TestCase):
         :param config_path: path to the config file containing the webhook configs
         """
         self.app = utils.get_test_magpie_app({"magpie.config_path": config_path})
-        self.headers, self.cookies = utils.check_or_try_login_user(self.app, self.usr, self.pwd, use_ui_form_submit=True)
+        self.headers, self.cookies = utils.check_or_try_login_user(self.app, self.usr, self.pwd,
+                                                                   use_ui_form_submit=True)
+
+        # Make sure the test user doesn't already exists from a previous test
+        utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.delete_TestGroup(self)
 
     def test_Webhook_CreateUser(self):
         """
         Test creating a user using webhooks.
         """
         # Write temporary config for testing webhooks
-        create_webhook_url = self.base_webhook_url + "/webhook"
+        create_webhook_url = BASE_WEBHOOK_URL + "/webhook_create"
         data = {
             "webhooks": [
                 {
@@ -74,14 +81,14 @@ class TestWebhooks(unittest.TestCase):
                     "action": "create_user",
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "temp_url": "{temp_url}"}
+                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
                 },
                 {
                     "name": "test_webhook_2",
                     "action": "create_user",
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "temp_url": "{temp_url}"}
+                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
                 }
             ],
             "providers": "",
@@ -94,7 +101,7 @@ class TestWebhooks(unittest.TestCase):
             # create the magpie app with the test webhook config
             self.setup_webhook_test(webhook_tmp_config.name)
 
-            utils.get_test_webhook_app(self.base_webhook_url)
+            utils.get_test_webhook_app(BASE_WEBHOOK_URL)
 
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
@@ -102,7 +109,7 @@ class TestWebhooks(unittest.TestCase):
             sleep(1)
 
             # Check if both webhook requests have completed successfully
-            resp = requests.get(self.base_webhook_url + "/get_status")
+            resp = requests.get(BASE_WEBHOOK_URL + "/get_status")
             assert resp.text == "2"
 
             # Check if user creation was successful
@@ -134,12 +141,101 @@ class TestWebhooks(unittest.TestCase):
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
+    # Skip this test, until tmp_url is implemented
+    @unittest.skip("implement tmp_url")
+    def test_Webhook_CreateUser_FailingWebhook(self):
+        """
+        Test creating a user where the webhook receives an internal error.
+        This should trigger a callback to Magpie using the tmp_url.
+        """
+        # Write temporary config for testing webhooks
+        webhook_fail_url = BASE_WEBHOOK_URL + "/webhook_fail"
+        data = {
+            "webhooks": [
+                {
+                    "name": "test_webhook",
+                    "action": "create_user",
+                    "method": "POST",
+                    "url": webhook_fail_url,
+                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
+                }
+
+            ],
+            "providers": "",
+            "permissions": ""
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
+            yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
+            # create the magpie app with the test webhook config
+            self.setup_webhook_test(webhook_tmp_config.name)
+
+            utils.get_test_webhook_app(BASE_WEBHOOK_URL)
+
+            utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+
+            # Wait for the webhook requests to complete
+            sleep(1)
+
+            # Check if user creation was successful even if the webhook resulted in failure
+            users = utils.TestSetup.get_RegisteredUsersList(self)
+            utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
+
+            # Check if the user's status is set to 0
+            path = "/users/{usr}".format(usr=self.test_user_name)
+            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+            body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+            info = utils.TestSetup.get_UserInfo(self, override_body=body)
+            utils.check_val_equal(info["status"], 0)
+
+    def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
+        """
+        Test creating a user where the webhook config has a non existent url
+        """
+        # Write temporary config for testing webhooks
+        webhook_url = BASE_WEBHOOK_URL + "/non_existent"
+        data = {
+            "webhooks": [
+                {
+                    "name": "test_webhook",
+                    "action": "create_user",
+                    "method": "POST",
+                    "url": webhook_url,
+                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
+                }
+
+            ],
+            "providers": "",
+            "permissions": ""
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
+            yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
+            # create the magpie app with the test webhook config
+            self.setup_webhook_test(webhook_tmp_config.name)
+
+            utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+
+            # Wait for the webhook requests to complete
+            sleep(1)
+
+            # Check if user creation was successful even if the webhook resulted in failure
+            users = utils.TestSetup.get_RegisteredUsersList(self)
+            utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
+
+            # Check if the user's status is set to 0
+            path = "/users/{usr}".format(usr=self.test_user_name)
+            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+            body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+            info = utils.TestSetup.get_UserInfo(self, override_body=body)
+            utils.check_val_equal(info["status"], 0)
+
     def test_Webhook_DeleteUser(self):
         """
         Test deleting a user using webhooks.
         """
         # Write temporary config for testing webhooks
-        delete_webhook_url = self.base_webhook_url + "/webhook"
+        delete_webhook_url = BASE_WEBHOOK_URL + "/webhook_delete"
         data = {
             "webhooks": [
                 {
@@ -166,13 +262,13 @@ class TestWebhooks(unittest.TestCase):
             # create the magpie app with the test webhook config
             self.setup_webhook_test(webhook_tmp_config.name)
 
-            utils.get_test_webhook_app(self.base_webhook_url)
+            utils.get_test_webhook_app(BASE_WEBHOOK_URL)
             # create the test user first
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Webhooks shouldn't have been called during the user creation
             sleep(1)
-            resp = requests.get(self.base_webhook_url + "/get_status")
+            resp = requests.get(BASE_WEBHOOK_URL + "/get_status")
             assert resp.text == "0"
 
             # delete the test user, webhooks should be called during this delete request
@@ -183,7 +279,7 @@ class TestWebhooks(unittest.TestCase):
 
             # Wait for the webhook requests to complete and check their success
             sleep(1)
-            resp = requests.get(self.base_webhook_url + "/get_status")
+            resp = requests.get(BASE_WEBHOOK_URL + "/get_status")
             assert resp.text == "2"
 
     def test_Webhook_DeleteUser_EmptyUrl(self):
@@ -225,9 +321,9 @@ class TestFailingWebhooks(unittest.TestCase):
 
     __test__ = True
 
-    def test_Webhook_Config_FailingUrl(self):
+    def test_Webhook_IncorrectConfig(self):
         """
-        Test using a config with a failing webhook url.
+        Test using a config with a badly formatted url.
         """
         # Write temporary config for testing webhooks
         create_webhook_url = "failing_url"
@@ -238,7 +334,7 @@ class TestFailingWebhooks(unittest.TestCase):
                     "action": "create_user",
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "temp_url": "{temp_url}"}
+                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
                 }
             ],
             "providers": "",
