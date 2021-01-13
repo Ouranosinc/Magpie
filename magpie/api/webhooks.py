@@ -38,6 +38,7 @@ LOGGER = get_logger(__name__)
 def process_webhook_requests(action, params, update_user_status_on_error=False):
     """
     Checks the config for any webhooks that correspond to the input action, and prepares corresponding requests.
+
     :param action: tag identifying which webhooks to use in the config
     :param params: dictionary containing the required parameters for the request, they will replace templates
                     found in the payload
@@ -55,6 +56,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False):
 def send_webhook_request(webhook_config, params, update_user_status_on_error=False):
     """
     Sends a single webhook request using the input config.
+
     :param webhook_config: dictionary containing the config data of a single webhook
     :param params: dictionary containing the required parameters for the request, they will replace templates
                     found in the payload

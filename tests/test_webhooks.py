@@ -63,6 +63,7 @@ class TestWebhooks(unittest.TestCase):
     def setup_webhook_test(self, config_path):
         """
         Prepares a Magpie app using a specific testing config for webhooks.
+
         :param config_path: path to the config file containing the webhook configs
         """
         self.app = utils.get_test_magpie_app({"magpie.config_path": config_path})
@@ -152,6 +153,7 @@ class TestWebhooks(unittest.TestCase):
     def test_Webhook_CreateUser_FailingWebhook(self):
         """
         Test creating a user where the webhook receives an internal error.
+
         This should trigger a callback to Magpie using the tmp_url.
         """
         # Write temporary config for testing webhooks
