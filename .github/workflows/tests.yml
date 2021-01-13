@@ -30,7 +30,7 @@ jobs:
         python-version: ["3.6", "3.7", "3.8"]
         allow-failure: [false]
         test-case: [test-local]
-        test-target: []
+        test-target: [""]
         include:
           # linter tests
           - python-version: 3.7
