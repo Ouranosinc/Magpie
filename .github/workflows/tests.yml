@@ -1,0 +1,73 @@
+# run test suites
+
+name: Tests
+on:
+  - pull_request
+  - push
+
+# Reference:
+#   https://github.com/actions/setup-python
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+      services:
+        # Label used to access the service container
+        postgres:
+          image: postgres  # DockerHub
+          env:
+            POSTGRES_PASSWORD: postgres
+          # Set health checks to wait until postgres has started
+          options: >-
+            --health-cmd pg_isready
+            --health-interval 10s
+            --health-timeout 5s
+            --health-retries 5
+      strategy:
+        matrix:
+          # os: [ubuntu-latest, windows-latest]
+          # python-version: ["2.7", "3.5", "3.6", "3.7", "3.8"]
+          os: [ubuntu-latest]
+          python-version: ["3.6", "3.7", "3.8"]
+          allow-failure: [false]
+          test-case: [test-local]
+          test-target: []
+          include:
+            # linter tests
+            - python-version: 3.7
+              test-case: check
+            # remote test
+            - python-version: 3.7
+              allow-failure: false
+              test-case: test-remote
+              test-target: start
+            # test allowed failing because of old versions
+            - python-version: 2.7
+              allow-failure: true
+            - python-version: 3.5
+              allow-failure: true
+            # smoke test of Docker image
+            - python-version: 3.7
+              test-case: test-docker
+      steps:
+        - uses: actions/checkout@v2
+          with:
+            fetch-depth: "0"
+        - name: Install Python
+          uses: actions/setup-python@v2
+          with:
+            python-version: ${{ matrix.python-version }}
+        - name: Intall Magpie
+          run: make install-pkg install-dev version
+        - name: Display Packages
+          run: pip freeze
+        - name: Setup Environment Variables
+          run: |
+            source ./ci/magpie.env
+            hash -r
+            env | sort
+        - name: Prepare Database
+          run: psql -c 'create database magpie;' -U postgres
+        - name: Run Tests
+          run: |
+            make stop ${{ matrix.test-target }}
+            make ${{ matrix.test-case }}
