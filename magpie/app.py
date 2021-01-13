@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from pyramid.settings import asbool
 from pyramid_beaker import set_cache_regions_from_settings
 
-from magpie.api.webhooks import WEBHOOK_KEYS, WEBHOOK_ACTIONS, HTTP_METHODS
+from magpie.api.webhooks import HTTP_METHODS, WEBHOOK_ACTIONS, WEBHOOK_KEYS
 from magpie.cli.register_defaults import register_defaults
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
@@ -79,10 +79,9 @@ def main(global_config=None, **settings):  # noqa: F811
     magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
 
     print_log("Register webhook configurations...", LOGGER)
-    settings["webhooks"] = []
+    settings["webhooks"] = defaultdict(lambda: [])
     if combined_config:
         webhook_configs = get_all_configs(combined_config, "webhooks", allow_missing=True)
-        webhook_configs_by_action = defaultdict(lambda: [])
 
         for cfg in webhook_configs:
             for webhook in cfg:
@@ -103,9 +102,7 @@ def main(global_config=None, **settings):  # noqa: F811
 
                 # Regroup webhooks by action key
                 webhook_sub_config = {k: webhook[k] for k in set(list(webhook.keys())) - {"action"}}
-                webhook_configs_by_action[webhook["action"]].append(webhook_sub_config)
-
-        settings["webhooks"] = webhook_configs_by_action
+                settings["webhooks"][webhook["action"]].append(webhook_sub_config)
 
     print_log("Running configurations setup...", LOGGER)
     patch_magpie_url(settings)
