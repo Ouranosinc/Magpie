@@ -35,11 +35,12 @@ HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 LOGGER = get_logger(__name__)
 
 
-def process_webhook_requests(action, payload, update_user_status_on_error=False):
+def process_webhook_requests(action, params, update_user_status_on_error=False):
     """
-    Checks the config for any webhooks that correspond to the input action, and prepares corresponding requests
+    Checks the config for any webhooks that correspond to the input action, and prepares corresponding requests.
     :param action: tag identifying which webhooks to use in the config
-    :param payload: dictionary containing the parameters used for the request
+    :param params: dictionary containing the required parameters for the request, they will replace templates
+                    found in the payload
     :param update_user_status_on_error: update the user status or not in case of a webhook error
     """
     # Check for webhook requests
@@ -47,36 +48,40 @@ def process_webhook_requests(action, payload, update_user_status_on_error=False)
     if len(webhooks) > 0:
         # Execute all webhook requests
         pool = multiprocessing.Pool(processes=len(webhooks))
-        args = [(webhook, payload, update_user_status_on_error) for webhook in webhooks]
+        args = [(webhook, params, update_user_status_on_error) for webhook in webhooks]
         pool.starmap_async(send_webhook_request, args)
 
 
 def send_webhook_request(webhook_config, params, update_user_status_on_error=False):
-    # type: (Dict, Dict, bool) -> None
     """
     Sends a single webhook request using the input config.
+    :param webhook_config: dictionary containing the config data of a single webhook
+    :param params: dictionary containing the required parameters for the request, they will replace templates
+                    found in the payload
+    :param update_user_status_on_error: update the user status or not in case of a webhook error
     """
     # Replace each instance of template parameters if a corresponding value was defined in input
     for template_param in WEBHOOK_TEMPLATE_PARAMS:
         if template_param in params:
-            for k,v in webhook_config["payload"].items():
+            for k, v in webhook_config["payload"].items():
                 webhook_config["payload"][k] = v.replace("{" + template_param + "}", params[template_param])
 
     try:
         resp = requests.request(webhook_config["method"], webhook_config["url"], data=webhook_config["payload"])
         resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        LOGGER.error(f"An exception has occured with the webhook : {webhook_config['name']}")
-        LOGGER.error(str(e))
+    except requests.exceptions.RequestException as exception:
+        LOGGER.error("An exception has occured with the webhook : %s", webhook_config["name"])
+        LOGGER.error(str(exception))
         if "user_name" in params.keys() and update_user_status_on_error:
             webhook_update_error_status(params["user_name"])
 
 
 def webhook_update_error_status(user_name):
     """
-    Updates the user's status to indicate an error occured with the webhook requests
+    Updates the user's status to indicate an error occured with the webhook requests.
     """
     # find user and change its status to 0 to indicate a webhook error happened
     db_session = get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
-    db_session.query(models.User).filter(models.User.user_name == user_name).update({"status": UserWebhookErrorStatus})
+    user = db_session.query(models.User).filter(models.User.user_name == user_name)  # pylint: disable=E1101,no-member
+    user.update({"status": UserWebhookErrorStatus})
     transaction.commit()

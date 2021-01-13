@@ -7,14 +7,9 @@ test_magpie_api
 
 Tests for :mod:`magpie.api` module.
 """
-import os
-import tempfile
-from time import sleep
 import unittest
-import yaml
 
 import mock
-import requests
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti

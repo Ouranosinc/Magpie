@@ -301,8 +301,8 @@ def get_test_webhook_app(webhook_url):
         user = request.POST["user_name"]
         tmp_url = request.POST["tmp_url"]
 
-        #TODO: call tmp_url
-        return Response()
+        # TODO: call tmp_url
+        return Response("Failing webhook url with user " + user + " and tmp_url " + tmp_url)
 
     def get_status(request):
         # Returns the status number

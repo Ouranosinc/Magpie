@@ -43,13 +43,16 @@ class TestWebhooks(unittest.TestCase):
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
+        cls.headers = None
+        cls.cookies = None
+        cls.app = None
 
         cls.json_headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
         cls.extra_user_names = set()
 
     def tearDown(self):
         """
-        Cleans up the test user after a test
+        Cleans up the test user after a test.
         """
         utils.check_or_try_logout_user(self)
         self.headers, self.cookies = utils.check_or_try_login_user(self.app, self.usr, self.pwd,
@@ -59,7 +62,7 @@ class TestWebhooks(unittest.TestCase):
 
     def setup_webhook_test(self, config_path):
         """
-        Prepares a Magpie app using a specific testing config for webhooks
+        Prepares a Magpie app using a specific testing config for webhooks.
         :param config_path: path to the config file containing the webhook configs
         """
         self.app = utils.get_test_magpie_app({"magpie.config_path": config_path})
@@ -193,7 +196,7 @@ class TestWebhooks(unittest.TestCase):
 
     def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
         """
-        Test creating a user where the webhook config has a non existent url
+        Test creating a user where the webhook config has a non existent url.
         """
         # Write temporary config for testing webhooks
         webhook_url = BASE_WEBHOOK_URL + "/non_existent"
@@ -347,4 +350,4 @@ class TestFailingWebhooks(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
             yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
             # create the magpie app with the test webhook config
-            self.assertRaises(ValueError,  utils.get_test_magpie_app, {"magpie.config_path": webhook_tmp_config.name})
+            self.assertRaises(ValueError, utils.get_test_magpie_app, {"magpie.config_path": webhook_tmp_config.name})
