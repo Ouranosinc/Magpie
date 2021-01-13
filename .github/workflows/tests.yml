@@ -8,7 +8,7 @@ on:
 # Reference:
 #   https://github.com/actions/setup-python
 jobs:
-  run:
+  tests:
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     env:
@@ -20,6 +20,8 @@ jobs:
         image: postgres  # DockerHub
         env:
           POSTGRES_PASSWORD: postgres
+        ports:
+          - "5432:5432"
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
@@ -76,7 +78,5 @@ jobs:
           source ./ci/magpie.env
           hash -r
           env | sort
-      - name: Prepare Database
-        run: psql -c 'create database magpie;' -U postgres
       - name: Run Tests
         run: make stop ${{ matrix.test-target }}
