@@ -79,4 +79,4 @@ jobs:
           hash -r
           env | sort
       - name: Run Tests
-        run: make stop ${{ matrix.test-target }}
+        run: make stop ${{ matrix.test-case }}
