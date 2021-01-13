@@ -11,6 +11,9 @@ jobs:
   run:
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
+    env:
+      # override make command to install directly in active python
+      CONDA_COMMAND: ""
     services:
       # Label used to access the service container
       postgres:
