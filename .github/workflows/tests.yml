@@ -89,7 +89,9 @@ jobs:
       - name: Upload coverage report
         if: ${{ success() }}
         run: |
-          (test -f reports/coverage.xml && \
-           bash <(curl -s https://codecov.io/bash) && \
-           python-codacy-coverage -r reports/coverage.xml) ||  \
-           echo "Codecov did not collect coverage reports"
+          if [ -f "./reports/coverage.xml" ]; then
+            bash <(curl -s https://codecov.io/bash)
+            python-codacy-coverage -r reports/coverage.xml)
+          else
+            echo "Codecov did not collect coverage reports"
+          fi
