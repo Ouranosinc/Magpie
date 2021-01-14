@@ -14,7 +14,7 @@ import yaml
 
 import requests
 
-from magpie.api.schemas import UserWebhookErrorStatus
+from magpie.api.schemas import UserOKStatus, UserWebhookErrorStatus
 from magpie.api.webhooks import WEBHOOK_CREATE_USER_ACTION, WEBHOOK_DELETE_USER_ACTION
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON
@@ -74,6 +74,18 @@ class TestWebhooks(unittest.TestCase):
         utils.TestSetup.delete_TestUser(self)
         utils.TestSetup.delete_TestGroup(self)
 
+    def checkTestUserStatus(self, status):
+        """
+        Checks if the test user has the expected status value.
+
+        :param status: Status value that should be found for the test user
+        """
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.check_val_equal(info["status"], status)
+
     def test_Webhook_CreateUser(self):
         """
         Test creating a user using webhooks.
@@ -121,6 +133,7 @@ class TestWebhooks(unittest.TestCase):
             # Check if user creation was successful
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
+            self.checkTestUserStatus(UserOKStatus)
 
     def test_Webhook_CreateUser_EmptyUrl(self):
         """
@@ -147,6 +160,7 @@ class TestWebhooks(unittest.TestCase):
             # Check if user creation was successful even if no webhook were defined in the config
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
+            self.checkTestUserStatus(UserOKStatus)
 
     # Skip this test, until tmp_url is implemented
     @unittest.skip("implement tmp_url")
@@ -190,11 +204,7 @@ class TestWebhooks(unittest.TestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is set to 0
-            path = "/users/{usr}".format(usr=self.test_user_name)
-            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-            body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-            info = utils.TestSetup.get_UserInfo(self, override_body=body)
-            utils.check_val_equal(info["status"], UserWebhookErrorStatus)
+            self.checkTestUserStatus(UserWebhookErrorStatus)
 
     def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
         """
@@ -232,11 +242,7 @@ class TestWebhooks(unittest.TestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is set to 0
-            path = "/users/{usr}".format(usr=self.test_user_name)
-            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-            body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-            info = utils.TestSetup.get_UserInfo(self, override_body=body)
-            utils.check_val_equal(info["status"], UserWebhookErrorStatus)
+            self.checkTestUserStatus(UserWebhookErrorStatus)
 
     def test_Webhook_DeleteUser(self):
         """
