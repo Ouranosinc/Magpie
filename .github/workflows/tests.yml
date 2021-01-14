@@ -19,7 +19,7 @@ jobs:
       postgres:
         image: postgres  # DockerHub
         env:
-          POSTGRES_USER: magpie
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: qwerty
         ports:
           - "5432:5432"
