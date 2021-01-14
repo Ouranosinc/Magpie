@@ -81,7 +81,11 @@ jobs:
         run: pip freeze
       - name: Setup Environment Variables
         run: |
-          source ./ci/magpie.env
+          while read line; do
+            echo "$line" >> $GITHUB_ENV
+          done < ./ci/magpie.env
+      - name: Display Environment Variables
+        run: |
           hash -r
           env | sort
       - name: Run Tests
