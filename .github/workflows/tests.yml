@@ -105,7 +105,7 @@ jobs:
       - name: Run Tests
         run: make stop ${{ matrix.test-case }}
       - name: Upload coverage report
-        if: ${{ success() }}
+        if: ${{ success() && matrix.test-case == "coverage" }}
         run: |
           if [ -f "./reports/coverage.xml" ]; then
             bash <(curl -s https://codecov.io/bash)
