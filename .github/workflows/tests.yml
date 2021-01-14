@@ -80,11 +80,9 @@ jobs:
       - name: Display Packages
         run: pip freeze
       - name: Setup Environment Variables
-        run: |
-          source ./ci/magpie.env
-          # while read line; do
-          #   echo "$line" >> $GITHUB_ENV
-          # done < ./ci/magpie.env
+        uses: c-py/action-dotenv-to-setenv@v2
+        with:
+          env-file: ./ci/magpie.env
       - name: Display Environment Variables
         run: |
           hash -r
