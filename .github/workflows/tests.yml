@@ -17,13 +17,13 @@ jobs:
         uses: fkirc/skip-duplicate-actions@master
         with:
           concurrent_skipping: "same_content"
-          skip_after_successful_duplicate: true
+          skip_after_successful_duplicate: "true"
           do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
 
   # see: https://github.com/actions/setup-python
   tests:
     needs: skip_duplicate
-    if: ${{ needs.skip_duplicate.outputs.should_skip != "true" }}
+    if: ${{ needs.skip_duplicate.outputs.should_skip != 'true' }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow-failure }}
     env:
@@ -105,7 +105,7 @@ jobs:
       - name: Run Tests
         run: make stop ${{ matrix.test-case }}
       - name: Upload coverage report
-        if: ${{ success() && matrix.test-case == "coverage" }}
+        if: ${{ success() && matrix.test-case == 'coverage' }}
         run: |
           if [ -f "./reports/coverage.xml" ]; then
             bash <(curl -s https://codecov.io/bash)
