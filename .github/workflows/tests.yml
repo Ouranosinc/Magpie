@@ -5,10 +5,25 @@ on:
   - pull_request
   - push
 
-# Reference:
-#   https://github.com/actions/setup-python
 jobs:
+  # see: https://github.com/fkirc/skip-duplicate-actions
+  skip_duplicate:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          concurrent_skipping: "same_content"
+          skip_after_successful_duplicate: "true"
+          do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
+
+  # see: https://github.com/actions/setup-python
   tests:
+    needs: skip_duplicate
+    if: ${{ needs.skip_duplicate.outputs.should_skip != "true" }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow-failure }}
     env:
@@ -94,7 +109,7 @@ jobs:
         run: |
           if [ -f "./reports/coverage.xml" ]; then
             bash <(curl -s https://codecov.io/bash)
-            python-codacy-coverage -r reports/coverage.xml)
+            python-codacy-coverage -r reports/coverage.xml
           else
             echo "Codecov did not collect coverage reports"
           fi
