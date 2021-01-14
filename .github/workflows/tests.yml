@@ -10,7 +10,7 @@ on:
 jobs:
   tests:
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.experimental }}
+    continue-on-error: ${{ matrix.allow-failure }}
     env:
       # override make command to install directly in active python
       CONDA_COMMAND: ""
@@ -19,7 +19,8 @@ jobs:
       postgres:
         image: postgres  # DockerHub
         env:
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: magpie
+          POSTGRES_PASSWORD: qwerty
         ports:
           - "5432:5432"
         # Set health checks to wait until postgres has started
@@ -34,42 +35,47 @@ jobs:
         # python-version: ["2.7", "3.5", "3.6", "3.7", "3.8"]
         os: [ubuntu-latest]
         python-version: ["3.6", "3.7", "3.8"]
-        experimental: [false]
+        allow-failure: [false]
         test-case: [test-local]
         include:
           # linter tests
           - os: ubuntu-latest
             python-version: 3.7
-            experimental: false
+            allow-failure: false
             test-case: check
           # remote test
           - os: ubuntu-latest
             python-version: 3.7
-            experimental: false
+            allow-failure: true
             test-case: start test-remote
           # test allowed failing because of old versions
           - os: ubuntu-latest
             python-version: 2.7
-            experimental: true
+            allow-failure: true
             test-case: test-local
           - os: ubuntu-latest
             python-version: 3.5
-            experimental: true
+            allow-failure: true
             test-case: test-local
+          # coverage test
+          - os: ubuntu-latest
+            python-version: 3.7
+            allow-failure: false
+            test-case: coverage
           # smoke test of Docker image
           - os: ubuntu-latest
             python-version: 3.5
-            experimental: true
+            allow-failure: true
             test-case: test-docker
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: "0"
-      - name: Install Python
+      - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Intall Magpie
+      - name: Intall Dependencies
         run: make install-pkg install-dev version
       - name: Display Packages
         run: pip freeze
@@ -80,3 +86,10 @@ jobs:
           env | sort
       - name: Run Tests
         run: make stop ${{ matrix.test-case }}
+      - name: Upload coverage report
+        if: ${{ success() }}
+        run: |
+          (test -f reports/coverage.xml && \
+           bash <(curl -s https://codecov.io/bash) && \
+           python-codacy-coverage -r reports/coverage.xml) ||  \
+           echo "Codecov did not collect coverage reports"
