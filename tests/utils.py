@@ -280,13 +280,11 @@ def get_test_webhook_app(webhook_url):
     Instantiate a local test application used for the prehook for user creation and deletion.
     """
     def webhook_create_request(request):
-        # Simulates a webhook url call during user creation
-        user = request.POST["user_name"]
-        tmp_url = request.POST["tmp_url"]
-
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
-        return Response("Successful webhook url with user " + user + " and tmp_url " + tmp_url)
+        # Save the request's payload
+        settings["payload"].append(request.body)
+        return Response("Successful webhook url")
 
     def webhook_delete_request(request):
         # Simulates a webhook url call during user deletion
@@ -308,27 +306,36 @@ def get_test_webhook_app(webhook_url):
         # Returns the status number
         return Response(str(settings["webhook_status"]))
 
-    def reset_status(request):
+    def check_payload(request):
+        # Check if the input payload is present in the webhook app saved payload
+        assert request.body in settings["payload"]
+        return Response("Content is correct")
+
+    def reset(request):
         settings["webhook_status"] = 0
-        return Response("Webhook status has been reset to 0.")
+        settings["payload"] = []
+        return Response("Webhook app has been reset.")
 
     with Configurator() as config:
         settings = config.registry.settings
         # Initialize status
         settings["webhook_status"] = 0
+        settings["payload"] = []
         config.add_route("webhook_create", "/webhook_create")
         config.add_route("webhook_delete", "/webhook_delete")
         config.add_route("webhook_fail", "/webhook_fail")
         config.add_route("get_status", "/get_status")
-        config.add_route("reset_status", "/reset_status")
+        config.add_route("check_payload", "/check_payload")
+        config.add_route("reset", "/reset")
         config.add_view(webhook_create_request, route_name="webhook_create",
-                        request_method="POST", request_param=("user_name", "tmp_url"))
+                        request_method="POST")
         config.add_view(webhook_delete_request, route_name="webhook_delete",
                         request_method="POST", request_param="user_name")
         config.add_view(webhook_fail_request, route_name="webhook_fail",
                         request_method="POST", request_param=("user_name", "tmp_url"))
         config.add_view(get_status, route_name="get_status", request_method="GET")
-        config.add_view(reset_status, route_name="reset_status", request_method="POST")
+        config.add_view(check_payload, route_name="check_payload", request_method="POST")
+        config.add_view(reset, route_name="reset", request_method="POST")
         webhook_app_instance = config.make_wsgi_app()
 
     def webhook_app():
@@ -337,8 +344,8 @@ def get_test_webhook_app(webhook_url):
             serve(webhook_app_instance, host=webhook_url_info.hostname, port=webhook_url_info.port)
         except OSError as exception:
             if exception.errno == EADDRINUSE:
-                # The app is already running, we just need to reset the webhook status for a new test.
-                resp = requests.post(webhook_url + "/reset_status")
+                # The app is already running, we just need to reset the webhook status and saved payload for a new test.
+                resp = requests.post(webhook_url + "/reset")
                 check_response_basic_info(resp, 200, expected_type=CONTENT_TYPE_HTML, expected_method="POST")
                 return
             raise

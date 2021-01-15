@@ -17,7 +17,7 @@ import requests
 from magpie.api.schemas import UserOKStatus, UserWebhookErrorStatus
 from magpie.api.webhooks import WEBHOOK_CREATE_USER_ACTION, WEBHOOK_DELETE_USER_ACTION
 from magpie.constants import get_constant
-from magpie.utils import CONTENT_TYPE_JSON
+from magpie.utils import CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
 from tests import runner, utils
 
 BASE_WEBHOOK_URL = "http://localhost:8080"
@@ -106,7 +106,14 @@ class TestWebhooks(unittest.TestCase):
                     "action": WEBHOOK_CREATE_USER_ACTION,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
+                    # Test with a more complex payload, that includes different types and nested arrays / dicts
+                    "payload": [
+                        {"user_name": ["{user_name}", "other_param"],
+                            "nested_dict": {
+                                "{user_name}": "{user_name} {user_name}",
+                        }},
+                        "{user_name}", False, 1
+                    ]
                 }
             ],
             "providers": "",
@@ -125,6 +132,13 @@ class TestWebhooks(unittest.TestCase):
 
             # Wait for the webhook requests to complete
             sleep(1)
+
+            # Check if the webhook received the more complex payload, with the right template replacements
+            expected_payload = [{"nested_dict": {self.test_user_name: f"{self.test_user_name} {self.test_user_name}"},
+                                 "user_name": [self.test_user_name, "other_param"]},
+                                self.test_user_name, False, 1]
+            resp = requests.post(BASE_WEBHOOK_URL + "/check_payload", json=expected_payload)
+            utils.check_response_basic_info(resp, 200, expected_method="POST", expected_type=CONTENT_TYPE_HTML)
 
             # Check if both webhook requests have completed successfully
             resp = requests.get(BASE_WEBHOOK_URL + "/get_status")
