@@ -19,7 +19,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - dependencies
       - | |py_ver| |dependencies|
     * - build status
-      - | |travis_latest| |travis_tagged| |readthedocs| |coverage| |codacy|
+      - | |travis_latest| |travis_tagged| |readthedocs|
+    * - tests status
+      - | |github_latest| |github_tagged| |coverage| |codacy|
     * - docker status
       - | |docker_build_mode| |docker_build_status|
     * - releases
@@ -47,6 +49,14 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 .. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/3.5.0.svg?label=3.5.0
     :alt: Travis-CI Build Status (latest tag)
+    :target: https://github.com/Ouranosinc/Magpie/tree/3.5.0
+
+.. |github_latest| image:: https://github.com/Ouranosinc/Magpie/workflows/Tests/badge.svg?branch=master
+    :alt: Github Actions CI Build Status (master branch)
+    :target: https://travis-ci.com/Ouranosinc/Magpie
+
+.. |github_tagged| image:: https://github.com/Ouranosinc/Magpie/workflows/Tests/badge.svg?branch=3.5.0
+    :alt: Github Actions CI Build Status (latest tag)
     :target: https://github.com/Ouranosinc/Magpie/tree/3.5.0
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
