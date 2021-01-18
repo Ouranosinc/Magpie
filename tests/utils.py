@@ -288,7 +288,7 @@ def get_test_webhook_app(webhook_url):
 
     def webhook_delete_request(request):
         # Simulates a webhook url call during user deletion
-        user = request.POST["user_name"]
+        user = json_pkg.loads(request.body)["user_name"]
 
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
@@ -296,8 +296,9 @@ def get_test_webhook_app(webhook_url):
 
     def webhook_fail_request(request):
         # Simulates a webhook url call during user creation
-        user = request.POST["user_name"]
-        tmp_url = request.POST["tmp_url"]
+        body = json_pkg.loads(request.body)
+        user = body["user_name"]
+        tmp_url = body["tmp_url"]
 
         # TODO: call tmp_url
         return Response("Failing webhook url with user " + user + " and tmp_url " + tmp_url)
@@ -330,9 +331,9 @@ def get_test_webhook_app(webhook_url):
         config.add_view(webhook_create_request, route_name="webhook_create",
                         request_method="POST")
         config.add_view(webhook_delete_request, route_name="webhook_delete",
-                        request_method="POST", request_param="user_name")
+                        request_method="POST")
         config.add_view(webhook_fail_request, route_name="webhook_fail",
-                        request_method="POST", request_param=("user_name", "tmp_url"))
+                        request_method="POST")
         config.add_view(get_status, route_name="get_status", request_method="GET")
         config.add_view(check_payload, route_name="check_payload", request_method="POST")
         config.add_view(reset, route_name="reset", request_method="POST")

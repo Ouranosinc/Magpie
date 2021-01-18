@@ -55,7 +55,8 @@ def process_webhook_requests(action, params, update_user_status_on_error=False):
 
 def replace_template(param_name, param_value, payload):
     """
-    Replace each instances of a template parameter by its corresponding value
+    Replace each instances of a template parameter by its corresponding value.
+
     :param param_name: name of a template parameter
     :param param_value: value of a template parameter
     :param payload: structure containing the data to be processed by the template replacement
@@ -73,9 +74,9 @@ def replace_template(param_name, param_value, payload):
                 replace_dict[new_key] = replace_dict[key]
                 del replace_dict[key]
         return replace_dict
-    elif isinstance(payload, list):
+    if isinstance(payload, list):
         return [replace_template(param_name, param_value, value) for value in payload]
-    elif isinstance(payload, str):
+    if isinstance(payload, str):
         return payload.replace("{" + param_name + "}", param_value)
     # For any other type, no replacing to do
     return payload
