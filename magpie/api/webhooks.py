@@ -99,8 +99,8 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
                                                              params[template_param],
                                                              webhook_config["payload"])
     except Exception as exception:
-        print("An exception has occured while processing the template parameters in a webhook payload : "
-              + str(exception))
+        LOGGER.error("An exception has occured while processing the template parameters in a webhook payload : "
+                     + str(exception))
     try:
         resp = requests.request(webhook_config["method"], webhook_config["url"], json=webhook_config["payload"])
         resp.raise_for_status()
