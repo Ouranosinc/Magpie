@@ -63,17 +63,8 @@ def replace_template(param_name, param_value, payload):
     :return: structure containing the data with the replaced template parameters
     """
     if isinstance(payload, dict):
-        replace_dict = payload.copy()
-        for key, value in payload.items():
-            # replace templates in the dictionary value
-            replace_dict[key] = replace_template(param_name, param_value, value)
-
-            # replace templates in the dictionary key
-            new_key = replace_template(param_name, param_value, key)
-            if new_key != key:
-                replace_dict[new_key] = replace_dict[key]
-                del replace_dict[key]
-        return replace_dict
+        return {replace_template(param_name, param_value, key): replace_template(param_name, param_value, value)
+                for key, value in payload.items()}
     if isinstance(payload, list):
         return [replace_template(param_name, param_value, value) for value in payload]
     if isinstance(payload, str):
