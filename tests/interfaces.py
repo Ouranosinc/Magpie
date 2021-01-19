@@ -2536,7 +2536,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_GetUserResourcePermissions_EffectivePermissions_MatchWithinRecursiveResolution(self):
         """
         Validates resolution of :term:`Effective Resolution` works when :term:`Permission` with :attr:`Scope.MATCH` is
-        defined *within* a scope where a :term:`Permission` with :attr:`Scope.RECURSIVE` exists
+        defined *within* a scope where a :term:`Permission` with :attr:`Scope.RECURSIVE` exists.
 
         Legend::
 
