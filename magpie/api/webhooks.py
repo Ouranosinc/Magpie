@@ -1,3 +1,4 @@
+import copy
 import multiprocessing
 
 from pyramid.threadlocal import get_current_registry
@@ -53,22 +54,24 @@ def process_webhook_requests(action, params, update_user_status_on_error=False):
         pool.starmap_async(send_webhook_request, args)
 
 
-def replace_template(param_name, param_value, payload):
+def replace_template(params, payload):
     """
     Replace each instances of a template parameter by its corresponding value.
 
-    :param param_name: name of a template parameter
-    :param param_value: value of a template parameter
+    :param params: the values of the template parameters
     :param payload: structure containing the data to be processed by the template replacement
     :return: structure containing the data with the replaced template parameters
     """
     if isinstance(payload, dict):
-        return {replace_template(param_name, param_value, key): replace_template(param_name, param_value, value)
+        return {replace_template(params, key): replace_template(params, value)
                 for key, value in payload.items()}
     if isinstance(payload, list):
-        return [replace_template(param_name, param_value, value) for value in payload]
+        return [replace_template(params, value) for value in payload]
     if isinstance(payload, str):
-        return payload.replace("{" + param_name + "}", param_value)
+        for template_param in WEBHOOK_TEMPLATE_PARAMS:
+            if template_param in params:
+                payload = payload.replace("{" + template_param + "}", params[template_param])
+        return payload
     # For any other type, no replacing to do
     return payload
 
@@ -83,20 +86,18 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
     :param update_user_status_on_error: update the user status or not in case of a webhook error
     """
     # Replace each instance of template parameters if a corresponding value was defined in input
+    processed_config = copy.deepcopy(webhook_config)
     try:
-        for template_param in WEBHOOK_TEMPLATE_PARAMS:
-            if template_param in params:
-                webhook_config["payload"] = replace_template(template_param,
-                                                             params[template_param],
-                                                             webhook_config["payload"])
+        processed_config["payload"] = replace_template(params, processed_config["payload"])
+        processed_config["url"] = replace_template(params, processed_config["url"])
     except Exception as exception:
         LOGGER.error("An exception has occured while processing the template parameters in a webhook payload : %s",
                      str(exception))
     try:
-        resp = requests.request(webhook_config["method"], webhook_config["url"], json=webhook_config["payload"])
+        resp = requests.request(processed_config["method"], processed_config["url"], json=processed_config["payload"])
         resp.raise_for_status()
     except Exception as exception:
-        LOGGER.error("An exception has occured with the webhook request : %s", webhook_config["name"])
+        LOGGER.error("An exception has occured with the webhook request : %s", processed_config["name"])
         LOGGER.error(str(exception))
         if "user_name" in params.keys() and update_user_status_on_error:
             webhook_update_error_status(params["user_name"])
