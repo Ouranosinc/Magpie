@@ -1,4 +1,3 @@
-import copy
 import multiprocessing
 
 from pyramid.threadlocal import get_current_registry
@@ -56,7 +55,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False):
 
 def replace_template(params, payload):
     """
-    Replace each instances of a template parameter by its corresponding value.
+    Replace each template parameter from the payload by its corresponding value.
 
     :param params: the values of the template parameters
     :param payload: structure containing the data to be processed by the template replacement
@@ -85,19 +84,14 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
                     found in the payload
     :param update_user_status_on_error: update the user status or not in case of a webhook error
     """
-    # Replace each instance of template parameters if a corresponding value was defined in input
-    processed_config = copy.deepcopy(webhook_config)
     try:
-        processed_config["payload"] = replace_template(params, processed_config["payload"])
-        processed_config["url"] = replace_template(params, processed_config["url"])
-    except Exception as exception:
-        LOGGER.error("An exception has occured while processing the template parameters in a webhook payload : %s",
-                     str(exception))
-    try:
-        resp = requests.request(processed_config["method"], processed_config["url"], json=processed_config["payload"])
+        # Replace template parameters if a corresponding value was defined in input and send the webhook request
+        resp = requests.request(webhook_config["method"],
+                                replace_template(params, webhook_config["url"]),
+                                json=replace_template(params, webhook_config["payload"]))
         resp.raise_for_status()
     except Exception as exception:
-        LOGGER.error("An exception has occured with the webhook request : %s", processed_config["name"])
+        LOGGER.error("An exception has occured with the webhook request : %s", webhook_config["name"])
         LOGGER.error(str(exception))
         if "user_name" in params.keys() and update_user_status_on_error:
             webhook_update_error_status(params["user_name"])
