@@ -9,6 +9,12 @@ from magpie.permissions import Access, Permission, PermissionSet, PermissionType
 from tests import runner, utils
 
 
+class MockObject(object):
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, property(lambda *_, **__: v))
+
+
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_UTILS
 @runner.MAGPIE_TEST_PERMISSIONS
@@ -88,30 +94,30 @@ class TestPermissions(unittest.TestCase):
         ]
         format_perms = format_permissions(test_perms, PermissionType.ALLOWED)
         expect_names = [
-            Permission.READ.value,
-            str(PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)),
             Permission.READ.value + "-" + Scope.MATCH.value,
             str(PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)),
+            Permission.READ.value,
+            str(PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)),
             # no implicit name for denied
-            str(PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)),
             str(PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)),
-            Permission.WRITE.value,
-            str(PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)),
+            str(PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)),
             Permission.WRITE.value + "-" + Scope.MATCH.value,
             str(PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH)),
+            Permission.WRITE.value,
+            str(PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)),
             # no implicit name for denied
-            str(PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)),
             str(PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)),
+            str(PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)),
         ]
         expect_perms = [
-            PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
             PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH, PermissionType.ALLOWED).json(),
-            PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
             PermissionSet(Permission.READ, Access.DENY, Scope.MATCH, PermissionType.ALLOWED).json(),
-            PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
             PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH, PermissionType.ALLOWED).json(),
-            PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
             PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH, PermissionType.ALLOWED).json(),
+            PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE, PermissionType.ALLOWED).json(),
         ]
         utils.check_all_equal(format_perms["permission_names"], expect_names, any_order=False)
         utils.check_all_equal(format_perms["permissions"], expect_perms, any_order=False)
@@ -222,15 +228,15 @@ class TestPermissions(unittest.TestCase):
                            msg="Don't allow any object that makes the permission name not explicitly defined.")
 
     def test_compare_and_sort_operations(self):
-        perm_rar = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)
         perm_ram = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)
-        perm_rdr = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)
+        perm_rar = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)
         perm_rdm = PermissionSet(Permission.READ, Access.DENY, Scope.MATCH)
-        perm_war = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)
+        perm_rdr = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)
         perm_wam = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.MATCH)
-        perm_wdr = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)
+        perm_war = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)
         perm_wdm = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)
-        perm_sorted = [perm_rar, perm_ram, perm_rdr, perm_rdm, perm_war, perm_wam, perm_wdr, perm_wdm]
+        perm_wdr = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)
+        perm_sorted = [perm_ram, perm_rar, perm_rdm, perm_rdr, perm_wam, perm_war, perm_wdm, perm_wdr]
         perm_random = [perm_rdr, perm_wam, perm_wdm, perm_rar, perm_war, perm_ram, perm_wdr, perm_rdm]
 
         utils.check_val_equal(perm_rar, Permission.READ, msg="Should be equal because of defaults and name conversion")
@@ -240,7 +246,7 @@ class TestPermissions(unittest.TestCase):
         utils.check_all_equal(list(sorted(perm_random)), perm_sorted, any_order=False)
 
         # cannot sort elements with other type representations although 'PermissionSet' can, because they don't know it
-        # (ie: str.__lt__ and dict.__ls__ could call with 'other' being a 'PermissionSet' depending on random order)
+        # (ie: str.__lt__ and dict.__ls__ could be called with 'other' being 'PermissionSet' depending on random order)
         # can still do the individual compares though if the reference object is 'PermissionSet' and other is anything
         utils.check_val_equal(perm_sorted[0] < perm_sorted[1], True)
         utils.check_val_equal(perm_sorted[0] < perm_sorted[1].json(), True)
@@ -256,3 +262,48 @@ class TestPermissions(unittest.TestCase):
             utils.check_val_equal(perm_1.like(perm_2.json()), True, msg="Expected {!r} ~ {!r}".format(perm_1, perm_2))
         for perm_1, perm_2 in itertools.product(perm_sorted[0:4], perm_sorted[4:8]):
             utils.check_val_equal(perm_1.like(perm_2.json()), False, msg="Expected {!r} !~ {!r}".format(perm_1, perm_2))
+
+    def test_permission_resolve_raised_invalid(self):
+        """
+        Ensure that resolution with completely invalid/impossible cases are raised instead of failing silently.
+        """
+        perm_r = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT)
+        res1 = MockObject(resource_name="mock-resource1", resource_id=987)
+        res2 = MockObject(resource_name="mock-resource2", resource_id=101)
+        usr = MockObject(user_name="mock-user", user_id=123)
+        grp = MockObject(group_name="mock-group", user_id=456)
+        usr_tup = PermissionTuple(usr, perm_r.explicit_permission, "user", None, res1, False, True)
+        usr_perm = PermissionSet(usr_tup)
+
+        # two same user permissions of identical name cannot exist
+        utils.check_raises(lambda: PermissionSet.resolve(usr_perm, usr_perm), ValueError,
+                           msg="Should raise permissions corresponding by name and user, cannot exist simultaneously.")
+
+        # various values that are valid to create 'PermissionSet', but insufficient for resolution
+        valid_only_for_repr = [
+            Permission.READ.value,
+            Permission.READ.value + "-" + Scope.MATCH.value,
+            Permission.READ.value + "-" + Access.ALLOW.value + "-" + Scope.MATCH.value,
+            {"name": Permission.READ, "access": Access.DENY, "scope": Scope.MATCH},
+            PermissionSet(Permission.READ.value, Access.ALLOW.value, Scope.MATCH.value)  # missing 'perm_tuple'
+        ]
+        for perm1, perm2 in itertools.permutations(valid_only_for_repr, 2):
+            utils.check_raises(lambda: PermissionSet.resolve(perm1, perm2), ValueError,
+                               msg="Permission that do not provide comparison elements for resolution must be raised, "
+                                   "although they are normally valid for simple permission representation.")
+
+        # valid user and group tuples (both provide tuples, point to same resource, and don't refer to same user-perm)
+        # but mismatching permission names
+        perm_w = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT)
+        grp_tup = PermissionTuple(usr, perm_w.explicit_permission, "group", grp, res1, False, True)
+        grp_perm = PermissionSet(grp_tup)
+        utils.check_raises(lambda: PermissionSet.resolve(usr_perm, grp_perm), ValueError,
+                           msg="Mismatching permission names should be raised as they cannot be resolved together.")
+
+        # same perm name (read), both tuple provided, not both user-perms, but not referring to same resource
+        grp_tup = PermissionTuple(usr, perm_r.explicit_permission, "group", grp, res2, False, True)
+        grp_perm = PermissionSet(grp_tup)
+        utils.check_raises(lambda: PermissionSet.resolve(usr_perm, grp_perm), ValueError,
+                           msg="Mismatching resources should be raised as they cannot be resolved together.")
+        utils.check_no_raise(lambda: PermissionSet.resolve(usr_perm, grp_perm, context=PermissionType.EFFECTIVE),
+                             msg="Mismatching resources should resolved when requested explicitly (effective).")

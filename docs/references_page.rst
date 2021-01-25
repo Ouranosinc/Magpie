@@ -1,7 +1,6 @@
 .. _references_page:
 .. include:: references.rst
 
-====================
 References and Links
 ====================
 

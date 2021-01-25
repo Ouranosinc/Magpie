@@ -8,4 +8,5 @@ def includeme(config):
     LOGGER.info("Adding API register...")
     config.add_route(**s.service_api_route_info(s.RegisterGroupsAPI))
     config.add_route(**s.service_api_route_info(s.RegisterGroupAPI))
+    config.add_route(**s.service_api_route_info(s.TemporaryUrlAPI))
     config.scan()

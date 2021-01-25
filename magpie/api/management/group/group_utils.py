@@ -104,6 +104,10 @@ def create_group(group_name, description, discoverable, db_session):
     ax.evaluate_call(lambda: db_session.add(new_group), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=group_content_error,
                      msg_on_fail=s.Groups_POST_ForbiddenAddResponseSchema.description)
+    # re-fetch the created group to update fields with auto-generated group ID
+    new_group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=db_session),
+                                 http_error=HTTPForbidden,
+                                 msg_on_fail=s.Groups_POST_ForbiddenAddResponseSchema.description)
     return ax.valid_http(http_success=HTTPCreated, detail=s.Groups_POST_CreatedResponseSchema.description,
                          content={"group": format_group(new_group, basic_info=True)})
 

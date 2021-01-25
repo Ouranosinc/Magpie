@@ -77,7 +77,8 @@ def _get_default_log_level():
         _settings = magpie.utils.get_settings_from_config_ini(MAGPIE_INI_FILE_PATH,
                                                               ini_main_section_name="logger_magpie")
         _default_log_lvl = _settings.get("level", _default_log_lvl)
-    except (AttributeError, ImportError, ModuleNotFoundError):  # noqa: W0703 # nosec: B110
+    # also considers 'ModuleNotFoundError' derived from 'ImportError', but not added to avoid Python <3.6 name error
+    except (AttributeError, ImportError):  # noqa: W0703 # nosec: B110
         pass
     return _default_log_lvl
 

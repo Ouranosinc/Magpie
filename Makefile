@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 3.4.0
+APP_VERSION ?= 3.5.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # guess OS (Linux, Darwin,...)
@@ -33,9 +33,9 @@ CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
 CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV_NAME)
 # allow pre-installed conda in Windows bash-like shell
 ifeq ($(findstring MINGW,$(OS_NAME)),MINGW)
-	CONDA_BIN_DIR ?= $(CONDA_HOME)/Scripts
+  CONDA_BIN_DIR ?= $(CONDA_HOME)/Scripts
 else
-	CONDA_BIN_DIR ?= $(CONDA_HOME)/bin
+  CONDA_BIN_DIR ?= $(CONDA_HOME)/bin
 endif
 CONDA_BIN := $(CONDA_BIN_DIR)/conda
 CONDA_ENV_REAL_TARGET_PATH := $(realpath $(CONDA_ENV_PATH))
@@ -43,23 +43,32 @@ CONDA_ENV_REAL_ACTIVE_PATH := $(realpath ${CONDA_PREFIX})
 
 # environment already active - use it directly
 ifneq ("$(CONDA_ENV_REAL_ACTIVE_PATH)", "")
-	CONDA_ENV_MODE := [using active environment]
-	CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_ACTIVE_PATH))
-	CONDA_CMD :=
+  CONDA_ENV_MODE := [using active environment]
+  CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_ACTIVE_PATH))
+  CONDA_CMD :=
 endif
 # environment not active but it exists - activate and use it
 ifneq ($(CONDA_ENV_REAL_TARGET_PATH), "")
-	CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_TARGET_PATH))
+  CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_TARGET_PATH))
 endif
 # environment not active and not found - create, activate and use it
 ifeq ("$(CONDA_ENV_NAME)", "")
-	CONDA_ENV_NAME := $(APP_NAME)
+  CONDA_ENV_NAME := $(APP_NAME)
 endif
 # update paths for environment activation
 ifeq ("$(CONDA_ENV_REAL_ACTIVE_PATH)", "")
-	CONDA_ENV_MODE := [will activate environment]
-	CONDA_CMD := source "$(CONDA_BIN_DIR)/activate" "$(CONDA_ENV_NAME)";
+  CONDA_ENV_MODE := [will activate environment]
+  CONDA_CMD := source "$(CONDA_BIN_DIR)/activate" "$(CONDA_ENV_NAME)";
 endif
+# override conda command as desired
+CONDA_COMMAND ?= undefined
+CONDA_SETUP := 1
+ifneq ("$(CONDA_COMMAND)","undefined")
+  CONDA_SETUP := 0
+  CONDA_ENV_MODE := [using overridden command]
+  CONDA_CMD := $(CONDA_COMMAND)
+endif
+
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
@@ -68,11 +77,11 @@ PIP_XARGS ?= --use-feature=2020-resolver
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda
 ifeq ("$(OS_NAME)", "Linux")
-FN := Miniconda3-latest-Linux-x86_64.sh
+  FN := Miniconda3-latest-Linux-x86_64.sh
 else ifeq ("$(OS_NAME)", "Darwin")
-FN := Miniconda3-latest-MacOSX-x86_64.sh
+  FN := Miniconda3-latest-MacOSX-x86_64.sh
 else
-FN := unknown
+  FN := unknown
 endif
 
 # docker
@@ -553,14 +562,18 @@ coverage-show: $(COVERAGE_HTML_IDX)		## display HTML webpage of generated covera
 
 .PHONY: conda-base
 conda-base:	 ## obtain a base distribution of conda if missing and required
-	@test -f "$(CONDA_HOME)/bin/conda" || test -d "$(DOWNLOAD_CACHE)" || \
-		(echo "Creating download directory: $(DOWNLOAD_CACHE)" && mkdir -p "$(DOWNLOAD_CACHE)")
-	@test -f "$(CONDA_HOME)/bin/conda" || test -f "$(DOWNLOAD_CACHE)/$(FN)" || \
-		(echo "Fetching conda distribution from: $(CONDA_URL)/$(FN)" && \
-		 curl "$(CONDA_URL)/$(FN)" --insecure --location --output "$(DOWNLOAD_CACHE)/$(FN)")
-	@test -f "$(CONDA_HOME)/bin/conda" || \
-		(bash "$(DOWNLOAD_CACHE)/$(FN)" -b -u -p "$(CONDA_HOME)" && \
-		 echo "Make sure to add '$(CONDA_HOME)/bin' to your PATH variable in '~/.bashrc'.")
+	@[ $(CONDA_SETUP) -eq 0 ] && echo "Conda setup disabled." || ( ( \
+		test -f "$(CONDA_HOME)/bin/conda" || test -d "$(DOWNLOAD_CACHE)" || ( \
+			echo "Creating download directory: $(DOWNLOAD_CACHE)" && \
+			mkdir -p "$(DOWNLOAD_CACHE)") ) ; ( \
+		test -f "$(CONDA_HOME)/bin/conda" || \
+		test -f "$(DOWNLOAD_CACHE)/$(FN)" || ( \
+			echo "Fetching conda distribution from: $(CONDA_URL)/$(FN)" && \
+		 	curl "$(CONDA_URL)/$(FN)" --insecure --location --output "$(DOWNLOAD_CACHE)/$(FN)") ) ; ( \
+		test -f "$(CONDA_HOME)/bin/conda" || ( \
+		  	bash "$(DOWNLOAD_CACHE)/$(FN)" -b -u -p "$(CONDA_HOME)" && \
+		 	echo "Make sure to add '$(CONDA_HOME)/bin' to your PATH variable in '~/.bashrc'.") ) \
+	)
 
 .PHONY: conda-cfg
 conda_config: conda-base	## update conda package configuration
@@ -575,6 +588,8 @@ conda_config: conda-base	## update conda package configuration
 
 .PHONY: conda-env
 conda-env: conda-base	## create conda environment if missing and required
-	@test -d "$(CONDA_ENV_PATH)" || \
-		(echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
-		 "$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV_NAME)" python=$(PYTHON_VERSION))
+	@[ $(CONDA_SETUP) -eq 0 ] || ( \
+		test -d "$(CONDA_ENV_PATH)" || ( \
+			echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
+		 	"$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV_NAME)" python=$(PYTHON_VERSION)) \
+		)

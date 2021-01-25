@@ -89,7 +89,7 @@ def signin_in_param(request):
     return request.invoke_subrequest(subreq, use_tweens=True)
 
 
-@s.SigninAPI.post(schema=s.Signin_POST_RequestSchema(), tags=[s.SessionTag], response_schemas=s.Signin_POST_responses)
+@s.SigninAPI.post(schema=s.Signin_POST_RequestSchema, tags=[s.SessionTag], response_schemas=s.Signin_POST_responses)
 @view_config(route_name=s.SigninAPI.name, request_method="POST", permission=NO_PERMISSION_REQUIRED)
 def sign_in(request):
     """
@@ -317,8 +317,8 @@ def get_session(request):
     """
     def _get_session(req):
         principals = ar.get_principals(req)
-        if Authenticated in principals:
-            user = request.user
+        user = request.user
+        if Authenticated in principals and user is not None:
             json_resp = {"authenticated": True, "user": format_user(user)}
         else:
             json_resp = {"authenticated": False}

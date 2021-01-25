@@ -1,5 +1,9 @@
+import itertools
 import os
+import secrets
+import string
 import unittest
+import uuid
 import warnings
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
@@ -17,7 +21,15 @@ from magpie.adapter import MagpieAdapter
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Directory, Route
-from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
+from magpie.permissions import (
+    PERMISSION_REASON_DEFAULT,
+    PERMISSION_REASON_MULTIPLE,
+    Access,
+    Permission,
+    PermissionSet,
+    PermissionType,
+    Scope
+)
 from magpie.register import pseudo_random_string
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceNCWMS2, ServiceTHREDDS
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
@@ -26,7 +38,7 @@ from tests.utils import TestVersion
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Optional, Set, Union
+    from typing import Dict, List, Optional, Set, Tuple, Union
 
     from sqlalchemy.orm.session import Session
     from webtest.app import TestApp
@@ -156,6 +168,19 @@ class BaseTestCase(unittest.TestCase):
                                                      override_headers=admin_headers, override_cookies=admin_cookies)
             utils.check_or_try_logout_user(cls)
 
+    @classmethod
+    def login_admin(cls):
+        """
+        Login as administrator user for setup pre-test components or validation post-test execution.
+
+        Each tests should call this method whenever appropriate considering the context (access control level) they
+        should be running with, and execute proper login/logout afterwards to correctly evaluate intended behaviour.
+        """
+        utils.check_or_try_logout_user(cls)  # in case user changed during another test
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
+        assert cls.headers and cls.cookies, cls.require     # nosec
+        cls.headers.update(cls.json_headers)
+
     def setUp(self):
         self.test_app = None  # reset: each test must redefine it if a custom one is needed
 
@@ -193,20 +218,13 @@ class BaseAdminTestCase(BaseTestCase):
     def tearDownClass(cls):
         super(BaseAdminTestCase, cls).tearDownClass()
 
-    @classmethod
-    def check_requirements(cls):
-        utils.check_or_try_logout_user(cls)  # in case user changed during another test
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
-        assert cls.headers and cls.cookies, cls.require     # nosec
-        cls.headers.update(cls.json_headers)
-
     def cleanup(self):
         """
         Removes test attributes from database to avoid conflict and unwanted behaviour due to previous definitions.
 
         Each employed test attribute must be overridden by the :attr:`setUpClass` of the `Test Case`.
         """
-        self.check_requirements()  # re-login as needed in case test logged out the user with permissions
+        self.login_admin()  # re-login as needed in case test logged out the user with permissions
         if self.test_resource_name:
             utils.TestSetup.delete_TestServiceResource(self)
         if self.test_service_name:
@@ -321,6 +339,59 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         utils.check_val_not_in("user_name", body)
         utils.check_val_not_in("user_email", body)
         utils.check_val_not_in("group_names", body)
+
+    @runner.MAGPIE_TEST_STATUS
+    def test_GetSession_InvalidTokens(self):
+        """
+        Invalid token in cookies must be ignored completely and return unauthorized response.
+        """
+        utils.warn_version(self, "session retrieval with invalid token", "3.5.0", skip=True)
+
+        # magpie uses SHA512, which is 64 bytes, converted to HEX becomes 128 characters
+        # adds 8 bytes to represent the timestamp + variable length of the user_id
+        # for evaluation, let's assume that user_id is 4 char: 128 + 8 + <4> + 16-char of post-data parsing method ('!')
+        user_id_len = 4
+        token_data = "!userid_type:int"
+        token_digest = "".join(secrets.choice(string.hexdigits) for _ in range(128 + 8 + user_id_len))
+        token_name = get_constant("MAGPIE_COOKIE_NAME", default_value="auth_tkt")
+        fake_token = token_digest + token_data
+        fake_cookie = {token_name: fake_token}
+
+        # test with forged cookie token
+        utils.check_or_try_logout_user(self)  # just to make extra sure
+        resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=fake_cookie)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["authenticated"], False)
+
+        # setup test user, retrieve temporarily valid token
+        self.login_admin()
+        test_user_name = "unittest-test-user-cookie-session"
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_user_name)  # in case of previous failure
+        body = utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"),
+                                               override_user_name=test_user_name, override_password=test_user_name)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        real_user_id = info["user_id"]
+
+        utils.check_or_try_logout_user(self)
+        _, cookies = utils.check_or_try_login_user(self, username=test_user_name, password=test_user_name)
+        real_token = cookies.get(token_name, "")
+        token_size = 128 + 8 + len(str(real_user_id)) + len(token_data)
+        utils.check_val_equal(len(real_token), token_size, msg="could not retrieve test user token")
+        # validate the token actually works in normal conditions
+        real_cookies = {token_name: real_token}
+        resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=real_cookies)  # valid
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["user"]["user_name"], test_user_name)
+        utils.check_val_equal(body["authenticated"], True)
+
+        # remove test user to make token invalid, although it was valid just before removing the test user
+        # then logout again to test that using this token to retrieve session returns unauthorized
+        self.login_admin()
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_user_name)
+        utils.check_or_try_logout_user(self)
+        resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=real_cookies)  # invalid
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["authenticated"], False)
 
     @runner.MAGPIE_TEST_STATUS
     def test_GetVersion(self):
@@ -915,7 +986,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Logged user is allowed to delete his own account.
         """
-        utils.warn_version(self, "Delete the logged user's own account", "3.4.0", skip=True)
+        utils.warn_version(self, "Delete the logged user's own account", "3.5.0", skip=True)
 
         # login as test user and delete its own account
         self.login_test_user()
@@ -930,8 +1001,8 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 401, expected_method="POST")
 
         # login as admin and validate if test user doesn't exist
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  data={"user_name": self.usr, "password": self.pwd})
+        utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
+                           data={"user_name": self.usr, "password": self.pwd})
         utils.TestSetup.check_NonExistingTestUser(self)
 
     @runner.MAGPIE_TEST_USERS
@@ -1098,10 +1169,12 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         body = utils.TestSetup.create_TestServiceResource(self)
         body = utils.TestSetup.create_TestUserResourcePermission(self, resource_info=body)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
-        child_perm, child_res_id = info["permission_names"][0], info["resource_id"]
+        first_perm, child_res_id = info["permission_names"][0], info["resource_id"]
+        child_perm = PermissionSet(first_perm, access=Access.ALLOW, scope=Scope.RECURSIVE).implicit_permission
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=child_res_id)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
-        leaf_perm, leaf_res_id = info["permission_names"][0], info["resource_id"]
+        first_perm, leaf_res_id = info["permission_names"][0], info["resource_id"]
+        leaf_perm = PermissionSet(first_perm, access=Access.ALLOW, scope=Scope.RECURSIVE).implicit_permission
         utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info)
         self.login_test_user()
         expect_child_perms = utils.TestSetup.get_PermissionNames(self, child_perm)
@@ -1483,7 +1556,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @classmethod
     def setup_test_values(cls):
         provider_file = os.path.join(MAGPIE_ROOT, "config", "providers.cfg")
-        services_cfg = yaml.safe_load(open(provider_file, "r"))
+        with open(provider_file, "r") as providers_fd:
+            services_cfg = yaml.safe_load(providers_fd)
         provider_services_info = services_cfg["providers"]
         # filter impossible providers from possible previous version of remote server
         possible_service_types = utils.get_service_types_for_version(cls.version)
@@ -1572,7 +1646,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in(get_constant("MAGPIE_ADMIN_USER"), users)
 
     @classmethod
-    def check_GetUserResourcesPermissions(cls, user_name, resource_id, query=None):
+    def check_GetUserResourcePermissions(cls, user_name, resource_id, query=None):
         query = "?{}".format(query) if query else ""
         path = "/users/{usr}/resources/{res}/permissions{q}".format(res=resource_id, usr=user_name, q=query)
         resp = utils.test_request(cls, "GET", path, headers=cls.json_headers, cookies=cls.cookies)
@@ -1605,7 +1679,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         res_id = body["resource"]["resource_id"]
-        self.check_GetUserResourcesPermissions(get_constant("MAGPIE_LOGGED_USER"), res_id)
+        self.check_GetUserResourcePermissions(get_constant("MAGPIE_LOGGED_USER"), res_id)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -1669,51 +1743,51 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         expect_perm_recur = utils.TestSetup.get_PermissionNames(self, perm_recur)
 
         # tests
-        q_groups = "inherit=true"
+        q_groups = "inherit=true"  # note: 'inherit' is old name, official is 'inherited', but backward supported
         q_effect = "effective=true"
         test_effective = TestVersion(self.version) < TestVersion("3.0")
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=None)
+        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_child_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_groups)
+        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_child_res_id, query=q_groups)
         utils.check_val_equal(body["permission_names"], [])
         if test_effective:
-            body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_child_res_id, query=q_effect)
+            body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_child_res_id, query=q_effect)
             utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=None)
+        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_parent_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_groups)
+        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_parent_res_id, query=q_groups)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
         if test_effective:
-            body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_parent_res_id, query=q_effect)
+            body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_parent_res_id, query=q_effect)
             utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=None)
+        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_svc_res_id, query=None)
         utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_groups)
+        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_svc_res_id, query=q_groups)
         utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
         if test_effective:
-            body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_svc_res_id, query=q_effect)
+            body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_svc_res_id, query=q_effect)
             utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
 
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=None)
+        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_child_res_id, query=None)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_groups)
+        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_child_res_id, query=q_groups)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
         if test_effective:
-            body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_child_res_id, query=q_effect)
+            body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_child_res_id, query=q_effect)
             utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=None)
+        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_parent_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_groups)
+        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_parent_res_id, query=q_groups)
         utils.check_val_equal(body["permission_names"], [])
         if test_effective:
-            body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_parent_res_id, query=q_effect)
+            body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_parent_res_id, query=q_effect)
             utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=None)
+        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_svc_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_groups)
+        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_svc_res_id, query=q_groups)
         utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         if test_effective:
-            body = self.check_GetUserResourcesPermissions(anonym_usr, resource_id=test_svc_res_id, query=q_effect)
+            body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_svc_res_id, query=q_effect)
             utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
@@ -1722,7 +1796,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_GetUserResourcesPermissions(self):
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
-        self.check_GetUserResourcesPermissions(self.usr, body["resource"]["resource_id"])
+        self.check_GetUserResourcePermissions(self.usr, body["resource"]["resource_id"])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -1760,7 +1834,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
         data = {"permission_name": self.test_resource_perm_name}
         utils.test_request(self, "POST", path, data=data, headers=self.json_headers, cookies=self.cookies)
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
+        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_res_id)
         utils.check_val_is_in(self.test_resource_perm_name, body["permission_names"],
                               msg="Can't test for conflicting permissions if it doesn't exist first.")
 
@@ -1799,7 +1873,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # first request creates the permission when it doesn't exist, PUT works exactly as POST does without problem
         resp = utils.test_request(self, "PUT", path, data=data, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 201, expected_method="PUT")  # created, http code indicates new entity
-        body = self.check_GetUserResourcesPermissions(self.usr, resource_id=test_res_id)
+        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_res_id)
         perm = PermissionSet(data["permission"])
         utils.check_val_is_in("permission_names", body)
         utils.check_val_is_in(str(perm), body["permission_names"],
@@ -1860,7 +1934,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # setup initial permission on service
         utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self)
+        body = utils.TestSetup.create_TestUser(self)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        test_user_id = info["user_id"]
         body = utils.TestSetup.create_TestService(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=info["resource_id"])
@@ -1887,6 +1963,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 201, expected_method="PUT")
         perm.update({"access": Access.ALLOW.value, "scope": Scope.RECURSIVE.value, "type": PermissionType.DIRECT.value})
         expect_perms.append(perm)
+
+        if TestVersion(self.version) >= TestVersion("3.5.0"):
+            for perm in expect_perms:
+                perm["reason"] = "user:{}:{}".format(test_user_id, self.test_user_name)
 
         # validate both permissions exist
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
@@ -1919,6 +1999,584 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_not_in(self.test_service_perm, body["permission_names"])
 
+    def create_validate_permissions(self,
+                                    test_user_name,                     # type: Str
+                                    test_resource_id,                   # type: int # resource to validate perm against
+                                    new_resource_id,                    # type: Optional[int] # resource to create perm
+                                    new_user_group_type,                # type: Optional[Str] # type "user"/"group"
+                                    new_user_group_name,                # type: Optional[Str] # name of user/group
+                                    new_permission,                     # type: Optional[PermissionSet]
+                                    expected_inherited_perm_reasons,    # type: List[Tuple[PermissionSet, Str]]
+                                    expected_resolved_perm_reasons,     # type: List[Tuple[PermissionSet, Str]]
+                                    expected_effective_perm_reasons,    # type: List[Tuple[PermissionSet, Str]]
+                                    error_prefix="",                    # type: Str
+                                    ):                                  # type: (...) -> None
+        """
+        Optionally create some user/group permission on an existing resource, and then validate expected permissions
+        according to each resolution method query ``inherited``, ``resolved``, ``effective``. List of expected
+        permissions for each case must be fully defined, and provided with (pre-set) ``type`` and expected ``reason``.
+
+        .. seealso::
+            - :meth:`test_GetUserResourcePermissions_CombinedMultiplePermissions`
+            - :meth:`test_GetUserResourcePermissions_PermissionsHierarchyResolution`
+        """
+        user_path = "/users/{}/resources/{}/permissions".format(test_user_name, test_resource_id)
+        user_path_inherit = "{}?inherited=true".format(user_path)
+        user_path_resolve = "{}?resolved=true".format(user_path)
+        user_path_effect = "{}?effective=true".format(user_path)
+        if new_permission is not None:
+            utils.TestSetup.update_TestAnyResourcePermission(self, new_user_group_type, "POST",
+                                                             override_item_name=new_user_group_name,
+                                                             override_resource_id=new_resource_id,
+                                                             override_permission=new_permission)
+        # expected permissions can have more than one entry if the names are not the same, otherwise always only one
+        _expect_inherit = [_perm[0].json() for _perm in expected_inherited_perm_reasons]
+        for i, (_, _reason) in enumerate(expected_inherited_perm_reasons):
+            _expect_inherit[i]["reason"] = _reason
+        _expect_resolve = [_perm[0].json() for _perm in expected_resolved_perm_reasons]
+        for i, (_, _reason) in enumerate(expected_resolved_perm_reasons):
+            _expect_resolve[i]["reason"] = _reason
+        _expect_effect = [_perm[0].json() for _perm in expected_effective_perm_reasons]
+        for i, (_, _reason) in enumerate(expected_effective_perm_reasons):
+            _expect_effect[i]["reason"] = _reason
+        # tests
+        error_prefix = "[{}]: ".format(error_prefix) if error_prefix else ""
+        _resp = utils.test_request(self, "GET", user_path_inherit, headers=self.json_headers, cookies=self.cookies)
+        _body = utils.check_response_basic_info(_resp)
+        _msg = "{}Test inherited permissions".format(error_prefix)
+        utils.check_all_equal(_body["permissions"], _expect_inherit, any_order=True, msg=_msg)
+        _resp = utils.test_request(self, "GET", user_path_resolve, headers=self.json_headers, cookies=self.cookies)
+        _body = utils.check_response_basic_info(_resp)
+        _msg = "{}Test resolved permissions".format(error_prefix)
+        utils.check_all_equal(_body["permissions"], _expect_resolve, any_order=True, msg=_msg)
+        _resp = utils.test_request(self, "GET", user_path_effect, headers=self.json_headers, cookies=self.cookies)
+        _body = utils.check_response_basic_info(_resp)
+        _msg = "{}Test effective permissions".format(error_prefix)
+        utils.check_all_equal(_body["permissions"], _expect_effect, any_order=True, msg=_msg)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PUBLIC
+    @runner.MAGPIE_TEST_PERMISSIONS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    def test_GetUserResourcePermissions_MultipleGroupPermissions(self):
+        """
+        Validate the merging strategy that produces ``inherited``, ``resolved`` and ``effective`` permissions with query
+        parameters considering user is member of *multiple groups* which each can have conflicting permission
+        specifications on a corresponding resource.
+
+        .. seealso::
+            :meth:`test_GetUserResourcePermissions_PermissionsHierarchyResolution`
+        """
+        utils.warn_version(self, "inherited/effective prioritized permissions resolution", "3.5.0", skip=True)
+
+        # setup
+        test_group_1 = "unittest-test-{!s}".format(uuid.uuid4())
+        test_group_2 = "unittest-test-{!s}".format(uuid.uuid4())
+        anonym_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        info = utils.TestSetup.get_GroupInfo(self, override_group_name=anonym_group)
+        anonym_id = info["group_id"]
+        anonym_reason = "group:{}:{}".format(anonym_id, anonym_group)
+        body = utils.TestSetup.create_TestGroup(self, override_group_name=test_group_1)
+        info = utils.TestSetup.get_GroupInfo(self, override_body=body)
+        grp1_id = info["group_id"]
+        grp1_reason = "group:{}:{}".format(grp1_id, test_group_1)
+        body = utils.TestSetup.create_TestGroup(self, override_group_name=test_group_2)
+        info = utils.TestSetup.get_GroupInfo(self, override_body=body)
+        grp2_id = info["group_id"]
+        grp2_reason = "group:{}:{}".format(grp2_id, test_group_2)
+        body = utils.TestSetup.create_TestUser(self, override_group_name=anonym_group)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        user_id = info["user_id"]
+        test_user = self.test_user_name
+        user_reason = "user:{}:{}".format(user_id, test_user)
+        utils.TestSetup.assign_TestUserGroup(self, override_group_name=test_group_1)
+        utils.TestSetup.assign_TestUserGroup(self, override_group_name=test_group_2)
+        svc_id, _, res_id = utils.TestSetup.create_TestServiceResourceTree(self, resource_depth=2)
+        perm1_name = self.test_service_resource_perms[0]
+        perm2_name = self.test_service_resource_perms[1]
+
+        # note:
+        #  For all created 'PermissionSet' that follows, the **expected** 'PermissionType' is defined to simplify
+        #  comparison checks with JSON response. That field is ignored during creation/deletion of the permission.
+
+        # note:
+        #   Effective permissions are always MATCH as they resolve the RECURSIVE aspect of the resource tree.
+        #   All possible permission names (for the evaluated Service type) are also always all present in the response.
+        #   Until the last test, the default reason is therefore returned for the 2nd permission as none was created.
+
+        effect_perm1_allow = PermissionSet(perm1_name, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE)
+        effect_perm1_deny = PermissionSet(perm1_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
+        effect_perm2_deny = PermissionSet(perm2_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
+
+        # with only special anonymous group permission, it should be found directly
+        # ==================== | User   | Group1 | Group2 | Anonymous | Inherit | Resolve | Effective
+        #   Service            |        |        |        |           |         |         | ...
+        #       Resource1      |        |        |        |           |         |         | ...
+        #           Resource2  |        |        |        | rDM       | rDM     | rDM     | rDM(a), w-D-M(default)
+        perm1 = PermissionSet(perm1_name, Access.DENY, Scope.MATCH, PermissionType.INHERITED)
+        self.create_validate_permissions(
+            test_user, res_id, res_id, "group", anonym_group, perm1,
+            [(perm1, anonym_reason)],
+            [(perm1, anonym_reason)],  # because it is the only existing permission, equal to inherited
+            [(effect_perm1_deny, anonym_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
+        )
+
+        # with special anonymous group deny permission on resource and other group allow permission at higher scope,
+        # that generic group prevails over anonymous during effective resolution, even if normally deny > allow
+        # inherited local scope remains with previous anonymous permission as higher group permission is not resolved
+        # ==================== | User   | Group1 | Group2 | Anonymous | Inherit | Resolve | Effective
+        #   Service            |        | rAR    |        |           | rAR     | rAR     | ...
+        #       Resource1      |        |        |        |           |         |         | ...
+        #           Resource2  |        |        |        | rDM       | rDM     | rDM     | rAM(g1), w-D-M(default)
+        perm2 = PermissionSet(perm1_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.INHERITED)
+        self.create_validate_permissions(
+            test_user, res_id, svc_id, "group", test_group_1, perm2,
+            [(perm1, anonym_reason)],
+            [(perm1, anonym_reason)],  # same as previously, local scope only sees the anonymous perm
+            [(effect_perm1_allow, grp1_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
+        )
+
+        # add second group permission of higher priority due to access DENY > ALLOW, but still of equal group priority
+        # ensures that when anonymous lower priority gets overridden by either (group1|group2) during tree-level scope
+        # evaluation, corresponding group priority overridden will continue considering other comparable group
+        # permissions for combined resolution at that same level
+        # ==================== | User   | Group1 | Group2 | Anonymous | Inherit | Resolve | Effective
+        #   Service            |        | rAR    | rDR    |           | rDR     | rDR     | ...
+        #       Resource1      |        |        |        |           |         |         | ...
+        #           Resource2  |        |        |        | rDM       | rDM     | rDM     | rDM(g1), w-D-M(default)
+        perm3 = PermissionSet(perm1_name, Access.DENY, Scope.RECURSIVE, PermissionType.INHERITED)
+        self.create_validate_permissions(
+            test_user, res_id, svc_id, "group", test_group_2, perm3,
+            [(perm1, anonym_reason)],
+            [(perm1, anonym_reason)],  # same as previously, local scope only sees the anonymous perm
+            [(effect_perm1_deny, grp2_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
+        )
+
+        # delete both group permission on service for following tests
+        # ensure that they will validate the right local scope and not infer result from those permissions
+        utils.TestSetup.delete_TestGroupResourcePermission(self, ignore_missing=False, override_resource_id=svc_id,
+                                                           override_permission=perm2, override_group_name=test_group_1)
+        utils.TestSetup.delete_TestGroupResourcePermission(self, ignore_missing=False, override_resource_id=svc_id,
+                                                           override_permission=perm3, override_group_name=test_group_2)
+
+        # generic group allow permission on same resource must be found instead of anonymous deny
+        # (generic group > anonymous group)
+        # ==================== | User   | Group1 | Group2 | Anonymous | Inherit | Resolve | Effective
+        #   Service            |        |        |        |           |         |         | ...
+        #       Resource1      |        |        |        |           |         |         | ...
+        #           Resource2  |        | rAM    |        | rDM       | [multi] | rAM     | rAM(g1), wDM(default)
+        perm4 = PermissionSet(perm1_name, Access.ALLOW, Scope.MATCH, PermissionType.INHERITED)
+        self.create_validate_permissions(
+            test_user, res_id, res_id, "group", test_group_1, perm4,
+            [(perm4, grp1_reason), (perm1, anonym_reason)],  # full listing still has anonymous perm
+            [(perm4, grp1_reason)],                          # resolve will have only prioritized group
+            [(effect_perm1_allow, grp1_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
+        )
+
+        # add second group recursive modifier that should become prioritized over match of first group (higher scope)
+        # because those are different groups, two permissions of same name can exist simultaneously on the same resource
+        # ==================== | User   | Group1 | Group2 | Anonymous | Inherit | Resolve | Effective
+        #   Service            |        |        |        |           |         |         | ...
+        #       Resource1      |        |        |        |           |         |         | ...
+        #           Resource2  |        | rAM    | rAR    | rDM       | [multi] | rAR     | rAM(g2), wDM(default)
+        # note:
+        #   In this case, scope change only modifies inherited interpretation of the permission
+        #   (eg: indication that lower resource will also be affected instead of only this local resource).
+        #   Effective resolution still return the same allow match as both permissions have that access.
+        perm5 = PermissionSet(perm1_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.INHERITED)
+        self.create_validate_permissions(
+            test_user, res_id, res_id, "group", test_group_2, perm5,
+            [(perm5, grp2_reason), (perm4, grp1_reason), (perm1, anonym_reason)],  # prev perms remain
+            [(perm5, grp2_reason)],  # because RECURSIVE > MATCH, group2 is prioritized
+            [(effect_perm1_allow, grp2_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
+        )
+
+        # replace first group allow permission access to deny, it should then take priority over the second group allow
+        # ==================== | User   | Group1 | Group2 | Anonymous | Inherit | Resolve   | Effective
+        #   Service            |        |        |        |           |         |           | ...
+        #       Resource1      |        |        |        |           |         |           | ...
+        #           Resource2  |        | rDM    | rAR    | rDM       | [multi] | rDM(g1)   | rDM(g1), wDM(default)
+        utils.TestSetup.delete_TestGroupResourcePermission(self, ignore_missing=False, override_resource_id=res_id,
+                                                           override_permission=perm4, override_group_name=test_group_1)
+        perm6 = PermissionSet(perm1_name, Access.DENY, Scope.MATCH, PermissionType.INHERITED)
+        self.create_validate_permissions(
+            test_user, res_id, res_id, "group", test_group_1, perm6,
+            [(perm5, grp2_reason), (perm6, grp1_reason), (perm1, anonym_reason)],  # perm4->perm6 (DENY)
+            [(perm6, grp1_reason)],  # because DENY > ALLOW, group1 returns as the most prioritized
+            [(effect_perm1_deny, grp1_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
+        )
+
+        # apply allow user permission on parent service (on level above, not same resource as previous tests)
+        # allow user permission takes priority over deny from second group, but only during effective resolution
+        # even if second group deny still exists, the user allow permission takes priority as it is more specific
+        # during check of local inherited permissions (no recursive considered), second group deny remains the result
+        # ==================== | User   | Group1 | Group2 | Anonymous | Inherit | Resolve   | Effective
+        #   Service            | rAR    |        |        |           | rAR     | rAR(u)    | ...
+        #       Resource1      |        |        |        |           |         |           | ...
+        #           Resource2  |        | rDM    | rAR    | rDM       | [multi] | rDM(g1)   | rAM(u), wDM(default)
+        perm7 = PermissionSet(perm1_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT)
+        self.create_validate_permissions(
+            test_user, res_id, svc_id, "user", self.test_user_name, perm7,
+            [(perm5, grp2_reason), (perm6, grp1_reason), (perm1, anonym_reason)],  # idem
+            [(perm6, grp1_reason)],  # still the same, locally not affect by new parent permission
+            [(effect_perm1_allow, user_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
+        )
+
+        # apply user direct permission directly on the targeted resource
+        # now all previous group inherited permissions should be completely ignored as user takes priority at same level
+        # ==================== | User   | Group1 | Group2 | Anonymous | Inherit | Resolve   | Effective
+        #   Service            | rAR    |        |        |           | rAR     | rAR(u)    | ...
+        #       Resource1      |        |        |        |           |         |           | ...
+        #           Resource2  | rAM    | rDM    | rAR    | rDM       | [multi] | rAM(u)    | rAM(u), wDM(default)
+        perm8 = PermissionSet(perm1_name, Access.ALLOW, Scope.MATCH, PermissionType.DIRECT)
+        self.create_validate_permissions(
+            test_user, res_id, res_id, "user", self.test_user_name, perm8,
+            [(perm8, user_reason), (perm5, grp2_reason), (perm6, grp1_reason), (perm1, anonym_reason)],
+            [(perm8, user_reason)],  # because USER > GROUP
+            [(effect_perm1_allow, user_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
+        )
+
+        # add a completely different permission name to validate that previous resolution of user-direct permission
+        # doesn't interfere with other group inherited permissions resolution
+        # ==================== | User   | Group1   | Group2 | Anonym | Inherit      | Resolve         | Effective
+        #   Service            | rAR    |          |        |        | rAR          | rAR(u)          | ...
+        #       Resource1      |        |          |        |        |              |                 | ...
+        #           Resource2  | rAM    | rDM, wDM | rAR    | rDM    | [multi], wDM | rAM(u), wDM(g1) | rAM(u), wDM(g1)
+        perm9 = PermissionSet(perm2_name, Access.DENY, Scope.MATCH, PermissionType.INHERITED)
+        self.create_validate_permissions(
+            test_user, res_id, res_id, "group", test_group_1, perm9,
+            [(perm8, user_reason), (perm5, grp2_reason), (perm6, grp1_reason), (perm1, anonym_reason),
+             (perm9, grp1_reason)],  # all previous permissions untouched, only new one added
+            [(perm8, user_reason), (perm9, grp1_reason)],  # resolved with prioritized regrouped by name
+            [(effect_perm1_allow, user_reason), (effect_perm2_deny, grp1_reason)]
+        )
+
+        # set an exactly equivalent permission as the previous one created, but using the second group this time
+        # because the two groups share equal priority and same permissions name/modifiers, none can be favored
+        # ==================== | User   | Group1   | Group2   | Anonym | Inherit    | Resolve        | Effective
+        #   Service            | rAR    |          |          |        | rAR        | rAR(u)         | ...
+        #       Resource1      |        |          |          |        |            |                | ...
+        #           Resource2  | rAM    | rDM, wDM | rAR, wDM | rDM    | [multi] x2 | rAM(u), wDM(M) | rAM(u), wDM(M)
+        self.create_validate_permissions(
+            test_user, res_id, res_id, "group", test_group_2, perm9,  # same permission, different group
+            [(perm8, user_reason), (perm5, grp2_reason), (perm6, grp1_reason), (perm1, anonym_reason),
+             (perm9, grp1_reason), (perm9, grp2_reason)],  # again everything remains, but adds new one
+            [(perm8, user_reason), (perm9, PERMISSION_REASON_MULTIPLE)],  # reason multiple equal groups
+            [(effect_perm1_allow, user_reason), (effect_perm2_deny, PERMISSION_REASON_MULTIPLE)]
+        )
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_PERMISSIONS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    def test_GetUserResourcePermissions_PermissionsHierarchyResolution(self):
+        """
+        Extensive test validating combined resolution against user, *normal* group, and *special* group  priorities, and
+        considering that each combination has multi-level permission defined to resolve inheritance, as well as
+        Allow/Deny modifiers permutations applied on different level in the resources hierarchy.
+
+        The hierarchy is defined for each case as::
+
+            parent-service              <-- 1st permission applied
+                middle-resource
+                    child-resource      <-- 2nd permission applied
+
+        For each combination, there is always only one :term:`Applied Permission` for a user or group per resource in
+        the hierarchy. This makes :term:`Inherited Permissions` and :term:`Resolved Permissions` field ``reasons`` much
+        easier to validate as there are no intra-resource (same) permission resolution, only inter-resource (distinct)
+        permission inheritance according to local-level priorities, making ``reason`` always single-entry.
+        These are highlighted by the corresponding arrow comments in the code.
+
+        During ``effective`` resolution though, the result will depend on user/group priority, parent/child order of
+        resources onto which the permissions were applied, as well as their ``access`` modifier.
+
+        All permissions are created with :attr:`Scope.RECURSIVE` to evaluate hierarchy resolution.
+        Created user is always provided membership to both the test-group and the anonymous special group.
+
+        .. seealso::
+            - :meth:`test_GetUserResourcePermissions_CombinedMultiplePermissions`
+        """
+        utils.warn_version(self, "inherited/effective prioritized permissions resolution", "3.5.0", skip=True)
+
+        # setup user/group
+        u_n = self.test_user_name
+        g_n = "unittest-test-{!s}".format(uuid.uuid4())
+        a_n = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        info = utils.TestSetup.get_GroupInfo(self, override_group_name=a_n)
+        a_id = info["group_id"]
+        a_r = "group:{}:{}".format(a_id, a_n)
+        body = utils.TestSetup.create_TestGroup(self, override_group_name=g_n)
+        info = utils.TestSetup.get_GroupInfo(self, override_body=body)
+        g_id = info["group_id"]
+        g_r = "group:{}:{}".format(g_id, g_n)
+        body = utils.TestSetup.create_TestUser(self, override_group_name=a_n)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        u_id = info["user_id"]
+        u_r = "user:{}:{}".format(u_id, u_n)
+        utils.TestSetup.assign_TestUserGroup(self, override_group_name=g_n)
+        perm_name = self.test_service_resource_perms[0]
+        undef_perms = set(self.test_service_resource_perms) - {perm_name}
+        p_A, p_D = Access.ALLOW, Access.DENY  # noqa  # aliases just to make combinations on same line "easier" to read
+
+        # for each of the following test combinations, items are defined as:
+        #   (service-user/group, service-perm, resource-user/group, resource-perm,      # permissions creation items
+        #    [inherit-perm/reasons], [resolve-perm/reasons], [effective-perm/reasons],  # expected service permissions
+        #    [inherit-perm/reasons], [resolve-perm/reasons], [effective-perm/reasons])  # expected resource permissions
+        # order is not really important for actual test, but they are somewhat placed by least to more specific,
+        # and by least to more restrictive, for 1st/2nd resource, to help lookup during debug in case of problem
+        combinations = [
+            # pylint: disable=C0301
+            #                +------------------------------------------------+-------------+ matching single-entry
+            #                |                                                |             | (inherited/resolved)
+            #      +---------c------+-------------+ matching single-entry     |             |
+            #      |         |      |             | (inherited/resolved)      |             |
+            #      v         v      v             v                           v             v
+            #  items to create  |     expected permissions on service     |     expected permissions on resource    |  test
+            #  (applied perms)  | inherited     resolved      effective   | inherited     resolved      effective   |  case
+            (a_n, p_A, a_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),  # 01
+            (a_n, p_A, a_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  # 02
+            (a_n, p_D, a_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)]),  # 03
+            (a_n, p_D, a_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)]),  # 04
+            (a_n, p_A, g_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 05
+            (a_n, p_A, g_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 06
+            (a_n, p_D, g_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 07
+            (a_n, p_D, g_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 08
+            (a_n, p_A, u_n, p_A, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 09
+            (a_n, p_A, u_n, p_D, [(p_A, a_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 10
+            (a_n, p_D, u_n, p_A, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 11
+            (a_n, p_D, u_n, p_D, [(p_D, a_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 12
+            # ---
+            (g_n, p_A, a_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, g_r)]),  # 13
+            (g_n, p_A, a_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, g_r)]),  # 14
+            (g_n, p_D, a_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, g_r)]),  # 15
+            (g_n, p_D, a_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, g_r)]),  # 16
+            (g_n, p_A, g_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 17
+            (g_n, p_A, g_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 18
+            (g_n, p_D, g_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)]),  # 19
+            (g_n, p_D, g_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)]),  # 20
+            (g_n, p_A, u_n, p_A, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 21
+            (g_n, p_A, u_n, p_D, [(p_A, g_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 22
+            (g_n, p_D, u_n, p_A, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 23
+            (g_n, p_D, u_n, p_D, [(p_D, g_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 24
+            # ---
+            (u_n, p_A, a_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_A, u_r)]),  # 25
+            (u_n, p_A, a_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_A, u_r)]),  # 26
+            (u_n, p_D, a_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_A, a_r)], [(p_A, a_r)], [(p_D, u_r)]),  # 27
+            (u_n, p_D, a_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, a_r)], [(p_D, a_r)], [(p_D, u_r)]),  # 28
+            (u_n, p_A, g_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_A, u_r)]),  # 29
+            (u_n, p_A, g_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_A, u_r)]),  # 30
+            (u_n, p_D, g_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_A, g_r)], [(p_A, g_r)], [(p_D, u_r)]),  # 31
+            (u_n, p_D, g_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, g_r)], [(p_D, g_r)], [(p_D, u_r)]),  # 32
+            (u_n, p_A, u_n, p_A, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 33
+            (u_n, p_A, u_n, p_D, [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 34
+            (u_n, p_D, u_n, p_A, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_A, u_r)], [(p_A, u_r)], [(p_A, u_r)]),  # 35
+            (u_n, p_D, u_n, p_D, [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)], [(p_D, u_r)]),  # 36
+        ]
+        # self-validation of test that all combinations are indeed defined (avoid incorrectly defined/edited test)
+        # repeat each set of possible target/access, representing one per service/resource: total = 36 use cases
+        valid_combo = list(itertools.product([u_n, g_n, a_n], [p_A, p_D], [u_n, g_n, a_n], [p_A, p_D]))
+        test_combo = [test[:4] for test in combinations]
+        utils.check_all_equal(test_combo, valid_combo, any_order=True, msg="invalid self-validation of combinations.")
+
+        # actual test
+        for i, (test_target1, test_access1, test_target2, test_access2,
+                expect_inherited1, expect_resolved1, expect_effective1,
+                expect_inherited2, expect_resolved2, expect_effective2) in enumerate(combinations):
+            # to guarantee that everything is applied properly and not carried over between iterations,
+            # recreate service from scratch every single time (all permissions under it are flushed automatically)
+            utils.TestSetup.delete_TestService(self)
+            utils.TestSetup.create_TestService(self)
+            body = utils.TestSetup.create_TestService(self)
+            info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+            svc_id = info["resource_id"]  # parent service (1st permission)
+            body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc_id)
+            info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+            res_id = info["resource_id"]  # middle resource, just to ensure inheritance resolves all the way
+            body = utils.TestSetup.create_TestResource(self, parent_resource_id=res_id)
+            info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+            res_id = info["resource_id"]  # child resource (2nd permission)
+            # create the combination permissions
+            # (pre-create both here to correctly resolve using both during validate utility call)
+            item1_type = "user" if test_target1 == u_n else "group"
+            item2_type = "user" if test_target2 == u_n else "group"
+            perm1 = PermissionSet(perm_name, test_access1, Scope.RECURSIVE)
+            perm2 = PermissionSet(perm_name, test_access2, Scope.RECURSIVE)
+            utils.TestSetup.update_TestAnyResourcePermission(self, item1_type, "POST",
+                                                             override_item_name=test_target1,
+                                                             override_resource_id=svc_id,
+                                                             override_permission=perm1)
+            utils.TestSetup.update_TestAnyResourcePermission(self, item2_type, "POST",
+                                                             override_item_name=test_target2,
+                                                             override_resource_id=res_id,
+                                                             override_permission=perm2)
+            # test expected results of current combination
+            # - inherited & resolved should always have same type as created permission (since only 1 on that resource)
+            # - effective are always overridden by the hierarchical resolution with MATCH/EFFECTIVE, with prioritized
+            #   reason, but missing permissions are added for all applicable ones with default DENY and MISSING reason
+            perm1_type = PermissionType.DIRECT if test_target1 == u_n else PermissionType.INHERITED
+            perm2_type = PermissionType.DIRECT if test_target2 == u_n else PermissionType.INHERITED
+            perm_effect = PermissionType.EFFECTIVE
+            for j, (access, reason) in enumerate(expect_inherited1):
+                expect_inherited1[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm1_type), reason
+            for j, (access, reason) in enumerate(expect_resolved1):
+                expect_resolved1[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm1_type), reason
+            for j, (access, reason) in enumerate(expect_effective1):
+                expect_effective1[j] = PermissionSet(perm_name, access, Scope.MATCH, perm_effect), reason
+            for perm in undef_perms:
+                perm_reason = (PermissionSet(perm, p_D, Scope.MATCH, perm_effect), PERMISSION_REASON_DEFAULT)
+                expect_effective1.append(perm_reason)
+            for j, (access, reason) in enumerate(expect_inherited2):
+                expect_inherited2[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm2_type), reason
+            for j, (access, reason) in enumerate(expect_resolved2):
+                expect_resolved2[j] = PermissionSet(perm_name, access, Scope.RECURSIVE, perm2_type), reason
+            for j, (access, reason) in enumerate(expect_effective2):
+                expect_effective2[j] = PermissionSet(perm_name, access, Scope.MATCH, perm_effect), reason
+            for perm in undef_perms:
+                perm_reason = (PermissionSet(perm, p_D, Scope.MATCH, perm_effect), PERMISSION_REASON_DEFAULT)
+                expect_effective2.append(perm_reason)
+            msg = "Test Case #{} (service)".format(i + 1)
+            self.create_validate_permissions(u_n, svc_id, None, None, None, None,  # pre-created, only validate
+                                             expect_inherited1, expect_resolved1, expect_effective1, error_prefix=msg)
+            msg = "Test Case #{} (resource)".format(i + 1)
+            self.create_validate_permissions(u_n, res_id, None, None, None, None,  # pre-created, only validate
+                                             expect_inherited2, expect_resolved2, expect_effective2, error_prefix=msg)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    def test_GetUserResourcePermissions_EffectivePermissions_ScopedHierarchyResolution(self):
+        """
+        Validates that :term:`Effective Permissions` resolution works when scoped subsets of :term:`Resource` have
+        alternating :term:`Applied Permissions` with opposite :class:`Access` modifiers.
+
+        The resolution of permissions should consider the *closest* scope to the targeted :term:`Resource`, but still
+        consider higher priority :term:`User` or :term:`Group` when also defined.
+
+        Legend::
+
+            r: read
+            A: allow
+            D: deny
+            R: recursive
+
+        Specifically, following is evaluated::
+
+            Resources                       | user permissions  | group permissions | effective resolution
+            ================================+===================+==================+============================
+            Service1                        |                   | r-A-R            | r-A
+                Resource1                   |                   |                  | r-A   ^ scope-1
+                    Resource2               |                   | r-D-R            | r-D
+                        Resource3           |                   |                  | r-D   ^ scope-2
+                            Resource4       |                   | r-A-R            | r-A
+                                Resource5   |                   |                  | r-A   ^ scope-3
+            --------------------------------+-------------------+------------------+----------------------------
+            Service2                        | r-A-R             |                  | r-A
+                Resource6                   |                   |                  | r-A   ^ scope-1
+                    Resource7               | r-D-R             |                  | r-D
+                        Resource8           |                   |                  | r-D   ^ scope-2
+                            Resource9       | r-A-R             |                  | r-A
+                                Resource10  |                   |                  | r-A   ^ scope-3
+            --------------------------------+-------------------+------------------+----------------------------
+            Service3                        |                   | r-A-R            | r-A (via group)
+                Resource11                  |                   |                  | r-A (via group)  ^ scope-1
+                    Resource12              | r-D-R             |                  | r-D (via user)
+                        Resource13          |                   | r-D-R            | r-D (via user)   ^ scope-2
+                            Resource14      | r-A-R             | must ignore this | r-A (via user) (not group-denied!)
+                                Resource15  |                   | scope user>group | r-A (via user)   ^ scope-3
+        """
+        utils.warn_version(self, "effective permissions resolution with scoped priorities", "3.5", skip=True)
+
+        # setup user/group and services/resources
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)  # auto-member of test-group
+        test1_ids = utils.TestSetup.create_TestServiceResourceTree(self, resource_depth=5, override_service_name="svc1")
+        svc1_id, res1_id, res2_id, res3_id, res4_id, res5_id = test1_ids
+        test2_ids = utils.TestSetup.create_TestServiceResourceTree(self, resource_depth=5, override_service_name="svc2")
+        svc2_id, res6_id, res7_id, res8_id, res9_id, res10_id = test2_ids
+        test3_ids = utils.TestSetup.create_TestServiceResourceTree(self, resource_depth=5, override_service_name="svc3")
+        svc3_id, res11_id, res12_id, res13_id, res14_id, res15_id = test3_ids
+
+        # setup permissions
+        perm_name = self.test_service_resource_perms[0]
+        rAR = PermissionSet(perm_name, Access.ALLOW, Scope.RECURSIVE)                           # noqa
+        rDR = PermissionSet(perm_name, Access.DENY, Scope.RECURSIVE)                            # noqa
+        rAE = PermissionSet(perm_name, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE)     # noqa
+        rDE = PermissionSet(perm_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)      # noqa
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc1_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res2_id, override_permission=rDR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res4_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc2_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res7_id, override_permission=rDR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res9_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc3_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res12_id, override_permission=rDR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res13_id, override_permission=rDR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=res14_id, override_permission=rAR)
+
+        # test
+        combinations = [
+            (svc1_id, rAE), (res1_id, rAE), (res2_id, rDE), (res3_id, rDE), (res4_id, rAE), (res5_id, rAE),
+            (svc2_id, rAE), (res6_id, rAE), (res7_id, rDE), (res8_id, rDE), (res9_id, rAE), (res10_id, rAE),
+            (svc3_id, rAE), (res11_id, rAE), (res12_id, rDE), (res13_id, rDE), (res14_id, rAE), (res15_id, rAE),
+        ]
+        for i, (res_id, perm_effective) in enumerate(combinations):
+            path = "/users/{}/resources/{}/permissions?effective=true".format(self.test_user_name, res_id)
+            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+            body = utils.check_response_basic_info(resp, 200)
+            perm = body["permissions"][0]
+            perm.pop("reason", None)  # ignore post magpie-3.5 'reason'
+            utils.check_val_equal(perm, perm_effective.json(), msg="Test Case #{}".format(i + 1))
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    def test_GetUserResourcePermissions_EffectivePermissions_MatchWithinRecursiveResolution(self):
+        """
+        Validates resolution of :term:`Effective Resolution` works when :term:`Permission` with :attr:`Scope.MATCH` is
+        defined *within* a scope where a :term:`Permission` with :attr:`Scope.RECURSIVE` exists.
+
+        Legend::
+
+            r: read
+            A: allow
+            D: deny
+            R: recursive
+
+        Specifically, following is evaluated::
+
+            Resources                       | group permissions | effective resolution
+            ================================+===================+========================================
+            Service                         | r-A-R             | r-A   recursive scope all the way down
+                Resource1                   |                   | r-A
+                    Resource2               | r-D-M             | r-D   no effect on scope above/under, only on it
+                        Resource3           |                   | r-A
+        """
+        utils.warn_version(self, "effective permissions resolution with deny", "3.0", skip=True)
+
+        # setup user/group and services/resources
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)  # auto-member of test-group
+        svc_id, res1_id, res2_id, res3_id = utils.TestSetup.create_TestServiceResourceTree(self, resource_depth=3)
+        # setup permissions
+        perm_name = self.test_service_resource_perms[0]
+        rAR = PermissionSet(perm_name, Access.ALLOW, Scope.RECURSIVE)                           # noqa
+        rDM = PermissionSet(perm_name, Access.DENY, Scope.MATCH)                                # noqa
+        rAE = PermissionSet(perm_name, Access.ALLOW, Scope.MATCH, PermissionType.EFFECTIVE)     # noqa
+        rDE = PermissionSet(perm_name, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)      # noqa
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=res2_id, override_permission=rDM)
+        # test
+        for res_id, perm_effective in zip([svc_id, res1_id, res2_id, res3_id], [rAE, rAE, rDE, rAE]):
+            path = "/users/{}/resources/{}/permissions?effective=true".format(self.test_user_name, res_id)
+            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+            body = utils.check_response_basic_info(resp, 200)
+            perm = body["permissions"][0]
+            perm.pop("reason", None)  # ignore post magpie-3.5 'reason'
+            utils.check_val_equal(perm, perm_effective.json())
+
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
@@ -1943,20 +2601,21 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             R: recursive
 
         Permissions::
-                                        user            group           effective (reason/importance)
 
-            Service1                    (r-A-M)                         r-A, w-D  (default)
-                Resource1               (w-A-M)         (r-A-R)         r-A, w-A
-                    Resource2           (r-D-M)         (r-D-R)         r-D, w-D  (default + group-res2)
-                        Resource3       (w-A-M)                         r-D, w-A  (group-res2)
-            Service2                                                    r-D, w-D  (default)
-                Resource4               (w-A-M)         (w-D-R)         r-D, w-A  (user > group)
-                    Resource5           (r-A-R)         (r-D-M)         r-A, w-D  (user > group)
-                        Resource6       (w-A-M)                         r-A. w-A  (user > group)
-            Service3                    (w-D-M)         (w-A-R)         r-D, w-D  (user > group)
-                Resource7                                               r-D, w-A  (group-svc3)
-                    Resource8                           (w-D-R)         r-D, w-D  (revert group-svc3)
-                        Resource9       (w-A-R)                         r-D, w-A  (user > group, revert group-res8)
+            resources hierarchy       | applied (user)  | applied (group) | effective (reason/importance)
+            ==========================+=================+=================+============================================
+            Service1                  | (r-A-M)         |                 | r-A, w-D  (default)
+                Resource1             |         (w-A-M) | (r-A-R)         | r-A, w-A
+                    Resource2         | (r-D-M)         | (r-D-R)         | r-D, w-D  (default + group-res2)
+                        Resource3     |         (w-A-M) |                 | r-D, w-A  (group-res2)
+            Service2                  |                 |                 | r-D, w-D  (default)
+                Resource4             |         (w-A-M) |         (w-D-R) | r-D, w-A  (user > group)
+                    Resource5         | (r-A-R)         | (r-D-M)         | r-A, w-D  (user > group)
+                        Resource6     |         (w-A-M) |                 | r-A. w-A  (user > group)
+            Service3                  |         (w-D-M) |         (w-A-R) | r-D, w-D  (user > group)
+                Resource7             |                 |                 | r-D, w-A  (group-svc3)
+                    Resource8         |                 |         (w-D-R) | r-D, w-D  (revert group-svc3)
+                        Resource9     |         (w-A-R) |                 | r-D, w-A  (user > group, revert group-res8)
         """
         utils.warn_version(self, "effective permissions resolution with deny", "3.0", skip=True)
 
@@ -2722,7 +3381,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         permission applied on a parent resource of the targeted resource that supports sub-tree inheritance.
         """
         # setup
-        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=anonymous)
+        info = utils.TestSetup.get_GroupInfo(self, override_group_name=anonymous)
+        anonym_id = info["group_id"]
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
@@ -2730,7 +3392,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.TestSetup.create_TestResource(self, parent_resource_id=parent_id)
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         applicable_perms = info["permission_names"]
-        applied_perm = applicable_perms[0]
+        first_perm = applicable_perms[0]
+        applied_perm = PermissionSet(first_perm, access=Access.ALLOW, scope=Scope.RECURSIVE).implicit_permission
         child_res_id = info["resource_id"]
         path = "/groups/{}/resources/{}/permissions".format(get_constant("MAGPIE_ANONYMOUS_GROUP"), parent_id)
         data = {"permission_name": applied_perm}
@@ -2754,11 +3417,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                               msg="Permission applied to anonymous group which user is member of should be effective")
         if TestVersion(self.version) >= TestVersion("3.0"):
             perms_names = {PermissionSet(perm).name for perm in applicable_perms}
-            perms_denied = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE)
+            perms_denied = [PermissionSet(perm, Access.DENY, Scope.MATCH, PermissionType.EFFECTIVE).json()
                             for perm in perms_names if perm != PermissionSet(applied_perm).name]
-            effective_permissions = [effective_perm] + perms_denied
+            effective_permissions = [effective_perm.json()] + perms_denied  # noqa
+            if TestVersion(self.version) >= TestVersion("3.5.0"):
+                effective_permissions[0]["reason"] = "group:{}:{}".format(anonym_id, anonymous)
+                for perm in effective_permissions[1:]:
+                    perm["reason"] = PERMISSION_REASON_DEFAULT
             utils.check_val_is_in("permissions", body)
-            utils.check_all_equal([perm.json() for perm in effective_permissions], body["permissions"], any_order=True)
+            utils.check_all_equal(effective_permissions, body["permissions"], any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers(self):
@@ -3112,14 +3779,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 200, expected_method="GET")
 
         # verify if user cannot log back in
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  expect_errors=True,
+        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={}, expect_errors=True,
                                   data={"user_name": self.test_user_name, "password": self.test_user_name})
         utils.check_response_basic_info(resp, 401, expected_method="POST")
 
         # login as admin and validate if the test admin user doesn't exist
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  data={"user_name": self.usr, "password": self.pwd})
+        self.login_admin()
         utils.TestSetup.check_NonExistingTestUser(self)
 
     @runner.MAGPIE_TEST_USERS
@@ -3177,9 +3842,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # Delete the temporary admin user and sign back in to special admin user
         path = "/users/{usr}".format(usr=self.test_user_name)
-        resp = utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
+        utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
         resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
                                   data={"user_name": self.usr, "password": self.pwd})
+        utils.check_response_basic_info(resp, 200, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
@@ -3327,6 +3993,19 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.delete_TestGroup(self)  # setup as required
         utils.TestSetup.create_TestGroup(self)  # actual test
         utils.TestSetup.delete_TestGroup(self)  # cleanup
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_PostGroups_ReturnedID(self):
+        utils.warn_version(self, "group ID returned immediately in creation response", "3.5.0", skip=True)
+
+        utils.TestSetup.delete_TestGroup(self)
+        # do the call manually to ensure there are no extra steps introduced by test utils
+        data = {"group_name": self.test_group_name}
+        resp = utils.test_request(self, "POST", "/groups", json=data, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 201, expected_method="POST")
+        utils.check_val_is_in("group", body)
+        utils.check_val_is_in("group_id", body["group"])
+        utils.check_val_type(body["group"]["group_id"], int, msg="Group ID should be returned with valid int, not None")
 
     @runner.MAGPIE_TEST_GROUPS
     def test_PostGroups_conflict(self):
@@ -4551,13 +5230,6 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
     def setUpClass(cls):
         raise NotImplementedError
 
-    @classmethod
-    def check_requirements(cls):
-        utils.check_or_try_logout_user(cls)  # in case user changed during another test
-        cls.require = "cannot run tests without logged admin user permissions to setup test data"
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd)
-        assert cls.headers and cls.cookies, cls.require  # nosec
-
     @runner.MAGPIE_TEST_LOGIN
     def test_FormLogin(self):
         utils.check_or_try_logout_user(self)
@@ -4656,7 +5328,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Logged user can delete his own account on account page.
         """
-        utils.warn_version(self, "delete account on user account page", "3.4.0", skip=True)
+        utils.warn_version(self, "delete account on user account page", "3.5.0", skip=True)
 
         other_user = self.test_user_name + "-other"
         utils.TestSetup.delete_TestUser(self, override_user_name=other_user)
@@ -4673,14 +5345,12 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_ui_response_basic_info(resp, expected_title="Magpie Administration")
 
         # verify if user cannot log back in
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  expect_errors=True,
-                                  data={"user_name": other_user, "password": self.test_user_name})
+        data = {"user_name": other_user, "password": self.test_user_name}
+        resp = utils.test_request(self, "POST", "/signin", json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies={})
         utils.check_response_basic_info(resp, 401, expected_method="POST")
 
-        resp = utils.test_request(self, "POST", "/signin", headers=self.json_headers, cookies={},
-                                  data={"user_name": get_constant("MAGPIE_ADMIN_USER"),
-                                        "password": get_constant("MAGPIE_ADMIN_PASSWORD")})
+        self.login_admin()
         utils.TestSetup.check_NonExistingTestUser(self, override_user_name=other_user)
 
 
@@ -4845,7 +5515,7 @@ class SetupMagpieAdapter(object):
         request.registry = registry
         settings = kwargs.get("settings")
         if settings:
-            request.registry.settings.update(settings)
+            request.registry.settings.update(settings)  # noqa
         methods = registry.queryUtility(IRequestExtensions).descriptors
         # process the reify request methods as they would normally be generated by pyramid app
         # this ensures they become available as properties from the request (eg: request.db, request.user, etc.)

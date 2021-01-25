@@ -1,11 +1,10 @@
-----------------------
-Table of Contents
-----------------------
+.. this is only the definition of the TOC
+   do not include displayed text here
 
 .. toctree::
     :maxdepth: 4
 
-    Contents <index>
+    Contents <table-of-contents>
     usage
     installation
     configuration

@@ -4,6 +4,7 @@ import functools
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import unittest
+import uuid
 import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
@@ -191,6 +192,8 @@ class TestVersion(LooseVersion):
         Environment variable ``MAGPIE_TEST_VERSION`` should be set with the desired version or ``latest`` to evaluate
         even new features above the last tagged version.
     """
+    __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
+
     def __init__(self, vstring):
         if isinstance(vstring, (TestVersion, LooseVersion)):
             self.version = vstring.version
@@ -1417,6 +1420,7 @@ class TestSetup(object):
     @staticmethod
     def create_TestServiceResource(test_case,                       # type: AnyMagpieTestCaseType
                                    override_service_name=null,      # type: Optional[Str]
+                                   override_service_type=null,      # type: Optional[Str]
                                    override_resource_name=null,     # type: Optional[Str]
                                    override_resource_type=null,     # type: Optional[Str]
                                    override_data=null,              # type: Optional[JSON]
@@ -1424,13 +1428,22 @@ class TestSetup(object):
                                    override_cookies=null,           # type: Optional[CookiesType]
                                    ):                               # type: (...) -> JSON
         """
-        Creates the test resource nested *immediately* under the test service. Test service *must* exist beforehand.
+        Creates a two-level tree with the test resource nested *immediately* under the test service.
 
+        Test service gets created if it did not exist beforehand, but its information are not returned.
+
+        .. seealso::
+            :meth:`create_TestServiceResourceTree`
+
+        :returns: response body of the created resource nested under the service.
         :raises AssertionError: if the response correspond to failure to create the test resource.
         """
         app_or_url = get_app_or_url(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
-        TestSetup.create_TestService(test_case, override_service_name=svc_name)
+        svc_type = override_service_type if override_service_type is not null else test_case.test_service_type
+        TestSetup.create_TestService(test_case,
+                                     override_service_name=svc_name, override_service_type=svc_type,
+                                     override_headers=override_headers, override_cookies=override_cookies)
         path = "/services/{svc}/resources".format(svc=svc_name)
         data = override_data if override_data is not null else {
             "resource_name": override_resource_name or test_case.test_resource_name,
@@ -1440,6 +1453,60 @@ class TestSetup(object):
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         return check_response_basic_info(resp, 201, expected_method="POST")
+
+    @staticmethod
+    def create_TestServiceResourceTree(test_case,                       # type: AnyMagpieTestCaseType
+                                       resource_depth=null,             # type: Optional[int]
+                                       override_service_name=null,      # type: Optional[Str]
+                                       override_service_type=null,      # type: Optional[Str]
+                                       override_resource_names=null,    # type: Optional[List[Str]]
+                                       override_resource_types=null,    # type: Optional[List[Str]]
+                                       override_headers=null,           # type: Optional[HeadersType]
+                                       override_cookies=null,           # type: Optional[CookiesType]
+                                       ):                               # type: (...) -> List[int]
+        """
+        Creates a :term:`Service` and nested N-depth :term:`Resource` hierarchy.
+
+        The number of sub-:term:`Resource` to create under the :term:`Service` will be equal to the number of
+        elements in lists :paramref:`override_resource_names` and :paramref:`override_resource_types` if specified
+        (must be equal lengths), or using :paramref:`resource_depth` value with randomly generated names.
+
+        Using :paramref:`resource_depth`, :paramref:`override_resource_names` and :paramref:`override_resource_types`
+        can be a single value to replicate over each of the N-depth :term:`Resource`. If more than one are provided in
+        this case, the first is picked. Test case defaults are used instead in each situation if not specified.
+
+        :returns: list of ordered IDs of the service and all following resources (N-depth + 1 elements).
+        :raises AssertionError: if the response correspond to failure to create any of the elements.
+        """
+        svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
+        svc_type = override_service_type if override_service_type is not null else test_case.test_service_type
+        res_type = override_resource_types if override_resource_types is not null else test_case.test_resource_type
+        res_name = override_resource_names
+        if resource_depth:
+            if isinstance(res_name, (list, set, tuple)):
+                res_name = res_name[0]
+            if isinstance(res_type, (list, set, tuple)):
+                res_name = res_type[0]
+            res_type = [res_type] * resource_depth
+        if res_name is null:
+            res_name = ["resource_{}_{}".format(i, uuid.uuid4()) for i in range(resource_depth)]
+        elif resource_depth:
+            res_name = [res_name] * resource_depth
+        body = TestSetup.create_TestService(test_case,
+                                            override_service_name=svc_name, override_service_type=svc_type,
+                                            override_headers=override_headers, override_cookies=override_cookies)
+        info = TestSetup.get_ResourceInfo(test_case, override_body=body,
+                                          override_headers=override_headers, override_cookies=override_cookies)
+        parent_id = info["resource_id"]
+        all_ids = [parent_id]
+        for res_n, res_t in zip(res_name, res_type):
+            body = TestSetup.create_TestResource(test_case, parent_resource_id=parent_id,
+                                                 override_resource_name=res_n, override_resource_type=res_t,
+                                                 override_headers=override_headers, override_cookies=override_cookies)
+            info = TestSetup.get_ResourceInfo(test_case, override_body=body, full_detail=True)
+            parent_id = info["resource_id"]
+            all_ids.append(parent_id)
+        return all_ids
 
     @staticmethod
     def create_TestResource(test_case,                      # type: AnyMagpieTestCaseType
@@ -1482,8 +1549,9 @@ class TestSetup(object):
         return check_response_basic_info(resp)
 
     @staticmethod
-    def create_TestAnyResourcePermission(test_case,                         # type: AnyMagpieTestCaseType
+    def update_TestAnyResourcePermission(test_case,                         # type: AnyMagpieTestCaseType
                                          item_type,                         # type: Str
+                                         method,                            # type: Str  # POST|PUT|DELETE
                                          override_item_name=null,           # type: Optional[Str]
                                          resource_info=null,                # type: Optional[JSON]
                                          override_resource_id=null,         # type: Optional[int]
@@ -1494,6 +1562,7 @@ class TestSetup(object):
         """
         See :meth:`create_TestGroupResourcePermission` and :meth:`create_TestUserResourcePermission` for specific uses.
         """
+        method = method.upper()
         if resource_info is null:
             resource_info = TestSetup.get_ResourceInfo(test_case, resource_id=override_resource_id, full_detail=True,
                                                        override_headers=override_headers,
@@ -1506,7 +1575,11 @@ class TestSetup(object):
                                                        override_cookies=override_cookies)
         res_id = resource_info["resource_id"]
         if override_permission is null:
-            override_permission = resource_info["permission_names"][0]
+            # to preserve backward compatibility with existing tests that assumed first permission from different order,
+            # override the modifiers to generate ([first-name]-allow-recursive) which was then returned as first element
+            # (sorting of PermissionSet now returns MATCH before RECURSIVE)
+            first_perm = resource_info["permission_names"][0]
+            override_permission = PermissionSet(first_perm, access=Access.ALLOW, scope=Scope.RECURSIVE)
         if item_type == "group":
             item_name = override_item_name if override_item_name is not null else test_case.test_group_name
             item_path = "/groups/{}".format(item_name)
@@ -1517,10 +1590,13 @@ class TestSetup(object):
             raise ValueError("invalid item-type: [{}]".format(item_type))
         data = {"permission": PermissionSet(override_permission).json()}
         path = "{}/resources/{}/permissions".format(item_path, res_id)
-        resp = test_request(test_case, "POST", path, data=data,
+        resp = test_request(test_case, method, path, data=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
-        return check_response_basic_info(resp, 201, expected_method="POST")
+        if method == "DELETE":
+            code = 200 if resp.status_code != 404 else 404
+            return check_response_basic_info(resp, code, expected_method=method)
+        return check_response_basic_info(resp, 201, expected_method=method)
 
     @staticmethod
     def create_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
@@ -1541,8 +1617,8 @@ class TestSetup(object):
 
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
-        return TestSetup.create_TestAnyResourcePermission(
-            test_case, "user", resource_info=resource_info,
+        return TestSetup.update_TestAnyResourcePermission(
+            test_case, "user", "POST", resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
         )
@@ -1557,7 +1633,7 @@ class TestSetup(object):
                                            override_cookies=null,            # type: Optional[CookiesType]
                                            ):                                # type: (...) -> JSON
         """
-        Utility method to create a permission on given resource for the user.
+        Utility method to create a permission on given resource for the group.
 
         Employs the resource information returned from one of the creation utilities:
             - :meth:`create_TestResource`
@@ -1566,8 +1642,8 @@ class TestSetup(object):
 
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
-        return TestSetup.create_TestAnyResourcePermission(
-            test_case, "group", resource_info=resource_info,
+        return TestSetup.update_TestAnyResourcePermission(
+            test_case, "group", "POST", resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
         )
@@ -1945,7 +2021,7 @@ class TestSetup(object):
 
         Executes an HTTP request with the currently logged user (using cookies/headers) or for another user (using
         :paramref:`override_username` (needs admin-level login cookies/headers).
-        Using :paramref:`body`, one can directly fetch details from JSON body instead of performing the request.
+        Using :paramref:`override_body`, details can be fetched from JSON body instead of performing the request.
         Employed version is extracted from the :paramref:`test_case` unless provided by :paramref:`override_version`.
         """
         if override_body:
@@ -1961,6 +2037,41 @@ class TestSetup(object):
             check_val_is_in("user", body)
             body = body["user"]
         return body or {}
+
+    @staticmethod
+    def get_GroupInfo(test_case,                 # type: AnyMagpieTestCaseType
+                      override_body=None,        # type: JSON
+                      override_group_name=null,  # type: Optional[Str]
+                      override_version=null,     # type: Optional[Str]
+                      override_headers=null,     # type: Optional[HeadersType]
+                      override_cookies=null,     # type: Optional[CookiesType]
+                      ):                         # type: (...) -> JSON
+        """
+        Obtains in a backward compatible way the group details based on response body and the tested instance version.
+
+        Executes an HTTP request with required admin-level login cookies/headers if the details are not found.
+        Using :paramref:`override_body`, details can be fetched from JSON body instead of performing the request.
+        Employed version is extracted from the :paramref:`test_case` unless provided by :paramref:`override_version`.
+        """
+        version = override_version if override_version is not null else TestSetup.get_Version(test_case)
+        grp_name = override_group_name if override_group_name is not null else test_case.test_group_name
+        if TestVersion(version) < TestVersion("0.6.4"):  # route did not exist before that
+            if override_body and "group" in override_body:
+                return override_body["group"]
+            if override_body and "group_name" in override_body:
+                return override_body
+            return {"group_name": grp_name or {}}
+        if override_body:
+            if override_body and "group" in override_body:
+                return override_body["group"]
+            if override_body and "group_name" in override_body:
+                return override_body
+        resp = test_request(test_case, "GET", "/groups/{}".format(grp_name),
+                            headers=override_headers if override_headers is not null else test_case.json_headers,
+                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        body = check_response_basic_info(resp)
+        check_val_is_in("group", body)
+        return body["group"] or {}
 
     @staticmethod
     def check_UserGroupMembership(test_case,                    # type: AnyMagpieTestCaseType
@@ -2099,3 +2210,63 @@ class TestSetup(object):
             check_response_basic_info(resp, 200, expected_method="DELETE")
         TestSetup.check_NonExistingTestGroup(test_case, override_group_name=group_name,
                                              override_headers=headers, override_cookies=cookies)
+
+    @staticmethod
+    def delete_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
+                                          resource_info=null,               # type: Optional[JSON]
+                                          override_resource_id=null,        # type: Optional[int]
+                                          override_permission=null,         # type: Optional[AnyPermissionType]
+                                          override_user_name=null,          # type: Optional[Str]
+                                          override_headers=null,            # type: Optional[HeadersType]
+                                          override_cookies=null,            # type: Optional[CookiesType]
+                                          ignore_missing=True,              # type: bool
+                                          ):                                # type: (...) -> JSON
+        """
+        Utility method to delete a permission on given resource for the user.
+
+        Employs the resource information returned from one of the creation utilities:
+            - :meth:`create_TestResource`
+            - :meth:`create_TestService`
+            - :meth:`create_TestServiceResource`
+
+        If resource information container is not provided, the resource ID must be given as parameter for deletion.
+        If the permission cannot be found, the operation assumes that nothing needs to be done (no failure).
+        """
+        result = TestSetup.update_TestAnyResourcePermission(
+            test_case, "user", "DELETE", resource_info=resource_info,
+            override_resource_id=override_resource_id, override_permission=override_permission,
+            override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
+        )
+        if not ignore_missing:
+            check_val_equal(result["code"], 200)
+        return result
+
+    @staticmethod
+    def delete_TestGroupResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
+                                           resource_info=null,               # type: Optional[JSON]
+                                           override_resource_id=null,        # type: Optional[int]
+                                           override_permission=null,         # type: Optional[AnyPermissionType]
+                                           override_group_name=null,         # type: Optional[Str]
+                                           override_headers=null,            # type: Optional[HeadersType]
+                                           override_cookies=null,            # type: Optional[CookiesType]
+                                           ignore_missing=True,              # type: bool
+                                           ):                                # type: (...) -> JSON
+        """
+        Utility method to delete a permission on given resource for the group.
+
+        Employs the resource information returned from one of the creation utilities:
+            - :meth:`create_TestResource`
+            - :meth:`create_TestService`
+            - :meth:`create_TestServiceResource`
+
+        If resource information container is not provided, the resource ID must be given as parameter for deletion.
+        If the permission cannot be found, the operation assumes that nothing needs to be done (no failure).
+        """
+        result = TestSetup.update_TestAnyResourcePermission(
+            test_case, "group", "DELETE", resource_info=resource_info,
+            override_resource_id=override_resource_id, override_permission=override_permission,
+            override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
+        )
+        if not ignore_missing:
+            check_val_equal(result["code"], 200)
+        return result

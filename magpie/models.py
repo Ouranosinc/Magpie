@@ -1,9 +1,13 @@
+import math
 from typing import TYPE_CHECKING
 
+import datetime
 import sqlalchemy as sa
+import uuid
 from pyramid.httpexceptions import HTTPInternalServerError
 from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated, Everyone
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from ziggurat_foundations import ziggurat_model_init
 from ziggurat_foundations.models.base import BaseModel, get_db_session
@@ -23,15 +27,18 @@ from ziggurat_foundations.models.user_permission import UserPermissionMixin
 from ziggurat_foundations.models.user_resource_permission import UserResourcePermissionMixin
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
-from magpie.api.exception import evaluate_call
+from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.permissions import Permission
+from magpie.utils import get_magpie_url
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, Type
+    from typing import Dict, Optional, Type, Union
 
-    from magpie.typedefs import AccessControlListType, Str
+    from sqlalchemy.orm.session import Session
+
+    from magpie.typedefs import AccessControlListType, GroupPriority, Str
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
@@ -41,6 +48,8 @@ def get_session_callable(request):
 
 
 class Group(GroupMixin, Base):
+    _priority = None
+
     def get_member_count(self, db_session=None):
         return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
 
@@ -50,6 +59,22 @@ class Group(GroupMixin, Base):
         Indicates if the group is discoverable for users to self-register to it.
         """
         return sa.Column(sa.Boolean(), default=False)
+
+    @property
+    def priority(self):
+        # type: () -> GroupPriority
+        """
+        Sorting priority weight of the group for resolving conflicting permissions.
+        """
+        if self._priority is not None:
+            return self._priority
+        if self.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP"):
+            self._priority = -1  # lowest of all for *special* public group
+        elif self.group_name == get_constant("MAGPIE_ADMIN_GROUP"):
+            self._priority = math.inf  # everything will be lower than admins
+        else:
+            self._priority = 0  # nothing can be lower/equal to anonymous, equal for any *generic* group
+        return self._priority
 
 
 class GroupPermission(GroupPermissionMixin, Base):
@@ -395,6 +420,38 @@ class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
     """
 
 
+class TemporaryToken(BaseModel, Base):
+    """
+    Model that defines a token for temporary URL completion of a given pending operation.
+    """
+    __tablename__ = "tmp_tokens"
+
+    token = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
+    operation = sa.Column(sa.Unicode(32), nullable=False)
+    created = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
+
+    user_id = sa.Column(sa.Integer,
+                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
+    user = relationship("User", foreign_keys=[user_id])
+    group_id = sa.Column(sa.Integer(),
+                         sa.ForeignKey("groups.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
+    group = relationship("Group", foreign_keys=[group_id])
+
+    def url(self, settings=None):
+        from magpie.api import schemas as s
+        return get_magpie_url(settings) + s.TemporaryUrlAPI.path.format(token=self.token)
+
+    def expired(self):
+        expire = get_constant("MAGPIE_TOKEN_EXPIRE", raise_missing=False, raise_not_set=False, default_value=86400)
+        return (datetime.datetime.utcnow() - self.created) <= datetime.timedelta(seconds=expire)
+
+    @staticmethod
+    def by_token(token, db_session=None):
+        # type: (Union[Str, UUID], Optional[Session]) -> Optional[TemporaryToken]
+        db_session = get_db_session(db_session)
+        return db_session.query(TemporaryToken).filter(TemporaryToken.token == token).first()
+
+
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
                     UserResourcePermission, GroupResourcePermission, Resource,
                     ExternalIdentity, passwordmanager=None)
@@ -410,13 +467,13 @@ for res in [Service, Directory, File, Workspace, Route, Process]:
 
 
 def resource_factory(**kwargs):
-    resource_type = evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
-                                  msg_on_fail="kwargs do not contain required 'resource_type'",
-                                  content={"kwargs": repr(kwargs)})
-    return evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs),  # noqa
-                         http_error=HTTPInternalServerError,
-                         msg_on_fail="kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'",
-                         content={"kwargs": repr(kwargs), "RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
+    resource_type = ax.evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
+                                     msg_on_fail="kwargs do not contain required 'resource_type'",
+                                     content={"kwargs": repr(kwargs)})
+    msg = "kwargs unpacking failed from specified 'resource_type' and 'RESOURCE_TYPE_DICT'"
+    return ax.evaluate_call(lambda: RESOURCE_TYPE_DICT[resource_type](**kwargs),  # noqa
+                            http_error=HTTPInternalServerError, msg_on_fail=msg,
+                            content={"kwargs": repr(kwargs), "RESOURCE_TYPE_DICT": repr(RESOURCE_TYPE_DICT)})
 
 
 def find_children_by_name(child_name, parent_id, db_session):

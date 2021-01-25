@@ -32,7 +32,8 @@ def get_resources_view(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.Resources_GET_OkResponseSchema.description, content=res_json)
 
 
-@s.ResourceAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resource_GET_responses)
+@s.ResourceAPI.get(schema=s.Resource_GET_RequestSchema, tags=[s.ResourcesTag],
+                   response_schemas=s.Resource_GET_responses)
 @view_config(route_name=s.ResourceAPI.name, request_method="GET")
 def get_resource_view(request):
     """
@@ -61,7 +62,7 @@ def create_resource_view(request):
     return ru.create_resource(resource_name, resource_display_name, resource_type, parent_id, request.db)
 
 
-@s.ResourceAPI.delete(schema=s.Resource_DELETE_RequestSchema(), tags=[s.ResourcesTag],
+@s.ResourceAPI.delete(schema=s.Resource_DELETE_RequestSchema, tags=[s.ResourcesTag],
                       response_schemas=s.Resources_DELETE_responses)
 @view_config(route_name=s.ResourceAPI.name, request_method="DELETE")
 def delete_resource_view(request):
@@ -71,7 +72,7 @@ def delete_resource_view(request):
     return ru.delete_resource(request)
 
 
-@s.ResourceAPI.patch(schema=s.Resource_PATCH_RequestSchema(), tags=[s.ResourcesTag],
+@s.ResourceAPI.patch(schema=s.Resource_PATCH_RequestSchema, tags=[s.ResourcesTag],
                      response_schemas=s.Resource_PATCH_responses)
 @view_config(route_name=s.ResourceAPI.name, request_method="PATCH")
 def update_resource(request):
@@ -112,7 +113,8 @@ def update_resource(request):
                                   "old_resource_name": res_old_name, "new_resource_name": res_new_name})
 
 
-@s.ResourcePermissionsAPI.get(tags=[s.ResourcesTag], response_schemas=s.ResourcePermissions_GET_responses)
+@s.ResourcePermissionsAPI.get(schema=s.ResourcePermissions_GET_RequestSchema, tags=[s.ResourcesTag],
+                              response_schemas=s.ResourcePermissions_GET_responses)
 @view_config(route_name=s.ResourcePermissionsAPI.name, request_method="GET")
 def get_resource_permissions_view(request):
     """
