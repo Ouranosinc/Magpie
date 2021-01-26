@@ -134,7 +134,7 @@ class TestWebhooks(unittest.TestCase):
             sleep(1)
 
             # Check if the webhook received the more complex payload, with the right template replacements
-            expected_payload = [{"nested_dict": {self.test_user_name: f"{self.test_user_name} {self.test_user_name}"},
+            expected_payload = [{"nested_dict": {self.test_user_name: self.test_user_name + " " + self.test_user_name},
                                  "user_name": [self.test_user_name, "other_param"]},
                                 self.test_user_name, False, 1]
             resp = requests.post(BASE_WEBHOOK_URL + "/check_payload", json=expected_payload)

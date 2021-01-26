@@ -87,18 +87,18 @@ def main(global_config=None, **settings):  # noqa: F811
             for webhook in cfg:
                 # Validate the webhook config
                 if webhook.keys() != WEBHOOK_KEYS:
-                    raise ValueError(f"Missing or invalid key found in a webhook config "
-                                     f"from the config file {combined_config}")
+                    raise ValueError("Missing or invalid key found in a webhook config " +
+                                     "from the config file {}".format(combined_config))
                 if webhook["action"] not in WEBHOOK_ACTIONS:
-                    raise ValueError(f"Invalid action {webhook['action']} found in a webhook config "
-                                     f"from the config file {combined_config}")
+                    raise ValueError("Invalid action {} found in a webhook config ".format(webhook["action"]) +
+                                     "from the config file {}".format(combined_config))
                 if webhook["method"] not in HTTP_METHODS:
-                    raise ValueError(f"Invalid method {webhook['method']} found in a webhook config "
-                                     f"from the config file {combined_config}")
+                    raise ValueError("Invalid method {} found in a webhook config ".format(webhook["method"]) +
+                                     "from the config file {}".format(combined_config))
                 url_parsed = urlparse(webhook["url"])
                 if not all([url_parsed.scheme, url_parsed.netloc, url_parsed.path]):
-                    raise ValueError(f"Invalid url {webhook['url']} found in a webhook config "
-                                     f"from the config file {combined_config}")
+                    raise ValueError("Invalid url {} found in a webhook config ".format(webhook["url"]) +
+                                     "from the config file {}".format(combined_config))
 
                 # Regroup webhooks by action key
                 webhook_sub_config = {k: webhook[k] for k in set(list(webhook.keys())) - {"action"}}
