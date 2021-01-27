@@ -10,6 +10,8 @@ Tests for the webhooks implementation
 import tempfile
 import unittest
 from time import sleep
+from urllib.parse import urlparse
+
 import yaml
 
 import requests
@@ -176,8 +178,6 @@ class TestWebhooks(unittest.TestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
             self.checkTestUserStatus(UserOKStatus)
 
-    # Skip this test, until tmp_url is implemented
-    @unittest.skip("implement tmp_url")
     def test_Webhook_CreateUser_FailingWebhook(self):
         """
         Test creating a user where the webhook receives an internal error.
@@ -216,6 +216,14 @@ class TestWebhooks(unittest.TestCase):
             # Check if user creation was successful even if the webhook resulted in failure
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
+
+            # Check if the user's status is still set to 1, since the tmp_url has not been called yet
+            self.checkTestUserStatus(UserOKStatus)
+
+            # Retrieve the tmp_url and send the request to the magpie app
+            resp = requests.get(BASE_WEBHOOK_URL + "/get_tmp_url")
+            assert resp.text
+            utils.test_request(self, "GET", urlparse(resp.text).path)
 
             # Check if the user's status is set to 0
             self.checkTestUserStatus(UserWebhookErrorStatus)

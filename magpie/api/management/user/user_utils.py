@@ -1,3 +1,4 @@
+import uuid
 from typing import TYPE_CHECKING
 
 import six
@@ -19,6 +20,7 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
+from magpie.api.management.register.register_utils import TokenOperation
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
@@ -119,11 +121,21 @@ def create_user(user_name, password, email, group_name, db_session):
 
     user_content = uf.format_user(new_user, new_user_groups)
 
+    # Create a token for the tmp_url, in case an error happens in the webhook services
+    token_id = uuid.uuid4()
+    webhook_token = models.TemporaryToken(
+        token=token_id,
+        operation=TokenOperation.WEBHOOK_ERROR.value,
+        user_id=new_user.id,
+        group_id=_get_group(group_name).id)
+    ax.evaluate_call(lambda: db_session.add(webhook_token), fallback=lambda: db_session.rollback(),
+                     http_error=HTTPForbidden, msg_on_fail=s.TemporaryToken_POST_ForbiddenResponseSchema.description)
+    tmp_url = webhook_token.url()
+
     # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
     transaction.commit()
 
-    # Process any webhook requests
-    process_webhook_requests(WEBHOOK_CREATE_USER_ACTION, {"user_name": user_name, "tmp_url": "tmp_url:80/todo"}, True)
+    process_webhook_requests(WEBHOOK_CREATE_USER_ACTION, {"user_name": user_name, "tmp_url": tmp_url}, True)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": user_content})
