@@ -29,7 +29,7 @@ LOGGER = get_logger(__name__)
 
 class WebhookAction(ExtendedEnum):
     """
-    Actions supported by webhooks
+    Actions supported by webhooks.
     """
     WEBHOOK_CREATE_USER_ACTION = "create_user"
     WEBHOOK_DELETE_USER_ACTION = "delete_user"
