@@ -17,7 +17,7 @@ import yaml
 import requests
 
 from magpie.api.schemas import UserOKStatus, UserWebhookErrorStatus
-from magpie.api.webhooks import WEBHOOK_CREATE_USER_ACTION, WEBHOOK_DELETE_USER_ACTION
+from magpie.api.webhooks import WebhookAction
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
 from tests import runner, utils
@@ -98,14 +98,14 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.WEBHOOK_CREATE_USER_ACTION.value,
                     "method": "POST",
                     "url": create_webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
                 },
                 {
                     "name": "test_webhook_2",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.WEBHOOK_CREATE_USER_ACTION.value,
                     "method": "POST",
                     "url": create_webhook_url,
                     # Test with a more complex payload, that includes different types and nested arrays / dicts
@@ -190,7 +190,7 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.WEBHOOK_CREATE_USER_ACTION.value,
                     "method": "POST",
                     "url": webhook_fail_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
@@ -238,7 +238,7 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.WEBHOOK_CREATE_USER_ACTION.value,
                     "method": "POST",
                     "url": webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
@@ -276,14 +276,14 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": WEBHOOK_DELETE_USER_ACTION,
+                    "action": WebhookAction.WEBHOOK_DELETE_USER_ACTION.value,
                     "method": "POST",
                     "url": delete_webhook_url,
                     "payload": {"user_name": "{user_name}"}
                 },
                 {
                     "name": "test_webhook_2",
-                    "action": WEBHOOK_DELETE_USER_ACTION,
+                    "action": WebhookAction.WEBHOOK_DELETE_USER_ACTION.value,
                     "method": "POST",
                     "url": delete_webhook_url,
                     "payload": {"user_name": "{user_name}"}
@@ -367,7 +367,7 @@ class TestFailingWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook_app",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.WEBHOOK_CREATE_USER_ACTION.value,
                     "method": "POST",
                     "url": create_webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}

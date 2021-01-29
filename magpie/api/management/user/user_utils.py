@@ -24,7 +24,7 @@ from magpie.api.management.register.register_utils import TokenOperation
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
-from magpie.api.webhooks import process_webhook_requests, WEBHOOK_CREATE_USER_ACTION
+from magpie.api.webhooks import process_webhook_requests, WebhookAction
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
@@ -135,7 +135,8 @@ def create_user(user_name, password, email, group_name, db_session):
     # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
     transaction.commit()
 
-    process_webhook_requests(WEBHOOK_CREATE_USER_ACTION, {"user_name": user_name, "tmp_url": tmp_url}, True)
+    process_webhook_requests(WebhookAction.WEBHOOK_CREATE_USER_ACTION,
+                             {"user_name": user_name, "tmp_url": tmp_url}, True)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": user_content})

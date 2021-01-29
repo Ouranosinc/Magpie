@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from pyramid.settings import asbool
 from pyramid_beaker import set_cache_regions_from_settings
 
-from magpie.api.webhooks import HTTP_METHODS, WEBHOOK_ACTIONS, WEBHOOK_KEYS
+from magpie.api.webhooks import HTTP_METHODS, WebhookAction, WEBHOOK_KEYS
 from magpie.cli.register_defaults import register_defaults
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
@@ -89,7 +89,7 @@ def main(global_config=None, **settings):  # noqa: F811
                 if webhook.keys() != WEBHOOK_KEYS:
                     raise ValueError("Missing or invalid key found in a webhook config " +
                                      "from the config file {}".format(combined_config))
-                if webhook["action"] not in WEBHOOK_ACTIONS:
+                if webhook["action"] not in WebhookAction.values():
                     raise ValueError("Invalid action {} found in a webhook config ".format(webhook["action"]) +
                                      "from the config file {}".format(combined_config))
                 if webhook["method"] not in HTTP_METHODS:
