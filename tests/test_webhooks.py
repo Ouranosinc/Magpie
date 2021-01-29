@@ -10,7 +10,7 @@ Tests for the webhooks implementation
 import tempfile
 import unittest
 from time import sleep
-from urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse
 
 import yaml
 
@@ -222,7 +222,7 @@ class TestWebhooks(unittest.TestCase):
 
             # Retrieve the tmp_url and send the request to the magpie app
             resp = requests.get(BASE_WEBHOOK_URL + "/get_tmp_url")
-            assert resp.text
+            utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=CONTENT_TYPE_HTML)
             utils.test_request(self, "GET", urlparse(resp.text).path)
 
             # Check if the user's status is set to 0

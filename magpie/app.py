@@ -5,7 +5,7 @@
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
 from collections import defaultdict
-from urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse
 
 from pyramid.settings import asbool
 from pyramid_beaker import set_cache_regions_from_settings

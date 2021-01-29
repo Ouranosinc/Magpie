@@ -24,7 +24,7 @@ class TokenOperation(ExtendedEnum):
     """
     GROUP_ACCEPT_TERMS = "group-accept-terms"
     USER_PASSWORD_RESET = "user-password-reset"  # nosec: B105
-    WEBHOOK_ERROR = "webhook-error"
+    WEBHOOK_CREATE_USER_ERROR = "webhook-create-user-error"
 
 
 def handle_temporary_token(tmp_token, db_session):
@@ -49,7 +49,7 @@ def handle_temporary_token(tmp_token, db_session):
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         # TODO: reset procedure
         ax.raise_http(HTTPNotImplemented, detail="Not Implemented")
-    if tmp_token.operation == TokenOperation.WEBHOOK_ERROR.value:
+    if tmp_token.operation == TokenOperation.WEBHOOK_CREATE_USER_ERROR.value:
         ax.verify_param(tmp_token.user, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         webhook_update_error_status(tmp_token.user.user_name)

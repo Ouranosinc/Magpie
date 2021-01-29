@@ -125,7 +125,7 @@ def create_user(user_name, password, email, group_name, db_session):
     token_id = uuid.uuid4()
     webhook_token = models.TemporaryToken(
         token=token_id,
-        operation=TokenOperation.WEBHOOK_ERROR.value,
+        operation=TokenOperation.WEBHOOK_CREATE_USER_ERROR.value,
         user_id=new_user.id,
         group_id=_get_group(group_name).id)
     ax.evaluate_call(lambda: db_session.add(webhook_token), fallback=lambda: db_session.rollback(),
