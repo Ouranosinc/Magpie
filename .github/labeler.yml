@@ -9,6 +9,7 @@ cli:
 # label 'ci' all automation-related steps and files
 ci:
   - .*  # all '.<>' files
+  - .github/**/*
   - ci/**/*
   - hooks/**/*
   - Makefile
@@ -19,6 +20,7 @@ doc:
   - "*.rst"
   - "*.example"
   - doc/**/*
+  - requirements-doc.txt
 
 db:
   - magpie/db.py
@@ -32,6 +34,7 @@ security:
 
 tests:
   - tests/**/*
+  - requirements-dev.txt
 
 ui:
   - magpie/ui/**/*
