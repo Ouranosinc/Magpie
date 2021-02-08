@@ -51,11 +51,11 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI Build Status (latest tag)
     :target: https://github.com/Ouranosinc/Magpie/tree/3.5.0
 
-.. |github_latest| image:: https://github.com/Ouranosinc/Magpie/workflows/Tests/badge.svg?branch=master
+.. |github_latest| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/master?label=master
     :alt: Github Actions CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |github_tagged| image:: https://github.com/Ouranosinc/Magpie/workflows/Tests/badge.svg?branch=3.5.0
+.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/3.5.0?label=3.5.0
     :alt: Github Actions CI Build Status (latest tag)
     :target: https://github.com/Ouranosinc/Magpie/tree/3.5.0
 
