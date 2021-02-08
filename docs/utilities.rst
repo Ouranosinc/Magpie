@@ -1,5 +1,5 @@
-.. _utilities:
 .. include:: references.rst
+.. _utilities:
 
 Utilities
 ============
@@ -26,7 +26,7 @@ Available helpers:
       - Register or unregister users using entries provided by batch file or arguments.
     * - ``magpie_register_defaults``
       - | Register default users and groups for `Magpie` internal operation.
-        | See `Configuration`_ for details on applicable parameters definitions.
+        | See :ref:`configuration` for details on applicable parameters definitions.
     * - ``magpie_register_providers``
       - | Register service providers from a configuration file.
         | This is the same command executed at `Magpie` startup using files defined through configuration settings.
@@ -60,7 +60,7 @@ For example, the two statements below are equivalent.
 
 
 When using an ``conda`` environment, you should be able to directly call the ``magpie_helper`` CLI as above if you
-previously installed the package (see `installation`_).
+previously installed the package (see :ref:`installation`).
 
 Source code of these helpers can be found `here <https://github.com/Ouranosinc/Magpie/tree/master/magpie/cli>`_.
 

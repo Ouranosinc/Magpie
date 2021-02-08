@@ -1,9 +1,10 @@
-.. _permissions:
 .. include:: references.rst
 
 .. default location to quickly reference items without the explicit and long prefix
 .. using the full name when introducing the element (to make the location obvious), then reuse shorthand variant
 .. py:currentmodule:: magpie.permissions
+
+.. _permissions:
 
 Permissions
 ===========

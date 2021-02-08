@@ -1,5 +1,5 @@
-.. _usage:
 .. include:: references.rst
+.. _usage:
 
 ========
 Usage
@@ -9,8 +9,8 @@ Package
 ----------------------
 
 To use `Magpie` in a project, first you need to install it. To do so, you can do a basic ``pip install``.
-For more details or other installation variants and environment preparation, see `installation`_ and
-`configuration`_ procedures.
+For more details or other installation variants and environment preparation, see :ref:`installation` and
+:ref:`configuration` procedures.
 
 After this, you should be able to import the Python package to validate it is installed properly using::
 
@@ -26,9 +26,9 @@ from the HTTP request session. To start the application, you can simply run the 
 
     make start
 
-This will first install any missing dependencies in the current environment (see `installation`_), and will after start
-a basic Web Application on ``localhost:2001`` with default configurations. Please note that you **MUST** have a
-`PostgreSQL`_ database connection configured prior to running `Magpie` for it to operate (refer to `Configuration`_
+This will first install any missing dependencies in the current environment (see :ref:`installation`), and will after
+start a basic Web Application on ``localhost:2001`` with default configurations. Please note that you **MUST** have a
+`PostgreSQL`_ database connection configured prior to running `Magpie` for it to operate (refer to :ref:`Configuration`
 for details).
 
 For running the application, multiple
@@ -68,7 +68,7 @@ Please refer to :ref:`permissions` for further details about applicable user acc
 CLI
 ----------------------
 
-After successful `installation`_ of `Magpie` package, multiple `helper utilities <utilities.rst>`_ become available
+After successful :ref:`installation` of `Magpie` package, multiple :ref:`cli_helpers` become available
 as CLI applications callable from the shell. These can be quite useful to run typical `Magpie` operations targeting
 a local or remote instance. Please refer to the relevant page for further details.
 

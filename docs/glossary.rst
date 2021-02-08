@@ -1,5 +1,5 @@
-.. _glossary:
 .. include:: references.rst
+.. _glossary:
 
 ************
 Glossary
@@ -112,7 +112,7 @@ Glossary
         can apply. Applicable values are generally defined by enum :py:class:`magpie.permissions.Permission`.
 
         .. note::
-            See `permissions`_ chapter for more exhaustive details, including contextual comparisons for all other
+            See :ref:`permissions` chapter for more exhaustive details, including contextual comparisons for all other
             *Permission*-related terms presented here.
 
     Provider
