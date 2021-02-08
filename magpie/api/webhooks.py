@@ -31,8 +31,8 @@ class WebhookAction(ExtendedEnum):
     """
     Actions supported by webhooks.
     """
-    WEBHOOK_CREATE_USER_ACTION = "create_user"
-    WEBHOOK_DELETE_USER_ACTION = "delete_user"
+    CREATE_USER = "create_user"
+    DELETE_USER = "delete_user"
 
 
 def process_webhook_requests(action, params, update_user_status_on_error=False):

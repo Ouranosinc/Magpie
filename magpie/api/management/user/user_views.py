@@ -140,7 +140,7 @@ def delete_user_view(request):
                      http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
 
     # Process any webhook requests
-    process_webhook_requests(WebhookAction.WEBHOOK_DELETE_USER_ACTION,
+    process_webhook_requests(WebhookAction.DELETE_USER,
                              {"user_name": user.user_name})
 
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
