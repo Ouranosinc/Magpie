@@ -10,12 +10,14 @@ Tests for the webhooks implementation
 import tempfile
 import unittest
 from time import sleep
+from six.moves.urllib.parse import urlparse
+
 import yaml
 
 import requests
 
 from magpie.api.schemas import UserOKStatus, UserWebhookErrorStatus
-from magpie.api.webhooks import WEBHOOK_CREATE_USER_ACTION, WEBHOOK_DELETE_USER_ACTION
+from magpie.api.webhooks import WebhookAction
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
 from tests import runner, utils
@@ -96,14 +98,14 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
                 },
                 {
                     "name": "test_webhook_2",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
                     # Test with a more complex payload, that includes different types and nested arrays / dicts
@@ -176,8 +178,6 @@ class TestWebhooks(unittest.TestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
             self.checkTestUserStatus(UserOKStatus)
 
-    # Skip this test, until tmp_url is implemented
-    @unittest.skip("implement tmp_url")
     def test_Webhook_CreateUser_FailingWebhook(self):
         """
         Test creating a user where the webhook receives an internal error.
@@ -190,7 +190,7 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_fail_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
@@ -217,6 +217,14 @@ class TestWebhooks(unittest.TestCase):
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
+            # Check if the user's status is still set to 1, since the tmp_url has not been called yet
+            self.checkTestUserStatus(UserOKStatus)
+
+            # Retrieve the tmp_url and send the request to the magpie app
+            resp = requests.get(BASE_WEBHOOK_URL + "/get_tmp_url")
+            utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=CONTENT_TYPE_HTML)
+            utils.test_request(self, "GET", urlparse(resp.text).path)
+
             # Check if the user's status is set to 0
             self.checkTestUserStatus(UserWebhookErrorStatus)
 
@@ -230,7 +238,7 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
@@ -268,14 +276,14 @@ class TestWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook",
-                    "action": WEBHOOK_DELETE_USER_ACTION,
+                    "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
                     "payload": {"user_name": "{user_name}"}
                 },
                 {
                     "name": "test_webhook_2",
-                    "action": WEBHOOK_DELETE_USER_ACTION,
+                    "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
                     "payload": {"user_name": "{user_name}"}
@@ -359,7 +367,7 @@ class TestFailingWebhooks(unittest.TestCase):
             "webhooks": [
                 {
                     "name": "test_webhook_app",
-                    "action": WEBHOOK_CREATE_USER_ACTION,
+                    "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
                     "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}

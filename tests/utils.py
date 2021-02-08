@@ -301,14 +301,18 @@ def get_test_webhook_app(webhook_url):
         # Simulates a webhook url call during user creation
         body = json_pkg.loads(request.body)
         user = body["user_name"]
-        tmp_url = body["tmp_url"]
-
-        # TODO: call tmp_url
-        return Response("Failing webhook url with user " + user + " and tmp_url " + tmp_url)
+        # Since we can't call a local magpie app directly here, we save the tmp_url here,
+        # and retrieve it in the test case
+        settings["tmp_url"] = body["tmp_url"]
+        return Response("Failing webhook url with user " + user + " and tmp_url " + settings["tmp_url"])
 
     def get_status(request):
         # Returns the status number
         return Response(str(settings["webhook_status"]))
+
+    def get_tmp_url(request):
+        # Returns the tmp_url
+        return Response(str(settings["tmp_url"]))
 
     def check_payload(request):
         # Check if the input payload is present in the webhook app saved payload
@@ -318,6 +322,7 @@ def get_test_webhook_app(webhook_url):
     def reset(request):
         settings["webhook_status"] = 0
         settings["payload"] = []
+        settings["tmp_url"] = ""
         return Response("Webhook app has been reset.")
 
     with Configurator() as config:
@@ -325,10 +330,12 @@ def get_test_webhook_app(webhook_url):
         # Initialize status
         settings["webhook_status"] = 0
         settings["payload"] = []
+        settings["tmp_url"] = ""
         config.add_route("webhook_create", "/webhook_create")
         config.add_route("webhook_delete", "/webhook_delete")
         config.add_route("webhook_fail", "/webhook_fail")
         config.add_route("get_status", "/get_status")
+        config.add_route("get_tmp_url", "/get_tmp_url")
         config.add_route("check_payload", "/check_payload")
         config.add_route("reset", "/reset")
         config.add_view(webhook_create_request, route_name="webhook_create",
@@ -338,6 +345,7 @@ def get_test_webhook_app(webhook_url):
         config.add_view(webhook_fail_request, route_name="webhook_fail",
                         request_method="POST")
         config.add_view(get_status, route_name="get_status", request_method="GET")
+        config.add_view(get_tmp_url, route_name="get_tmp_url", request_method="GET")
         config.add_view(check_payload, route_name="check_payload", request_method="POST")
         config.add_view(reset, route_name="reset", request_method="POST")
         webhook_app_instance = config.make_wsgi_app()

@@ -7,6 +7,7 @@ from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.management.user import user_utils as uu
 from magpie import models
+from magpie.api.webhooks import webhook_update_error_status
 from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum
 
 if TYPE_CHECKING:
@@ -23,6 +24,7 @@ class TokenOperation(ExtendedEnum):
     """
     GROUP_ACCEPT_TERMS = "group-accept-terms"
     USER_PASSWORD_RESET = "user-password-reset"  # nosec: B105
+    WEBHOOK_CREATE_USER_ERROR = "webhook-create-user-error"
 
 
 def handle_temporary_token(tmp_token, db_session):
@@ -36,17 +38,21 @@ def handle_temporary_token(tmp_token, db_session):
         ax.raise_http(HTTPGone, content={"token": str_token}, detail=s.TemporaryURL_GET_GoneResponseSchema.description)
     ax.verify_param(tmp_token.operation, is_in=True, param_compare=TokenOperation.values(),
                     param_name="token", http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
-    if tmp_token.operation == TokenOperation.GROUP_ACCEPT_TERMS:
+    if tmp_token.operation == TokenOperation.GROUP_ACCEPT_TERMS.value:
         ax.verify_param(tmp_token.group, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         ax.verify_param(tmp_token.user, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         uu.assign_user_group(tmp_token.user, tmp_token.group, db_session)
-    if tmp_token.operation == TokenOperation.USER_PASSWORD_RESET:
+    if tmp_token.operation == TokenOperation.USER_PASSWORD_RESET.value:
         ax.verify_param(tmp_token.user, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         # TODO: reset procedure
         ax.raise_http(HTTPNotImplemented, detail="Not Implemented")
+    if tmp_token.operation == TokenOperation.WEBHOOK_CREATE_USER_ERROR.value:
+        ax.verify_param(tmp_token.user, not_none=True,
+                        http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
+        webhook_update_error_status(tmp_token.user.user_name)
     db_session.delete(tmp_token)
 
 

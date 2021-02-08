@@ -2745,6 +2745,11 @@ class TemporaryURL_GET_GoneResponseSchema(BaseResponseSchemaAPI):
     body = BaseResponseBodySchema(code=HTTPGone.code, description=description)
 
 
+class TemporaryToken_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Failed to add token to db."
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
 class Session_GET_ResponseBodySchema(BaseResponseBodySchema):
     user = UserBodySchema(missing=colander.drop)
     authenticated = colander.SchemaNode(

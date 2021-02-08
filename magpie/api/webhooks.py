@@ -8,7 +8,7 @@ from magpie.api.schemas import UserWebhookErrorStatus
 from magpie.constants import MAGPIE_INI_FILE_PATH
 from magpie.db import get_db_session_from_config_ini
 from magpie import models
-from magpie.utils import get_logger, get_settings
+from magpie.utils import get_logger, get_settings, ExtendedEnum
 
 # List of keys that should be found for a single webhook item in the config
 WEBHOOK_KEYS = {
@@ -19,20 +19,20 @@ WEBHOOK_KEYS = {
     "payload"
 }
 
-# List of possible actions associated with a webhook
-WEBHOOK_CREATE_USER_ACTION = "create_user"
-WEBHOOK_DELETE_USER_ACTION = "delete_user"
-WEBHOOK_ACTIONS = [
-    WEBHOOK_CREATE_USER_ACTION,
-    WEBHOOK_DELETE_USER_ACTION
-]
-
 # These are the parameters permitted to use the template form in the webhook payload.
 WEBHOOK_TEMPLATE_PARAMS = ["user_name", "tmp_url"]
 
 HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
 LOGGER = get_logger(__name__)
+
+
+class WebhookAction(ExtendedEnum):
+    """
+    Actions supported by webhooks.
+    """
+    CREATE_USER = "create_user"
+    DELETE_USER = "delete_user"
 
 
 def process_webhook_requests(action, params, update_user_status_on_error=False):
@@ -45,7 +45,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False):
     :param update_user_status_on_error: update the user status or not in case of a webhook error
     """
     # Check for webhook requests
-    webhooks = get_settings(get_current_registry())["webhooks"][action]
+    webhooks = get_settings(get_current_registry())["webhooks"][action.value]
     if len(webhooks) > 0:
         # Execute all webhook requests
         pool = multiprocessing.Pool(processes=len(webhooks))
