@@ -1,5 +1,5 @@
-.. _performance:
 .. include:: references.rst
+.. _performance:
 
 *************
 Performance

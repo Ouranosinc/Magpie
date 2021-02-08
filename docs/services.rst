@@ -204,7 +204,7 @@ by the below configuration.
 
 .. note::
     A custom categorization between *metadata* and *data* contents can be provided With either the `providers.cfg`_ or
-    a :ref:`config_file` as described in greater lengths within the :ref:`configuration_link` chapter.
+    a :ref:`config_file` as described in greater lengths within the :ref:`configuration` chapter.
 
 .. code-block:: YAML
 
