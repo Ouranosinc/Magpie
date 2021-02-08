@@ -14,7 +14,8 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add URL endpoint to receive temporary tokens to complete pending operations.
+* Add URL endpoint to receive temporary tokens to complete pending operations
+  (in preparation of PR `#378 <https://github.com/Ouranosinc/Magpie/issues/378>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
