@@ -62,7 +62,7 @@ Ready to contribute? Here's how to set up `magpie` for local development.
 
 3. When you're done making changes, check that your changes pass code formatting and tests::
 
-    make lint
+    make check
     make test
 
 
@@ -87,9 +87,11 @@ Tips
 
 To run a subset of tests::
 
-    python -m unittest tests.test_magpie
+    make SPEC="<CUSTOM TEST SPECIFICATIONS>" test-custom
 
 
+With ``<CUSTOM TEST SPECIFICATIONS>`` being any predefined markers, specific test classes or functions as supported
+by ``pytest`` runner.
 
 .. References for this page
 .. _new issue: https://github.com/Ouranosinc/Magpie/issues/new

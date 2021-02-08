@@ -72,7 +72,22 @@ endif
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
-PIP_XARGS ?= --use-feature=2020-resolver
+PIP_XARGS ?=
+PIP_USE_FEATURE := `python -c '\
+	import pip; \
+	from distutils.version import LooseVersion; \
+	print(LooseVersion(pip.__version__) < LooseVersion("21.0"))'`
+ifeq ($(findstring "--use-feature=2020-resolver", "$(PIP_XARGS)"),)
+  # feature not specified, but needed
+  ifeq ("$(PIP_USE_FEATURE)", "True")
+    PIP_XARGS := --use-feature=2020-resolver $(PIP_XARGS)
+  endif
+else
+  # feature was specified, but should not (not required anymore, default behavior)
+  ifeq ("$(PIP_USE_FEATURE)", "True")
+    PIP_XARGS := $(subst "--use-feature=2020-resolver",,"$(PIP_XARGS)")
+  endif
+endif
 
 # choose conda installer depending on your OS
 CONDA_URL = https://repo.continuum.io/miniconda

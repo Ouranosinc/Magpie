@@ -16,6 +16,10 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix rendering of path parameter details within OpenAPI schemas.
+* Fix ``alembic`` migration failing due to new version updates of package
+  (see `diff 1.4.3 => 1.5.2 <https://github.com/sqlalchemy/alembic/compare/rel_1_4_3..rel_1_5_2>`_).
+* Bump version of ``Twitcher`` to ``v0.5.5`` to obtain its Docker dependency fixes
+  (see PR `bird-house/twitcher#99 <https://github.com/bird-house/twitcher/pull/99>`_).
 
 `3.5.0 <https://github.com/Ouranosinc/Magpie/tree/3.5.0>`_ (2021-01-06)
 ------------------------------------------------------------------------------------

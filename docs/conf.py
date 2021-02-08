@@ -118,7 +118,6 @@ linkcheck_ignore = [
     # ignore private links
     "https://github.com/Ouranosinc/PAVICS/*",
 ]
-
 linkcheck_timeout = 20
 linkcheck_retries = 5
 
