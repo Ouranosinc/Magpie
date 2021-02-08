@@ -120,7 +120,7 @@ Glossary
         See also :term:`Internal Providers`, :term:`External Providers` and section :ref:`Authentication Providers`.
 
     Proxy
-        Sibling service (typically `Twitcher <Twitcher>`_) that employs `Magpie` as access management of :term:`User`,
+        Sibling service (typically `Twitcher`_) that employs `Magpie` as access management of :term:`User`,
         :term:`Group`, :term:`Service` and :term:`Resource` to obtain applicable sets of :term:`Permission`.
         Provided these, it acts as policy enforcement point (PEP).
 
@@ -155,7 +155,3 @@ Glossary
         Unitary entity containing details about the user allowing it to log into `Magpie` and that can have other
         relationships applied to it such as :term:`Permission` and :term:`Group` that extend his specific access rights
         to :term:`Service` and :term:`Resource` elements. Implemented by :py:class:`magpie.models.User`.
-
-
-.. _permissions: ./docs/permissions.rst
-

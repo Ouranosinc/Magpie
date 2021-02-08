@@ -310,7 +310,7 @@ at the start of the `Configuration`_ section.
   | (Default: ``False``)
 
   Specifies whether `Magpie` logging should also **enforce** printing the details to the console when using
-  `CLI helpers <utilities_helpers>`_.
+  :ref:`cli_helpers`.
   Otherwise, the configured logging methodology in `magpie.ini`_ is used (which can also define a console handler).
 
 - | ``MAGPIE_LOG_REQUEST``
@@ -773,7 +773,7 @@ GitHub Settings
 
 To use `GitHub_AuthN`_ authentication provider, variables ``GITHUB_CLIENT_ID`` and ``GITHUB_CLIENT_SECRET``
 must be configured. These settings correspond to the values retrieved from following steps described in
-`Creating an OAuth App <Github_OAuthApp>`_.
+`Github_OAuthApp`_.
 
 Furthermore, the callback URL used for configuring the OAuth application on Github must match the running `Magpie`
 instance URL. For this reason, the values of ``MAGPIE_URL``, ``MAGPIE_HOST`` and ``HOSTNAME`` must be considered.
@@ -790,4 +790,4 @@ To use `WSO2`_ authentication provider, following variables must be set:
 - ``WSO2_SSL_VERIFY``
 
 To configure your `Magpie` instance as a trusted application for ``WSO2`` (and therefore retrieve values of above
-parameters), please refer to `WSO2 Identity Server Documentation <WSO2_doc>`_.
+parameters), please refer to `WSO2_doc`_.

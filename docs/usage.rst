@@ -68,7 +68,7 @@ Please refer to :ref:`permissions` for further details about applicable user acc
 CLI
 ----------------------
 
-After successful `installation`_ of `Magpie` package, multiple `helper utilities <utilities>`_ become available
+After successful `installation`_ of `Magpie` package, multiple `helper utilities <utilities.rst>`_ become available
 as CLI applications callable from the shell. These can be quite useful to run typical `Magpie` operations targeting
 a local or remote instance. Please refer to the relevant page for further details.
 

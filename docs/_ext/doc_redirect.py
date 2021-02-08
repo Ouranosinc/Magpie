@@ -3,7 +3,8 @@
 
 import os
 
-from sphinx.builders import html as builders
+from sphinx.builders.html import StandaloneHTMLBuilder
+from sphinx.builders.linkcheck import CheckExternalLinksBuilder
 from sphinx.util import logging
 
 LOGGER = logging.getLogger(__name__)
@@ -65,9 +66,11 @@ def generate_redirects(app):
         Literal RST file references must be relative to package root in other to be rendered correctly on GitHub.
     """
 
-    if not isinstance(app.builder, builders.StandaloneHTMLBuilder):
+    if not isinstance(app.builder, (StandaloneHTMLBuilder, CheckExternalLinksBuilder)):
         ext = os.path.split(__file__)[-1].split(".")[0]
-        LOGGER.warning("Extension '{}' is only supported by the 'html' builder. Skipping...".format(ext))
+        builder = type(app.builder)
+        LOGGER.warning("Extension '{}' is only supported by the 'html' builder [builder: {}]. ".format(ext, builder) +
+                       "Skipping...")
         return
     if not isinstance(app.config.doc_redirect_map, dict) and len(app.config.doc_redirect_map):
         LOGGER.info("Could not find doc redirect map")

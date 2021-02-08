@@ -96,5 +96,5 @@ by ``pytest`` runner.
 .. References for this page
 .. _new issue: https://github.com/Ouranosinc/Magpie/issues/new
 .. _changes: CHANGES.rst
-.. _installation: docs/installation.rst
-.. _utilities: docs/utilities.rst
+.. _installation: https://pavics-magpie.readthedocs.io/en/latest/installation.html
+.. _utilities: https://pavics-magpie.readthedocs.io/en/latest/utilities.html

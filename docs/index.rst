@@ -1,3 +1,4 @@
+.. include:: references.rst
 .. include:: ../README.rst
 
 ----------------------
