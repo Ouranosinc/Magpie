@@ -291,7 +291,7 @@ def get_test_webhook_app(webhook_url):
 
     def webhook_delete_request(request):
         # Simulates a webhook url call during user deletion
-        user = json_pkg.loads(request.body)["user_name"]
+        user = json_pkg.loads(request.body.decode('utf-8'))["user_name"]
 
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
@@ -299,7 +299,7 @@ def get_test_webhook_app(webhook_url):
 
     def webhook_fail_request(request):
         # Simulates a webhook url call during user creation
-        body = json_pkg.loads(request.body)
+        body = json_pkg.loads(request.body.decode('utf-8'))
         user = body["user_name"]
         # Since we can't call a local magpie app directly here, we save the tmp_url here,
         # and retrieve it in the test case
