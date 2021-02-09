@@ -44,8 +44,8 @@ If you are proposing a feature:
 Provide utilities
 ~~~~~~~~~~~~~~~~~
 
-If you made a convenient utility or tool that works conjointly with `Magpie` in other to provide useful features or
-simply provide ease-of-life, don't hesitate to open a PR referring to it in the documentation `contrib_utilities`_.
+If you made a convenient CLI utility or tool that works conjointly with `Magpie` in other to provide useful features
+or simply provide ease-of-life, don't hesitate to open a PR referring to it in the documentation |contrib_utilities|_.
 We love sharing and avoiding to rewrite stuff.
 
 Get Started!
@@ -58,7 +58,7 @@ Ready to contribute? Here's how to set up `magpie` for local development.
     git clone https://github.com/Ouranosinc/Magpie
 
 
-2. Install your local copy (see `contrib_installation`_)
+2. Install your local copy (see |contrib_installation|_)
 
 3. When you're done making changes, check that your changes pass code formatting and tests::
 
@@ -78,7 +78,7 @@ Before you submit a pull request, check that it meets these guidelines:
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
-   feature to the list in `changes`_ (under relevant category of section `Unreleased`).
+   feature to the list in |contrib_changes|_ (under relevant category of section `Unreleased`).
 3. The tests should work for the specified version of Python for this project.
 
 
@@ -95,6 +95,9 @@ by ``pytest`` runner.
 
 .. References for this page
 .. _new issue: https://github.com/Ouranosinc/Magpie/issues/new
-.. _changes: CHANGES.rst
+.. |contrib_changes| replace:: CHANGES
+.. _contrib_changes: CHANGES.rst
+.. |contrib_installation| replace:: Installation
 .. _contrib_installation: https://pavics-magpie.readthedocs.io/en/latest/installation.html
+.. |contrib_utilities| replace:: Utilities
 .. _contrib_utilities: https://pavics-magpie.readthedocs.io/en/latest/utilities.html
