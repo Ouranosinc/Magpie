@@ -40,8 +40,8 @@ class TestWebhooks(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
-        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
-        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.usr = get_constant("MAGPIE_ADMIN_USER")
+        cls.pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
@@ -71,7 +71,6 @@ class TestWebhooks(unittest.TestCase):
         self.app = utils.get_test_magpie_app({"magpie.config_path": config_path})
         self.headers, self.cookies = utils.check_or_try_login_user(self.app, self.usr, self.pwd,
                                                                    use_ui_form_submit=True)
-
         # Make sure the test user doesn't already exists from a previous test
         utils.TestSetup.delete_TestUser(self)
         utils.TestSetup.delete_TestGroup(self)
