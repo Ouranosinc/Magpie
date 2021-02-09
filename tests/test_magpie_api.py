@@ -7,7 +7,6 @@ test_magpie_api
 
 Tests for :mod:`magpie.api` module.
 """
-
 import unittest
 
 import mock

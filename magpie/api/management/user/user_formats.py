@@ -10,6 +10,7 @@ def format_user(user, group_names=None):
             "user_name": str(usr.user_name),
             "email": str(usr.email),
             "group_names": sorted(list(grp_names) if grp_names else [grp.group_name for grp in user.groups]),
+            "status": int(user.status)
         }
         if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER"):
             user_info["user_id"] = int(user.id)

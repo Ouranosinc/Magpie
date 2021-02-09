@@ -145,6 +145,15 @@ a combined configuration as follows.
         group: my-group  # will reference above group
         action: create
 
+    webhooks:
+      - name: <webhook_name>
+        action: create_user | remove_user
+        method: GET | HEAD | POST | PUT | PATCH | DELETE
+        url: <location>
+        payload: # add any parameters required with the webhook url here
+          <param_name> : <param_value>
+          ...
+
 
 For backward compatibility reasons, `Magpie` will first look for separate files to load each section individually.
 To enforce using a combined file as above, either provide ``MAGPIE_CONFIG_PATH = <path>/config.yml`` or ensure that each
@@ -159,6 +168,44 @@ definitions from multiple files, meaning that ``providers`` are first registered
 creation. Otherwise defaults are assumed and only the specified user or group name are employed. Please refer to files
 `providers.cfg`_ and `permissions.cfg`_ for further details about specific formatting and behaviour of each available
 field.
+
+  .. versionadded:: 3.6
+
+A section for webhooks has also been added to the combined configuration file. This section defines a list of
+urls that should be called after creating or deleting a user. The webhooks urls are responsible for any extra
+steps that should be taken on external services after the user creation/deletion. Note that the webhook requests are
+asynchronous, so Magpie might execute other requests before the webhooks requests are fully done.
+
+Each webhook should define the following parameters :
+
+- | ``name``
+
+  The webhook's name
+
+- | ``action``
+  | (Values: ``create_user | delete_user``)
+
+  The action where the webhook will be executed, either during the user's creation (create_user),
+  or the user's deletion (delete_user)
+
+- | ``method``
+
+  The http method used for the webhook request
+
+- | ``url``
+
+  A valid http url that should be called for the webhook request
+
+- | ``payload``
+
+  A list of parameters that will be sent with the request. Note that those parameters can contain
+  template variables using the braces characters {}.
+  The only permitted template variables for now are ``user_name`` and ``tmp_url``. These variables will get replaced
+  by the corresponding value at the time of the request.
+
+  For example, the parameter "user_name_param" could be defined in the config using a template variable ``user_name``:
+
+  ``"user_name_param": "{user_name}"``
 
 Settings and Constants
 ----------------------

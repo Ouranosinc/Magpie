@@ -1,3 +1,5 @@
+from errno import EADDRINUSE
+import threading
 import functools
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
@@ -12,10 +14,13 @@ import pytest
 import requests
 import requests.exceptions
 import six
+from pyramid.config import Configurator
+from pyramid.response import Response
 from pyramid.httpexceptions import HTTPException
 from pyramid.settings import asbool
 from pyramid.testing import DummyRequest, setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
+from waitress import serve
 from webtest.app import AppError, TestApp  # noqa
 from webtest.forms import Form
 from webtest.response import TestResponse
@@ -271,6 +276,96 @@ def get_app_or_url(test_item):
     if not app_or_url:
         raise ValueError("Invalid test class, application or URL could not be found.")
     return app_or_url
+
+
+def get_test_webhook_app(webhook_url):
+    """
+    Instantiate a local test application used for the prehook for user creation and deletion.
+    """
+    def webhook_create_request(request):
+        # Status is incremented to count the number of successful test webhooks
+        settings["webhook_status"] += 1
+        # Save the request's payload
+        settings["payload"].append(request.body)
+        return Response("Successful webhook url")
+
+    def webhook_delete_request(request):
+        # Simulates a webhook url call during user deletion
+        user = json_pkg.loads(request.body.decode("utf-8"))["user_name"]
+
+        # Status is incremented to count the number of successful test webhooks
+        settings["webhook_status"] += 1
+        return Response("Successful webhook url with user " + user)
+
+    def webhook_fail_request(request):
+        # Simulates a webhook url call during user creation
+        body = json_pkg.loads(request.body.decode("utf-8"))
+        user = body["user_name"]
+        # Since we can't call a local magpie app directly here, we save the tmp_url here,
+        # and retrieve it in the test case
+        settings["tmp_url"] = body["tmp_url"]
+        return Response("Failing webhook url with user " + user + " and tmp_url " + settings["tmp_url"])
+
+    def get_status(request):
+        # Returns the status number
+        return Response(str(settings["webhook_status"]))
+
+    def get_tmp_url(request):
+        # Returns the tmp_url
+        return Response(str(settings["tmp_url"]))
+
+    def check_payload(request):
+        # Check if the input payload is present in the webhook app saved payload
+        assert request.body in settings["payload"]
+        return Response("Content is correct")
+
+    def reset(request):
+        settings["webhook_status"] = 0
+        settings["payload"] = []
+        settings["tmp_url"] = ""
+        return Response("Webhook app has been reset.")
+
+    with Configurator() as config:
+        settings = config.registry.settings
+        # Initialize status
+        settings["webhook_status"] = 0
+        settings["payload"] = []
+        settings["tmp_url"] = ""
+        config.add_route("webhook_create", "/webhook_create")
+        config.add_route("webhook_delete", "/webhook_delete")
+        config.add_route("webhook_fail", "/webhook_fail")
+        config.add_route("get_status", "/get_status")
+        config.add_route("get_tmp_url", "/get_tmp_url")
+        config.add_route("check_payload", "/check_payload")
+        config.add_route("reset", "/reset")
+        config.add_view(webhook_create_request, route_name="webhook_create",
+                        request_method="POST")
+        config.add_view(webhook_delete_request, route_name="webhook_delete",
+                        request_method="POST")
+        config.add_view(webhook_fail_request, route_name="webhook_fail",
+                        request_method="POST")
+        config.add_view(get_status, route_name="get_status", request_method="GET")
+        config.add_view(get_tmp_url, route_name="get_tmp_url", request_method="GET")
+        config.add_view(check_payload, route_name="check_payload", request_method="POST")
+        config.add_view(reset, route_name="reset", request_method="POST")
+        webhook_app_instance = config.make_wsgi_app()
+
+    def webhook_app():
+        try:
+            webhook_url_info = urlparse(webhook_url)
+            serve(webhook_app_instance, host=webhook_url_info.hostname, port=webhook_url_info.port)
+        except OSError as exception:
+            if exception.errno == EADDRINUSE:
+                # The app is already running, we just need to reset the webhook status and saved payload for a new test.
+                resp = requests.post(webhook_url + "/reset")
+                check_response_basic_info(resp, 200, expected_type=CONTENT_TYPE_HTML, expected_method="POST")
+                return
+            raise
+
+    x = threading.Thread(target=webhook_app, daemon=True)
+    x.start()
+
+    return webhook_app_instance
 
 
 def get_hostname(test_item):

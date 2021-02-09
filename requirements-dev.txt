@@ -21,3 +21,4 @@ pytest
 python2-secrets; python_version <= "3.5"
 tox>=3.0
 webtest
+waitress

@@ -443,7 +443,7 @@ class TemporaryToken(BaseModel, Base):
 
     def expired(self):
         expire = get_constant("MAGPIE_TOKEN_EXPIRE", raise_missing=False, raise_not_set=False, default_value=86400)
-        return (datetime.datetime.utcnow() - self.created) <= datetime.timedelta(seconds=expire)
+        return (datetime.datetime.utcnow() - self.created) > datetime.timedelta(seconds=expire)
 
     @staticmethod
     def by_token(token, db_session=None):

@@ -1,3 +1,4 @@
+import uuid
 from typing import TYPE_CHECKING
 
 import six
@@ -10,6 +11,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
+import transaction
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -18,12 +20,17 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
+from magpie.api.management.register.register_utils import TokenOperation
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
+from magpie.api.webhooks import process_webhook_requests, WebhookAction
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
+from magpie.utils import get_logger
+
+LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -112,8 +119,27 @@ def create_user(user_name, password, email, group_name, db_session):
         _add_to_group(new_user, _get_group(anonym_grp_name))
         new_user_groups.append(anonym_grp_name)
 
+    user_content = uf.format_user(new_user, new_user_groups)
+
+    # Create a token for the tmp_url, in case an error happens in the webhook services
+    token_id = uuid.uuid4()
+    webhook_token = models.TemporaryToken(
+        token=token_id,
+        operation=TokenOperation.WEBHOOK_CREATE_USER_ERROR.value,
+        user_id=new_user.id,
+        group_id=_get_group(group_name).id)
+    ax.evaluate_call(lambda: db_session.add(webhook_token), fallback=lambda: db_session.rollback(),
+                     http_error=HTTPForbidden, msg_on_fail=s.TemporaryToken_POST_ForbiddenResponseSchema.description)
+    tmp_url = webhook_token.url()
+
+    # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
+    transaction.commit()
+
+    process_webhook_requests(WebhookAction.CREATE_USER,
+                             {"user_name": user_name, "tmp_url": tmp_url}, True)
+
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
-                         content={"user": uf.format_user(new_user, new_user_groups)})
+                         content={"user": user_content})
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session, overwrite=False):

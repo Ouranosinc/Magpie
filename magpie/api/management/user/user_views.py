@@ -1,6 +1,7 @@
 """
 User Views, both for specific user-name provided as request path variable and special keyword for logged session user.
 """
+
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
@@ -15,6 +16,7 @@ from magpie.api import schemas as s
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
+from magpie.api.webhooks import process_webhook_requests, WebhookAction
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
 from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
@@ -136,6 +138,11 @@ def delete_user_view(request):
                     http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
     ax.evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
+
+    # Process any webhook requests
+    process_webhook_requests(WebhookAction.DELETE_USER,
+                             {"user_name": user.user_name})
+
     return ax.valid_http(http_success=HTTPOk, detail=s.User_DELETE_OkResponseSchema.description)
 
 

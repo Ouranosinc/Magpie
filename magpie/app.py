@@ -4,14 +4,18 @@
 """
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
+from collections import defaultdict
+from six.moves.urllib.parse import urlparse
 
 from pyramid.settings import asbool
 from pyramid_beaker import set_cache_regions_from_settings
 
+from magpie.api.webhooks import HTTP_METHODS, WebhookAction, WEBHOOK_KEYS
 from magpie.cli.register_defaults import register_defaults
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
-from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
+from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config, \
+    get_all_configs
 from magpie.security import get_auth_config
 from magpie.utils import get_logger, patch_magpie_url, print_log
 
@@ -73,6 +77,32 @@ def main(global_config=None, **settings):  # noqa: F811
     perm_cfg = combined_config or get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", settings, default_value="",
                                                raise_missing=False, raise_not_set=False, print_missing=True)
     magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
+
+    print_log("Register webhook configurations...", LOGGER)
+    settings["webhooks"] = defaultdict(lambda: [])
+    if combined_config:
+        webhook_configs = get_all_configs(combined_config, "webhooks", allow_missing=True)
+
+        for cfg in webhook_configs:
+            for webhook in cfg:
+                # Validate the webhook config
+                if webhook.keys() != WEBHOOK_KEYS:
+                    raise ValueError("Missing or invalid key found in a webhook config " +
+                                     "from the config file {}".format(combined_config))
+                if webhook["action"] not in WebhookAction.values():
+                    raise ValueError("Invalid action {} found in a webhook config ".format(webhook["action"]) +
+                                     "from the config file {}".format(combined_config))
+                if webhook["method"] not in HTTP_METHODS:
+                    raise ValueError("Invalid method {} found in a webhook config ".format(webhook["method"]) +
+                                     "from the config file {}".format(combined_config))
+                url_parsed = urlparse(webhook["url"])
+                if not all([url_parsed.scheme, url_parsed.netloc, url_parsed.path]):
+                    raise ValueError("Invalid url {} found in a webhook config ".format(webhook["url"]) +
+                                     "from the config file {}".format(combined_config))
+
+                # Regroup webhooks by action key
+                webhook_sub_config = {k: webhook[k] for k in set(list(webhook.keys())) - {"action"}}
+                settings["webhooks"][webhook["action"]].append(webhook_sub_config)
 
     print_log("Running configurations setup...", LOGGER)
     patch_magpie_url(settings)

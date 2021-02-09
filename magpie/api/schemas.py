@@ -92,6 +92,10 @@ def service_api_route_info(service_api, **kwargs):
 _LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
 LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
 
+# Values for the 'status' field in the Users database
+UserOKStatus = 1
+UserWebhookErrorStatus = 0
+
 SwaggerGenerator = Service(
     path="/json",
     name="swagger_schema_json")
@@ -2739,6 +2743,11 @@ class TemporaryURL_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
 class TemporaryURL_GET_GoneResponseSchema(BaseResponseSchemaAPI):
     description = "Temporary URL token is expired."
     body = BaseResponseBodySchema(code=HTTPGone.code, description=description)
+
+
+class TemporaryToken_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Failed to add token to db."
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class Session_GET_ResponseBodySchema(BaseResponseBodySchema):
