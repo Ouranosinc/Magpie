@@ -31,13 +31,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requires Python 2.7, 3.5+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.5.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.5.1.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/3.5.0...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/3.5.1...master
 
-.. |version| image:: https://img.shields.io/badge/tag-3.5.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-3.5.1-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/3.5.0
+    :target: https://github.com/Ouranosinc/Magpie/tree/3.5.1
 
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/Magpie/shield.svg
     :alt: Dependencies Status
@@ -47,17 +47,17 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/Magpie
 
-.. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/3.5.0.svg?label=3.5.0
+.. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/3.5.1.svg?label=3.5.1
     :alt: Travis-CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/tree/3.5.0
+    :target: https://github.com/Ouranosinc/Magpie/tree/3.5.1
 
-.. |github_latest| image:: https://github.com/Ouranosinc/Magpie/workflows/Tests/badge.svg?branch=master
+.. |github_latest| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/master?label=master
     :alt: Github Actions CI Build Status (master branch)
-    :target: https://travis-ci.com/Ouranosinc/Magpie
+    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3Amaster
 
-.. |github_tagged| image:: https://github.com/Ouranosinc/Magpie/workflows/Tests/badge.svg?branch=3.5.0
+.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/3.5.1?label=3.5.1
     :alt: Github Actions CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/tree/3.5.0
+    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A3.5.1
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
     :alt: Readthedocs Build Status (master branch)
@@ -75,7 +75,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Docker Build Status (latest tag)
     :target: https://hub.docker.com/r/pavics/magpie/builds
 
-.. |docker_build_status| image:: https://img.shields.io/docker/build/pavics/magpie.svg?label=status
+.. |docker_build_status| image:: https://img.shields.io/docker/cloud/build/pavics/magpie.svg?label=status
     :alt: Docker Build Status (latest tag)
     :target: https://hub.docker.com/r/pavics/magpie/builds
 
@@ -85,32 +85,25 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 Documentation
 --------------
 
-The REST API documentation is auto-generated and served under ``{MAGPIE_URL}/api/`` using Swagger-UI with tag ``latest``.
+The REST API documentation is auto-generated and served under ``{MAGPIE_URL}/api/`` using Swagger-UI with tag
+``latest``.
 
-| More ample details about installation, configuration and usage are provided on `readthedocs`_.
-| These are generated from corresponding information provided in `docs`_.
-
-.. _readthedocs: https://pavics-magpie.readthedocs.io
-.. _docs: https://github.com/Ouranosinc/Magpie/tree/master/docs
+| More ample details about installation, configuration and usage are provided on `readme_readthedocs`_.
+| These are generated from corresponding information provided in `github_docs`_.
 
 ----------------------------
 Configuration and Usage
 ----------------------------
 
 | Multiple configuration options exist for ``Magpie`` application.
-| Please refer to `configuration`_ for details.
-| See `usage`_ for details.
-
-.. _configuration: ./docs/configuration.rst
-.. _usage: ./docs/usage.rst
+| Please refer to `readme_configuration`_ for details.
+| See `readme_usage`_ for details.
 
 --------------
 Change History
 --------------
 
-Addressed features, changes and bug fixes per version tag are available in `changes`_.
-
-.. _changes: CHANGES.rst
+Addressed features, changes and bug fixes per version tag are available in `readme_changes`_.
 
 --------------
 Docker Images
@@ -128,8 +121,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - pavics/magpie:3.5.0
-      - pavics/twitcher:magpie-3.5.0
+    * - pavics/magpie:3.5.1
+      - pavics/twitcher:magpie-3.5.1
     * - pavics/magpie:latest
       - pavics/twitcher:magpie-latest
 
@@ -139,8 +132,14 @@ Following most recent variants are available:
 - Older tags the are also available: `Magpie Docker Images`_
 - `Twitcher`_ image with integrated ``MagpieAdapter`` are only available for Magpie ``>=1.0.0``
 
+.. these reference must be left direct (not included with 'docs/references.rst') to allow pretty rendering on Github
+.. _readme_changes: CHANGES.rst
+.. _readme_configuration: https://pavics-magpie.readthedocs.io/en/latest/configuration.html
+.. _readme_usage: https://pavics-magpie.readthedocs.io/en/latest/usage.html
+.. _readme_readthedocs: https://pavics-magpie.readthedocs.io
+.. _github_docs: https://github.com/Ouranosinc/Magpie/tree/master/docs
+
 .. REST API redoc reference is auto-generated by sphinx from magpie cornice-swagger definitions
-.. These reference must be left direct (not included) to allow pretty rendering on Github
 .. _REST API: https://pavics-magpie.readthedocs.io/en/latest/api.html
 .. _Authomatic: https://authomatic.github.io/authomatic/
 .. _PostgreSQL: https://www.postgresql.org/

@@ -117,6 +117,8 @@ linkcheck_ignore = [
     "https://github.com/Ouranosinc/Magpie/*",    # limit only Magpie so others are still checked
     # ignore private links
     "https://github.com/Ouranosinc/PAVICS/*",
+    # ignore false-positive broken links to local doc files used for rendering on Github
+    "CHANGES.rst",
 ]
 linkcheck_timeout = 20
 linkcheck_retries = 5

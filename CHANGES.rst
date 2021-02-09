@@ -9,15 +9,23 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add URL endpoint to receive temporary tokens to complete pending operations.
 * Add a list of webhook urls, defined in the configuration, that will be called when creating or deleting a user.
   (resolves `#343 <https://github.com/Ouranosinc/Magpie/issues/343>`_).
+
+`3.5.1 <https://github.com/Ouranosinc/Magpie/tree/3.5.1>`_ (2021-02-08)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add URL endpoint to receive temporary tokens to complete pending operations
+  (in preparation of PR `#378 <https://github.com/Ouranosinc/Magpie/issues/378>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix rendering of path parameter details within OpenAPI schemas.
 * Fix ``alembic`` migration failing due to new version updates of package
   (see `diff 1.4.3 => 1.5.2 <https://github.com/sqlalchemy/alembic/compare/rel_1_4_3..rel_1_5_2>`_).
+* Fix documentation references and generation with updated Sphinx extension packages.
 * Bump version of ``Twitcher`` to ``v0.5.5`` to obtain its Docker dependency fixes
   (see PR `bird-house/twitcher#99 <https://github.com/bird-house/twitcher/pull/99>`_).
 

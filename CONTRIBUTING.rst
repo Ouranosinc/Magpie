@@ -45,8 +45,8 @@ Provide utilities
 ~~~~~~~~~~~~~~~~~
 
 If you made a convenient utility or tool that works conjointly with `Magpie` in other to provide useful features or
-simply provide ease-of-life, don't hesitate to open a PR referring to it in the documentation `utilities`_. We love
-sharing and avoiding to rewrite stuff.
+simply provide ease-of-life, don't hesitate to open a PR referring to it in the documentation `contrib_utilities`_.
+We love sharing and avoiding to rewrite stuff.
 
 Get Started!
 ------------
@@ -58,7 +58,7 @@ Ready to contribute? Here's how to set up `magpie` for local development.
     git clone https://github.com/Ouranosinc/Magpie
 
 
-2. Install your local copy (see `installation`_)
+2. Install your local copy (see `contrib_installation`_)
 
 3. When you're done making changes, check that your changes pass code formatting and tests::
 
@@ -96,5 +96,5 @@ by ``pytest`` runner.
 .. References for this page
 .. _new issue: https://github.com/Ouranosinc/Magpie/issues/new
 .. _changes: CHANGES.rst
-.. _installation: docs/installation.rst
-.. _utilities: docs/utilities.rst
+.. _contrib_installation: https://pavics-magpie.readthedocs.io/en/latest/installation.html
+.. _contrib_utilities: https://pavics-magpie.readthedocs.io/en/latest/utilities.html

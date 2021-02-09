@@ -18,6 +18,7 @@ pylint-quotes
 # bird-house/twticher, must match version in Dockerfile.adapater
 pyramid-twitcher==0.5.3
 pytest
+python2-secrets; python_version <= "3.5"
 tox>=3.0
 webtest
 waitress

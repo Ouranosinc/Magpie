@@ -1,9 +1,10 @@
-.. _utilities:
 .. include:: references.rst
+.. _utilities:
 
 Utilities
 ============
 
+.. _cli_helpers:
 .. _utilities_helpers:
 
 Magpie CLI Helpers
@@ -25,7 +26,7 @@ Available helpers:
       - Register or unregister users using entries provided by batch file or arguments.
     * - ``magpie_register_defaults``
       - | Register default users and groups for `Magpie` internal operation.
-        | See `Configuration`_ for details on applicable parameters definitions.
+        | See :ref:`configuration` for details on applicable parameters definitions.
     * - ``magpie_register_providers``
       - | Register service providers from a configuration file.
         | This is the same command executed at `Magpie` startup using files defined through configuration settings.
@@ -59,7 +60,7 @@ For example, the two statements below are equivalent.
 
 
 When using an ``conda`` environment, you should be able to directly call the ``magpie_helper`` CLI as above if you
-previously installed the package (see `installation`_).
+previously installed the package (see :ref:`installation`).
 
 Source code of these helpers can be found `here <https://github.com/Ouranosinc/Magpie/tree/master/magpie/cli>`_.
 
@@ -79,7 +80,8 @@ in order to use it with the standard ``requests`` library by passing ``auth=Magp
 Magpie Adapter: Integration with Twitcher
 ----------------------------------------------
 
-The class :py:class:`magpie.adapter.MagpieAdapter` (`source <source_magpie_adapter>`_) allows an easy integration with
+The class :py:class:`magpie.adapter.MagpieAdapter`
+(`source <https://github.com/Ouranosinc/Magpie/blob/master/magpie/adapter/__init__>`_) allows an easy integration with
 the proxy service `Twitcher`_. This allows the user to setup a server (i.e.: using `docker-compose`_ or similar) that
 can easily integrate a complete user authentication and authorization chain by having `Twitcher`_ ask `Magpie` for
 the targeted service/resource access permissions via the adapter upon receiving an HTTP(S) request.
@@ -94,4 +96,3 @@ confirm that both instances were adequately configured as both require to share 
 (amongst many other settings) in order to lookup and authenticate users correctly from incoming HTTP requests.
 
 .. _docker-compose: https://docs.docker.com/compose/
-.. _source_magpie_adapter: https://github.com/Ouranosinc/Magpie/blob/master/magpie/adapter/__init__.py#L107

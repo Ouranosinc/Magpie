@@ -204,7 +204,7 @@ by the below configuration.
 
 .. note::
     A custom categorization between *metadata* and *data* contents can be provided With either the `providers.cfg`_ or
-    a :ref:`config_file` as described in greater lengths within the :ref:`configuration_link` chapter.
+    a :ref:`config_file` as described in greater lengths within the :ref:`configuration` chapter.
 
 .. code-block:: YAML
 
@@ -461,6 +461,6 @@ The synchronization mechanism can be launched from `Magpie` UI using the ``Sync`
 
 .. seealso::
 
-    Utility ``magpie_sync_resources`` in :ref:`utilities_helpers` is also available to manually launch a
+    Utility ``magpie_sync_resources`` in :ref:`cli_helpers` is also available to manually launch a
     :term:`Resource` synchronization operation from the command line for supporting :term:`Service`-types.
     This is the same operation that gets executed by `magpie-cron`_.
