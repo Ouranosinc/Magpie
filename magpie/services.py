@@ -849,6 +849,7 @@ def invalidate_service(service_name):
     """
     Invalidates any caching reference to the specified service name.
     """
+    # pylint: disable=W0212,protected-access
     try:
         # could fail if twitcher was not installed
         from magpie.adapter.magpieowssecurity import MagpieOWSSecurity  # noqa
