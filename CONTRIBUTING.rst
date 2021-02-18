@@ -98,6 +98,6 @@ by ``pytest`` runner.
 .. |contrib_changes| replace:: CHANGES
 .. _contrib_changes: CHANGES.rst
 .. |contrib_installation| replace:: Installation
-.. _contrib_installation: https://pavics-magpie.readthedocs.io/en/latest/installation.html
+.. _contrib_installation: docs/installation.rst
 .. |contrib_utilities| replace:: Utilities
-.. _contrib_utilities: https://pavics-magpie.readthedocs.io/en/latest/utilities.html
+.. _contrib_utilities: docs/utilities.rst

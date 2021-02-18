@@ -67,19 +67,26 @@ doc_redirect_ignores = [
     re.compile(r"magpie\..*"),  # autoapi generated files
     re.compile(r"index.*"),
 ]
+doc_redirect_extensions = [
+    ".rst",
+]
 
 
 def doc_redirect_include(file_path):
-    return file_path.endswith(".rst") and not any(re.match(regex, file_path) for regex in doc_redirect_ignores)
+    if any(re.match(regex, file_path) for regex in doc_redirect_ignores):
+        return False
+    return any(file_path.endswith(ext) for ext in doc_redirect_extensions)
 
 
+# references to RST files in 'docs' dir redirect to corresponding HTML
 doc_redirect_map = {
     "docs/{}".format(file_name): file_name
     for file_name in os.listdir(DOC_DIR_ROOT)
     if doc_redirect_include(file_name)
 }
+# references to RST files in repo root (README/CHANGES) redirect to their equivalent HTML in 'docs' dir
 doc_redirect_map.update({
-    file_name: file_name
+    file_name: "docs/{}".format(file_name.lower())
     for file_name in os.listdir(PROJECT_ROOT)
     if doc_redirect_include(file_name)
 })
@@ -119,6 +126,7 @@ linkcheck_ignore = [
     "https://github.com/Ouranosinc/PAVICS/*",
     # ignore false-positive broken links to local doc files used for rendering on Github
     "CHANGES.rst",
+    r"docs/\w+.rst",
 ]
 linkcheck_timeout = 20
 linkcheck_retries = 5

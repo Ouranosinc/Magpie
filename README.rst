@@ -136,9 +136,9 @@ Following most recent variants are available:
 .. |readme_changes| replace:: CHANGES
 .. _readme_changes: CHANGES.rst
 .. |readme_configuration| replace:: Configuration
-.. _readme_configuration: https://pavics-magpie.readthedocs.io/en/latest/configuration.html
+.. _readme_configuration: docs/configuration.rst
 .. |readme_usage| replace:: Usage
-.. _readme_usage: https://pavics-magpie.readthedocs.io/en/latest/usage.html
+.. _readme_usage: docs/usage.rst
 .. |readme_readthedocs| replace:: ReadTheDocs
 .. _readme_readthedocs: https://pavics-magpie.readthedocs.io
 .. |github_docs| replace:: docs

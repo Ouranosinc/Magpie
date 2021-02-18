@@ -91,7 +91,7 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
                                 json=replace_template(params, webhook_config["payload"]))
         resp.raise_for_status()
     except Exception as exception:
-        LOGGER.error("An exception has occured with the webhook request : %s", webhook_config["name"])
+        LOGGER.error("An exception has occurred with the webhook request : %s", webhook_config["name"])
         LOGGER.error(str(exception))
         if "user_name" in params.keys() and update_user_status_on_error:
             webhook_update_error_status(params["user_name"])
@@ -99,7 +99,7 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
 
 def webhook_update_error_status(user_name):
     """
-    Updates the user's status to indicate an error occured with the webhook requests.
+    Updates the user's status to indicate an error occurred with the webhook requests.
     """
     # find user and change its status to 0 to indicate a webhook error happened
     db_session = get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)

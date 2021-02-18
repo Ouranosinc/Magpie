@@ -189,8 +189,11 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name="app:mag
     result = parser.read([config_ini_path])
     # raise silently ignored missing file
     if len(result) != 1 or not os.path.isfile(result[0]):
-        result = result[0] or os.path.abspath(str(config_ini_path))  # in case not found, use expected location
-        message = "Cannot find Magpie INI configuration file [{}] resolved as [{}]".format(config_ini_path, result)
+        if result:
+            result = result[0] or os.path.abspath(str(config_ini_path))  # in case not found, use expected location
+            message = "Cannot find Magpie INI configuration file [{}] resolved as [{}]".format(config_ini_path, result)
+        else:
+            message = "Cannot find Magpie INI configuration file [{}]".format(config_ini_path)
         raise ValueError(message)
     settings = dict(parser.items(ini_main_section_name))
     return settings
