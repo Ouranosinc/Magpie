@@ -14,6 +14,10 @@ Features / Changes
 * Apply cache invalidation when it can be resolved upon changes to instances that should be reflected immediately.
 * Update performance docs and INI related to caching.
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix broken link to remote authentication provider in documentation.
+
 `3.6.0 <https://github.com/Ouranosinc/Magpie/tree/3.6.0>`_ (2021-02-09)
 ------------------------------------------------------------------------------------
 
