@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import math
     from typing import Any
-    from typing import AnyStr as _AnyStr
+    from typing import AnyStr
     from typing import Dict, Iterable, List, Optional, Tuple, Type, Union
 
     import six
@@ -32,10 +32,9 @@ if TYPE_CHECKING:
 
     if six.PY2:
         # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
-        Str = Union[_AnyStr, unicode]  # noqa: E0602,F405,F821
+        Str = Union[AnyStr, unicode]  # noqa: E0602,F405,F821
     else:
-        Str = _AnyStr
-    AnyStr = Str    # pylint: disable=C0103,invalid-name
+        Str = str
 
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]

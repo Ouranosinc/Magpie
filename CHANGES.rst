@@ -7,7 +7,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Introduce caching of ``Service`` definitions using ``beaker``, which can be use in conjunction with ``ACL`` caching
+  to improve performance of `Twitcher` requests.
+* Apply cache invalidation when it can be resolved upon changes to instances that should be reflected immediately.
+* Update performance docs and INI related to caching.
 
 `3.6.0 <https://github.com/Ouranosinc/Magpie/tree/3.6.0>`_ (2021-02-09)
 ------------------------------------------------------------------------------------

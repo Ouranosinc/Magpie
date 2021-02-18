@@ -1,5 +1,8 @@
 import logging
+from typing import TYPE_CHECKING
+
 import requests
+from beaker.cache import cache_region, cache_regions
 from pyramid.authentication import IAuthenticationPolicy
 from pyramid.authorization import IAuthorizationPolicy
 from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPOk
@@ -12,7 +15,7 @@ from magpie.api.schemas import ProviderSigninAPI
 from magpie.constants import get_constant
 from magpie.models import Service
 from magpie.permissions import Permission
-from magpie.services import service_factory
+from magpie.services import invalidate_service, service_factory
 from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, get_settings
 
 # WARNING:
@@ -24,6 +27,13 @@ from twitcher.owssecurity import OWSSecurityInterface  # noqa
 from twitcher.utils import parse_service_name  # noqa
 
 LOGGER = get_logger("TWITCHER")
+if TYPE_CHECKING:
+    from typing import Dict, NoReturn, Optional, Tuple
+
+    from pyramid.request import Request
+
+    from magpie.services import ServiceInterface
+    from magpie.typedefs import AnyValue, Str
 
 
 class MagpieOWSSecurity(OWSSecurityInterface):
@@ -31,32 +41,99 @@ class MagpieOWSSecurity(OWSSecurityInterface):
     def __init__(self, request):
         super(MagpieOWSSecurity, self).__init__()
         self.settings = get_settings(request)
+        self.request = request
         self.magpie_url = get_magpie_url(self.settings)
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.twitcher_protected_path = self.settings.get("twitcher.ows_proxy_protected_path", "/ows")
 
-    def check_request(self, request):
-        if request.path.startswith(self.twitcher_protected_path):
-            service_name = parse_service_name(request.path, self.twitcher_protected_path)
-            service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=request.db),
-                                    http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
-            verify_param(service, not_none=True, http_error=HTTPNotFound, msg_on_fail="Service name not found.")
+    @cache_region("acl")
+    def _get_service_cached(self, service_name):
+        # type: (Str) -> Tuple[ServiceInterface, Dict[str, AnyValue]]
+        """
+        Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
 
-            # return a specific type of service, ex: ServiceWPS with all the acl (loaded according to the service_type)
-            service_specific = service_factory(service, request)
+        If the cache is not hit (expired timeout or new key entry), calls :meth:`get_service` to retrieve the actual
+        :class:`ServiceInterface` implementation. Otherwise, returns the cached service to avoid SQL queries.
+
+        .. note::
+            Function arguments are required to generate caching keys by which cached elements will be retrieved.
+
+        .. seealso::
+            - :meth:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity.get_service`
+            - :meth:`magpie.adapter.magpieservice.MagpieServiceStore.fetch_by_name`
+        """
+        service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=self.request.db),
+                                http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
+        verify_param(service, not_none=True, http_error=HTTPNotFound, msg_on_fail="Service name not found.")
+        # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
+        service_impl = service_factory(service, self.request)
+        service_data = service.get_appstruct()
+        return service_impl, service_data
+
+    def get_service(self, request):
+        # type: (Request) -> ServiceInterface
+        """
+        Obtains the service referenced by the request.
+
+        Caching is automatically handled according to configured application settings and whether the specific service
+        name being requested was already processed recently and not expired.
+        """
+
+        # make sure the cache is invalidated to retrieve 'fresh' service from database if requested or cache disabled
+        self.request = request
+        if "acl" not in cache_regions:
+            cache_regions["acl"] = {"enabled": False}
+        service_name = parse_service_name(request.path, self.twitcher_protected_path)
+        if self.request.headers.get("Cache-Control") == "no-cache":
+            invalidate_service(service_name)
+
+        # retrieve the implementation and the service data contained in the database entry
+        service_impl, service_data = self._get_service_cached(service_name)
+
+        # because the database service *could* be linked to cached item, expired session creates unbound object
+        # - rebuild the service from cached data such that following operations can retrieve details as needed
+        #   (this avoids SQLAlchemy running lazy-loading of pre-fetched data, since it is readily available)
+        # - reapply the request which contains the methods to retrieve database session and request user from it
+        #   (this ensures that any other places using the request/db/user will use the current one instead of cached)
+        if service_impl.request is not request:
+            LOGGER.warning("Using cached service")
+            service_cached = Service()
+            service_cached.populate_obj(service_data)
+            service_impl.service = service_cached
+            service_impl.request = request
+
+        return service_impl
+
+    def check_request(self, request):
+        # type: (Request) -> Optional[NoReturn]
+        """
+        Verifies if the request user has access to the targeted resource according to parent service and permissions.
+
+        If the request path corresponds to configured `Twitcher` proxy, evaluate the :term:`ACL`.
+        Otherwise, ignore request access validation.
+
+        In the case `Twitcher` proxy path is matched, the :term:`Logged User` **MUST** be allowed access following
+        :term:`Effective Permissions` resolution via :term:`ACL`. Otherwise, :exception:`OWSForbidden` is raised.
+        Failing to parse the request or any underlying component also raises that exception.
+
+        :raises OWSForbidden: if user does not have access to the targeted resource under the service.
+        :returns: nothing if user has access.
+        """
+        if request.path.startswith(self.twitcher_protected_path):
+            service_impl = self.get_service(request)
             # should contain all the acl, this the only thing important
             # parse request (GET/POST) to get the permission requested for that service
-            permission_requested = service_specific.permission_requested()
+            permission_requested = service_impl.permission_requested()
             # convert permission enum to str for comparison
             permission_requested = Permission.get(permission_requested).value if permission_requested else None
 
             if permission_requested:
                 LOGGER.info("'%s' request '%s' permission on '%s'", request.user, permission_requested, request.path)
                 self.update_request_cookies(request)
-                authn_policy = request.registry.queryUtility(IAuthenticationPolicy)
-                authz_policy = request.registry.queryUtility(IAuthorizationPolicy)
+                authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
+                authz_policy = request.registry.queryUtility(IAuthorizationPolicy)   # noqa
                 principals = authn_policy.effective_principals(request)
-                has_permission = authz_policy.permits(service_specific, principals, permission_requested)
+                has_permission = authz_policy.permits(service_impl, principals, permission_requested)
 
                 if LOGGER.isEnabledFor(logging.DEBUG):
                     LOGGER.debug("%s - AUTHN policy configurations:", type(self).__name__)

@@ -392,7 +392,7 @@ def is_magpie_ui_path(request):
     # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
     magpie_url = get_magpie_url(request)
     magpie_url = request.url.replace(magpie_url, "")
-    magpie_path = urlparse(magpie_url).path
+    magpie_path = str(urlparse(magpie_url).path)
     magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
     magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
     magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")
