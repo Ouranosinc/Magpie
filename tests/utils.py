@@ -212,7 +212,7 @@ class TestVersion(LooseVersion):
             return 1
         if other.version == "latest":
             return -1
-        return super(TestVersion, self)._cmp(other)
+        return super(TestVersion, self)._cmp(other)  # noqa
 
 
 @six.add_metaclass(SingletonMeta)
@@ -245,6 +245,18 @@ def config_setup_from_ini(config_ini_file_path):
     return config
 
 
+def setup_cache_settings(settings):
+    # type: (SettingsType) -> None
+    """
+    Enforces disabled caching for tests execution.
+    """
+    regions = ["acl", "service"]
+    settings["cache.regions"] = ", ".join(regions)
+    for region in regions:
+        settings["cache.{}.enable".format(region)] = "false"
+        settings.pop("cache.{}.expire".format(region), None)
+
+
 def get_test_magpie_app(settings=None):
     # type: (Optional[SettingsType]) -> TestApp
     """
@@ -257,10 +269,7 @@ def get_test_magpie_app(settings=None):
     config.registry.settings["magpie.url"] = "http://localhost:80"
     if settings:
         config.registry.settings.update(settings)
-    # enforce no caching for tests
-    for region in ["acl", "service"]:
-        config.registry.settings["cache.{}.enable".format(region)] = "false"
-        config.registry.settings.pop("cache.{}.expire".format(region), None)
+    setup_cache_settings(config.registry.settings)
     # create the test application
     magpie_app = TestApp(app.main({}, **config.registry.settings))
     return magpie_app
@@ -284,7 +293,7 @@ def get_app_or_url(test_item):
 
 def get_test_webhook_app(webhook_url):
     """
-    Instantiate a local test application used for the prehook for user creation and deletion.
+    Instantiate a local test application used for the pre-hook for user creation and deletion.
     """
     def webhook_create_request(request):
         # Status is incremented to count the number of successful test webhooks
@@ -310,11 +319,11 @@ def get_test_webhook_app(webhook_url):
         settings["tmp_url"] = body["tmp_url"]
         return Response("Failing webhook url with user " + user + " and tmp_url " + settings["tmp_url"])
 
-    def get_status(request):
+    def get_status(*_):
         # Returns the status number
         return Response(str(settings["webhook_status"]))
 
-    def get_tmp_url(request):
+    def get_tmp_url(*_):
         # Returns the tmp_url
         return Response(str(settings["tmp_url"]))
 
@@ -323,7 +332,7 @@ def get_test_webhook_app(webhook_url):
         assert request.body in settings["payload"]
         return Response("Content is correct")
 
-    def reset(request):
+    def reset(*_):
         settings["webhook_status"] = 0
         settings["payload"] = []
         settings["tmp_url"] = ""
@@ -779,7 +788,7 @@ def visual_repr(item):
     try:
         if isinstance(item, (dict, list)):
             return json_pkg.dumps(item, indent=4, ensure_ascii=False)
-    except Exception:
+    except Exception:  # noqa
         pass
     return "'{}'".format(repr(item))
 
@@ -1074,6 +1083,7 @@ class TestSetup(object):
         .. seealso::
             - :func:`warn_version`
 
+        :param test_case: `Test Case` to retrieve the instance and parameters to send requests to.
         :param real_version:
             Force request to retrieve the API version as defined in metadata.
             Otherwise, version can be either overridden by ``MAGPIE_TEST_VERSION``, the current Test Suite, or the API
@@ -1767,7 +1777,7 @@ class TestSetup(object):
         if ignore_missing_service and resp.status_code == 404:
             return []
         json_body = get_json_body(resp)
-        resources = json_body[svc_name]["resources"]
+        resources = json_body[svc_name]["resources"]  # type: Dict[str, JSON]
         return [resources[res] for res in resources]
 
     @staticmethod
@@ -1895,7 +1905,7 @@ class TestSetup(object):
 
     @staticmethod
     def get_RegisteredServicesList(test_case, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> List[Str]
+        # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> List[JSON]
         """
         Obtains the list of registered services names.
 

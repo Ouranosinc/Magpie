@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from webtest.app import TestApp
 
-    from magpie.typedefs import JSON, CookiesType, HeadersType, Str
+    from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, Str
 
 
 @six.add_metaclass(ABCMeta)
@@ -1944,7 +1944,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_equal(len(body["permissions"]), 1)
-        perm = body["permissions"][0]
+        perm = body["permissions"][0]  # type: PermissionDict
         utils.check_val_equal(perm["access"], Access.ALLOW.value)
         utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
 
@@ -2697,7 +2697,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_val_not_equal(len(permissions), 0)
             scope = Scope.MATCH.value
             msg = "Effective permission '{}' on resource '{}' expected '{}'.".format(perm.value, res_name, access.value)
-            for obj in permissions:
+            for obj in permissions:  # type: PermissionDict
                 if Permission.get(obj["name"]) != perm:
                     continue
                 utils.check_val_equal(Access.get(obj["access"]), access, msg=msg)
@@ -3135,11 +3135,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], list)
         utils.check_val_equal(len(body["services"]), 2, msg="services with direct user permissions expected")
-        for svc in body["services"]:
+        services = body["services"]  # type: List[JSON]
+        for svc in services:
             utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False,
                                                 skip_permissions=True)  # specific permissions validated in other tests
         expected_services = [test_items["svc1_name"], test_items["svc3_name"]]
-        utils.check_all_equal([svc["service_name"] for svc in body["services"]], expected_services, any_order=True)
+        utils.check_all_equal([svc["service_name"] for svc in services], expected_services, any_order=True)
 
         # check it still works with other flags
         # note: cannot test number of services and expected service names because of inherited from anonymous
@@ -4203,7 +4204,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_equal(len(body["permissions"]), 1)
-        perm = body["permissions"][0]
+        perm = body["permissions"][0]  # type: PermissionDict
         utils.check_val_equal(perm["access"], Access.ALLOW.value)
         utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
 
@@ -4325,7 +4326,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_equal(len(body["permissions"]), 1)
-        perm = body["permissions"][0]
+        perm = body["permissions"][0]  # type: PermissionDict
         utils.check_val_equal(perm["access"], Access.ALLOW.value)
         utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
 
@@ -5497,6 +5498,7 @@ class SetupMagpieAdapter(object):
     def setup_adapter(cls):
         test_app = utils.get_app_or_url(cls)
         settings = test_app.app.registry.settings
+        utils.setup_cache_settings(settings)
         adapter = MagpieAdapter(settings)
         config = adapter.configurator_factory(settings)
         # making the app triggers creation of class instances from registry (eg: AuthN/AuthZ Policies)

@@ -592,8 +592,10 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
     }
 
     def resource_requested(self):
-        permission = self.permission_requested()
         path_parts = self._get_request_path_parts()
+        if not path_parts:
+            return self.service, False
+        permission = self.permission_requested()
         parts_lower = [part.lower() for part in path_parts]
         if parts_lower and parts_lower[0] == "":
             path_parts = path_parts[1:]

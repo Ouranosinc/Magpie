@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import math
+    import typing
     from typing import Any
     from typing import AnyStr
     from typing import Dict, Iterable, List, Optional, Tuple, Type, Union
@@ -27,6 +28,11 @@ if TYPE_CHECKING:
 
     from magpie import models
     from magpie.permissions import Permission, PermissionSet
+
+    if hasattr(typing, "TypedDict"):
+        from typing import TypedDict  # pylint: disable=E0611,no-name-in-module
+    else:
+        from typing_extensions import TypedDict  # noqa
 
     # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 
@@ -62,7 +68,9 @@ if TYPE_CHECKING:
     GroupPriority = Union[int, Type[math.inf]]
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
-    PermissionObject = Dict[Str, Optional[Str]]
+    PermissionDict = TypedDict("PermissionDict",
+                               {"name": Str, "access": Optional[Str], "scope": Optional[Str],
+                                "type": Optional[Str], "reason": Optional[Str]}, total=False)
     AnyZigguratPermissionType = Union[
         models.GroupPermission,
         models.UserPermission,
@@ -70,7 +78,7 @@ if TYPE_CHECKING:
         models.UserResourcePermission,
         PermissionTuple,
     ]
-    AnyPermissionType = Union[Permission, PermissionSet, PermissionObject, AnyZigguratPermissionType, Str]
+    AnyPermissionType = Union[Permission, PermissionSet, PermissionDict, AnyZigguratPermissionType, Str]
     ResolvablePermissionType = Union[PermissionSet, AnyZigguratPermissionType]
     AnyAccessPrincipalType = Union[Str, Iterable[Str]]
     AccessControlEntryType = Union[Tuple[Str, Str, Str], Str]
