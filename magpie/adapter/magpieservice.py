@@ -17,7 +17,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_admin_cookies, get_logger, get_m
 #   Twitcher available only when this module is imported from it.
 #   It is installed during tests for evaluation.
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
-from twitcher.datatype import Service as TwithcerService  # noqa
+from twitcher.datatype import Service as TwitcherService  # noqa
 from twitcher.exceptions import ServiceNotFound  # noqa
 from twitcher.store import ServiceStoreInterface  # noqa
 
@@ -72,14 +72,14 @@ class MagpieServiceStore(ServiceStoreInterface):
         json_body = resp.json()
         for service_type in json_body["services"]:
             for service in json_body["services"][service_type].values():
-                services.append(TwithcerService(url=service["service_url"],
+                services.append(TwitcherService(url=service["service_url"],
                                                 name=service["service_name"],
                                                 type=service["service_type"]))
         return services
 
     @cache_region("service")
     def _fetch_by_name_cached(self, service_name):
-        # type: (Str) -> TwithcerService
+        # type: (Str) -> TwitcherService
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
 
@@ -107,7 +107,7 @@ class MagpieServiceStore(ServiceStoreInterface):
             if service is None:
                 raise ServiceNotFound("Service name not found.")
 
-            return TwithcerService(url=service.url,
+            return TwitcherService(url=service.url,
                                    name=service.resource_name,
                                    type=service.type,
                                    verify=self.twitcher_ssl_verify)
@@ -115,7 +115,7 @@ class MagpieServiceStore(ServiceStoreInterface):
             session.close()
 
     def fetch_by_name(self, name):
-        # type: (Str) -> TwithcerService
+        # type: (Str) -> TwitcherService
         """
         Gets :class:`twitcher.datatype.Service` corresponding to :class:`magpie.models.Service` by ``name``.
         """
