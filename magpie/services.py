@@ -752,6 +752,7 @@ class ServiceTHREDDS(ServiceInterface):
         return self._config
 
     def get_path_parts(self):
+        # type: () -> Optional[List[Str]]
         cfg = self.get_config()
         path_parts = self._get_request_path_parts()
         skip_prefix = cfg["skip_prefix"]
@@ -767,7 +768,7 @@ class ServiceTHREDDS(ServiceInterface):
         path_parts = self.get_path_parts()
 
         # handle optional prefix as targeting the service directly
-        if len(path_parts) < 2:
+        if not path_parts or len(path_parts) < 2:
             return self.service, True
         path_parts = path_parts[1:]
         cfg = self.get_config()

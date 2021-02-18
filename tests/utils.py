@@ -257,6 +257,10 @@ def get_test_magpie_app(settings=None):
     config.registry.settings["magpie.url"] = "http://localhost:80"
     if settings:
         config.registry.settings.update(settings)
+    # enforce no caching for tests
+    for region in ["acl", "service"]:
+        config.registry.settings["cache.{}.enable".format(region)] = "false"
+        config.registry.settings.pop("cache.{}.expire".format(region), None)
     # create the test application
     magpie_app = TestApp(app.main({}, **config.registry.settings))
     return magpie_app
