@@ -29,6 +29,4 @@ services:
     # WARNING:
     #   following is for direct access from host during tests only
     #   production magpie instance should not be exposed directly
-    ports:
-      - "2001:2001"
     network_mode: host
