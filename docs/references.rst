@@ -22,7 +22,7 @@
 
 .. external providers
 .. _OpenID: https://openid.net/
-.. _ESGF: https://esgf.llnl.gov/
+.. _ESGF: https://esgf-node.llnl.gov
 .. _DKRZ: https://esgf-data.dkrz.de
 .. _IPSL: https://www.ipsl.fr/
 .. _BADC: http://data.ceda.ac.uk/badc
