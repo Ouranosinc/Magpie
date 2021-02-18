@@ -7,7 +7,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Improve error message in case of failure to load INI file instead of misleading index error.
 
 `3.6.0 <https://github.com/Ouranosinc/Magpie/tree/3.6.0>`_ (2021-02-09)
 ------------------------------------------------------------------------------------
