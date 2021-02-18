@@ -853,9 +853,11 @@ def invalidate_service(service_name):
         # could fail if twitcher was not installed
         from magpie.adapter.magpieowssecurity import MagpieOWSSecurity  # noqa
 
-        if "acl" in cache_regions:
-            region_invalidate(MagpieOWSSecurity._get_service_cached, "acl", service_name)  # noqa
+        if "service" in cache_regions:
+            region_invalidate(MagpieOWSSecurity._get_service_cached, "service", service_name)  # noqa
     except ImportError:
-        LOGGER.warning("Could not invalidate ACL of service: [%s]", service_name)
-    cache_keys = (service_name, )
-    region_invalidate(ServiceInterface._get_acl_cached, "acl", *cache_keys)  # noqa
+        LOGGER.warning("Could not invalidate cache of service: [%s]", service_name)
+
+    if "acl" in cache_regions:
+        cache_keys = (service_name, )  # (service_name, request_method, request_path, user_id)
+        region_invalidate(ServiceInterface._get_acl_cached, "acl", *cache_keys)  # noqa

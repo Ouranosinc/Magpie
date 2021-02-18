@@ -46,7 +46,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.twitcher_protected_path = self.settings.get("twitcher.ows_proxy_protected_path", "/ows")
 
-    @cache_region("acl")
+    @cache_region("service")
     def _get_service_cached(self, service_name):
         # type: (Str) -> Tuple[ServiceInterface, Dict[str, AnyValue]]
         """
@@ -81,9 +81,9 @@ class MagpieOWSSecurity(OWSSecurityInterface):
 
         # make sure the cache is invalidated to retrieve 'fresh' service from database if requested or cache disabled
         self.request = request
-        if "acl" not in cache_regions:
-            cache_regions["acl"] = {"enabled": False}
         service_name = parse_service_name(request.path, self.twitcher_protected_path)
+        if "service" not in cache_regions:
+            cache_regions["service"] = {"enabled": False}
         if self.request.headers.get("Cache-Control") == "no-cache":
             invalidate_service(service_name)
 

@@ -4,12 +4,13 @@ Store adapters to read data from magpie.
 from typing import TYPE_CHECKING
 
 import requests
-from beaker.cache import cache_region
+from beaker.cache import cache_region, cache_regions
 from pyramid.httpexceptions import HTTPOk
 from pyramid.settings import asbool
 
 from magpie.api.schemas import ServicesAPI
 from magpie.models import Service as MagpieService
+from magpie.services import invalidate_service
 from magpie.utils import CONTENT_TYPE_JSON, get_admin_cookies, get_logger, get_magpie_url, get_settings
 
 # WARNING:
@@ -76,7 +77,7 @@ class MagpieServiceStore(ServiceStoreInterface):
                                                 type=service["service_type"]))
         return services
 
-    @cache_region("acl")
+    @cache_region("service")
     def _fetch_by_name_cached(self, service_name):
         # type: (Str) -> TwithcerService
         """
@@ -99,27 +100,10 @@ class MagpieServiceStore(ServiceStoreInterface):
             - :meth:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity.get_service`
             - :meth:`magpie.adapter.magpieservice.MagpieServiceStore.fetch_by_name`
         """
-
-
-
-
-        service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=self.request.db),
-                                http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
-        verify_param(service, not_none=True, http_error=HTTPNotFound, msg_on_fail="Service name not found.")
-        # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
-        service_impl = service_factory(service, self.request)
-        service_data = service.get_appstruct()
-        return service_impl, service_data
-
-    def fetch_by_name(self, name):
-        """
-        Gets :class:`twitcher.datatype.Service` corresponding to :class:`magpie.models.Service` by ``name``.
-        """
-
         session = self.session_factory()
 
         try:
-            service = MagpieService.by_service_name(name, db_session=session)
+            service = MagpieService.by_service_name(service_name, db_session=session)
             if service is None:
                 raise ServiceNotFound("Service name not found.")
 
@@ -129,6 +113,18 @@ class MagpieServiceStore(ServiceStoreInterface):
                                    verify=self.twitcher_ssl_verify)
         finally:
             session.close()
+
+    def fetch_by_name(self, name):
+        # type: (Str) -> TwithcerService
+        """
+        Gets :class:`twitcher.datatype.Service` corresponding to :class:`magpie.models.Service` by ``name``.
+        """
+        # make sure the cache is invalidated to retrieve 'fresh' service from database if requested or cache disabled
+        if "service" not in cache_regions:
+            cache_regions["service"] = {"enabled": False}
+        if self.request.headers.get("Cache-Control") == "no-cache":
+            invalidate_service(name)
+        return self._fetch_by_name_cached(name)
 
     def fetch_by_url(self, url, request=None):
         """
