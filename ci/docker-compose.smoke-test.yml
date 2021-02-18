@@ -17,8 +17,6 @@ services:
       - postgres
     links:
       - postgres
-    ports:
-      - "2001:2001"
     env_file:
       - magpie.env
     environment:
@@ -28,3 +26,9 @@ services:
       MAGPIE_POSTGRES_HOST: postgres  # connect directly to test docker
     volumes:
       - ../config/magpie.ini:/opt/local/src/magpie/config/magpie.ini
+    # WARNING:
+    #   following is for direct access from host during tests only
+    #   production magpie instance should not be exposed directly
+    ports:
+      - "2001:2001"
+    network_mode: host
