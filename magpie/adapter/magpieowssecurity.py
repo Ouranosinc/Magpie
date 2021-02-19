@@ -64,7 +64,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         """
         service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=self.request.db),
                                 http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
-        verify_param(service, not_none=True, http_error=HTTPNotFound, msg_on_fail="Service name not found.")
+        verify_param(service, not_none=True, param_name="service_name",
+                     http_error=HTTPNotFound, msg_on_fail="Service name not found.")
         # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
         service_impl = service_factory(service, self.request)
         service_data = service.get_appstruct()

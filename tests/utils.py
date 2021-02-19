@@ -1,8 +1,9 @@
 from errno import EADDRINUSE
-import threading
 import functools
+import importlib
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
+import threading
 import unittest
 import uuid
 import warnings
@@ -33,6 +34,7 @@ from magpie.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
     SingletonMeta,
+    fully_qualified_name,
     get_header,
     get_magpie_url,
     get_settings_from_config_ini
@@ -245,20 +247,25 @@ def config_setup_from_ini(config_ini_file_path):
     return config
 
 
-def setup_cache_settings(settings):
-    # type: (SettingsType) -> None
+def setup_cache_settings(settings, enabled=False, expire=10):
+    # type: (SettingsType, bool, int) -> None
     """
-    Enforces disabled caching for tests execution.
+    Enforces caching settings for tests execution, disabled by default.
     """
     regions = ["acl", "service"]
     settings["cache.regions"] = ", ".join(regions)
+    settings["cache.type"] = "memory"
     for region in regions:
-        settings["cache.{}.enable".format(region)] = "false"
-        settings.pop("cache.{}.expire".format(region), None)
+        settings["cache.{}.enabled".format(region)] = str(enabled).lower()
+        region_expire = "cache.{}.expire".format(region)
+        if enabled:
+            settings[region_expire] = str(expire)
+        else:
+            settings.pop(region_expire, None)
 
 
-def get_test_magpie_app(settings=None):
-    # type: (Optional[SettingsType]) -> TestApp
+def get_test_magpie_app(settings=None, setup_cache=True):
+    # type: (Optional[SettingsType], bool) -> TestApp
     """
     Instantiate a Magpie local test application.
     """
@@ -269,7 +276,8 @@ def get_test_magpie_app(settings=None):
     config.registry.settings["magpie.url"] = "http://localhost:80"
     if settings:
         config.registry.settings.update(settings)
-    setup_cache_settings(config.registry.settings)
+    if setup_cache:
+        setup_cache_settings(config.registry.settings)
     # create the test application
     magpie_app = TestApp(app.main({}, **config.registry.settings))
     return magpie_app
@@ -531,15 +539,85 @@ def mock_request(request_path_query="",     # type: Str
     request.matched_route = None  # cornice method
     if content_type:
         request.headers["Content-Type"] = content_type
+    else:
+        content_type = request.headers.get("Content-Type", CONTENT_TYPE_JSON)
     request.body = body
     try:
-        if body:
+        if body and content_type == CONTENT_TYPE_JSON:
             # set missing DummyRequest.json attribute
             request.json = json_pkg.loads(body)
     except (TypeError, ValueError):
         pass
     request.registry.settings = settings or {}
     return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
+
+
+
+
+def wrapped_call(target, method=None, instance=None):
+    # type: (Union[Type, Str], Optional[Str], Optional[Any]) -> mock.MagicMock
+    """
+    Utility call wrapper that injects a mock reference between the target operation call and its real execution.
+
+    The returned mock will be accessible to obtain details about number of calls, arguments of each call, etc.
+    The utility can be use in the following situations.
+
+    Wrapping a class method:
+
+    .. code-block::
+
+        instance = MyObjectRef()
+        mock = wrapped_call(MyObjectRef, "target_method", instance)
+        # ...
+        # do operations that lead to 'MyObjectRef.target_method' call
+        # ...
+        assert mock.called
+
+    Wrapping a module function:
+
+    .. code-block::
+
+        mock = wrapped_call("package.module.target_function")
+        # ...
+        # do operations that lead to 'target.module.function' call
+        # ...
+        assert mock.called
+
+    .. warning::
+        When using the string function reference, provide the *imported location*, **NOT** the original location.
+        For example, if ``module_operation`` does ``from module_original import target_function`` and that it is
+        this instance in ``module_operation`` calling ``target_function``  that must be wrapped for the test,
+        specify ``module_operation.target_function`` as input to :func:`wrapped_call`.
+
+    :param target: item to wrap (class or string reference)
+    :param method: string name of the method if target was a class reference
+    :param instance: actual instance to be wrapped
+    :return: mock object with calls statistic
+    """
+    if method:
+        real = getattr(target, method)
+        func = method
+    elif isinstance(target, str):
+        func = target
+        mod_name, func_name = target.rsplit(".", 1)
+        mod = importlib.import_module(mod_name)
+        real = getattr(mod, func_name)
+    else:
+        mod = importlib.import_module(target.__module__)
+        real = getattr(mod, target.__name__)
+        func = fully_qualified_name(real)
+        target = mod
+
+    def wrapped(*_, **__):
+        if instance is None:
+            return real(*_, **__)
+        return real(instance, *_, **__)
+
+    if method:
+        mocked = mock.patch.object(target, func, side_effect=wrapped)
+    else:
+        mocked = mock.patch(func, side_effect=wrapped)
+    return mocked  # noqa
 
 
 def test_request(test_item,             # type: AnyMagpieTestItemType

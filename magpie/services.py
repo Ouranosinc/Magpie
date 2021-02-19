@@ -162,7 +162,7 @@ class ServiceInterface(object):
         if "acl" not in cache_regions:
             cache_regions["acl"] = {"enabled": False}
         user_id = None if self.request.user is None else self.request.user.id
-        cache_keys = (self.request.method, self.request.path_qs, user_id, self.service.resource_name)
+        cache_keys = (self.service.resource_name, self.request.method, self.request.path_qs, user_id)
         if self.request.headers.get("Cache-Control") == "no-cache":
             region_invalidate(self._get_acl_cached, "acl", *cache_keys)
         return self._get_acl_cached(*cache_keys)

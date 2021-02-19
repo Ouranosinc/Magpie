@@ -21,7 +21,7 @@ from magpie.adapter.magpieowssecurity import OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceTHREDDS, ServiceWPS
-from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN
+from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, CONTENT_TYPE_TXT_XML
 from tests import interfaces as ti, runner, utils
 
 if TYPE_CHECKING:
@@ -139,10 +139,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         self.headers, self.cookies = utils.check_or_try_login_user(self, self.usr, self.pwd, use_ui_form_submit=True)
         self.require = "cannot run tests without logged in user with '{}' permissions".format(self.grp)
         self.login_admin()
-
-    def mock_request(self, *args, **kwargs):
-        kwargs.update({"cookies": self.test_cookies, "headers": self.test_headers})
-        return super(TestServices, self).mock_request(*args, **kwargs)
 
     def make_resource(self, resource_type, parent_id, index="", resource_name_prefix=""):
         # type: (Str, int, Union[int, Str], Str) -> Tuple[int, Str]
@@ -858,17 +854,18 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
           </wps:ResponseForm>
         </wps:Execute>
         """)
+        xml_headers = {"Content-Type": CONTENT_TYPE_TXT_XML}
 
         # Process2 POST Execute
         path = "/ows/proxy/{}".format(wps2_name)
         body = wps_xml_post_body_template.format(process=proc2_name).encode()
-        req = self.mock_request(path, method="POST", body=body, params=None)
+        req = self.mock_request(path, method="POST", body=body, params=None, headers=xml_headers)
         utils.check_no_raise(lambda: self.ows.check_request(req))
 
         # Process3 POST Execute
         path = "/ows/proxy/{}".format(wps2_name)
         body = wps_xml_post_body_template.format(process=proc3_name).encode()
-        req = self.mock_request(path, method="POST", body=body, params=None)
+        req = self.mock_request(path, method="POST", body=body, params=None, headers=xml_headers)
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
     @utils.mock_get_settings
