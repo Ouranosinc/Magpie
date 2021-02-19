@@ -128,6 +128,11 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
     """
     Test request parsing and :term:`ACL` resolution when caching is enabled.
+
+    .. warning::
+        Caching tests are time-dependant.
+        While debugging, exceeding the value of :data:`cache_expire` could make a test fail because cache was reset.
+        This is the case especially for requests count comparisons.
     """
     # pylint: disable=C0103,invalid-name
     __test__ = True
@@ -165,6 +170,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         self.headers, self.cookies = utils.check_or_try_login_user(self, self.usr, self.pwd, use_ui_form_submit=True)
         self.require = "cannot run tests without logged in user with '{}' permissions".format(self.grp)
         self.login_admin()
+        utils.TestSetup.delete_TestService(self)
         utils.TestSetup.create_TestService(self)
 
     @utils.mock_get_settings
@@ -187,18 +193,53 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
 
                 # initial request to ensure functions get cached once from scratch
                 path = "/ows/proxy/{}".format(self.test_service_name)
+                msg = "Using [GET, {}]".format(path)
                 req = self.mock_request(path, method="GET", headers=admin_no_cache, cookies=admin_cookies)
-                utils.check_no_raise(lambda: self.ows.check_request(req), msg="Using [GET, {}]".format(path))
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
 
                 # run many requests which should directly return the previously cached result
                 req = self.mock_request(path, method="GET", headers=admin_headers, cookies=admin_cookies)
-                msg = "Using [GET, {}]".format(path)
                 for _ in range(number_calls):
                     utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
 
-        utils.check_val_equal(mock_cached.call_count, number_calls + 1, msg="Cached call expected for each request")
         utils.check_val_equal(mock_service.call_count, 1, msg="Real call expected only on first run before caching")
+        utils.check_val_equal(mock_cached.call_count, number_calls + 1, msg="Cached call expected for each request")
 
     @utils.mock_get_settings
     def test_access_cached_service_by_other_user(self):
-        pass
+        """
+        Verify that cached service doesn't result into invalid permission access when different user sends the request.
+
+        Although service is cached, the resolution of the given user doing the request must still resolve correctly.
+        """
+
+        admin_headers = self.headers.copy()
+        admin_cookies = self.cookies.copy()
+        admin_no_cache = self.cache_reset_headers.copy()
+        admin_no_cache.update(admin_headers)
+
+        # wrap 'get_service' which calls the cached method, which in turn calls 'service_factory'
+        # when caching takes effect, 'service_factory' does not get called as the cached service is returned directly
+        with utils.wrapped_call(MagpieOWSSecurity, "get_service", self.ows) as wrapped_service:
+            with utils.wrapped_call("magpie.adapter.magpieowssecurity.service_factory") as wrapped_cached:
+
+                # always hit the same endpoint for each request
+                path = "/ows/proxy/{}".format(self.test_service_name)
+                msg = "Using [GET, {}]".format(path)
+
+                # initial request to ensure functions get cached once from scratch
+                req = self.mock_request(path, method="GET", headers=admin_no_cache, cookies=admin_cookies)
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+
+                # same request by admin, but with caching from previous call allowed for sanity check
+                req = self.mock_request(path, method="GET", headers=self.headers, cookies=self.cookies)
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+
+                # finally, request for unauthorized user access to the service with cache still enabled
+                self.login_test_user()
+                req = self.mock_request(path, method="GET")
+                msg += " Expected unauthorized user refused access, not inheriting access of previous cached request"
+                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
+
+        utils.check_val_equal(wrapped_cached.call_count, 1, msg="Real call expected only on first run before caching")
+        utils.check_val_equal(wrapped_service.call_count, 3, msg="Service call expected for each request")
