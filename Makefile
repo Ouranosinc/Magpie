@@ -337,9 +337,14 @@ cron:
 	cron
 
 .PHONY: start
-start: install	## start application instance(s) with gunicorn
+start: install start-app  ## start application instance with gunicorn after installation of dependencies
+
+.PHONY: start-app
+start-app: stop		## start application instance with gunicorn
 	@echo "Starting $(APP_NAME)..."
 	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(APP_INI)" --preload &'
+	@sleep 5
+	@curl -H "Accept: application/json" "http://localhost:2001/version" | grep '"code": 200'
 
 .PHONY: stop
 stop: 		## kill application instance(s) started with gunicorn
