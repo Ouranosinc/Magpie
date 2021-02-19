@@ -5511,6 +5511,8 @@ class SetupMagpieAdapter(object):
         """
         Set getters that are normally defined when running the full application.
         """
+        kwargs.setdefault("headers", {})
+        kwargs["headers"]["Cache-Control"] = "no-cache"
         request = utils.mock_request(*args, **kwargs)
         test_app = utils.get_app_or_url(cls)
         registry = test_app.app.registry
