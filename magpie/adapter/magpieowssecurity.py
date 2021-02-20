@@ -68,7 +68,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                      http_error=HTTPNotFound, msg_on_fail="Service name not found.")
         # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
         service_impl = service_factory(service, self.request)
-        service_data = service.get_appstruct()
+        service_data = dict(service.get_appstruct())
         return service_impl, service_data
 
     def get_service(self, request):
