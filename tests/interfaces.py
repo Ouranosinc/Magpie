@@ -3934,7 +3934,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("group", body)
         utils.check_val_is_in(admin_usr, body["group"]["user_names"],
                               msg="Admin user should be automatically assigned to administrator group.")
-
+        if TestVersion(self.version) > TestVersion("3.6"):
+            utils.check_val_type(body["priority"], str)
+            utils.check_val_equal(body["priority"], "max")
+    
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroup_exists(self):
         utils.TestSetup.create_TestGroup(self)
