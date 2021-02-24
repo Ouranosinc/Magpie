@@ -552,8 +552,6 @@ def mock_request(request_path_query="",     # type: Str
     return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
 
 
-
-
 def wrapped_call(target, method=None, instance=None):
     # type: (Union[Type, Str], Optional[Str], Optional[Any]) -> mock.MagicMock
     """
