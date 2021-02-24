@@ -2,7 +2,6 @@ from pyramid.httpexceptions import HTTPNotFound
 
 from magpie import __meta__
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
-from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.constants import get_constant
 from magpie.services import ServiceAPI
 from tests import interfaces as ti, runner, utils
