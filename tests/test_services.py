@@ -75,7 +75,7 @@ class TestOWSParser(unittest.TestCase):
         assert parser.params["test"] == "something"
 
         body = '{"test": "something"}'  # pylint: disable=C4001
-        parser = make_ows_parser(method="POST", content_type=CONTENT_TYPE_PLAIN, params=None, body=body)
+        parser = make_ows_parser(method="POST", content_type=CONTENT_TYPE_JSON, params=None, body=body)
         parser.parse(["test"])
         assert isinstance(parser, owsrequest.MultiFormatParser)
         assert parser.params["test"] == "something"
