@@ -807,6 +807,13 @@ class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
         example=True,
         default=False
     )
+    priority = colander.SchemaNode(
+        colander.Integer(),
+        description="Priority order of the group permission resolution, except administrators with enforced 'max'.",
+        validator=colander.Range(min=-1, max=None),
+        default=0,
+        example=0
+    )
 
 
 class ServiceConfigurationSchema(colander.MappingSchema):

@@ -11,6 +11,8 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Improve error message in case of failure to load INI file instead of misleading index error.
 * Fix broken link to remote authentication provider in documentation.
+* Fix JSON rendering of ``Group`` response specifically for ``MAGPIE_ADMIN_GROUP`` where ``inf`` value could not
+  be converted. Literal string ``"max"`` is instead returned in that case, and the corresponding ``int`` for others.
 
 `3.6.0 <https://github.com/Ouranosinc/Magpie/tree/3.6.0>`_ (2021-02-09)
 ------------------------------------------------------------------------------------
