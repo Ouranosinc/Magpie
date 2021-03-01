@@ -17,7 +17,7 @@ if TYPE_CHECKING:
         AccessControlEntryType,
         AnyPermissionType,
         GroupPriority,
-        PermissionObject,
+        PermissionDict,
         ResolvablePermissionType,
         Str
     )
@@ -242,7 +242,7 @@ class PermissionSet(object):
         return self.name == other.name
 
     def json(self):
-        # type: () -> PermissionObject
+        # type: () -> PermissionDict
         """
         Obtains the JSON representation of this :class:`PermissionSet`.
         """
@@ -543,7 +543,7 @@ class PermissionSet(object):
 def format_permissions(permissions,             # type: Optional[Collection[AnyPermissionType]]
                        permission_type=None,    # type: Optional[PermissionType]
                        force_unique=True,       # type: bool
-                       ):                       # type: (...) -> Dict[Str, Union[List[Str], PermissionObject, Str]]
+                       ):                       # type: (...) -> Dict[Str, Union[List[Str], PermissionDict, Str]]
     """
     Obtains the formatted permission representations after validation that each of their name is a known member of
     :class:`Permission` enum, and optionally with modifiers as defined by :class:`PermissionSet`.

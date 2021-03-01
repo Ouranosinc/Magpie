@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import inspect
 import json
 import logging
 import os
@@ -7,7 +8,6 @@ import sys
 import types
 from distutils.dir_util import mkpath
 from enum import Enum
-from inspect import isfunction
 from typing import TYPE_CHECKING
 
 import requests
@@ -172,6 +172,16 @@ def isclass(obj):
     Evaluate an object for :class:`class` type (ie: class definition, not an instance nor any other type).
     """
     return isinstance(obj, (type, six.class_types))
+
+
+def ismethod(obj):
+    # type: (Any) -> bool
+    """
+    Evaluate an object for :class:`method` type (ie: class method reference.
+    """
+    if six.PY2:
+        return inspect.ismethod(obj)
+    return inspect.isroutine(obj) and "." in obj.__qualname__
 
 
 # alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5
@@ -395,7 +405,7 @@ def is_magpie_ui_path(request):
     # remove any additional hostname and known /magpie prefix to get only the final magpie-specific path
     magpie_url = get_magpie_url(request)
     magpie_url = request.url.replace(magpie_url, "")
-    magpie_path = urlparse(magpie_url).path
+    magpie_path = str(urlparse(magpie_url).path)
     magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
     magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
     magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")
@@ -408,7 +418,13 @@ def fully_qualified_name(obj):
     """
     Obtains the ``'<module>.<name>'`` full path definition of the object to allow finding and importing it.
     """
-    cls = obj if isclass(obj) or isfunction(obj) else type(obj)
+    # pylint: disable=no-member
+    if ismethod(obj):
+        if six.PY2:
+            cls = obj.im_class
+            return ".".join([cls.__module__, cls.__name__, obj.__name__])
+        return ".".join([obj.__module__, obj.__qualname__])
+    cls = obj if isclass(obj) or inspect.isfunction(obj) else type(obj)
     return ".".join([obj.__module__, cls.__name__])
 
 

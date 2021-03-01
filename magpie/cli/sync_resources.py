@@ -26,9 +26,11 @@ from magpie.utils import get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, AnyStr, Optional, Sequence, Union
+    from typing import Any, Optional, Sequence, Union
 
     from sqlalchemy.orm.session import Session
+
+    from magpie.typedefs import Str
 
 LOGGER = get_logger(__name__)
 
@@ -309,7 +311,7 @@ def fetch(settings=None):
 
 
 def setup_cron_logger(log_level=logging.INFO):
-    # type: (Union[AnyStr, int]) -> None
+    # type: (Union[Str, int]) -> None
 
     if not isinstance(log_level, int):
         log_level = logging.getLevelName(log_level)
@@ -345,7 +347,7 @@ def make_parser():
 
 
 def main(args=None, parser=None, namespace=None):
-    # type: (Optional[Sequence[AnyStr]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
+    # type: (Optional[Sequence[Str]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
     """
     Main entry point for cron service.
     """

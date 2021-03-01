@@ -24,7 +24,9 @@ from magpie.permissions import (
     PermissionType,
     Scope
 )
+from magpie.utils import get_logger
 
+LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
@@ -160,23 +162,24 @@ class ServiceInterface(object):
         if "acl" not in cache_regions:
             cache_regions["acl"] = {"enabled": False}
         user_id = None if self.request.user is None else self.request.user.id
-        cache_keys = (self.request.method, self.request.path_qs, user_id)
+        cache_keys = (self.service.resource_name, self.request.method, self.request.path_qs, user_id)
         if self.request.headers.get("Cache-Control") == "no-cache":
             region_invalidate(self._get_acl_cached, "acl", *cache_keys)
         return self._get_acl_cached(*cache_keys)
 
-    # NOTE:
-    #   Function arguments are required to generate caching keys by which cached elements will be retrieved.
-    #   Actual arguments are not needed as we employ stored objects in the instance.
     @cache_region("acl")
-    def _get_acl_cached(self, request_method, request_path, user_id):  # noqa: F811
-        # type: (Str, Str, Optional[int]) -> AccessControlListType
+    def _get_acl_cached(self, service_name, request_method, request_path, user_id):  # noqa: F811
+        # type: (Str, Str, Str, Optional[int]) -> AccessControlListType
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
 
         If the cache is not hit (expired timeout or new key entry), calls :meth:`ServiceInterface.get_acl` to retrieve
         effective permissions of the requested resource and specific permission for the applicable service and user
         executing the request.
+
+        .. note::
+            Function arguments are required to generate caching keys by which cached elements will be retrieved.
+            Actual arguments are not needed as we employ stored objects in the instance.
 
         .. seealso::
             - :meth:`ServiceInterface.permission_requested`
@@ -589,8 +592,10 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
     }
 
     def resource_requested(self):
-        permission = self.permission_requested()
         path_parts = self._get_request_path_parts()
+        if not path_parts:
+            return self.service, False
+        permission = self.permission_requested()
         parts_lower = [part.lower() for part in path_parts]
         if parts_lower and parts_lower[0] == "":
             path_parts = path_parts[1:]
@@ -749,6 +754,7 @@ class ServiceTHREDDS(ServiceInterface):
         return self._config
 
     def get_path_parts(self):
+        # type: () -> Optional[List[Str]]
         cfg = self.get_config()
         path_parts = self._get_request_path_parts()
         skip_prefix = cfg["skip_prefix"]
@@ -764,7 +770,7 @@ class ServiceTHREDDS(ServiceInterface):
         path_parts = self.get_path_parts()
 
         # handle optional prefix as targeting the service directly
-        if len(path_parts) < 2:
+        if not path_parts or len(path_parts) < 2:
             return self.service, True
         path_parts = path_parts[1:]
         cfg = self.get_config()
@@ -839,3 +845,23 @@ def service_factory(service, request):
     return ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type](service, request),
                             http_error=HTTPInternalServerError,
                             msg_on_fail="Failed to find requested service type.")
+
+
+def invalidate_service(service_name):
+    # type: (Str) -> None
+    """
+    Invalidates any caching reference to the specified service name.
+    """
+    # pylint: disable=W0212,protected-access
+    try:
+        # could fail if twitcher was not installed
+        from magpie.adapter.magpieowssecurity import MagpieOWSSecurity  # noqa
+
+        if "service" in cache_regions:
+            region_invalidate(MagpieOWSSecurity._get_service_cached, "service", service_name)  # noqa
+    except ImportError:
+        LOGGER.warning("Could not invalidate cache of service: [%s]", service_name)
+
+    if "acl" in cache_regions:
+        cache_keys = (service_name, )  # (service_name, request_method, request_path, user_id)
+        region_invalidate(ServiceInterface._get_acl_cached, "acl", *cache_keys)  # noqa

@@ -43,22 +43,12 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from webtest.app import TestApp
 
-    from magpie.typedefs import JSON, CookiesType, HeadersType, Str
+    from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, Str
 
 
-@six.add_metaclass(ABCMeta)
-class BaseTestCase(unittest.TestCase):
+class ConfigTestCase(object):
     """
-    Base definition for all other `Test Case` interfaces.
-
-    The implementers must provide :meth:`setUpClass` which prepares the various test parameters, session cookies and
-    the local application or remote Magpie URL configuration to evaluate test cases on.
-
-    The implementing `Test Case` must also set :attr:`__test__` to ``True`` so that tests are picked up as executable.
-
-    .. note::
-        Attribute attr:`__test__` is employed to avoid duplicate runs of this base class or other derived classes that
-        must not be considered as the *final implementer* `Test Case`.
+    Various test configuration fields that can be employed across test case implementations.
     """
     # pylint: disable=C0103,invalid-name
 
@@ -90,6 +80,23 @@ class BaseTestCase(unittest.TestCase):
     extra_group_names = set()       # type: Set[Str]
     extra_resource_ids = set()      # type: Set[int]
     extra_service_names = set()     # type: Set[Str]
+
+
+@six.add_metaclass(ABCMeta)
+class BaseTestCase(ConfigTestCase, unittest.TestCase):
+    """
+    Base definition for all other `Test Case` interfaces.
+
+    The implementers must provide :meth:`setUpClass` which prepares the various test parameters, session cookies and
+    the local application or remote Magpie URL configuration to evaluate test cases on.
+
+    The implementing `Test Case` must also set :attr:`__test__` to ``True`` so that tests are picked up as executable.
+
+    .. note::
+        Attribute attr:`__test__` is employed to avoid duplicate runs of this base class or other derived classes that
+        must not be considered as the *final implementer* `Test Case`.
+    """
+    # pylint: disable=C0103,invalid-name
 
     # NOTE: don't forget to override this, or your specialized test-suite will not run
     __test__ = False    # won't run this as a test case, only its derived classes that overrides to True
@@ -1944,7 +1951,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_equal(len(body["permissions"]), 1)
-        perm = body["permissions"][0]
+        perm = body["permissions"][0]  # type: PermissionDict
         utils.check_val_equal(perm["access"], Access.ALLOW.value)
         utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
 
@@ -2697,7 +2704,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_val_not_equal(len(permissions), 0)
             scope = Scope.MATCH.value
             msg = "Effective permission '{}' on resource '{}' expected '{}'.".format(perm.value, res_name, access.value)
-            for obj in permissions:
+            for obj in permissions:  # type: PermissionDict
                 if Permission.get(obj["name"]) != perm:
                     continue
                 utils.check_val_equal(Access.get(obj["access"]), access, msg=msg)
@@ -3135,11 +3142,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("services", body)
         utils.check_val_type(body["services"], list)
         utils.check_val_equal(len(body["services"]), 2, msg="services with direct user permissions expected")
-        for svc in body["services"]:
+        services = body["services"]  # type: List[JSON]
+        for svc in services:
             utils.TestSetup.check_ServiceFormat(self, svc, has_children_resources=False, has_private_url=False,
                                                 skip_permissions=True)  # specific permissions validated in other tests
         expected_services = [test_items["svc1_name"], test_items["svc3_name"]]
-        utils.check_all_equal([svc["service_name"] for svc in body["services"]], expected_services, any_order=True)
+        utils.check_all_equal([svc["service_name"] for svc in services], expected_services, any_order=True)
 
         # check it still works with other flags
         # note: cannot test number of services and expected service names because of inherited from anonymous
@@ -4206,7 +4214,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_equal(len(body["permissions"]), 1)
-        perm = body["permissions"][0]
+        perm = body["permissions"][0]  # type: PermissionDict
         utils.check_val_equal(perm["access"], Access.ALLOW.value)
         utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
 
@@ -4328,7 +4336,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_equal(len(body["permissions"]), 1)
-        perm = body["permissions"][0]
+        perm = body["permissions"][0]  # type: PermissionDict
         utils.check_val_equal(perm["access"], Access.ALLOW.value)
         utils.check_val_equal(perm["scope"], Scope.RECURSIVE.value)
 
@@ -5486,7 +5494,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
 
-class SetupMagpieAdapter(object):
+class SetupMagpieAdapter(ConfigTestCase):
     """
     Configures all required :class:`MagpieAdapter` components to simulate how it would be loaded by `Twitcher` instance.
 
@@ -5494,26 +5502,42 @@ class SetupMagpieAdapter(object):
     to the ones that would be received by the proxy. This allows to test handling of the requests be the various
     components defined in the adapter.
     """
-    session = None  # type: Optional[Session]
+    session = None          # type: Optional[Session]
+    cache_enabled = False   # type: bool
+    cache_expire = None     # type: Optional[int]
 
     @classmethod
     def setup_adapter(cls):
         test_app = utils.get_app_or_url(cls)
         settings = test_app.app.registry.settings
+        utils.setup_cache_settings(settings, enabled=cls.cache_enabled, expire=cls.cache_expire)
         adapter = MagpieAdapter(settings)
         config = adapter.configurator_factory(settings)
         # making the app triggers creation of class instances from registry (eg: AuthN/AuthZ Policies)
         config.make_wsgi_app()
         settings = config.registry.settings
         cls.ows = adapter.owssecurity_factory(settings)
+        cls.adapter = adapter
 
-    @classmethod
-    def mock_request(cls, *args, **kwargs):
+    @utils.mock_get_settings
+    def mock_request(self, *args, **kwargs):
         """
         Set getters that are normally defined when running the full application.
         """
+        # apply test app session cookies and default headers, but override with explicit params given as input
+        param_cookies = kwargs.pop("cookies", {})
+        param_headers = kwargs.pop("headers", {})
+        test_cookies = self.test_cookies or {}
+        test_headers = self.test_headers or {}
+        test_cookies.update(param_cookies)
+        test_headers.update(param_headers)
+        if not self.cache_enabled:
+            test_headers["Cache-Control"] = "no-cache"
+        kwargs.update({"cookies": test_cookies, "headers": test_headers})
+
+        # generate mocked request and getter methods
         request = utils.mock_request(*args, **kwargs)
-        test_app = utils.get_app_or_url(cls)
+        test_app = utils.get_app_or_url(self)
         registry = test_app.app.registry
         request.registry = registry
         settings = kwargs.get("settings")
@@ -5527,9 +5551,9 @@ class SetupMagpieAdapter(object):
         for meth, reify in methods:
             # handle DB session manually, otherwise it gets duplicated and QueuePool limit gets reached
             if meth == "db":
-                if not cls.session:
-                    cls.session = reify.wrapped(request)
-                setattr(request, meth, cls.session)
+                if not self.session:
+                    self.session = reify.wrapped(request)
+                setattr(request, meth, self.session)
             else:
                 setattr(request, meth, reify.wrapped(request))
         return request
