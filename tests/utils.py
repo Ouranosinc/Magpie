@@ -483,26 +483,31 @@ def json_msg(json_body, msg=null):
     return json_str
 
 
-def mock_get_settings(test):
-    """
-    Decorator to mock :func:`magpie.utils.get_settings` to allow retrieval of settings from :class:`DummyRequest`.
+def mock_get_settings(arg=None):
+    def mock_get_settings_decorator(test):
+        """
+        Decorator to mock :func:`magpie.utils.get_settings` to allow retrieval of settings from :class:`DummyRequest`.
 
-    .. warning::
-        Only apply on test methods (not on class TestCase) to ensure that :mod:`pytest` can collect them correctly.
-    """
-    from magpie.utils import get_settings as real_get_settings
+        .. warning::
+            Only apply on test methods (not on class TestCase) to ensure that :mod:`pytest` can collect them correctly.
+        """
+        from magpie.utils import get_settings as real_get_settings
 
-    def mocked(container):
-        if isinstance(container, DummyRequest):
-            return container.registry.settings
-        return real_get_settings(container)
+        def mocked(container):
+            if isinstance(container, DummyRequest):
+                return container.registry.settings
+            return real_get_settings(container)
 
-    @functools.wraps(test)
-    def wrapped(*_, **__):
-        # mock.patch("magpie.services.get_settings", side_effect=mocked)
-        with mock.patch("magpie.utils.get_settings", side_effect=mocked):
-            return test(*_, **__)
-    return wrapped
+        @functools.wraps(test)
+        def wrapped(*_, **__):
+            # mock.patch("magpie.services.get_settings", side_effect=mocked)
+            with mock.patch("magpie.utils.get_settings", side_effect=mocked):
+                return test(*_, **__)
+        return wrapped
+
+    if callable(arg):
+        return mock_get_settings_decorator(arg)
+    return mock_get_settings_decorator
 
 
 def mock_request(request_path_query="",     # type: Str
@@ -552,17 +557,20 @@ def mock_request(request_path_query="",     # type: Str
     return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
 
 
-def wrapped_call(target, method=None, instance=None):
-    # type: (Union[Type, Str], Optional[Str], Optional[Any]) -> mock.MagicMock
+__WRAPPED_INSTANCES__ = {}
+
+
+def wrapped_call(target, method=None, instance=None, side_effect=None):
+    # type: (Union[Type, Str], Optional[Str], Optional[Any], Callable[[...], Any]) -> mock.MagicMock
     """
     Utility call wrapper that injects a mock reference between the target operation call and its real execution.
 
     The returned mock will be accessible to obtain details about number of calls, arguments of each call, etc.
-    The utility can be use in the following situations.
+    The utility can be used in the following situations.
 
-    Wrapping a class method:
+    Wrapping the class method of a specific instance:
 
-    .. code-block::
+    .. code-block:: python
 
         instance = MyObjectRef()
         mock = wrapped_call(MyObjectRef, "target_method", instance)
@@ -571,9 +579,9 @@ def wrapped_call(target, method=None, instance=None):
         # ...
         assert mock.called
 
-    Wrapping a module function:
+    Wrapping a specific module function:
 
-    .. code-block::
+    .. code-block:: python
 
         mock = wrapped_call("package.module.target_function")
         # ...
@@ -590,12 +598,31 @@ def wrapped_call(target, method=None, instance=None):
     :param target: item to wrap (class or string reference)
     :param method: string name of the method if target was a class reference
     :param instance: actual instance to be wrapped
+    :param side_effect: specific function to call instead of original obtained from wrapped target
     :return: mock object with calls statistic
     """
+
+    base = object  # for unused class wrapper to avoid error
     if method:
-        real = getattr(target, method)
-        func = method
-    elif isinstance(target, str):
+        # class string reference and method name
+        if isinstance(target, six.string_types):
+            mod_name, cls_name = target.rsplit(".", 1)
+            mod = importlib.import_module(mod_name)
+            base = getattr(mod, cls_name)
+            # mock other method of already mocked class reference
+            if target in __WRAPPED_INSTANCES__:
+                pass
+            real = getattr(base, method)
+            func = method
+            target = mod
+            func = cls_name
+
+        # class object and method name ('instance' param required)
+        else:
+            real = getattr(target, method)
+            func = method
+    # function string reference
+    elif isinstance(target, six.string_types):
         func = target
         mod_name, func_name = target.rsplit(".", 1)
         mod = importlib.import_module(mod_name)
@@ -606,15 +633,30 @@ def wrapped_call(target, method=None, instance=None):
         func = fully_qualified_name(real)
         target = mod
 
-    def wrapped(*_, **__):
+    class WrappedClass(base):
+        def __init__(self, *_, **__):
+            super(WrappedClass, self).__init__(*_, **__)
+
+    def make_ref(*_, **__):
+        if target not in __WRAPPED_INSTANCES__:
+            __WRAPPED_INSTANCES__[target] = WrappedClass(*_, **__)
+            setattr(__WRAPPED_INSTANCES__[target], method,
+                    mock.patch(func, side_effect=lambda *_, **__: real(*_, **__)))
+        return __WRAPPED_INSTANCES__[target]
+
+    def wrapped_func(*_, **__):
         if instance is None:
             return real(*_, **__)
+        if type(real) is property:  # pylint: disable=C0123
+            return real.fget(instance)
         return real(instance, *_, **__)
 
-    if method:
-        mocked = mock.patch.object(target, func, side_effect=wrapped)
+    if method and instance:
+        mocked = mock.patch.object(target, func, side_effect=wrapped_func)
+    elif method:
+        mocked = mock.patch.object(target, func, new=make_ref)
     else:
-        mocked = mock.patch(func, side_effect=wrapped)
+        mocked = mock.patch(func, side_effect=side_effect or wrapped_func)
     return mocked  # noqa
 
 

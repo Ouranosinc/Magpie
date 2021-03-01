@@ -1,9 +1,11 @@
+import random
+
 from pyramid.httpexceptions import HTTPNotFound
 
 from magpie import __meta__
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
 from magpie.constants import get_constant
-from magpie.services import ServiceAPI
+from magpie.services import ServiceAPI, ServiceInterface
 from tests import interfaces as ti, runner, utils
 
 
@@ -137,7 +139,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
     __test__ = True
     test_headers = None
     test_cookies = None
-    cache_expire = 10
+    cache_expire = 600
     cache_enabled = True
     cache_reset_headers = {"Cache-Control": "no-cache"}
 
@@ -157,6 +159,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         cls.test_group_name = "unittest-adapter-cache-group"
         cls.test_service_name = "unittest-adapter-service"
         cls.test_service_type = ServiceAPI.service_type
+        cls.test_resource_type = "route"
 
         cls.setup_adapter()
         cls.setup_admin()
@@ -242,3 +245,115 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
 
         utils.check_val_equal(wrapped_cached.call_count, 1, msg="Real call expected only on first run before caching")
         utils.check_val_equal(wrapped_service.call_count, 3, msg="Service call expected for each request")
+
+    @utils.mock_get_settings
+    def test_retrieve_cached_acl(self):
+        """
+        Validate caching of :term:`ACL` resolution against repeated combinations of caching arguments.
+
+        Caching method takes as inputs combinations of (:term:`User`, :term:`Resource`, :term:`Permission`).
+
+        Verify that the caching takes effect, but also that it is properly managed between distinct consecutive
+        requests. Multiple combinations of :term:`ACL` resolution requests are sent in random order to ensure they
+        don't invalidate other caches (of other combinations), while still producing valid results for the relevant
+        :term:`Resource` the :term:`User` attempts to obtain :term:`Permission` access.
+
+        When :term:`ACL` caching is applied properly, the complete computation of the access result should only be
+        accomplished on the first call of each combination, and all following ones (within the caching timeout) will
+        resolve from the cache.
+        """
+        # create some test resources under the service with permission for the user
+        # service not allowed access, resource allowed
+        res1_name = "test1"
+        res2_name = "test2"
+        res1_path = "/ows/proxy/{}/{}".format(self.test_service_name, res1_name)
+        res2_path = "/ows/proxy/{}/{}".format(self.test_service_name, res2_name)
+        info = utils.TestSetup.create_TestServiceResource(self, override_resource_name=res1_name)
+        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission="read")
+        info = utils.TestSetup.create_TestServiceResource(self, override_resource_name=res2_name)
+        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission="write")
+
+        no_cache_header = self.cache_reset_headers.copy()
+        admin_cookies = self.cookies.copy()
+        admin_headers = self.headers.copy()
+        self.login_test_user()
+        user_cookies = self.test_cookies.copy()
+        user_headers = self.test_headers.copy()
+        utils.check_or_try_logout_user(self)
+        self.test_headers = None
+        self.test_cookies = None
+
+        test_requests = [
+            # allowed because admin
+            (True, self.mock_request(res1_path, method="GET", headers=admin_headers, cookies=admin_cookies)),
+            (True, self.mock_request(res1_path, method="POST", headers=admin_headers, cookies=admin_cookies)),
+            (True, self.mock_request(res2_path, method="GET", headers=admin_headers, cookies=admin_cookies)),
+            (True, self.mock_request(res2_path, method="POST", headers=admin_headers, cookies=admin_cookies)),
+            # allowed/denied based on (user, resource, permission) combination
+            (True, self.mock_request(res1_path, method="GET", headers=user_headers, cookies=user_cookies)),
+            (False, self.mock_request(res1_path, method="POST", headers=user_headers, cookies=user_cookies)),
+            (False, self.mock_request(res2_path, method="GET", headers=user_headers, cookies=user_cookies)),
+            (True, self.mock_request(res2_path, method="POST", headers=user_headers, cookies=user_cookies)),
+        ]
+        number_duplicate_call_cached = 20
+        cache_requests = test_requests * number_duplicate_call_cached
+        random.shuffle(cache_requests)
+
+        # each method targets a different Permission, each path a different Resource, and each cookies a different user
+        token = get_constant("MAGPIE_COOKIE_NAME")
+        unique_calls = set((req.method, req.path, req.cookies[token]) for _, req in test_requests + cache_requests)
+
+        def run_check(test_requests_set, cached):
+            _cached = " (cached)" if cached else ""
+            for _allowed, _request in test_requests_set:
+                _cookie = _request.cookies[token]
+                _user = self.test_user_name if _cookie == user_cookies[token] else "admin"
+                _msg = "Using [{}, {}]{} with user [{}]".format(_request.method, _request.path, _cached, _user)
+                if not cached:
+                    _request.headers.update(no_cache_header)
+                else:
+                    _request.headers.pop("Cache-Control", None)
+                if _allowed:
+                    utils.check_no_raise(lambda: self.ows.check_request(_request), msg=_msg)
+                else:
+                    utils.check_raises(lambda: self.ows.check_request(_request), OWSAccessForbidden, msg=_msg)
+
+        # obtain a reference to the 'service' that should be returned by 'service_factory' such that we can
+        # prepare wrapped mock references to its '__acl__' and '_get_acl' methods
+        tmp_req = test_requests[0][1]
+        service = self.ows.get_service(tmp_req)
+
+        def mocked_service_factory(__test_service, test_request):
+            service.request = test_request
+            return service
+
+        # WARNING:
+        #  In both cases below, we cannot mock the cached method directly since it needs to do caching retrieval.
+        #  Instead, mock a function before each cached method call and another within to compare call-counts.
+
+        # wrap 'get_service' which calls the cached method '_get_service_cached', which in turn calls 'service_factory'
+        # when caching takes effect, 'service_factory' does not get called as the cached service is returned directly
+        with utils.wrapped_call(MagpieOWSSecurity, "get_service", self.ows) as mock_service_cached:
+            with utils.wrapped_call("magpie.adapter.magpieowssecurity.service_factory",
+                                    side_effect=mocked_service_factory) as mock_service:
+                # wrap '__acl__' which calls '_get_acl_cached', that in turns calls '_get_acl' when computing real ACL
+                with utils.wrapped_call(ServiceInterface, "__acl__", service) as mock_acl_cached:
+                    with utils.wrapped_call(ServiceInterface, "_get_acl", service) as mock_acl:
+
+                        # run all requests with caching disabled to initialize their expire duration
+                        run_check(test_requests, False)
+                        # then, do exactly the same but with caches enabled for requests in random order
+                        # all caches should remain active for the whole duration and not conflict with each other
+                        run_check(cache_requests, True)
+
+        # there should be as many service resolution as there are requests, but only first ones without cache fetches it
+        # for ACL resolution, there should also be as many as there are requests, but actual computation will be limited
+        # to the number of combinations without caching, and all others only return the precomputed cache result
+        total_cached = len(cache_requests)
+        total_no_cache = len(test_requests)
+        total_calls = total_cached + total_no_cache
+        total_acl_cached = len(unique_calls)
+        utils.check_val_equal(mock_service_cached.call_count, total_calls, msg="Service call expected for each request")
+        utils.check_val_equal(mock_acl_cached.call_count, total_calls, msg="ACL resolution expected for each request")
+        utils.check_val_equal(mock_service.call_count, total_no_cache, msg="Real service expected only on first ones")
+        utils.check_val_equal(mock_acl.call_count, total_acl_cached, msg="Real ACL call expected only on first unique")
