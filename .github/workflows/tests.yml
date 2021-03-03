@@ -79,7 +79,7 @@ jobs:
             test-case: coverage
           # smoke test of Docker image
           - os: ubuntu-latest
-            python-version: 3.5
+            python-version: none
             allow-failure: true
             test-case: test-docker
     steps:
@@ -88,11 +88,14 @@ jobs:
           fetch-depth: "0"
       - name: Setup Python
         uses: actions/setup-python@v2
+        if: ${{ matrix.python-version != 'none' }}
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Dependencies
+        if: ${{ matrix.python-version != 'none' }}
         run: make install-pkg install-dev version
       - name: Display Packages
+        if: ${{ matrix.python-version != 'none' }}
         run: pip freeze
       - name: Setup Environment Variables
         uses: c-py/action-dotenv-to-setenv@v2
