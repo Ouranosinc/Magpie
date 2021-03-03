@@ -20,6 +20,7 @@ Bug Fixes
 * Fix broken link to remote authentication provider in documentation.
 * Fix JSON rendering of ``Group`` response specifically for ``MAGPIE_ADMIN_GROUP`` where ``inf`` value could not
   be converted. Literal string ``"max"`` is instead returned in that case, and the corresponding ``int`` for others.
+* Fix conversion of ``expire`` value to integer when retrieved from ``MAGPIE_TOKEN_EXPIRE`` setting as string.
 
 `3.6.0 <https://github.com/Ouranosinc/Magpie/tree/3.6.0>`_ (2021-02-09)
 ------------------------------------------------------------------------------------
