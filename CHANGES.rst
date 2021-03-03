@@ -7,6 +7,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Introduce caching of ``Service`` definitions using ``beaker``, which can be use in conjunction with ``ACL`` caching
+  to improve performance of `Twitcher` requests.
+* Apply cache invalidation when it can be resolved upon changes to instances that should be reflected immediately.
+* Update performance docs and INI related to caching.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Improve error message in case of failure to load INI file instead of misleading index error.

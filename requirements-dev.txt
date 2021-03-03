@@ -13,7 +13,7 @@ isort; python_version < "3.6"
 isort>5; python_version >= "3.6"
 mock
 pylint; python_version < "3.6"
-pylint>=2.5; python_version >= "3.6"
+pylint>=2.7,<2.8; python_version >= "3.6"
 pylint-quotes
 # bird-house/twticher, must match version in Dockerfile.adapater
 pyramid-twitcher==0.5.3

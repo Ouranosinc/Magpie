@@ -11,7 +11,9 @@ from magpie.db import run_database_migration
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, AnyStr, Optional, Sequence
+    from typing import Any, Optional, Sequence
+
+    from magpie.typedefs import Str
 
 
 def make_parser():
@@ -25,7 +27,7 @@ def make_parser():
 
 
 def main(args=None, parser=None, namespace=None):
-    # type: (Optional[Sequence[AnyStr]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
+    # type: (Optional[Sequence[Str]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)

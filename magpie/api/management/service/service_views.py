@@ -20,7 +20,7 @@ from magpie.api.management.service import service_formats as sf
 from magpie.api.management.service import service_utils as su
 from magpie.permissions import Permission, PermissionType, format_permissions
 from magpie.register import SERVICES_PHOENIX_ALLOWED, sync_services_phoenix
-from magpie.services import SERVICE_TYPE_DICT
+from magpie.services import SERVICE_TYPE_DICT, invalidate_service
 from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
@@ -123,12 +123,13 @@ def update_service_view(request):
         return new_value if new_value is not None and not new_value == "" else old_value
 
     # None/Empty values are accepted in case of unspecified
-    svc_name = select_update(ar.get_multiformat_body(request, "service_name"), service.resource_name)
+    cur_svc_name = service.resource_name
+    svc_name = select_update(ar.get_multiformat_body(request, "service_name"), cur_svc_name)
     svc_url = select_update(ar.get_multiformat_body(request, "service_url"), service.url)
     ax.verify_param(svc_name, param_compare="types", not_equal=True,
                     param_name="service_name", http_error=HTTPForbidden,
                     msg_on_fail=s.Service_PATCH_ForbiddenResponseSchema_ReservedKeyword.description)
-    ax.verify_param(svc_name == service.resource_name and svc_url == service.url, not_equal=True,
+    ax.verify_param(svc_name == cur_svc_name and svc_url == service.url, not_equal=True,
                     param_compare=True, param_name="service_name/service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Service_PATCH_BadRequestResponseSchema.description)
 
@@ -142,7 +143,7 @@ def update_service_view(request):
                             msg_on_fail=s.Service_CheckConfig_UnprocessableEntityResponseSchema.description)
         service.configuration = new_svc_config
 
-    if svc_name != service.resource_name:
+    if svc_name != cur_svc_name:
         all_services = request.db.query(models.Service)
         all_svc_names = [svc.resource_name for svc in all_services]
         ax.verify_param(svc_name, not_in=True, param_compare=all_svc_names, with_param=False,
@@ -164,6 +165,7 @@ def update_service_view(request):
                      fallback=lambda: request.db.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.Service_PATCH_ForbiddenResponseSchema.description,
                      content=err_svc_content)
+    invalidate_service(cur_svc_name)
     return ax.valid_http(http_success=HTTPOk, detail=s.Service_PATCH_OkResponseSchema.description,
                          content={"service": sf.format_service(service, show_private_url=True)})
 
@@ -192,6 +194,7 @@ def unregister_service_view(request):
     service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
     svc_content = sf.format_service(service, show_private_url=True)
     svc_res_id = service.resource_id
+    svc_name = service.resource_name
     ax.evaluate_call(lambda: models.RESOURCE_TREE_SERVICE.delete_branch(resource_id=svc_res_id, db_session=request.db),
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                      msg_on_fail="Delete service from resource tree failed.", content=svc_content)
@@ -204,6 +207,7 @@ def unregister_service_view(request):
     ax.evaluate_call(lambda: remove_service_magpie_and_phoenix(service, service_push, request.db),
                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.Service_DELETE_ForbiddenResponseSchema.description, content=svc_content)
+    invalidate_service(svc_name)
     return ax.valid_http(http_success=HTTPOk, detail=s.Service_DELETE_OkResponseSchema.description)
 
 

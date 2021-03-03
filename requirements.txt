@@ -35,6 +35,8 @@ threddsclient==0.4.1; python_version < "3"
 threddsclient>=0.4.1; python_version >= "3"
 transaction
 typing; python_version < "3"
+# typing extension required for TypedDict
+typing_extensions; python_version < "3.8"
 wheel
 webob
 ziggurat-foundations>=0.8.3
