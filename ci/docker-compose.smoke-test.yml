@@ -3,8 +3,6 @@ services:
   postgres:
     container_name: "magpie-smoke-test-postgres"
     image: "postgres:latest"
-    expose:
-      - "5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: qwerty
@@ -26,7 +24,3 @@ services:
       MAGPIE_POSTGRES_HOST: postgres  # connect directly to test docker
     volumes:
       - ../config/magpie.ini:/opt/local/src/magpie/config/magpie.ini
-    # WARNING:
-    #   following is for direct access from host during tests only
-    #   production magpie instance should not be exposed directly
-    network_mode: host
