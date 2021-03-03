@@ -112,9 +112,11 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to sets prefixed by
         ``extra_``, in case some test failed to do so (e.g.: because it raised midway or was simply forgotten).
         """
+        cls.usr = cls.usr or get_constant("MAGPIE_ADMIN_USER")
+        cls.pwd = cls.pwd or get_constant("MAGPIE_ADMIN_PASSWORD")
+        cls.app = cls.app or cls.url or utils.get_test_magpie_app(settings=getattr(cls, "settings", None))
         utils.check_or_try_logout_user(cls)
-        admin_usr, admin_pwd = get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ADMIN_PASSWORD")
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=admin_usr, password=admin_pwd)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
         # remove test service/resource if overridden by test-case class implementers
         if cls.test_resource_name:
             utils.TestSetup.delete_TestServiceResource(cls)
