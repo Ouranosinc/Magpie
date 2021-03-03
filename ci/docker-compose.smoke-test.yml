@@ -11,6 +11,8 @@ services:
     container_name: "magpie-smoke-test-application"
     image: pavics/magpie:latest
     restart: "no"
+    ports:
+      - "2001:2001"
     depends_on:
       - postgres
     links:
