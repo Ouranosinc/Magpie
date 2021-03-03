@@ -112,8 +112,8 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to sets prefixed by
         ``extra_``, in case some test failed to do so (e.g.: because it raised midway or was simply forgotten).
         """
-        cls.usr = cls.usr or get_constant("MAGPIE_ADMIN_USER")
-        cls.pwd = cls.pwd or get_constant("MAGPIE_ADMIN_PASSWORD")
+        cls.usr = get_constant("MAGPIE_ADMIN_USER")
+        cls.pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
         cls.app = cls.app or cls.url or utils.get_test_magpie_app(settings=getattr(cls, "settings", None))
         utils.check_or_try_logout_user(cls)
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
@@ -125,6 +125,8 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         # avoid attempt cleanup of reserved keyword user/group, since it will fail with magpie '>=2.x'
         reserved_users = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
         reserved_groups = [get_constant("MAGPIE_ADMIN_GROUP"), get_constant("MAGPIE_ANONYMOUS_GROUP")]
+        test_admin = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.extra_user_names.add(test_admin)
         cls.extra_user_names.add(cls.test_user_name)
         cls.extra_group_names.add(cls.test_group_name)
         for usr in cls.extra_user_names:

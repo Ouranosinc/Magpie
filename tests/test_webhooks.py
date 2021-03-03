@@ -38,8 +38,8 @@ class TestWebhooks(ti.BaseTestCase):
     @classmethod
     def setUpClass(cls):
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
-        cls.usr = get_constant("MAGPIE_ADMIN_USER")
-        cls.pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
