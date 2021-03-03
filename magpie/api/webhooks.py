@@ -1,14 +1,23 @@
 import multiprocessing
+from collections import defaultdict
+from typing import TYPE_CHECKING
 
-from pyramid.threadlocal import get_current_registry
 import requests
 import transaction
+from pyramid.threadlocal import get_current_registry
+from six.moves.urllib.parse import urlparse
 
+from magpie import models
 from magpie.api.schemas import UserWebhookErrorStatus
 from magpie.constants import MAGPIE_INI_FILE_PATH
 from magpie.db import get_db_session_from_config_ini
-from magpie import models
-from magpie.utils import get_logger, get_settings, ExtendedEnum
+from magpie.register import get_all_configs
+from magpie.utils import ExtendedEnum, get_logger, get_settings, raise_log
+
+if TYPE_CHECKING:
+    from typing import Dict, List, Optional
+
+    from magpie.typedefs import JSON, SettingsType, Str
 
 # List of keys that should be found for a single webhook item in the config
 WEBHOOK_KEYS = {
@@ -106,3 +115,53 @@ def webhook_update_error_status(user_name):
     user = db_session.query(models.User).filter(models.User.user_name == user_name)  # pylint: disable=E1101,no-member
     user.update({"status": UserWebhookErrorStatus})
     transaction.commit()
+
+
+def setup_webhooks(config_path, settings):
+    # type: (Optional[Str], SettingsType) -> None
+    """
+    Prepares the webhook settings for the application based on definitions retrieved from the configuration file.
+    """
+
+    settings["webhooks"] = defaultdict(lambda: [])
+    webhooks_conf = settings["webhooks"]  # type: Dict[str, List[JSON]]
+    if not config_path:
+        LOGGER.info("No configuration file provided to load webhook definitions.")
+    else:
+        LOGGER.info("Loading provided configuration file to setup webhook definitions.")
+        webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
+
+        for cfg in webhook_configs:  # type: JSON
+            for webhook in cfg:
+                # Validate the webhook config
+                if not isinstance(webhook, dict):
+                    raise_log(
+                        "Invalid format for webhook definition. Dictionary expected.",
+                        exception=ValueError, logger=LOGGER
+                    )
+                LOGGER.debug("Validating webhook: %s", webhook.get("name", "<undefined-name>"))
+                if set(webhook.keys()) != WEBHOOK_KEYS or not all(value for value in webhook.values()):
+                    raise_log(
+                        "Missing or invalid key/value in webhook config from the config file {}".format(config_path),
+                        exception=ValueError, logger=LOGGER
+                    )
+                if webhook["action"] not in WebhookAction.values():
+                    raise_log(
+                        "Invalid action {} found in webhook from config file {}".format(webhook["action"], config_path),
+                        exception=ValueError, logger=LOGGER
+                    )
+                if webhook["method"] not in HTTP_METHODS:
+                    raise_log(
+                        "Invalid method {} found in webhook from config file {}".format(webhook["method"], config_path),
+                        exception=ValueError, logger=LOGGER
+                    )
+                url_parsed = urlparse(webhook["url"])
+                if not all([url_parsed.scheme, url_parsed.netloc, url_parsed.path]):
+                    raise_log(
+                        "Invalid URL {} found in webhook from config file {}".format(webhook["url"], config_path),
+                        exception=ValueError, logger=LOGGER
+                    )
+
+                # Regroup webhooks by action key
+                webhook_sub_config = {k: webhook[k] for k in set(list(webhook.keys())) - {"action"}}
+                webhooks_conf[webhook["action"]].append(webhook_sub_config)
