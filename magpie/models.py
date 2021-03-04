@@ -442,7 +442,7 @@ class TemporaryToken(BaseModel, Base):
         return get_magpie_url(settings) + s.TemporaryUrlAPI.path.format(token=self.token)
 
     def expired(self):
-        expire = get_constant("MAGPIE_TOKEN_EXPIRE", raise_missing=False, raise_not_set=False, default_value=86400)
+        expire = int(get_constant("MAGPIE_TOKEN_EXPIRE", raise_missing=False, raise_not_set=False, default_value=86400))
         return (datetime.datetime.utcnow() - self.created) > datetime.timedelta(seconds=expire)
 
     @staticmethod
