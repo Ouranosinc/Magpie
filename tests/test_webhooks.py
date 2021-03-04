@@ -19,7 +19,7 @@ import requests
 from magpie.api.schemas import UserOKStatus, UserWebhookErrorStatus
 from magpie.api.webhooks import WebhookAction
 from magpie.constants import get_constant
-from magpie.utils import CONTENT_TYPE_JSON, CONTENT_TYPE_HTML
+from magpie.utils import CONTENT_TYPE_HTML
 from tests import interfaces as ti, runner, utils
 
 
@@ -43,13 +43,14 @@ class TestWebhooks(ti.BaseTestCase):
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
-        cls.headers = None
-        cls.cookies = None
+
+        # tmp app to prepare test admin access
+        # discard afterwards to regenerate different configs per test
+        cls.app = utils.get_test_magpie_app()
+        cls.setup_admin()
         cls.app = None
 
         cls.base_webhook_url = "http://localhost:8080"
-        cls.json_headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
-        cls.extra_user_names = set()
 
     def tearDown(self):
         """
