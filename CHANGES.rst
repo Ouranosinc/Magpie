@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`3.7.0 <https://github.com/Ouranosinc/Magpie/tree/3.7.0>`_ (2021-03-16)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Introduce caching of ``Service`` definitions using ``beaker``, which can be use in conjunction with ``ACL`` caching
