@@ -28,6 +28,8 @@ requests
 requests_file
 simplejson
 six>=1.12.0
+# 'SessionExtension' employed in 'zope.sqlalchemy<1.2' dropped in 'sqlalchemy==1.4'
+sqlalchemy<1.4; python_version < "3.7"
 sqlalchemy
 sqlalchemy_utils<0.36.4; python_version < "3"
 sqlalchemy_utils!=0.36.8; python_version >= "3"

@@ -7,7 +7,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix breaking version of ``sqlalchemy==1.4`` with Python 3.6 due to pinned ``zope.sqlalchemy<1.2``.
 
 `3.7.0 <https://github.com/Ouranosinc/Magpie/tree/3.7.0>`_ (2021-03-16)
 ------------------------------------------------------------------------------------
