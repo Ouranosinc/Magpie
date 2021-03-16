@@ -28,7 +28,7 @@
 .. _BADC: http://data.ceda.ac.uk/badc
 .. _CEDA: https://esgf-index1.ceda.ac.uk
 .. _LLNL: https://www.llnl.gov/
-.. _PCMDI: http://pcmdi.llnl.gov
+.. _PCMDI: https://pcmdi.llnl.gov/
 .. _SMHI: https://www.smhi.se
 .. _GitHub_AuthN: https://docs.github.com/developers/apps/identifying-and-authorizing-users-for-github-apps
 .. |Github_OAuthApp| replace:: Creating an OAuth App
