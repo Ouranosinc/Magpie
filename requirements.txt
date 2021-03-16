@@ -28,9 +28,12 @@ requests
 requests_file
 simplejson
 six>=1.12.0
-# 'SessionExtension' employed in 'zope.sqlalchemy<1.2' dropped in 'sqlalchemy==1.4'
-sqlalchemy<1.4; python_version < "3.7"
-sqlalchemy
+# 'sqlalchemy==1.4' breaks many integrations with 'sqlalchemy_utils' and 'zope.sqlalchemy'
+# 'zope.sqlalchemy<1.2' enforced for 'Python<3.7' will always need 'sqlalchemy<1.4'
+# 'sqlalchemy_utils' with 'Python>=3.7' could use 'sqlalchemy==1.4' when patched:
+#   https://github.com/kvesteri/sqlalchemy-utils/issues/474
+#   https://github.com/kvesteri/sqlalchemy-utils/issues/505
+sqlalchemy<1.4
 sqlalchemy_utils<0.36.4; python_version < "3"
 sqlalchemy_utils!=0.36.8; python_version >= "3"
 threddsclient==0.4.1; python_version < "3"
