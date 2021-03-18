@@ -69,11 +69,11 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Docker Build Status (latest tag)
     :target: https://hub.docker.com/r/pavics/magpie/builds
 
-.. |docker_latest_tag| image:: https://img.shields.io/docker/v/pavics/magpie
+.. |docker_latest_tag| image:: https://img.shields.io/docker/v/pavics/magpie?label=last%20build
     :alt: Docker Latest Tag
     :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=latest
 
-.. |docker_semver_tag| image:: https://img.shields.io/docker/v/pavics/magpie?sort=semver
+.. |docker_semver_tag| image:: https://img.shields.io/docker/v/pavics/magpie?label=version&sort=semver
     :alt: Docker Version Tag
     :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=3.7.1
 
