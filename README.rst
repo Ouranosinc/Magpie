@@ -18,12 +18,10 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
     * - dependencies
       - | |py_ver| |dependencies|
-    * - build status
-      - | |travis_latest| |travis_tagged| |readthedocs|
     * - tests status
       - | |github_latest| |github_tagged| |coverage| |codacy|
     * - docker status
-      - | |docker_build_mode| |docker_build_status|
+      - | |docker_build_mode| |docker_build_status| |docker_latest_tag| |docker_semver_tag|
     * - releases
       - | |version| |commits-since|
 
@@ -42,14 +40,6 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/Magpie/shield.svg
     :alt: Dependencies Status
     :target: https://pyup.io/account/repos/github/Ouranosinc/Magpie/
-
-.. |travis_latest| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/master.svg?label=master
-    :alt: Travis-CI Build Status (master branch)
-    :target: https://travis-ci.com/Ouranosinc/Magpie
-
-.. |travis_tagged| image:: https://img.shields.io/travis/com/Ouranosinc/Magpie/3.7.1.svg?label=3.7.1
-    :alt: Travis-CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/tree/3.7.1
 
 .. |github_latest| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/master?label=master
     :alt: Github Actions CI Build Status (master branch)
@@ -78,6 +68,14 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 .. |docker_build_status| image:: https://img.shields.io/docker/cloud/build/pavics/magpie.svg?label=status
     :alt: Docker Build Status (latest tag)
     :target: https://hub.docker.com/r/pavics/magpie/builds
+
+.. |docker_latest_tag| image:: https://img.shields.io/docker/v/pavics/magpie
+    :alt: Docker Latest Tag
+    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=latest
+
+.. |docker_semver_tag| image:: https://img.shields.io/docker/v/pavics/magpie?sort=semver
+    :alt: Docker Version Tag
+    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=3.7.1
 
 .. end-badges
 
