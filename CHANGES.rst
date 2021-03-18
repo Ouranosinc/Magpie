@@ -7,7 +7,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Pin version of ``sqlalchemy<1.4`` breaking integrations with ``sqlalchemy_utils`` and ``zope.sqlalchemy``.
 
 `3.7.0 <https://github.com/Ouranosinc/Magpie/tree/3.7.0>`_ (2021-03-16)
 ------------------------------------------------------------------------------------

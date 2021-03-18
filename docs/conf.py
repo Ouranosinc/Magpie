@@ -127,6 +127,7 @@ linkcheck_ignore = [
     # ignore false-positive broken links to local doc files used for rendering on Github
     "CHANGES.rst",
     r"docs/\w+.rst",
+    "https://pcmdi.llnl.gov/",  # works, but very often causes false-positive 'broken' links
 ]
 linkcheck_timeout = 20
 linkcheck_retries = 5
