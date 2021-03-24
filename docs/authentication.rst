@@ -189,7 +189,9 @@ Authentication Headers
 After execution of an :term:`Authentication` request, a ``Set-Cookie`` header with `Magpie` user identification token
 named according to :ref:`config_security` should be set in the response. Web browsers and libraries for HTTP requests
 handling should automatically detect that header and register the ``Cookie`` for subsequent requests. Alternatively,
-the ``Cookie`` can be provided directly in the request using the following format::
+the ``Cookie`` can be provided directly in the request using the following format.
+
+.. code-block::
 
     {MAGPIE_COOKIE_NAME}=<auth-token>!userid_type:int; [Domain=<domain>; Path=<path>; HttpOnly; SameSite=Lax]
 
@@ -214,14 +216,15 @@ Authorization Headers
 Following any successful :term:`Authentication` request as presented in the previous section, the obtained ``Cookie``
 defines which :term:`Logged User` attempts to accomplish an operation against a given protected URI. `Magpie` employs
 the same ``Cookie`` both for operations provided by its API and for accessing the real :term:`Resource` protected
-according to resolution of :term:`Effective Permissions` based on :term:`Applied Permissions` definitions.
+behind the :term:`Proxy` according to resolution of :term:`Effective Permissions` based on :term:`Applied Permissions`
+definitions.
 
 Access to Magpie Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When the :term:`Logged User` has sufficient :term:`Permissions`
-
-:ref:`perm_access`
+When a :term:`Logged User` has sufficient :term:`Permissions`, it will be allowed different levels of access to
+operate onto `Magpie` API paths. The specific requirements for each case are extensively presented in section
+:ref:`perm_access`.
 
 Access to Protected Resources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -239,5 +242,25 @@ When appropriately authenticated, access to the targeted :term:`Resource` will b
 Another alternative to obtain :term:`Authorization` (only when using the :ref:`utilities_adapter<Magpie Adapter>`) is
 by providing the ``Authorization`` header in the request with appropriate credentials. In this situation, the adapter
 will attempt a login operation inline to that original request, and if successful, will update the ``Cookie`` headers
-accordingly. Although this method saves the need for the client to explicitly do an :term:`Authentication` request
-toward `Magpie`'s signin path prior to :term:`Resource` access attempt, it
+accordingly. Although this method saves the need for the client to explicitly do an initial :term:`Authentication`
+request toward `Magpie`'s signin path prior to :term:`Resource` access attempt, failing to update the following any
+following requests with the ``Cookie`` will repeat the procedure on each call, which will slow down response time. If
+multiple requests are executed, especially for accessing different protected resources, :ref:`authn_requests` should be
+employed instead to process :term:`Authentication` only once.
+
+The format of the ``Authorization`` header is has follows.
+
+.. code-block::
+
+    Authorization: Bearer <access_token>
+
+
+Where the ``access_token`` must correspond with the applicable ``provider_name`` specified by query parameter in order
+to orchestrate the :term:`Authentication` operation accordingly. Once again, omitting the ``provider_name`` will default
+to :term:`User` identification against local accounts in `Magpie`.
+
+
+.. fixme: https://github.com/Ouranosinc/Magpie/issues/255
+.. todo::
+
+    Support ``Authorization: Basic <base64-user-pass>`` (see `#255 <https://github.com/Ouranosinc/Magpie/issues/255>`_)

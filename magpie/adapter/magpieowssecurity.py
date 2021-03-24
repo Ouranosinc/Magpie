@@ -156,9 +156,10 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         ``Authorization`` header. Counter-validate the login procedure by calling Magpie's ``/session`` which should
         indicate if there is a logged user.
         """
-        token_name = get_constant("MAGPIE_COOKIE_NAME", settings_container=request.registry.settings)
+        settings = get_settings(request)
+        token_name = get_constant("MAGPIE_COOKIE_NAME", settings_container=settings)
         if "Authorization" in request.headers and token_name not in request.cookies:
-            magpie_prov = request.params.get("provider", "WSO2")
+            magpie_prov = request.params.get("provider_name", get_constant("MAGPIE_DEFAULT_PROVIDER", settings))
             magpie_path = ProviderSigninAPI.path.format(provider_name=magpie_prov)
             magpie_auth = "{}{}".format(self.magpie_url, magpie_path)
             headers = dict(request.headers)
