@@ -125,6 +125,7 @@ all: help
 _SECTION := \033[34m
 _TARGET  := \033[36m
 _NORMAL  := \033[0m
+_SPACING := 24
 .PHONY: help
 # note: use "\#\#" to escape results that would self-match in this target's search definition
 help:	## print this help message (default)
@@ -134,8 +135,10 @@ help:	## print this help message (default)
 #		| awk 'BEGIN {FS = ":.*?\#\# "}; {printf "    $(_TARGET)%-24s$(_NORMAL) %s\n", $$1, $$2}'
 	@grep -E '\#\#.*$$' "$(APP_ROOT)/$(MAKEFILE_NAME)" \
 		| awk ' BEGIN {FS = "(:|\-\-\-)+.*?\#\# "}; \
-			/\--/ {printf "$(_SECTION)%s$(_NORMAL)\n", $$1;} \
-			/:/   {printf "    $(_TARGET)%-24s$(_NORMAL) %s\n", $$1, $$2} \
+			/\--/ 		{printf "$(_SECTION)%s$(_NORMAL)\n", $$1;} \
+			/:/   		{printf "   $(_TARGET)%-$(_SPACING)s$(_NORMAL) %s\n", $$1, $$2;} \
+			/\-only:/   {gsub(/-only/, "", $$1); \
+						 printf "   $(_TARGET)%-$(_SPACING)s$(_NORMAL) %s (preinstall dependencies)\n", $$1, $$2;} \
 		'
 
 .PHONY: version
@@ -406,21 +409,30 @@ docker-clean: 	## remove any leftover images from docker target operations
 mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
+# autogen check variants with pre-install of dependencies using the '-only' target references
+CHECKS := pep8 lint security doc8 links imports
+CHECKS := $(addprefix check-, $(CHECKS))
+
+$(CHECKS): check-%: install-dev check-%-only
+
 .PHONY: check
-check: check-all	## alias for 'check-all' target
+check: check-all  ## alias for 'check-all' target
+
+.PHONY: check-only
+check-only: $(addsuffix -only, $(CHECKS))
 
 .PHONY: check-all
-check-all: clean-test check-pep8 check-lint check-security check-docs check-links	## run every code style checks
+check-all: install-dev $(CHECKS)  ## run all code checks
 
-.PHONY: check-pep8
-check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
+.PHONY: check-pep8-only
+check-pep8-only: mkdir-reports		## run PEP8 code style checks
 	@echo "Running PEP8 code style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-pep8.txt"
 	@bash -c '$(CONDA_CMD) \
 		flake8 --config="$(APP_ROOT)/setup.cfg" --output-file="$(REPORTS_DIR)/check-pep8.txt" --tee'
 
-.PHONY: check-lint
-check-lint: mkdir-reports install-dev		## run linting code style checks
+.PHONY: check-lint-only
+check-lint-only: mkdir-reports		## run linting code style checks
 	@echo "Running linting code style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-lint.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -431,19 +443,19 @@ check-lint: mkdir-reports install-dev		## run linting code style checks
 			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/docs" "$(APP_ROOT)/tests" \
 		1> >(tee "$(REPORTS_DIR)/check-lint.txt")'
 
-.PHONY: check-security
-check-security: mkdir-reports install-dev	## run security code checks
+.PHONY: check-security-only
+check-security-only: mkdir-reports	## run security code checks
 	@echo "Running security code checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-security.txt"
 	@bash -c '$(CONDA_CMD) \
 		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
 		1> >(tee "$(REPORTS_DIR)/check-security.txt")'
 
-.PHONY: check-docs
-check-docs: check-doc8 check-docf	## run every code documentation checks
+.PHONY: check-docs-only
+check-docs-only: check-doc8 check-docf	## run every code documentation checks
 
-.PHONY: check-doc8
-check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
+.PHONY: check-doc8-only
+check-doc8-only: mkdir-reports		## run PEP8 documentation style checks
 	@echo "Running PEP8 doc style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-doc8.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -456,8 +468,8 @@ check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
 #	Don't employ '--wrap-descriptions 120' since they *enforce* that length and rearranges format if any word can fit
 #	within remaining space, which often cause big diffs of ugly formatting for no important reason. Instead only check
 #	general formatting operations, and let other linter capture docstrings going over 120 (what we really care about).
-.PHONY: check-docf
-check-docf: mkdir-reports install-dev	## run PEP8 code documentation format checks
+.PHONY: check-docf-only
+check-docf-only: mkdir-reports	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
 	@-rm -fr "$(REPORTS_DIR)/check-docf.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -471,35 +483,44 @@ check-docf: mkdir-reports install-dev	## run PEP8 code documentation format chec
 			"$(APP_ROOT)" \
 		1>&2 2> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
-.PHONY: check-links
-check-links: install-dev	## check all external links in documentation for integrity
+.PHONY: check-links-only
+check-links-only: mkdir-reports		## check all external links in documentation for integrity
 	@echo "Running link checks on docs..."
 	@bash -c '$(CONDA_CMD) $(MAKE) -C "$(APP_ROOT)/docs" linkcheck'
 
-.PHONY: check-imports
-check-imports: mkdir-reports install-dev	## run imports code checks
+.PHONY: check-imports-only
+check-imports-only: mkdir-reports	## run imports code checks
 	@echo "Running import checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-imports.txt"
 	@bash -c '$(CONDA_CMD) \
 	 	isort --check-only --diff --recursive $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
+# autogen fix variants with pre-install of dependencies using the '-only' target references
+FIXES := imports lint docf
+FIXES := $(addprefix fix-, $(FIXES))
+
+$(FIXES): fix-%: install-dev fix-%-only
+
 .PHONY: fix
-fix: fix-all	## alias for 'fix-all' target
+fix: fix-all 	## alias for 'fix-all' target
+
+.PHONY: fix-only
+fix-only: $(addsuffix -only, $(FIXES))
 
 .PHONY: fix-all
-fix-all: fix-imports fix-lint fix-docf	## fix all applicable code check corrections automatically
+fix-all: install-dev $(FIXES)  ## fix all code check problems automatically
 
-.PHONY: fix-imports
-fix-imports: install-dev	## fix import code checks corrections automatically
+.PHONY: fix-imports-only
+fix-imports-only: 	## fix import code checks corrections automatically
 	@echo "Fixing flagged import checks..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
 	@bash -c '$(CONDA_CMD) \
 		isort --recursive $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
 
-.PHONY: fix-lint
-fix-lint: install-dev	## fix some PEP8 code style problems automatically
+.PHONY: fix-lint-only
+fix-lint-only: mkdir-reports	## fix some PEP8 code style problems automatically
 	@echo "Fixing PEP8 code style problems..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-lint.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -507,8 +528,8 @@ fix-lint: install-dev	## fix some PEP8 code style problems automatically
 		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
 
 # FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
-.PHONY: fix-docf
-fix-docf: install-dev	## fix some PEP8 code documentation style problems automatically
+.PHONY: fix-docf-only
+fix-docf-only: mkdir-reports	## fix some PEP8 code documentation style problems automatically
 	@echo "Fixing PEP8 code documentation problems..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-docf.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -524,35 +545,49 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 
 ## --- Test targets --- ##
 
+
+# -v:  list of test names with PASS/FAIL/SKIP/ERROR/etc. next to it
+# -vv: extended collection of stdout/stderr on top of test results
+TEST_VERBOSITY ?= -vv
+
+# autogen tests variants with pre-install of dependencies using the '-only' target references
+TESTS := unit func workflow online offline no-tb14 spec coverage
+TESTS := $(addprefix test-, $(TESTS))
+
+$(TESTS): test-%: install install-dev test-%-only
+
 .PHONY: test
-test: test-all	## alias for 'test-all' target
+test: clean-test test-all   ## alias for 'test-all' target
 
 .PHONY: test-all
-test-all: install-dev install		## run all tests combinations
-	@echo "Running tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
+test-all: install install-dev test-only  ## run all tests (including long running tests)
 
-.PHONY: test-cli
-test-cli: install-dev install		## run only CLI tests with the environment Python
+.PHONY: test-only
+test-only: mkdir-reports		 ## run all tests combinations without pre-installation of dependencies
+	@echo "Running tests..."
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) --junitxml "$(APP_ROOT)/tests/results.xml"'
+
+.PHONY: test-cli-only
+test-cli-only: 		## run only CLI tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 # note: use 'not remote' instead of 'local' to capture other low-level tests like 'utils' unittests
-.PHONY: test-local
-test-local: install-dev install		## run only local tests with the environment Python
+.PHONY: test-local-only
+test-local-only: 		## run only local tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
-.PHONY: test-remote
-test-remote: install-dev install	## run only remote tests with the environment Python
+.PHONY: test-remote-only
+test-remote-only:		## run only remote tests with the environment Python
 	@echo "Running remote tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
-.PHONY: test-custom
-test-custom: install-dev install	## run custom marker tests using SPEC="<marker-specification>"
+.PHONY: test-custom-only
+test-custom-only:		## run custom marker tests using SPEC="<marker-specification>"
 	@echo "Running custom tests..."
 	@[ "${SPEC}" ] || ( echo ">> 'TESTS' is not set"; exit 1 )
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
@@ -570,8 +605,11 @@ $(COVERAGE_FILE): install-dev
 	@bash -c '$(CONDA_CMD) coverage html -d "$(COVERAGE_HTML_DIR)"'
 	@-echo "Coverage report available: file://$(COVERAGE_HTML_IDX)"
 
+.PHONY: coverage-only
+coverage-only: $(COVERAGE_FILE)
+
 .PHONY: coverage
-coverage: install-dev install $(COVERAGE_FILE)	## check code coverage and generate an analysis report
+coverage: install-dev install coverage-only		## check code coverage and generate an analysis report
 
 .PHONY: coverage-show
 coverage-show: $(COVERAGE_HTML_IDX)		## display HTML webpage of generated coverage report (run coverage if missing)
