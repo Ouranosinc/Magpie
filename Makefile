@@ -136,9 +136,9 @@ help:	## print this help message (default)
 	@grep -E '\#\#.*$$' "$(APP_ROOT)/$(MAKEFILE_NAME)" \
 		| awk ' BEGIN {FS = "(:|\-\-\-)+.*?\#\# "}; \
 			/\--/ 		{printf "$(_SECTION)%s$(_NORMAL)\n", $$1;} \
-			/:/   		{printf "   $(_TARGET)%-$(_SPACING)s$(_NORMAL) %s\n", $$1, $$2} \
+			/:/   		{printf "   $(_TARGET)%-$(_SPACING)s$(_NORMAL) %s\n", $$1, $$2;} \
 			/\-only:/   {gsub(/-only/, "", $$1); \
-						 printf "   $(_TARGET)%-$(_SPACING)s$(_NORMAL) %s (preinstall dependencies)\n", $$1, $$2} \
+						 printf "   $(_TARGET)%-$(_SPACING)s$(_NORMAL) %s (preinstall dependencies)\n", $$1, $$2;} \
 		'
 
 .PHONY: version
