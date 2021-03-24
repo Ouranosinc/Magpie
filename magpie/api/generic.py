@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from pyramid.registry import Registry
     from pyramid.response import Response
 
-    from magpie.typedefs import HeadersType, JSON, Str
+    from magpie.typedefs import JSON, Str
 
 LOGGER = get_logger(__name__)
 
