@@ -9,7 +9,8 @@ Changes
 * Add missing ``WWW-Authentication`` and ``Location-When-Unauthenticated`` headers when HTTP ``Unauthorized [401]``
   response is returned (addresses `#96 <https://github.com/bird-house/twitcher/issues/96>`_ and
   fixes `#330 <https://github.com/Ouranosinc/Magpie/issues/330>`_).
-* Add documentation details about ``Authentication`` and ``Authorization`` methods.
+* Add documentation details about ``Authentication`` and ``Authorization`` methods
+  (fixes `#344 <https://github.com/Ouranosinc/Magpie/issues/344>`_).
 
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
