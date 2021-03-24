@@ -152,8 +152,9 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         """
         Ensure login of the user and update the request cookies if Twitcher is in a special configuration.
 
-        Only update if `MAGPIE_COOKIE_NAME` is missing and is retrievable from `access_token` in `Authorization` header.
-        Counter-validate the login procedure by calling Magpie's `/session` which should indicated a logged user.
+        Only update if ``MAGPIE_COOKIE_NAME`` is missing and is retrievable from ``access_token`` field within the
+        ``Authorization`` header. Counter-validate the login procedure by calling Magpie's ``/session`` which should
+        indicate if there is a logged user.
         """
         token_name = get_constant("MAGPIE_COOKIE_NAME", settings_container=request.registry.settings)
         if "Authorization" in request.headers and token_name not in request.cookies:

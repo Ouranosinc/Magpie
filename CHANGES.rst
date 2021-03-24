@@ -4,6 +4,14 @@
 Changes
 *******
 
+.. tmp "future 3.9" 
+
+* Add missing ``WWW-Authentication`` and ``Location-When-Unauthenticated`` headers when HTTP ``Unauthorized [401]``
+  response is returned (addresses `#96 <https://github.com/bird-house/twitcher/issues/96>`_ and
+  fixes `#330 <https://github.com/Ouranosinc/Magpie/issues/330>`_).
+* Add documentation details about ``Authentication`` and ``Authorization`` methods.
+
+
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
@@ -763,9 +771,9 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Refactoring of literal strings to corresponding ``Permission`` enum
   (`#167 <https://github.com/Ouranosinc/Magpie/issues/167>`_).
-* Change all incorrect usages of ``HTTPNotAcceptable [406]`` to ``HTTPBadRequest [400]``
+* Change all incorrect usages of HTTP ``Not Acceptable [406]`` to ``Bad Request [400]``
   (`#163 <https://github.com/Ouranosinc/Magpie/issues/163>`_).
-* Add ``Accept`` header type checking before requests and return ``HTTPNotAcceptable [406]`` if invalid.
+* Add ``Accept`` header type checking before requests and return HTTP ``Not Acceptable [406]`` if invalid.
 * Code formatting changes for consistency and cleanup of redundant/misguiding names
   (`#162 <https://github.com/Ouranosinc/Magpie/issues/162>`_).
 * Add option ``MAGPIE_UI_ENABLED`` allowing to completely disable all ``/ui`` route (enabled by default).
@@ -792,9 +800,9 @@ Features / Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Logging requests and exceptions according to `MAGPIE_LOG_REQUEST` and `MAGPIE_LOG_EXCEPTION` values.
-* Better handling of ``HTTPUnauthorized [401]`` and ``HTTPForbidden [403]`` according to unauthorized view
+* Better handling of HTTP ``Unauthorized [401]`` and ``Forbidden [403]`` according to unauthorized view
   (invalid access token/headers or forbidden operation under view).
-* Better handling of ``HTTPNotFound [404]`` and ``HTTPMethodNotAllowed [405]`` on invalid routes and request methods.
+* Better handling of HTTP ``Not Found [404]`` and ``Method Not Allowed [405]`` on invalid routes and request methods.
 * Adjust ``Dockerfile`` copy order to save time if requirements did not change.
 
 `0.9.4 <https://github.com/Ouranosinc/Magpie/tree/0.9.4>`_ (2019-02-19)

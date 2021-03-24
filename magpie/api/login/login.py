@@ -103,9 +103,12 @@ def sign_in(request):
     pattern = ax.EMAIL_REGEX if "@" in user_name else ax.PARAM_REGEX
     ax.verify_param(user_name, matches=True, param_compare=pattern, param_name="user_name",
                     http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+    anonymous = get_constant("MAGPIE_ANONYMOUS_USER", request)
+    ax.verify_param(user_name, not_equal=True, param_compare=anonymous, param_name="user_name",
+                    http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_UnauthorizedResponseSchema.description)
     verify_provider(provider_name)
 
-    if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
+    if provider_name in list(MAGPIE_INTERNAL_PROVIDERS):
         # password can be None for external login, validate only here as needed
         password = ar.get_value_multiformat_body_checked(request, "password", pattern=None)
         # check manually to avoid inserting value in result body
@@ -149,6 +152,7 @@ def login_failure(request, reason=None):
     .. seealso::
         - :func:`sign_in`
     """
+    http_kw = None
     http_err = HTTPUnauthorized
     if reason is None:
         reason = s.Signin_POST_UnauthorizedResponseSchema.description
@@ -162,13 +166,16 @@ def login_failure(request, reason=None):
             user_name_list = ax.evaluate_call(
                 lambda: [user.user_name for user in UserService.all(models.User, db_session=request.db)],
                 fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
+                msg_on_fail=s.Signin_POST_Internal_InternalServerErrorResponseSchema.description)
             if user_name in user_name_list:
                 http_err = HTTPInternalServerError
                 reason = s.Signin_POST_Internal_InternalServerErrorResponseSchema.description
     content = ag.get_request_info(request, default_message=s.Signin_POST_UnauthorizedResponseSchema.description)
     content.setdefault("detail", str(reason))
-    ax.raise_http(http_error=http_err, content=content, detail=s.Signin_POST_UnauthorizedResponseSchema.description)
+    if http_err is HTTPUnauthorized:
+        http_kw = {"headers": ag.get_authenticate_headers(request)}
+    ax.raise_http(http_error=http_err, http_kwargs=http_kw, content=content,
+                  detail=s.Signin_POST_UnauthorizedResponseSchema.description)
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):

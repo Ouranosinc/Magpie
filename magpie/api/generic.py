@@ -14,10 +14,13 @@ from pyramid.httpexceptions import (
 )
 from pyramid.request import Request
 from simplejson import JSONDecodeError
+from six.moves.urllib.parse import urlparse
 
+from magpie import __meta__
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.requests import get_principals
+from magpie.constants import get_constant
 from magpie.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_HTML,
@@ -26,6 +29,7 @@ from magpie.utils import (
     SUPPORTED_ACCEPT_TYPES,
     get_header,
     get_logger,
+    get_magpie_url,
     is_magpie_ui_path
 )
 
@@ -36,7 +40,7 @@ if TYPE_CHECKING:
     from pyramid.registry import Registry
     from pyramid.response import Response
 
-    from magpie.typedefs import JSON, Str
+    from magpie.typedefs import HeadersType, JSON, Str
 
 LOGGER = get_logger(__name__)
 
@@ -76,12 +80,12 @@ def not_found_or_method_not_allowed(request):
 def unauthorized_or_forbidden(request):
     # type: (Request) -> HTTPException
     """
-    Overrides the default ``HTTPForbidden`` [403] by appropriate ``HTTPUnauthorized`` [401] when applicable.
+    Overrides the default HTTP ``Forbidden [403]`` by appropriate ``Unauthorized [401]`` when applicable.
 
     Unauthorized response is for restricted user access according to missing credentials and/or authorization headers.
     Forbidden response is for operation refused by the underlying process operations or due to insufficient permissions.
 
-    Without this fix, both situations return [403] regardless.
+    Without this fix, both situations return ``Forbidden [403]`` regardless.
 
     .. seealso::
         - http://www.restapitutorial.com/httpstatuscodes.html
@@ -89,18 +93,64 @@ def unauthorized_or_forbidden(request):
     In case the request references to `Magpie UI` route, it is redirected to
     :meth:`magpie.ui.home.HomeViews.error_view` for it to handle and display the error accordingly.
     """
+    http_kw = None
     http_err = HTTPForbidden
     http_msg = s.HTTPForbiddenResponseSchema.description
     principals = get_principals(request)
     if Authenticated not in principals:
         http_err = HTTPUnauthorized
         http_msg = s.UnauthorizedResponseSchema.description
+        http_kw = {"headers": get_authenticate_headers(request)}
     content = get_request_info(request, default_message=http_msg)
     if is_magpie_ui_path(request):
         # need to handle 401/403 immediately otherwise target view is not even called
         from magpie.ui.utils import redirect_error
         return redirect_error(request, code=http_err.code, content=content)
-    return ax.raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content)
+    return ax.raise_http(nothrow=True, http_error=http_err, http_kwargs=http_kw,
+                         detail=content["detail"], content=content)
+
+
+def get_authenticate_headers(request, error_type="invalid_token"):
+    # type: (Request, Str) -> Optional[HeadersType]
+    """
+    Obtains all required headers by 401 responses based on executed :paramref:`request`.
+
+    :param request: request that was sent to attempt authentication or access which must respond with Unauthorized.
+    :param error_type: additional detail of the cause of error, one of (invalid_token, invalid_token
+    """
+    # FIXME: support other authentication methods (JWT, HTTP, Basic, Bearer Token, etc.)
+    #        in such case, must resolve specified challenge method according to request if provided
+    #        (https://github.com/Ouranosinc/Magpie/issues/255)
+    # Generic Auth: https://tools.ietf.org/html/rfc7235#section-2.1  (section for schema of 'WWW-Authenticate')
+    # Basic/Digest: https://tools.ietf.org/html/rfc2617
+    # Bearer Token: https://tools.ietf.org/html/rfc6750
+    # Cookie Token: https://tools.ietf.org/id/draft-broyer-http-cookie-auth-00.html#anchor1
+
+    # avoid adding headers when explicitly requested
+    #   https://stackoverflow.com/questions/9859627
+    #   https://stackoverflow.com/questions/86105
+    if get_header("X-Requested-With", request.headers) == "XMLHttpRequest":
+        return None
+
+    # select error type: https://tools.ietf.org/html/rfc6750#section-3.1
+    if error_type not in ["invalid_token", "invalid_token", "insufficient_scope"]:
+        error_type = "invalid_token"
+    cookie_name = get_constant("MAGPIE_COOKIE_NAME", request)
+    magpie_url = get_magpie_url(request)
+    signin_url = "{}{}".format(magpie_url, s.SigninAPI.path)
+    login_url = "{}/ui/login".format(magpie_url)
+    domain = urlparse(magpie_url).hostname
+    title = "{} Login".format(__meta__.__title__)
+    headers = {
+        # Challenge Schema: https://tools.ietf.org/html/rfc2617#section-3.2.1  (section for schema of extra params)
+        #   WWW-Authenticate: challenge-1 [realm="<>" title="<>" params],
+        #                     challenge-2 [params], ...
+        "WWW-Authenticate": ("Cookie cookie-name=\"{}\" error=\"{}\" domain=\"{}\" URI=\"{}\" title=\"{}\""
+                             .format(cookie_name, error_type, domain, signin_url, title)),
+        # https://tools.ietf.org/html/rfc8053#section-4.3
+        "Location-When-Unauthenticated": login_url,
+    }
+    return headers
 
 
 def guess_target_format(request):
