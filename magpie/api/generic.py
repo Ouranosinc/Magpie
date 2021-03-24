@@ -14,22 +14,19 @@ from pyramid.httpexceptions import (
 )
 from pyramid.request import Request
 from simplejson import JSONDecodeError
-from six.moves.urllib.parse import urlparse
 
-from magpie import __meta__
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.requests import get_principals
-from magpie.constants import get_constant
 from magpie.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
     FORMAT_TYPE_MAPPING,
     SUPPORTED_ACCEPT_TYPES,
+    get_authenticate_headers,
     get_header,
     get_logger,
-    get_magpie_url,
     is_magpie_ui_path
 )
 
@@ -108,49 +105,6 @@ def unauthorized_or_forbidden(request):
         return redirect_error(request, code=http_err.code, content=content)
     return ax.raise_http(nothrow=True, http_error=http_err, http_kwargs=http_kw,
                          detail=content["detail"], content=content)
-
-
-def get_authenticate_headers(request, error_type="invalid_token"):
-    # type: (Request, Str) -> Optional[HeadersType]
-    """
-    Obtains all required headers by 401 responses based on executed :paramref:`request`.
-
-    :param request: request that was sent to attempt authentication or access which must respond with Unauthorized.
-    :param error_type: additional detail of the cause of error, one of (invalid_token, invalid_token
-    """
-    # FIXME: support other authentication methods (JWT, HTTP, Basic, Bearer Token, etc.)
-    #        in such case, must resolve specified challenge method according to request if provided
-    #        (https://github.com/Ouranosinc/Magpie/issues/255)
-    # Generic Auth: https://tools.ietf.org/html/rfc7235#section-2.1  (section for schema of 'WWW-Authenticate')
-    # Basic/Digest: https://tools.ietf.org/html/rfc2617
-    # Bearer Token: https://tools.ietf.org/html/rfc6750
-    # Cookie Token: https://tools.ietf.org/id/draft-broyer-http-cookie-auth-00.html#anchor1
-
-    # avoid adding headers when explicitly requested
-    #   https://stackoverflow.com/questions/9859627
-    #   https://stackoverflow.com/questions/86105
-    if get_header("X-Requested-With", request.headers) == "XMLHttpRequest":
-        return None
-
-    # select error type: https://tools.ietf.org/html/rfc6750#section-3.1
-    if error_type not in ["invalid_token", "invalid_token", "insufficient_scope"]:
-        error_type = "invalid_token"
-    cookie_name = get_constant("MAGPIE_COOKIE_NAME", request)
-    magpie_url = get_magpie_url(request)
-    signin_url = "{}{}".format(magpie_url, s.SigninAPI.path)
-    login_url = "{}/ui/login".format(magpie_url)
-    domain = urlparse(magpie_url).hostname
-    title = "{} Login".format(__meta__.__title__)
-    headers = {
-        # Challenge Schema: https://tools.ietf.org/html/rfc2617#section-3.2.1  (section for schema of extra params)
-        #   WWW-Authenticate: challenge-1 [realm="<>" title="<>" params],
-        #                     challenge-2 [params], ...
-        "WWW-Authenticate": ("Cookie cookie-name=\"{}\" error=\"{}\" domain=\"{}\" URI=\"{}\" title=\"{}\""
-                             .format(cookie_name, error_type, domain, signin_url, title)),
-        # https://tools.ietf.org/html/rfc8053#section-4.3
-        "Location-When-Unauthenticated": login_url,
-    }
-    return headers
 
 
 def guess_target_format(request):

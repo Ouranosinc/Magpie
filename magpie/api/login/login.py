@@ -36,7 +36,7 @@ from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
 from magpie.constants import get_constant
 from magpie.security import authomatic_setup, get_provider_names
-from magpie.utils import CONTENT_TYPE_JSON, convert_response, get_logger, get_magpie_url
+from magpie.utils import CONTENT_TYPE_JSON, convert_response, get_authenticate_headers, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     from magpie.typedefs import Session, Str
@@ -173,7 +173,7 @@ def login_failure(request, reason=None):
     content = ag.get_request_info(request, default_message=s.Signin_POST_UnauthorizedResponseSchema.description)
     content.setdefault("detail", str(reason))
     if http_err is HTTPUnauthorized:
-        http_kw = {"headers": ag.get_authenticate_headers(request)}
+        http_kw = {"headers": get_authenticate_headers(request)}
     ax.raise_http(http_error=http_err, http_kwargs=http_kw, content=content,
                   detail=s.Signin_POST_UnauthorizedResponseSchema.description)
 

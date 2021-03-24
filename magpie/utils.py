@@ -24,6 +24,7 @@ from six.moves import configparser
 from six.moves.urllib.parse import urlparse
 from webob.headers import EnvironHeaders, ResponseHeaders
 
+from magpie import __meta__
 from magpie.constants import get_constant
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
         AnyResponseType,
         AnySettingsContainer,
         CookiesType,
+        HeadersType,
         SettingsType,
         Str
     )
@@ -277,6 +279,52 @@ def convert_response(response):
             if header_name.lower() == "set-cookie":
                 pyramid_response.set_cookie(name=header_name, value=header_value, overwrite=True)
     return pyramid_response
+
+
+def get_authenticate_headers(request, error_type="invalid_token"):
+    # type: (Request, Str) -> Optional[HeadersType]
+    """
+    Obtains all required headers by 401 responses based on executed :paramref:`request`.
+
+    :param request: request that was sent to attempt authentication or access which must respond with Unauthorized.
+    :param error_type: additional detail of the cause of error, one of (invalid_token, invalid_token
+    """
+    # FIXME: support other authentication methods (JWT, HTTP, Basic, Bearer Token, etc.)
+    #        in such case, must resolve specified challenge method according to request if provided
+    #        (https://github.com/Ouranosinc/Magpie/issues/255)
+    # Generic Auth: https://tools.ietf.org/html/rfc7235#section-2.1  (section for schema of 'WWW-Authenticate')
+    # Basic/Digest: https://tools.ietf.org/html/rfc2617
+    # Bearer Token: https://tools.ietf.org/html/rfc6750
+    # Cookie Token: https://tools.ietf.org/id/draft-broyer-http-cookie-auth-00.html#anchor1
+
+    from magpie.api.schemas import SigninAPI
+
+    # avoid adding headers when explicitly requested
+    #   https://stackoverflow.com/questions/9859627
+    #   https://stackoverflow.com/questions/86105
+    if get_header("X-Requested-With", request.headers) == "XMLHttpRequest":
+        return None
+
+    # select error type: https://tools.ietf.org/html/rfc6750#section-3.1
+    if error_type not in ["invalid_token", "invalid_token", "insufficient_scope"]:
+        error_type = "invalid_token"
+    cookie_name = get_constant("MAGPIE_COOKIE_NAME", request)
+    magpie_url = get_magpie_url(request)
+    signin_url = "{}{}".format(magpie_url, SigninAPI.path)
+    login_url = "{}/ui/login".format(magpie_url)
+    hostname = urlparse(magpie_url).hostname
+    title = "{} Login".format(__meta__.__title__)
+    headers = {
+        # Challenge Schema: https://tools.ietf.org/html/rfc2617#section-3.2.1  (section for schema of extra params)
+        #   WWW-Authenticate: challenge-1 [realm="<>" title="<>" ...],
+        #                     challenge-2 [...], ...
+        # provide URL with both 'domain' and 'uri' which are two variants that can exist, depending on implementation
+        "WWW-Authenticate": ("Cookie cookie-name=\"{}\" error=\"{}\" domain=\"{}\" uri=\"{}\" realm=\"{}\" title=\"{}\""
+                             .format(cookie_name, error_type, signin_url, signin_url, hostname, title)),
+        # https://tools.ietf.org/html/rfc8053#section-4.3
+        "Location-When-Unauthenticated": login_url,
+    }
+    return headers
 
 
 def get_admin_cookies(container, verify=True, raise_message=None):

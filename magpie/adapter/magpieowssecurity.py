@@ -5,7 +5,7 @@ import requests
 from beaker.cache import cache_region, cache_regions
 from pyramid.authentication import IAuthenticationPolicy
 from pyramid.authorization import IAuthorizationPolicy
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPOk, HTTPUnauthorized
 from pyramid.settings import asbool
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
@@ -16,7 +16,7 @@ from magpie.constants import get_constant
 from magpie.models import Service
 from magpie.permissions import Permission
 from magpie.services import invalidate_service, service_factory
-from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, get_settings
+from magpie.utils import CONTENT_TYPE_JSON, get_authenticate_headers, get_logger, get_magpie_url, get_settings
 
 # WARNING:
 #   Twitcher available only when this module is imported from it.
@@ -145,8 +145,15 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                 if has_permission:
                     return  # allowed
 
-            raise OWSAccessForbidden("Not authorized to access this resource. "
-                                     "User does not meet required permissions.")
+            if request.user is None:
+                error_base = HTTPUnauthorized
+                error_desc = "Not authorized to access this resource. Missing user authentication."
+                error_kw = {"headers": get_authenticate_headers(request)}
+            else:
+                error_base = HTTPForbidden
+                error_desc = "Not authorized to access this resource. User does not meet required permissions."
+                error_kw = {}
+            raise OWSAccessForbidden(error_desc, status_base=error_base, **error_kw)
 
     def update_request_cookies(self, request):
         """

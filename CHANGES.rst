@@ -17,6 +17,12 @@ Features / Changes
   internal login operation applied when using the normal sign-in API path.
 * Change the query ``provider`` to ``provider_name`` when using the ``Authorization`` header in order to aligned with
   ``provider_name`` employed for every other sign-in related operation.
+* Ensure ``MagpieAdapter`` returns the appropriate code (``Unauthorized [401]`` vs ``Forbidden [403]``) according to
+  missing or specified authentication headers.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Add missing ``Max-Age`` and ``expires`` indications in generated ``Cookie`` when ``MAGPIE_COOKIE_EXPIRE`` is defined.
 
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)

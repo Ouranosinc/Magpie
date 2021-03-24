@@ -86,6 +86,7 @@ def get_auth_config(container):
         http_only=True,
         # Automatically refresh the cookie unless inactivity reached 'timeout'
         timeout=magpie_cookie_expire,
+        max_age=magpie_cookie_expire,
         reissue_time=int(magpie_cookie_expire) / 10 if magpie_cookie_expire else None,
     )
     authz_policy = ACLAuthorizationPolicy()
