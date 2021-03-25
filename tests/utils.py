@@ -1,4 +1,3 @@
-from errno import EADDRINUSE
 import functools
 import importlib
 import itertools
@@ -8,6 +7,7 @@ import unittest
 import uuid
 import warnings
 from distutils.version import LooseVersion
+from errno import EADDRINUSE
 from typing import TYPE_CHECKING
 
 import mock
@@ -16,10 +16,11 @@ import requests
 import requests.exceptions
 import six
 from pyramid.config import Configurator
-from pyramid.response import Response
 from pyramid.httpexceptions import HTTPException
+from pyramid.response import Response
 from pyramid.settings import asbool
-from pyramid.testing import DummyRequest, setUp as PyramidSetUp
+from pyramid.testing import DummyRequest
+from pyramid.testing import setUp as PyramidSetUp
 from six.moves.urllib.parse import urlparse
 from waitress import serve
 from webtest.app import AppError, TestApp  # noqa

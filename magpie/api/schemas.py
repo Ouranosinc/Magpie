@@ -1,8 +1,8 @@
+import uuid
 from typing import TYPE_CHECKING
 
 import colander
 import six
-import uuid
 from cornice import Service
 from cornice.service import get_services
 from cornice_swagger.swagger import CorniceSwagger

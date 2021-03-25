@@ -10,17 +10,17 @@ Tests for the webhooks implementation
 import tempfile
 import unittest
 from time import sleep
-from six.moves.urllib.parse import urlparse
-
-import yaml
 
 import requests
+import yaml
+from six.moves.urllib.parse import urlparse
 
 from magpie.api.schemas import UserOKStatus, UserWebhookErrorStatus
 from magpie.api.webhooks import WebhookAction
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_HTML
-from tests import interfaces as ti, runner, utils
+from tests import interfaces as ti
+from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_WEBHOOKS

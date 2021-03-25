@@ -2,6 +2,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 import six
+import transaction
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
@@ -11,7 +12,6 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
-import transaction
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -24,7 +24,7 @@ from magpie.api.management.register.register_utils import TokenOperation
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
-from magpie.api.webhooks import process_webhook_requests, WebhookAction
+from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory

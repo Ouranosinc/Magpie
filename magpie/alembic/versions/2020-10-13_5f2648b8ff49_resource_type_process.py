@@ -12,7 +12,6 @@ from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm.session import sessionmaker
 from ziggurat_foundations.models.services.resource import ResourceService
 
-
 # revision identifiers, used by Alembic.
 revision = "5f2648b8ff49"
 down_revision = "a2a039e2cff5"

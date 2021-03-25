@@ -7,11 +7,11 @@ Create Date: 2021-01-04 12:56:22.298527
 """
 
 import datetime
-import sqlalchemy as sa
 import uuid
+
+import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
-
 
 # revision identifiers, used by Alembic.
 revision = "954a9d7fe740"
