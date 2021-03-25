@@ -7,7 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix UI erroneously displaying edit or delete operations for reserved user names that does not apply for such updates.
+* Fix UI not handling returned error related to forbidden operation during user edition
+  (`#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
 
 `3.7.1 <https://github.com/Ouranosinc/Magpie/tree/3.7.1>`_ (2021-03-18)
 ------------------------------------------------------------------------------------

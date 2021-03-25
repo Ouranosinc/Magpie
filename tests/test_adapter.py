@@ -6,7 +6,8 @@ from magpie import __meta__
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.services import ServiceAPI, ServiceInterface
-from tests import interfaces as ti, runner, utils
+from tests import interfaces as ti
+from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_LOCAL

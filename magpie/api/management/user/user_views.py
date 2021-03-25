@@ -16,7 +16,7 @@ from magpie.api import schemas as s
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
-from magpie.api.webhooks import process_webhook_requests, WebhookAction
+from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
 from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
@@ -74,7 +74,7 @@ def update_user_view(request):
                     http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
     # user name change is admin-only operation
     if update_username:
-        ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP"), is_in=True,
+        ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP", request), is_in=True,
                         param_compare=uu.get_user_groups_checked(request.user, request.db), with_param=False,
                         http_error=HTTPForbidden, msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
 
@@ -87,7 +87,8 @@ def update_user_view(request):
     ]
     check_user_name_cases = [user.user_name, new_user_name] if update_username else [user.user_name]
     for check_user_name in check_user_name_cases:
-        ax.verify_param(check_user_name, not_in=True, param_compare=forbidden_user_names, param_name="user_name",
+        ax.verify_param(check_user_name, not_in=True, param_compare=forbidden_user_names,
+                        param_name="user_name", with_param=False,  # don't leak the user names
                         http_error=HTTPForbidden, content={"user_name": str(check_user_name)},
                         msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
     if update_username:

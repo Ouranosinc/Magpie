@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPForbidden, HTTPGone, HTTPNotFound, HTTPInternalServerError, HTTPNotImplemented
+from pyramid.httpexceptions import HTTPForbidden, HTTPGone, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
 from ziggurat_foundations.models.services.group import GroupService
 
+from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.management.user import user_utils as uu
-from magpie import models
 from magpie.api.webhooks import webhook_update_error_status
 from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum
 

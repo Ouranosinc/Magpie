@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from pyramid.authentication import Authenticated
-from pyramid.httpexceptions import HTTPFound, HTTPBadRequest, HTTPUnprocessableEntity
+from pyramid.httpexceptions import HTTPBadRequest, HTTPFound, HTTPUnprocessableEntity
 from pyramid.view import view_config
 
 from magpie.api import schemas

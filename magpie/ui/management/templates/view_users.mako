@@ -21,20 +21,26 @@
 </tr>
 </thead>
 <tbody>
-%for i, user in enumerate(users):
-<form action="${request.path}" method="post">
-%if i % 2:
-<tr class="list-row-even">
-%else:
-<tr class="list-row-odd">
-%endif
-    <td><input type="hidden" value="${user}" name="user_name">${user}</td>
-    <td style="white-space: nowrap">
-        <input type="submit" value="Edit" name="edit" class="button theme">
-        <input type="submit" value="Delete" name="delete" class="button delete">
-    </td>
-</tr>
-</form>
+%for i, user_name in enumerate(users):
+    <form action="${request.path}" method="post">
+        %if i % 2:
+        <tr class="list-row-even">
+        %else:
+        <tr class="list-row-odd">
+        %endif
+            <td><input type="hidden" value="${user_name}" name="user_name">${user_name}</td>
+            <td style="white-space: nowrap">
+                <input type="submit" value="Edit" name="edit" class="button theme">
+                <input value="Delete" name="delete"
+                    %if user_name in MAGPIE_FIXED_USERS:
+                       type="button" class="button delete disabled" disabled
+                    %else:
+                       type="submit" class="button delete"
+                    %endif
+                >
+            </td>
+        </tr>
+    </form>
 %endfor
 </tbody>
 </table>

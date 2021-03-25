@@ -8,9 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import math
     import typing
-    from typing import Any
-    from typing import AnyStr
-    from typing import Dict, Iterable, List, Optional, Tuple, Type, Union
+    from typing import Any, AnyStr, Dict, Iterable, List, Optional, Tuple, Type, Union
 
     import six
     from pyramid.config import Configurator

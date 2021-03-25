@@ -551,7 +551,7 @@ fix-docf-only: mkdir-reports	## fix some PEP8 code documentation style problems 
 TEST_VERBOSITY ?= -vv
 
 # autogen tests variants with pre-install of dependencies using the '-only' target references
-TESTS := unit func workflow online offline no-tb14 spec coverage
+TESTS := cli local remote custom
 TESTS := $(addprefix test-, $(TESTS))
 
 $(TESTS): test-%: install install-dev test-%-only

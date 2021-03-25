@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import List, Optional
 
-    from magpie.typedefs import AnySettingsContainer, JSON, Str
+    from magpie.typedefs import JSON, AnySettingsContainer, Str
 
 AUTHOMATIC_LOGGER = get_logger("magpie.authomatic", level=logging.DEBUG)
 LOGGER = get_logger(__name__)

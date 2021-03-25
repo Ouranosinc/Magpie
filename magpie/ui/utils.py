@@ -100,7 +100,9 @@ def redirect_error(request, code=None, content=None):
     """
     path = request.route_path("error")
     path = path.replace("/magpie/", "/") if path.startswith("/magpie") else path  # avoid glob other 'magpie'
-    data = {"error_request": content, "error_code": code or content.get("code", 500)}
+    cause = content.get("cause", {}) if isinstance(content, dict) else {}
+    code = code or content.get("content", cause.get("code", 500))
+    data = {"error_request": content, "error_code": code}
     return request_api(request, path, "POST", data)  # noqa
 
 
