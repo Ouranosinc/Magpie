@@ -23,7 +23,13 @@
             <span class="panel-title">User: </span>
             <span class="panel-value">[${user_name}]</span>
             <span class="panel-heading-button">
-                <input type="submit" value="Delete" name="delete" class="button delete">
+                <input value="Delete" name="delete"
+                    %if user_name not in MAGPIE_FIXED_USERS:
+                        type="submit" class="button delete"
+                    %else:
+                        type="button" class="button delete disabled" disabled
+                    %endif
+                >
             </span>
         </form>
     </div>
@@ -39,9 +45,11 @@
                             <span class="panel-entry">Username: </span>
                         </td>
                         <td>
-                            <form id="edit_username" action="${request.path}" method="post">
+                            %if user_name not in MAGPIE_FIXED_USERS:
+                                <form id="edit_username" action="${request.path}" method="post">
+                            %endif
                                 <div class="panel-line-entry">
-                                    %if edit_mode == "edit_username":
+                                    %if edit_mode == "edit_username" and user_name not in MAGPIE_FIXED_USERS:
                                         <label>
                                         <input type="text" placeholder="new user name" name="new_user_name"
                                                id="input_username" value="${user_name}"
@@ -52,11 +60,15 @@
                                     %else:
                                         <label>
                                         <span class="panel-line-textbox">${user_name}</span>
-                                        <input type="submit" value="Edit" name="edit_username" class="button theme">
+                                        %if user_name not in MAGPIE_FIXED_USERS:
+                                            <input type="submit" value="Edit" name="edit_username" class="button theme">
+                                        %endif
                                         </label>
                                     %endif
                                 </div>
-                            </form>
+                            %if user_name not in MAGPIE_FIXED_USERS:
+                                </form>
+                            %endif
                         </td>
                         <td>
                         %if invalid_user_name:
