@@ -17,13 +17,15 @@ import pytest
 import six
 
 from magpie import __meta__, models, owsrequest
-from magpie.adapter.magpieowssecurity import OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceTHREDDS, ServiceWPS
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML
 from tests import interfaces as ti
 from tests import runner, utils
+
+if six.PY3:
+    from magpie.adapter.magpieowssecurity import OWSAccessForbidden
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -48,6 +50,8 @@ def make_ows_parser(method="GET", content_type=None, params=None, body=""):
     return parser
 
 
+@unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
+@pytest.mark.skipif(six.PY2, reason="Unsupported Twitcher for MagpieAdapter in Python 2")
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_SERVICES
 class TestOWSParser(unittest.TestCase):

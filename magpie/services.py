@@ -766,6 +766,17 @@ class ServiceTHREDDS(ServiceInterface):
                 return path_parts[1:]  # remove extra '' added by split
         return path_parts
 
+    @staticmethod
+    def is_match(value, pattern):
+        # type: (Str, Str) -> Optional[Str]
+        try:
+            match = re.match(pattern, value)
+            if match is None:
+                return None
+            return match.group(0)  # use this method for backward support py35 not supporting [] access
+        except (TypeError, KeyError):  # fail match or fail to extract (depending on configured pattern)
+            return None
+
     def resource_requested(self):
         path_parts = self.get_path_parts()
 
@@ -787,11 +798,10 @@ class ServiceTHREDDS(ServiceInterface):
             #   since that would be the last part extracted, the parent directory will be matched as intended
             if not path_parts:
                 for pattern in cfg["file_patterns"]:
-                    try:
-                        part_name = re.match(pattern, part_name)[0]
+                    matched = self.is_match(part_name, pattern)
+                    if matched is not None:
+                        part_name = matched
                         break
-                    except (TypeError, KeyError):  # fail match or fail to extract (depending on configured pattern)
-                        pass
             child_res_id = child_resource.resource_id
             child_resource = models.find_children_by_name(part_name, parent_id=child_res_id, db_session=self.request.db)
             if child_resource:
@@ -811,14 +821,11 @@ class ServiceTHREDDS(ServiceInterface):
             (cfg["metadata_type"]["prefixes"], Permission.BROWSE),  # first to favor BROWSE over READ prefix conflicts
             (cfg["data_type"]["prefixes"], Permission.READ),
         ]:
-            for prefix in prefixes:  # type: Str
-                if path_prefix is None and prefix is None:
+            for pattern_prefix in prefixes:  # type: Str
+                if path_prefix is None and pattern_prefix is None:
                     return permission
-                try:
-                    path_prefix = re.match(prefix, path_prefix)[0]
+                if self.is_match(path_prefix, pattern_prefix) is not None:
                     return permission
-                except (TypeError, KeyError):  # fail match or fail to extract pattern group
-                    pass
         return None  # automatically deny
 
 

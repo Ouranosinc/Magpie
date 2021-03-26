@@ -19,6 +19,9 @@ Bug Fixes
   (identified by issue `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
 * Fix password update of pre-registered administrator upon configuration change of ``MAGPIE_ADMIN_PASSWORD`` without
   modification to ``MAGPIE_ADMIN_USER`` (fixes `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
+* Apply backward compatibility fixes to handle regexes in Python 3.5 (pending deprecation).
+* Remove `MagpieAdapter` from Python 2.7 test suite to get passing results against obsolete version and unsupported
+  code by `Twitcher`.
 
 `3.7.1 <https://github.com/Ouranosinc/Magpie/tree/3.7.1>`_ (2021-03-18)
 ------------------------------------------------------------------------------------
