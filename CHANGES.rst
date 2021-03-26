@@ -13,7 +13,8 @@ Bug Fixes
 * Fix UI not handling returned error related to forbidden operation during user edition
   (`#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
 * Apply backward compatibility fixes to handle regexes in Python 3.5 (pending deprecation).
-* Remove Python 2.7 from test suite to get passing results against obsolete version and unsupported code by `Twitcher`.
+* Remove `MagpieAdapter` from Python 2.7 test suite to get passing results against obsolete version and unsupported
+  code by `Twitcher`.
 
 `3.7.1 <https://github.com/Ouranosinc/Magpie/tree/3.7.1>`_ (2021-03-18)
 ------------------------------------------------------------------------------------

@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING
 
 import mock
 import pyramid.testing
+import pytest
 import six
 import yaml
 from pyramid.interfaces import IRequestExtensions
 from six.moves.urllib.parse import urlparse
 
 from magpie import __meta__
-from magpie.adapter import MagpieAdapter
 from magpie.api import schemas as s
 from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Directory, Route
@@ -35,6 +35,10 @@ from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, Servic
 from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
 from tests import runner, utils
 from tests.utils import TestVersion
+
+if six.PY3:
+    # WARNING: Twitcher does not support Python 2 since 0.4.0, adapter cannot work without it
+    from magpie.adapter import MagpieAdapter
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -5498,6 +5502,8 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
 
+@unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
+@pytest.mark.skipif(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
 class SetupMagpieAdapter(ConfigTestCase):
     """
     Configures all required :class:`MagpieAdapter` components to simulate how it would be loaded by `Twitcher` instance.
