@@ -278,32 +278,37 @@ table.panel-line td {
     min-height: 1em;
 }
 
+.panel-form-warning>img,
 .panel-form-error>img {
     width: 1em;
     height: 1em;
     margin: 0.1em 0.25em 0.15em 0;
 }
 
+.panel-form-warning,
 .panel-form-error {
     width: auto;
     display: inline-flex;
     float: left;
     text-align: center;
-    margin-left: 0.25em;
+    margin-left: 0.75em;
     margin-top: 0;
 }
 
+.panel-line input[type="button"],
 .panel-line input[type="submit"],
+.panel-line-entry input[type="button"],
 .panel-line-entry input[type="submit"] {
     height: auto;
     float: right;
-    margin-left: 0.5em;
+    margin-left: 1em;
     min-width: 4em;  /* for save/edit buttons alignment when editing one field and others are still in non-edit mode */
 }
 
 /* textual field entry when in edit mode */
 .panel-line-entry input[type="password"],
 .panel-line-entry input[type="text"],
+.panel-line-entry input[type="email"],
 .panel-line-entry input[type="url"] {
     -webkit-appearance: none;
     appearance: none;
@@ -463,12 +468,14 @@ table.panel-line td {
     color: black;
 }
 
-.alert-form-error>img {
+.alert-form-warning > img,
+.alert-form-error > img {
     width: 1.25em;
     height: 1.25em;
     margin: -0.05em 0.25em 0.15em 0;
 }
 
+.alert-form-warning,
 .alert-form-error {
     width: auto;
     display: inline-flex;
@@ -478,6 +485,13 @@ table.panel-line td {
 }
 
 .alert-form-text {
+}
+
+.alert-form-text-warning {
+    color: #FF9900;
+}
+
+.alert-form-text-error {
     color: #CD0000;
 }
 

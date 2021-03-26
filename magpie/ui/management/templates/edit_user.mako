@@ -75,7 +75,7 @@
                             <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
-                                <div class="alert-form-text">
+                                <div class="alert-form-text alert-form-text-error">
                                     ${reason_user_name}
                                 </div>
                             </div>
@@ -89,18 +89,24 @@
                         <td>
                             <form id="edit_password" action="${request.path}" method="post">
                                 <div class="panel-line-entry">
-                                    %if edit_mode == "edit_password":
+                                    %if edit_mode == "edit_password" and user_name not in MAGPIE_USER_PWD_DISABLED:
                                         <label>
-                                        <input type="password" placeholder="new password" name="new_user_password"
-                                               id="input_password" value=""
-                                               onkeyup="adjustWidth('input_password')">
-                                        <input type="submit" value="Save" name="save_password" class="button theme">
-                                        <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                            <input type="password" placeholder="new password" name="new_user_password"
+                                                   id="input_password" value=""
+                                                   onkeyup="adjustWidth('input_password')">
+                                            <input type="submit" value="Save" name="save_password" class="button theme">
+                                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
                                         </label>
                                     %else:
                                         <label>
-                                        <span class="panel-value">***</span>
-                                        <input type="submit" value="Edit" name="edit_password" class="button theme">
+                                            <span class="panel-value">***</span>
+                                            <input value="Edit" name="edit_password"
+                                                %if user_name in MAGPIE_USER_PWD_DISABLED:
+                                                   type="button" class="button theme disabled" disabled
+                                                %else:
+                                                   type="submit" class="button theme"
+                                                %endif
+                                            >
                                         </label>
                                     %endif
                                 </div>
@@ -111,8 +117,20 @@
                             <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
-                                <div class="alert-form-text">
+                                <div class="alert-form-text alert-form-text-error">
                                     ${reason_password}
+                                </div>
+                            </div>
+                        %elif user_name in MAGPIE_USER_PWD_LOCKED or user_name in MAGPIE_USER_PWD_DISABLED:
+                            <div class="panel-form-warning">
+                                <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
+                                     alt="WARNING" class="icon-warning"/>
+                                <div class="alert-form-text alert-form-text-warning">
+                                    %if user_name in MAGPIE_USER_PWD_LOCKED:
+                                        This special user password is locked and can only be edited from configuration.
+                                    %else:
+                                        This special user password is not editable.
+                                    %endif
                                 </div>
                             </div>
                         %endif
@@ -147,7 +165,7 @@
                             <div class="panel-form-error">
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                                      alt="ERROR" class="icon-error" />
-                                <div class="alert-form-text">
+                                <div class="alert-form-text alert-form-text-error">
                                     ${reason_user_email}
                                 </div>
                             </div>

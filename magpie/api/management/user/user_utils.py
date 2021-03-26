@@ -176,7 +176,7 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
         ax.verify_param(exist_perm, is_none=True, with_param=False, http_error=HTTPConflict, content=err_content,
                         msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
 
-    new_perm = models.UserResourcePermission(resource_id=res_id, user_id=user.id, perm_name=str(permission))
+    new_perm = models.UserResourcePermission(resource_id=res_id, user_id=user.id, perm_name=str(permission))  # noqa
     ax.verify_param(new_perm, not_none=True, http_error=HTTPForbidden,
                     content={"resource_id": res_id, "user_id": user.id},
                     msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
