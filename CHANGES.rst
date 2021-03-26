@@ -7,11 +7,18 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Explicitly require ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` to be updated through configuration and
+  application restart. Update is forbidden through the API and UI.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix UI erroneously displaying edit or delete operations for reserved user names that does not apply for such updates.
 * Fix UI not handling returned error related to forbidden operation during user edition
-  (`#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
+  (identified by issue `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
+* Fix password update of pre-registered administrator upon configuration change of ``MAGPIE_ADMIN_PASSWORD`` without
+  modification to ``MAGPIE_ADMIN_USER`` (fixes `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
 
 `3.7.1 <https://github.com/Ouranosinc/Magpie/tree/3.7.1>`_ (2021-03-18)
 ------------------------------------------------------------------------------------
