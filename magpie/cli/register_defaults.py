@@ -17,6 +17,7 @@ from ziggurat_foundations.models.services.user import UserService
 from magpie import db, models
 from magpie.api.management.user import user_utils as uu
 from magpie.constants import get_constant
+from magpie.register import pseudo_random_string
 from magpie.utils import get_json, get_logger, print_log, raise_log
 
 if TYPE_CHECKING:
@@ -29,14 +30,14 @@ LOGGER = get_logger(__name__)
 
 
 def register_user_with_group(user_name, group_name, email, password, db_session):
-    # type: (Str, Str, Str, Str, Session) -> None
+    # type: (Str, Str, Str, Optional[Str], Session) -> None
     """
     Registers the user if missing and associate him to a group specified by name, also created if missing.
 
     :param user_name: name of the user to create (if missing) and to make part of the group (if specified)
     :param group_name: name of the group to create (if missing and specified) and to make the user join (if not already)
     :param email: email of the user to be created (if missing)
-    :param password: password of the user to be created (if missing)
+    :param password: password of the user to be created (if missing), auto-generate if not provided (None).
     :param db_session: database connexion to apply changes
 
     .. warning::
@@ -51,6 +52,10 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
 
     registered_user = UserService.by_user_name(user_name, db_session=db_session)
     if not registered_user:
+        if password is None:
+            LOGGER.debug("No password provided for user [%s], auto-generating one.", user_name)
+            password = pseudo_random_string(length=get_constant("MAGPIE_PASSWORD_MIN_LENGTH"))
+        uu.check_user_info(user_name=user_name, password=password, group_name=group_name, check_email=False)
         new_user = models.User(user_name=user_name, email=email)  # noqa
         UserService.set_password(new_user, password)
         UserService.regenerate_security_code(new_user)
@@ -86,7 +91,7 @@ def init_anonymous(db_session, settings=None):
     register_user_with_group(user_name=get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings),
                              group_name=anonymous_group,
                              email=get_constant("MAGPIE_ANONYMOUS_EMAIL", settings_container=settings),
-                             password=get_constant("MAGPIE_ANONYMOUS_PASSWORD", settings_container=settings),
+                             password=None,  # autogen, value doesn't matter as no login applicable, just make it valid
                              db_session=db_session)
 
     # enforce some admin group fields
@@ -114,10 +119,12 @@ def init_admin(db_session, settings=None):
         register_user_with_group(user_name=admin_usr_name,
                                  group_name=admin_grp_name,
                                  email=get_constant("MAGPIE_ADMIN_EMAIL", settings_container=settings),
-                                 password=get_constant("MAGPIE_ADMIN_PASSWORD", settings_container=settings),
+                                 password=admin_password,
                                  db_session=db_session)
-    elif admin_usr:
-        # admin user already exist, update password as needed
+    # allow old 'invalid' password to ease backward support of existing servers
+    elif admin_usr and not UserService.check_password(admin_usr, admin_password):
+        # admin user already exist, update modified password
+        LOGGER.warning("Detected password change for 'MAGPIE_ADMIN_USER'. Attempting to update...")
         try:
             uu.check_user_info(password=admin_password, check_name=False, check_email=False, check_group=False)
             UserService.set_password(admin_usr, admin_password)
@@ -130,6 +137,9 @@ def init_admin(db_session, settings=None):
                 msg = "(allowed characters, min-length, etc.)"  # give generic detail as explicit could not be found
             raise_log("Failed to update 'MAGPIE_ADMIN_PASSWORD'. Provided configuration value does not conform to "
                       "password format requirements {}.".format(msg), exception=ValueError, logger=LOGGER)
+    elif len(admin_password) < get_constant("MAGPIE_PASSWORD_MIN_LENGTH", settings_container=settings):
+        print_log("Weak password detected for 'MAGPIE_ADMIN_USER', consider changing it.",
+                  logger=LOGGER, level=logging.WARN)
 
     # Check if MAGPIE_ADMIN_GROUP has permission MAGPIE_ADMIN_PERMISSION
     magpie_admin_group = GroupService.by_group_name(admin_grp_name, db_session=db_session)  # type: models.Group

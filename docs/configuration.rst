@@ -473,9 +473,12 @@ remain available as described at the start of the :ref:`Configuration` section.
 
   .. versionchanged:: 3.8
     Prior to this version, changing only the ``MAGPIE_ADMIN_PASSWORD`` without modification of ``MAGPIE_ADMIN_USER``
-    was not handled. Following versions reapply the password systematically on restart to apply any changes of
-    credentials. Provided value must now also fulfill validation against standard password format requirements,
-    such as ``MAGPIE_PASSWORD_MIN_LENGTH``.
+    was not handled. Following versions applies any password modification on restart to update credentials.
+
+  .. warning::
+    Note that if the password is modified in later versions, its new value will require to fulfill validation against
+    standard password format requirements, such as ``MAGPIE_PASSWORD_MIN_LENGTH``. Older passwords will remain effective
+    only if left untouched for backward compatibility, but will be flagged as potential security risk.
 
 - | ``MAGPIE_ADMIN_EMAIL``
   | (Default: ``"${MAGPIE_ADMIN_USER}@mail.com"``)
