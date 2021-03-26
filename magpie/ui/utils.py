@@ -155,6 +155,8 @@ class BaseViews(object):
     MAGPIE_FIXED_GROUP_MEMBERSHIPS = []
     MAGPIE_FIXED_GROUP_EDITS = []
     MAGPIE_FIXED_USERS = []
+    MAGPIE_USER_PWD_LOCKED = []
+    MAGPIE_USER_PWD_DISABLED = []
 
     def __init__(self, request):
         self.request = request
@@ -162,12 +164,16 @@ class BaseViews(object):
         self.ui_theme = get_constant("MAGPIE_UI_THEME", self.request)
         self.logged_user = get_logged_user(self.request)
 
-        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=self.request)
-        admin = get_constant("MAGPIE_ADMIN_GROUP", settings_container=self.request)
-        self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonymous]   # special groups membership that cannot be edited
-        self.__class__.MAGPIE_FIXED_GROUP_EDITS = [anonymous, admin]  # special groups that cannot be edited
+        anonym_grp = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=self.request)
+        admin_grp = get_constant("MAGPIE_ADMIN_GROUP", settings_container=self.request)
+        self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonym_grp]  # special groups membership that cannot be edited
+        self.__class__.MAGPIE_FIXED_GROUP_EDITS = [anonym_grp, admin_grp]  # special groups that cannot be edited
         # special users that cannot be deleted
-        self.__class__.MAGPIE_FIXED_USERS = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
+        anonym_usr = get_constant("MAGPIE_ANONYMOUS_USER", self.request)
+        admin_usr = get_constant("MAGPIE_ADMIN_USER", self.request)
+        self.__class__.MAGPIE_FIXED_USERS = [admin_usr, anonym_usr]
+        self.__class__.MAGPIE_USER_PWD_LOCKED = [admin_usr]
+        self.__class__.MAGPIE_USER_PWD_DISABLED = [anonym_usr, admin_usr]
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
@@ -188,6 +194,8 @@ class BaseViews(object):
         all_data.setdefault("MAGPIE_FIXED_GROUP_MEMBERSHIPS", self.MAGPIE_FIXED_GROUP_MEMBERSHIPS)
         all_data.setdefault("MAGPIE_FIXED_GROUP_EDITS", self.MAGPIE_FIXED_GROUP_EDITS)
         all_data.setdefault("MAGPIE_FIXED_USERS", self.MAGPIE_FIXED_USERS)
+        all_data.setdefault("MAGPIE_USER_PWD_LOCKED", self.MAGPIE_USER_PWD_LOCKED)
+        all_data.setdefault("MAGPIE_USER_PWD_DISABLED", self.MAGPIE_USER_PWD_DISABLED)
         magpie_logged_user = get_logged_user(self.request)
         if magpie_logged_user:
             all_data.update({"MAGPIE_LOGGED_USER": magpie_logged_user.user_name})

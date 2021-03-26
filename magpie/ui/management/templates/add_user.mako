@@ -25,7 +25,7 @@
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
-                    <div class="alert-form-text">
+                    <div class="alert-form-text alert-form-text-error">
                         %if invalid_user_name:
                             ${reason_user_name}
                         %endif
@@ -48,7 +48,7 @@
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
-                    <div class="alert-form-text">
+                    <div class="alert-form-text alert-form-text-error">
                         %if invalid_user_email:
                             ${reason_user_email}
                         %endif
@@ -72,7 +72,7 @@
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
-                    <div class="alert-form-text">
+                    <div class="alert-form-text alert-form-text-error">
                         %if invalid_password:
                             ${reason_password}
                         %endif
@@ -96,7 +96,7 @@
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                          alt="ERROR" class="icon-error" />
-                    <div class="alert-form-text">
+                    <div class="alert-form-text alert-form-text-error">
                         ${reason_password}
                     </div>
                 </div>
