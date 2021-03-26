@@ -43,7 +43,7 @@ def upgrade():
     grp_res_perms = GroupResourcePermissionService.base_query(db_session=session)
     usr_res_perms = UserResourcePermissionService.base_query(db_session=session)
 
-    for perm_list in [grp_res_perms, usr_res_perms]:
+    for item_id_key, perm_list in [("group_id", grp_res_perms), ("user_id", usr_res_perms)]:
         perm_map = [(perm, PermissionSet(perm.perm_name)) for perm in perm_list]
         perm_rm = set()
         perm_keep = set()
@@ -54,7 +54,9 @@ def upgrade():
             for other_db, other_set in perm_map:
                 if perm_set is other_set:
                     continue
-                if perm_db.resource_id == other_db.resource_id and perm_set.like(other_set):
+                perm_id = getattr(perm_db, item_id_key, None)
+                other_id = getattr(other_db, item_id_key, None)
+                if perm_id == other_id and perm_db.resource_id == other_db.resource_id and perm_set.like(other_set):
                     if perm_set.scope == Scope.RECURSIVE:
                         perm_keep.add(perm_db)
                         perm_rm.add(other_db)

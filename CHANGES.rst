@@ -14,6 +14,11 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
+* Fix incorrect migration operation of old permission names to new permission-set scheme introduced in
+  (`PR#353 <https://github.com/Ouranosinc/Magpie/issues/353>`_, database revision ``a2a039e2cff5``) that were omitting
+  check of affected user/group, causing inconsistent drop of mismatching permissions. Resolution is retroactively
+  compatible for every `Magpie` ``1.x → 2.x`` migration
+  (fixes `#403 <https://github.com/Ouranosinc/Magpie/issues/403>`_).
 * Fix UI erroneously displaying edit or delete operations for reserved user names that does not apply for such updates.
 * Fix UI not handling returned error related to forbidden operation during user edition
   (identified by issue `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
