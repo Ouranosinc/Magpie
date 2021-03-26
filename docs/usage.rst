@@ -17,6 +17,8 @@ After this, you should be able to import the Python package to validate it is in
     import magpie
 
 
+.. _usage_webapp:
+
 Web Application
 ----------------------
 
@@ -37,6 +39,8 @@ configuration file for specific settings. `Magpie` also employs such INI file to
 See `Configuration`_ for further details, and please refer to the employed `WSGI` application documentation of your
 liking for their respective setup requirements.
 
+
+.. _usage_api:
 
 API
 ----------------------
@@ -65,6 +69,8 @@ according to the applicable user permission (or is inherited group memberships).
 
 Please refer to :ref:`permissions` for further details about applicable user access levels.
 
+.. _usage_cli:
+
 CLI
 ----------------------
 
@@ -76,6 +82,8 @@ a local or remote instance. Please refer to the relevant page for further detail
 .. _installation: installation.rst
 .. _permissions: permissions.rst
 .. _utilities: utilities.rst
+
+.. _usage_ui:
 
 GUI
 ----------------------
@@ -91,6 +99,9 @@ administrator permissions.
     These offer some basic functionalities such as registration to publicly visible groups. Users minimally require
     to be logged-in (successful :term:`Authentication`) in order to access these pages. The UI pages are accessible
     using the ``Account`` button from the main entrypoint of the `Magpie` UI.
+
+
+.. _usage_tests:
 
 Testing
 ----------------------
