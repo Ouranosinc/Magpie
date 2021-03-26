@@ -132,7 +132,7 @@ MAGPIE_POSTGRES_DB = os.getenv("MAGPIE_POSTGRES_DB", "magpie")
 # constants
 # ===========================
 MAGPIE_ADMIN_PERMISSION = "admin"   # user must be administrator to access a view (default permission, always allowed)
-MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must be MAGPIE_LOGGED_USER (either literally or inferred)
+MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must be itself (either literally or inferred MAGPIE_LOGGED_USER)
 MAGPIE_CONTEXT_PERMISSION = "MAGPIE_CONTEXT_USER"  # path user must be itself, MAGPIE_LOGGED_USER or unauthenticated
 MAGPIE_LOGGED_USER = "current"
 MAGPIE_DEFAULT_PROVIDER = "ziggurat"

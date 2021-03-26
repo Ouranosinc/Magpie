@@ -1,6 +1,7 @@
 """
 User Views, both for specific user-name provided as request path variable and special keyword for logged session user.
 """
+from secrets import compare_digest
 
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
@@ -65,9 +66,9 @@ def update_user_view(request):
     new_email = ar.get_multiformat_body(request, "email", default=user.email)
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
 
-    update_username = user.user_name != new_user_name and new_user_name is not None
-    update_password = user.user_password != new_password and new_password is not None
-    update_email = user.email != new_email and new_email is not None
+    update_username = new_user_name is not None and not compare_digest(user.user_name, str(new_user_name))
+    update_password = new_password is not None and not compare_digest(user.user_password, str(new_password))
+    update_email = new_email is not None and not compare_digest(user.email, str(new_email))
     ax.verify_param(any([update_username, update_password, update_email]), is_true=True,
                     with_param=False,  # params are not useful in response for this case
                     content={"user_name": user.user_name},

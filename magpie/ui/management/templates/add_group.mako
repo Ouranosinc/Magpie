@@ -26,7 +26,7 @@
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                              alt="ERROR" class="icon-error" />
-                    <div class="alert-form-text">
+                    <div class="alert-form-text alert-form-text-error">
                         ${reason_group_name}
                     </div>
                 </div>
@@ -50,7 +50,7 @@
                 >
                     <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
                              alt="ERROR" class="icon-error" />
-                    <div class="alert-form-text">
+                    <div class="alert-form-text alert-form-text-error">
                         ${reason_description}
                     </div>
                 </div>

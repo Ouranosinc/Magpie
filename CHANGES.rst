@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Explicitly require ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` to be updated through configuration and
+  application restart. Update is forbidden through the API and UI.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix incorrect migration operation of old permission names to new permission-set scheme introduced in
@@ -16,7 +21,9 @@ Bug Fixes
   (fixes `#403 <https://github.com/Ouranosinc/Magpie/issues/403>`_).
 * Fix UI erroneously displaying edit or delete operations for reserved user names that does not apply for such updates.
 * Fix UI not handling returned error related to forbidden operation during user edition
-  (fixes `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
+  (identified by issue `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
+* Fix password update of pre-registered administrator upon configuration change of ``MAGPIE_ADMIN_PASSWORD`` without
+  modification to ``MAGPIE_ADMIN_USER`` (fixes `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
 * Apply backward compatibility fixes to handle regexes in Python 3.5 (pending deprecation).
 * Remove `MagpieAdapter` from Python 2.7 test suite to get passing results against obsolete version and unsupported
   code by `Twitcher`.

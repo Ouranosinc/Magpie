@@ -280,7 +280,7 @@ ifeq ($(findstring bump, $(MAKECMDGOALS)),)
 endif
 
 .PHONY: bump
-bump:	## bump version using VERSION specified as user input
+bump:	## bump version using VERSION specified as user input (make VERSION=<X.Y.Z> bump)
 	@-echo "Updating package version ..."
 	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
 	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version" || pip install $(PIP_XARGS) bump2version'
