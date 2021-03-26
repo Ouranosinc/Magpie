@@ -223,24 +223,27 @@ _alembic: conda-env
 .PHONY: migrate
 migrate: database-migration		## alias to 'database-migration'
 
+DB_REVISION ?= head
+DB_COMMAND := MAGPIE_INI_FILE_PATH="$(APP_INI)" alembic -c "$(APP_INI)"
+
 .PHONY: database-migration
-database-migration: conda-env _alembic 	## run postgres database migration with alembic
-	@echo "Running database migration..."
-	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" upgrade head'
+database-migration: conda-env _alembic 	## run database migration (make [REVISION=head,<empty=1>,ID] database-migration)
+	@echo "Running database migration (using revision: [$(DB_REVISION)])..."
+	@bash -c '$(CONDA_CMD) $(DB_COMMAND) upgrade $(DB_REVISION)'
 
 .PHONY: database-history
 database-history: conda-env _alembic    ## obtain database revision history
-	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" history'
+	@bash -c '$(CONDA_CMD) $(DB_COMMAND) history'
 
 .PHONY: database-revision
 database-revision: conda-env _alembic   ## create a new database revision
 	@[ "${DOC}" ] || ( echo ">> 'DOC' is not set. Provide a description."; exit 1 )
-	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" revision -m "$(DOC)"'
+	@bash -c '$(CONDA_CMD) $(DB_COMMAND) revision -m "$(DOC)"'
 
 .PHONY: database-version
 database-version: conda-env _alembic 	## retrieve current database revision ID
 	@echo "Fetching database revision..."
-	@bash -c '$(CONDA_CMD) alembic -c "$(APP_INI)" current'
+	@bash -c '$(CONDA_CMD) $(DB_COMMAND) current'
 
 ## --- Documentation targets --- ##
 
@@ -277,7 +280,7 @@ ifeq ($(findstring bump, $(MAKECMDGOALS)),)
 endif
 
 .PHONY: bump
-bump:	## bump version using VERSION specified as user input
+bump:	## bump version using VERSION specified as user input (make VERSION=<X.Y.Z> bump)
 	@-echo "Updating package version ..."
 	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
 	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version" || pip install $(PIP_XARGS) bump2version'

@@ -1,5 +1,7 @@
 from __future__ import with_statement
 
+import os
+
 from alembic import context  # noqa: F403
 from sqlalchemy.engine import Connectable, Connection, create_engine  # noqa: W0212
 from sqlalchemy.schema import MetaData
@@ -7,7 +9,7 @@ from sqlalchemy_utils import create_database, database_exists
 
 from magpie.constants import get_constant
 from magpie.db import get_db_url
-from magpie.utils import get_logger
+from magpie.utils import get_logger, get_settings_from_config_ini
 
 LOGGER = get_logger(__name__)
 
@@ -58,7 +60,11 @@ def run_migrations_online(connection=None):
     In this scenario we need to create an Engine and associate a connection with the context.
     """
     if not config_connection:
-        url = get_db_url()
+        ini = get_constant("MAGPIE_INI_FILE_PATH", raise_not_set=False, raise_missing=False, print_missing=True)
+        settings = None
+        if ini and os.path.isfile(ini):
+            settings = get_settings_from_config_ini(ini)
+        url = get_db_url(settings=settings)
     else:
         url = config_connection.engine.url
 
