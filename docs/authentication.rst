@@ -179,7 +179,7 @@ See :ref:`Authentication Headers` for more details on that matter.
 Authentication Headers
 ---------------------------
 
-.. versionadded:: 3.8
+.. versionadded:: 3.9
     The ``WWW-Authentication`` and ``Location-When-Unauthenticated`` headers are returned whenever the
     HTTP ``Unauthorized [401]`` response is the result of a request. This is done in order to help requesting
     users or applications identify the endpoint where it can attempt :term:`Authentication` with credentials.
@@ -209,7 +209,7 @@ that they will automatically emit a new ``Cookie`` based on reissue time after 1
 accomplished using the same ``Cookie`` within the lifetime duration of the original login, unless explicitly logged out.
 Modifications of the duration is accomplished using configuration detailed in :ref:`config_security`.
 
-.. versionchanged:: 3.8
+.. versionchanged:: 3.9
     Although maximum duration could be defined in settings, prior versions did not explicitly indicate them in the
     generated ``Cookie``. Following versions without these values will effectively mean the ``Cookie`` has unlimited
     lifetime.
