@@ -179,23 +179,33 @@
 
 
 <%block name="sync_resources">
-    <form id="sync_info" action="${request.path}" method="post">
-        <p class="">  <!-- no panel-line to have normal size button -->
+    <div>
+        <form id="sync_info" action="${request.path}" method="post"
             %if sync_implemented:
-                <input type="submit" value="Sync" name="force_sync" class="button-warning equal-width">
+              onsubmit="document.getElementById('sync-loading').style.display='revert';"
             %endif
-            %if ids_to_clean and not out_of_sync:
-                <span class="panel-entry">Note: </span>
-                <span class="panel-value">Some resources are absent from the remote server </span>
-                <input type="hidden" value="${ids_to_clean}" name="ids_to_clean">
-                <input type="submit" class="button-warning equal-width" value="Clean all" name="clean_all">
-            %endif
-            <span class="panel-entry center-text sync-text">Last synchronization with remote services: </span>
-            %if sync_implemented:
-                <span class="panel-value center-text">${last_sync} </span>
-            %else:
-                <span class="panel-value center-text">Not implemented for this service type.</span>
-            %endif
-        </p>
-    </form>
+        >
+            <div class="">  <!-- no panel-line to have normal size button -->
+                %if sync_implemented:
+                    <input type="submit" value="Sync" name="force_sync" class="button-warning equal-width">
+                    <img class="icon-loading" style="display: none" id="sync-loading"
+                         src="${request.static_url('magpie.ui.home:static/loading.gif')}" alt="SYNCING..."/>
+                %endif
+                <div class="align-text">
+                %if ids_to_clean and not out_of_sync:
+                    <span class="panel-entry">Note: </span>
+                    <span class="panel-value">Some resources are absent from the remote server </span>
+                    <input type="hidden" value="${ids_to_clean}" name="ids_to_clean">
+                    <input type="submit" class="button-warning equal-width" value="Clean all" name="clean_all">
+                %endif
+                <span class="panel-entry sync-text">Last synchronization with remote services: </span>
+                %if sync_implemented:
+                    <span class="panel-value">${last_sync} </span>
+                %else:
+                    <span class="panel-value">Not implemented for this service type.</span>
+                %endif
+                </div>
+            </div>
+        </form>
+    </div>
 </%block>

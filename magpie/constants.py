@@ -33,8 +33,7 @@ if TYPE_CHECKING:
 # ===========================
 MAGPIE_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
 MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
-MAGPIE_CONFIG_DIR = os.getenv(
-    "MAGPIE_CONFIG_DIR", os.path.join(MAGPIE_ROOT, "config"))
+MAGPIE_CONFIG_DIR = os.getenv("MAGPIE_CONFIG_DIR") or os.path.join(MAGPIE_ROOT, "config")  # default also if empty
 MAGPIE_PROVIDERS_CONFIG_PATH = os.getenv(
     "MAGPIE_PROVIDERS_CONFIG_PATH", "{}/providers.cfg".format(MAGPIE_CONFIG_DIR))
 MAGPIE_PERMISSIONS_CONFIG_PATH = os.getenv(

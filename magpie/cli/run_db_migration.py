@@ -31,7 +31,7 @@ def main(args=None, parser=None, namespace=None):
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
-    return run_database_migration(settings={"magpie.ini_file_path": args.config_file})
+    return run_database_migration(container={"magpie.ini_file_path": args.config_file})
 
 
 if __name__ == "__main__":

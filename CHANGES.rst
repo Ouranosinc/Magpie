@@ -11,6 +11,8 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Explicitly require ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` to be updated through configuration and
   application restart. Update is forbidden through the API and UI.
+* Add UI loading animation while sync operation is in progress to indicate it was registered until completion
+  as it can take a while to process all remote resources.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -27,6 +29,8 @@ Bug Fixes
 * Apply backward compatibility fixes to handle regexes in Python 3.5 (pending deprecation).
 * Remove `MagpieAdapter` from Python 2.7 test suite to get passing results against obsolete version and unsupported
   code by `Twitcher`.
+* Fix default value resolution of ``MAGPIE_CONFIG_DIR`` if the specified value is parsed as empty string.
+* Fix mismatching resolution of database URL from different locations because of invalid settings forwarding.
 
 `3.7.1 <https://github.com/Ouranosinc/Magpie/tree/3.7.1>`_ (2021-03-18)
 ------------------------------------------------------------------------------------

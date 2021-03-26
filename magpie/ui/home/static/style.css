@@ -346,10 +346,10 @@ table.panel-line td {
 .panel-value {
 }
 
-.center-text {
+.align-text {
     margin-top: 0.1em;
     display: inline-block;
-    text-align: center;
+    vertical-align: top;
 }
 
 .sync-text {
@@ -530,6 +530,13 @@ table.panel-line td {
     width: 1.25em;
     height: 1.25em;
     margin-top: 0.05em;
+}
+
+.icon-loading {
+    width: 1.5em;
+    height: 1.5em;
+    margin-top: 0.1em;
+    margin-left: 0.5em;
 }
 
 .icon-color-invert {
