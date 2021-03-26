@@ -65,10 +65,10 @@ jobs:
             test-case: start test-remote
           # test allowed failing because of old versions
           # FIXME: remove altogether (twitcher does not support it for a long time)
-          - os: ubuntu-latest
-            python-version: 2.7
-            allow-failure: true
-            test-case: test-local
+          #- os: ubuntu-latest
+          #  python-version: 2.7
+          #  allow-failure: true
+          #  test-case: test-local
           - os: ubuntu-latest
             python-version: 3.5
             allow-failure: true
