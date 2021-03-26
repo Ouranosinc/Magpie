@@ -5503,7 +5503,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
 
 
 @unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
-@pytest.mark.skipif(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
+@pytest.mark.skipif(six.PY2, reason="Unsupported Twitcher for MagpieAdapter in Python 2")
 class SetupMagpieAdapter(ConfigTestCase):
     """
     Configures all required :class:`MagpieAdapter` components to simulate how it would be loaded by `Twitcher` instance.
