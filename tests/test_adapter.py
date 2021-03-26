@@ -1,15 +1,22 @@
 import random
+import unittest
 
+import pytest
+import six
 from pyramid.httpexceptions import HTTPNotFound
 
 from magpie import __meta__
-from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.services import ServiceAPI, ServiceInterface
 from tests import interfaces as ti
 from tests import runner, utils
 
+if six.PY3:
+    from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
 
+
+@unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
+@pytest.mark.skipif(six.PY2, reason="Unsupported Twitcher for MagpieAdapter in Python 2")
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_ADAPTER
 @runner.MAGPIE_TEST_FUNCTIONAL
