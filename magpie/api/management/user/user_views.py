@@ -66,7 +66,7 @@ def update_user_view(request):
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
 
     update_username = user.user_name != new_user_name and new_user_name is not None
-    update_password = user.user_password != new_password and new_password is not None
+    update_password = new_password is not None
     update_email = user.email != new_email and new_email is not None
     ax.verify_param(any([update_username, update_password, update_email]), is_true=True,
                     with_param=False,  # params are not useful in response for this case
