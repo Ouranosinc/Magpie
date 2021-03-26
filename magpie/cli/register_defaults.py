@@ -15,8 +15,8 @@ from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.user import UserService
 
 from magpie import db, models
-from magpie.constants import get_constant
 from magpie.api.management.user import user_utils as uu
+from magpie.constants import get_constant
 from magpie.utils import get_json, get_logger, print_log, raise_log
 
 if TYPE_CHECKING:
