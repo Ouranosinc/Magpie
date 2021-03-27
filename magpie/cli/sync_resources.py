@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import Str
+    from magpie.typedefs import JSON, Str
 
 LOGGER = get_logger(__name__)
 
@@ -140,11 +140,12 @@ def _ensure_sync_info_exists(service_resource_id, session):
 
 
 def _get_remote_resources(service):
+    # type: (models.Service) -> JSON
     """
     Request remote resources, depending on service type.
 
-    :param service: (models.Service)
-    :return:
+    :param service: service for which to fetch remove children resources
+    :return: nested content as ``{"node_name": {"children": JSON, "resource_type": "resource_type"}}``
     """
     service_url = service.url
     if service_url.endswith("/"):  # remove trailing slash
@@ -269,9 +270,10 @@ def fetch_all_services_by_type(service_type, session):
     for service in session.query(models.Service).filter_by(type=service_type):
         try:
             fetch_single_service(service, session)
-        except Exception:  # noqa # nosec: B110
+        except Exception as exc:  # noqa # nosec: B110
             if CRON_SERVICE:
-                LOGGER.exception("There was an error when fetching data from the url: %s", service.url)
+                LOGGER.exception("There was an error when fetching data from the URL: [%s]", service.url)
+                LOGGER.debug("Error detail from failed fetch of data during sync:\n", exc_info=exc)
             else:
                 raise
 
@@ -285,6 +287,9 @@ def fetch_single_service(service, session):
     """
     if isinstance(service, int):
         service = session.query(models.Service).filter_by(resource_id=service).first()
+    if not service.sync_type:
+        LOGGER.info("Skipping service [%s] with no sync type defined.", service.resource_name)
+        return
     LOGGER.info("Requesting remote resources")
     remote_resources = _get_remote_resources(service)
     service_id = service.resource_id
