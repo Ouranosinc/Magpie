@@ -11,8 +11,8 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Explicitly require ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` to be updated through configuration and
   application restart. Update is forbidden through the API and UI.
-* Add UI loading animation while sync operation is in progress to indicate it was registered until completion
-  as it can take a while to process all remote resources.
+* Add UI loading animation while sync operation is in progress to indicate some user feedback that it was registered
+  and is running until completion as it can take a while to parse all remote resources (depends on amount and latency).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -31,6 +31,9 @@ Bug Fixes
   code by `Twitcher`.
 * Fix default value resolution of ``MAGPIE_CONFIG_DIR`` if the specified value is parsed as empty string.
 * Fix mismatching resolution of database URL from different locations because of invalid settings forwarding.
+* Patch broken sync ``RemoteResource`` due to invalid resolution of ziggurat-foundations model in tree generator
+  (relates to `ergo/ziggurat_foundations PR#70 <https://github.com/ergo/ziggurat_foundations/pull/70>`_,
+   fixes `#401 <https://github.com/Ouranosinc/Magpie/issues/401>`_).
 
 `3.7.1 <https://github.com/Ouranosinc/Magpie/tree/3.7.1>`_ (2021-03-18)
 ------------------------------------------------------------------------------------
