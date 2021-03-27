@@ -96,6 +96,7 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
         for resource_name_remote, values in _resources_remote.items():
             if resource_name_remote not in _resources_local:
                 new_resource = {"permission_names": [],
+                                "permissions": [],
                                 "children": {},
                                 "id": None,
                                 "remote_id": values["remote_id"],
