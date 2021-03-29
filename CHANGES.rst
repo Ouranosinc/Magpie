@@ -20,6 +20,10 @@ Features / Changes
   ``provider_name`` employed for every other sign-in related operation.
 * Ensure ``MagpieAdapter`` returns the appropriate code (``Unauthorized [401]`` vs ``Forbidden [403]``) according to
   missing or specified authentication headers.
+* Block ``anonymous`` special user login as it corresponds to *"not logged in"* definition.
+* Change HTTP ``Forbidden [403]`` responses during login to generic ``Unauthorized [401]`` to avoid leaking details
+  about which are valid and invalid user names. Any failure to login using correctly formatted credentials will be
+  errored out indistinctly as ``Unauthorized [401]``.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

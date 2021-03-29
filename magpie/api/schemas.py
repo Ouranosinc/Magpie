@@ -2889,7 +2889,7 @@ class Signin_POST_UnauthorizedResponseSchema(BaseResponseSchemaAPI):
 
 
 class Signin_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Login was refused."
+    description = "Login was refused for this user."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 

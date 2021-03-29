@@ -105,11 +105,12 @@ def sign_in(request):
                     http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
     anonymous = get_constant("MAGPIE_ANONYMOUS_USER", request)
     ax.verify_param(user_name, not_equal=True, param_compare=anonymous, param_name="user_name",
-                    http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_UnauthorizedResponseSchema.description)
+                    http_error=HTTPForbidden, content={"user_name": str(user_name)},
+                    msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
     verify_provider(provider_name)
 
-    if provider_name in list(MAGPIE_INTERNAL_PROVIDERS):
-        # password can be None for external login, validate only here as needed
+    if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
+        # password can be None for external login, validate only here as it is required for internal login
         password = ar.get_value_multiformat_body_checked(request, "password", pattern=None)
         # check manually to avoid inserting value in result body
         # obtain the raw path, without any '/magpie' prefix (if any), let 'application_url' handle it
@@ -152,6 +153,12 @@ def login_failure(request, reason=None):
     .. seealso::
         - :func:`sign_in`
     """
+    # WARNING:
+    #   To avoid trial/error login attempts leaking valid vs invalid username credentials, all failures to login
+    #   MUST return the same message and error code. Multiple login attempts must not provide any way to identify
+    #   potential combinations that would greatly simplify guessing credentials.
+    #   Only pre-check of field formats or reserved special user name values can return something different since
+    #   those are guaranteed to be a non-existing user.
     http_kw = None
     http_err = HTTPUnauthorized
     if reason is None:
@@ -163,9 +170,11 @@ def login_failure(request, reason=None):
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description
         else:
+            # failure to login with correctly formatted credentials and existing user means something wrong happened
+            # failure to retrieve users and validating against existing ones means db is either corrupted or code error
             user_name_list = ax.evaluate_call(
                 lambda: [user.user_name for user in UserService.all(models.User, db_session=request.db)],
-                fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                 msg_on_fail=s.Signin_POST_Internal_InternalServerErrorResponseSchema.description)
             if user_name in user_name_list:
                 http_err = HTTPInternalServerError
