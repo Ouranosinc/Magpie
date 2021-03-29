@@ -32,7 +32,14 @@ from magpie.permissions import (
 )
 from magpie.register import pseudo_random_string
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceNCWMS2, ServiceTHREDDS
-from magpie.utils import CONTENT_TYPE_HTML, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML, get_twitcher_protected_service_url
+from magpie.utils import (
+    CONTENT_TYPE_FORM,
+    CONTENT_TYPE_HTML,
+    CONTENT_TYPE_JSON,
+    CONTENT_TYPE_PLAIN,
+    CONTENT_TYPE_TXT_XML,
+    get_twitcher_protected_service_url
+)
 from tests import runner, utils
 from tests.utils import TestVersion
 
@@ -407,6 +414,82 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=real_cookies)  # invalid
         body = utils.check_response_basic_info(resp, 200)
         utils.check_val_equal(body["authenticated"], False)
+
+    @runner.MAGPIE_TEST_LOGIN
+    def test_LoginAnonymous_Forbidden(self):
+        """
+        Test different login variations and ensure that ``MAGPIE_ANONYMOUS_USER`` is always blocked.
+        """
+        utils.warn_version(self, "Login anonymous explicitly blocked.", "3.9.0", skip=True)
+        data = {
+            "user_name": get_constant("MAGPIE_ANONYMOUS_USER"),
+            "password": get_constant("MAGPIE_ANONYMOUS_PASSWORD")
+        }
+        headers = {"Accept": CONTENT_TYPE_JSON}
+
+        resp = utils.test_request(self, "GET", s.SigninAPI.path, params=data, headers=headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="GET")
+
+        form = "user_name={user_name}&password={password}".format(**data)
+        headers["Content-Type"] = CONTENT_TYPE_FORM
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, data=form, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="POST")
+
+        headers["Content-Type"] = CONTENT_TYPE_JSON
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, json=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="POST")
+
+    @runner.MAGPIE_TEST_LOGIN
+    def test_Login_GetRequestFormat(self):
+        """
+        Validate that GET request for login returns correct metadata, and not its corresponding POST request ones.
+
+        Tests multiple accept header formats to ensure they are also handled each time.
+        """
+        utils.warn_version(self, "Login with GET metadata validation.", "3.9.0", skip=True)
+
+        self.login_admin()
+        utils.TestSetup.delete_TestUser(self)
+        utils.TestSetup.delete_TestGroup(self)
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+        utils.check_or_try_logout_user(self)
+
+        path = s.SigninAPI.path
+        data_ok = {"user_name": self.test_user_name, "password": self.test_user_name}
+        data_bad = {"user_name": self.test_user_name, "password": "random-dont-care"}
+        for ctype in [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN]:
+            headers = {"Accept": ctype}
+            resp = utils.test_request(self, "GET", path, params=data_ok, headers=headers)
+            utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=ctype)
+
+            resp = utils.test_request(self, "GET", path, params=data_bad, headers=headers, expect_errors=True)
+            utils.check_response_basic_info(resp, 401, expected_method="GET", expected_type=ctype)
+
+    @runner.MAGPIE_TEST_LOGIN
+    def test_LoginAnyOtherUser_Unauthorized(self):
+        """
+        Validates raised errors as unauthorized (401) for any user name.
+
+        Any user that is not a reserved/special user name (e.g.: ``MAGPIE_ANONYMOUS_USER``), must be raised as a
+        generic HTTP 401 error regardless of whether that user name really exists or not, to avoid indirect inference
+        of partial user credentials using the response code.
+        """
+        utils.warn_version(self, "Login unauthorized ignores user name check.", "3.9.0", skip=True)
+
+        expected = [
+            # real user with bad password or non-existing user altogether return same code/message (cannot distinguish)
+            (401, get_constant("MAGPIE_ADMIN_USER"), "fake-and-should-be-valid"),
+            (401, "random-user-that-should-not-exist", "ignore-value-dont-care"),
+        ]
+        messages = set()    # equal messages should make the set filled with only one value
+        for code, usr, pwd in expected:
+            data = {"user_name": usr, "password": pwd}
+            resp = utils.test_request(self, "POST", s.SigninAPI.path, json=data, expect_errors=True)
+            body = utils.check_response_basic_info(resp, code, expected_method="POST")
+            messages.add(body["detail"])
+        err_msg = "Error messages should all be equal for failed login with valid formats [{}]".format(messages)
+        utils.check_val_equal(len(messages), 1, msg=err_msg)
 
     @runner.MAGPIE_TEST_STATUS
     def test_GetVersion(self):
