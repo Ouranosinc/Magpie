@@ -49,7 +49,13 @@
             <div class="tree-key">Resources</div>
             <div class="tree-item">
                 %for perm_name in permissions:
-                    <div class="permission-title">${perm_name}</div>
+                    <div
+                    %if inherit_groups_permissions:
+                        class="permission-title permission-title-effective"
+                    %else:
+                        class="permission-title"
+                    %endif
+                    >${perm_name}</div>
                 %endfor
             </div>
         </div>
@@ -185,7 +191,7 @@
               onsubmit="document.getElementById('sync-loading').style.display='revert';"
             %endif
         >
-            <div class="">  <!-- no panel-line to have normal size button -->
+            <div class="no-border">  <!-- no panel-line to have normal size button -->
                 %if sync_implemented:
                     <input type="submit" value="Sync" name="force_sync" class="button-warning equal-width">
                     <img class="icon-loading" style="display: none" id="sync-loading"

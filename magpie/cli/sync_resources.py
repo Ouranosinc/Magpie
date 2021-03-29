@@ -271,12 +271,11 @@ def fetch_all_services_by_type(service_type, session):
     for service in session.query(models.Service).filter_by(type=service_type):
         try:
             fetch_single_service(service, session)
-        except Exception as exc:  # noqa # nosec: B110
+        except Exception:  # noqa # nosec: B110
+            LOGGER.exception("There was an error when fetching data from the URL: [%s]", service.url)
             if CRON_SERVICE:
-                LOGGER.exception("There was an error when fetching data from the URL: [%s]", service.url)
-                LOGGER.debug("Error detail from failed fetch of data during sync:\n", exc_info=exc)
-            else:
-                raise
+                pass
+            raise
 
 
 def fetch_single_service(service, session):
