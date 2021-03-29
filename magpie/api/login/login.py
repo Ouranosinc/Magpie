@@ -42,7 +42,7 @@ from magpie.utils import (
     get_authenticate_headers,
     get_json,
     get_logger,
-    get_magpie_url,
+    get_magpie_url
 )
 
 if TYPE_CHECKING:
