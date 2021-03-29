@@ -33,7 +33,7 @@ Bug Fixes
 * Fix mismatching resolution of database URL from different locations because of invalid settings forwarding.
 * Patch broken sync ``RemoteResource`` due to invalid resolution of ziggurat-foundations model in tree generator
   (relates to `ergo/ziggurat_foundations PR#70 <https://github.com/ergo/ziggurat_foundations/pull/70>`_,
-   fixes `#401 <https://github.com/Ouranosinc/Magpie/issues/401>`_).
+  fixes `#401 <https://github.com/Ouranosinc/Magpie/issues/401>`_).
 
 `3.7.1 <https://github.com/Ouranosinc/Magpie/tree/3.7.1>`_ (2021-03-18)
 ------------------------------------------------------------------------------------
