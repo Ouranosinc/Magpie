@@ -630,7 +630,7 @@ remain available as described at the start of the :ref:`Configuration` section.
   | (Value: ``"ziggurat"``)
 
   Name of the :term:`Provider` used for login. This represents the identifier that is set to define how to
-  differentiate between a local sign-in procedure and a dispatched one some known `Authentication Providers`_.
+  differentiate between a local sign-in procedure and a dispatched one some known :ref:`authn_providers`.
 
 .. _config_phoenix:
 
