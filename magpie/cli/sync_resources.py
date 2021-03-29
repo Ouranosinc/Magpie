@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import Str
+    from magpie.typedefs import JSON, Str
 
 LOGGER = get_logger(__name__)
 
@@ -96,6 +96,7 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
         for resource_name_remote, values in _resources_remote.items():
             if resource_name_remote not in _resources_local:
                 new_resource = {"permission_names": [],
+                                "permissions": [],
                                 "children": {},
                                 "id": None,
                                 "remote_id": values["remote_id"],
@@ -140,11 +141,12 @@ def _ensure_sync_info_exists(service_resource_id, session):
 
 
 def _get_remote_resources(service):
+    # type: (models.Service) -> JSON
     """
     Request remote resources, depending on service type.
 
-    :param service: (models.Service)
-    :return:
+    :param service: service for which to fetch remove children resources
+    :return: nested content as ``{"node_name": {"children": JSON, "resource_type": "resource_type"}}``
     """
     service_url = service.url
     if service_url.endswith("/"):  # remove trailing slash
@@ -270,10 +272,10 @@ def fetch_all_services_by_type(service_type, session):
         try:
             fetch_single_service(service, session)
         except Exception:  # noqa # nosec: B110
+            LOGGER.exception("There was an error when fetching data from the URL: [%s]", service.url)
             if CRON_SERVICE:
-                LOGGER.exception("There was an error when fetching data from the url: %s", service.url)
-            else:
-                raise
+                pass
+            raise
 
 
 def fetch_single_service(service, session):
@@ -285,6 +287,9 @@ def fetch_single_service(service, session):
     """
     if isinstance(service, int):
         service = session.query(models.Service).filter_by(resource_id=service).first()
+    if not service.sync_type:
+        LOGGER.info("Skipping service [%s] with no sync type defined.", service.resource_name)
+        return
     LOGGER.info("Requesting remote resources")
     remote_resources = _get_remote_resources(service)
     service_id = service.resource_id

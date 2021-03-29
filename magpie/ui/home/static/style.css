@@ -247,6 +247,10 @@ table thead {
     background-color: #CCCCCC;
 }
 
+.no-border {
+    border-width: 0;
+}
+
 .panel-heading-button {
     float: right;
     margin-top: -3px;
@@ -267,7 +271,7 @@ table.panel-line {
 
 table.panel-line th,
 table.panel-line td {
-    border: 0;
+    border-width: 0;
     margin: 0.25em 0.25em;
     white-space: nowrap;
     padding: 0;  /* override global th/td */
@@ -346,10 +350,10 @@ table.panel-line td {
 .panel-value {
 }
 
-.center-text {
+.align-text {
     margin-top: 0.1em;
     display: inline-block;
-    text-align: center;
+    vertical-align: top;
 }
 
 .sync-text {
@@ -532,6 +536,13 @@ table.panel-line td {
     margin-top: 0.05em;
 }
 
+.icon-loading {
+    width: 1.5em;
+    height: 1.5em;
+    margin-top: 0.1em;
+    margin-left: 0.5em;
+}
+
 .icon-color-invert {
     filter: saturate(0) invert(100%);
     -webkit-filter: saturate(0) invert(100%);
@@ -568,9 +579,10 @@ table.panel-line td {
     padding: 1px 2px 2px;
     font-weight: bold;
     font-size: 1.25em;
-    /* this makes sure other current line checkbox remains aligned with others  */
+    /* make sure current line test button converted to success/failure icon remains aligned with other lines buttons.
+       is affected by width of 'permission-effective-button' to align, impacts width of 'permission-title-effective' */
     margin-left: 0.1em;
-    margin-right: 0.05em;
+    margin-right: 0.1em;
 }
 
 .permission-effective-tester {
@@ -596,8 +608,8 @@ input[type="button"].permission-effective-button {
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    padding: 0.2em 0.6em;
-    margin: 3px 2px;
+    padding: 0.2em 0.6em; /* padding must be included in 'permission-title-effective' (2x because left and right) */
+    margin: 3px 0.25em;   /* width must be included in 'permission-title-effective' (2x because left and right) */
     cursor: pointer;
 }
 
@@ -775,8 +787,10 @@ div.tree-button {
 }
 
 .permission-title {
-    /* ensure that sufficient space is provided to fit all possible permission-name side-by-side */
-    width: 10.5em;  /* align with combobox nad checkbox, must include both their respective width */
+    /* ensure that sufficient space is provided to fit all possible permission-name side-by-side
+       align with combobox and checkbox, must include both their respective width
+    */
+    width: 10em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width] */
     float: right;
     text-align: left;
 
@@ -786,17 +800,24 @@ div.tree-button {
     /*-o-transform: rotate(-10deg);*/        /* Opera */
 }
 
+.permission-title-effective {
+    /* when 'effective' permission display is enabled, the extra button to test adds more width between items */
+    width: 11.6em;  /* [width = permission-title.width + 2 * permission-effective-button.width] */
+}
+
 .permission-entry {
     float:right;
     text-align: left;
-    margin: 0.1em 1em 0 0;
+    margin-top: 0.05em;
+    margin-right: 0.5em;    /* must be included in 'permission-title' width */
 }
 
 .permission-checkbox {
     width: 1.5em;
     float: right;
     text-align: left;
-    margin: 0.1em 0 0 0;
+    margin-top: 0.1em;
+    margin-right: 0;        /* must be included in 'permission-title' width, affects width of 'permission-effective' */
 }
 
 .permission-combobox {

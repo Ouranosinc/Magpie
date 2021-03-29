@@ -418,6 +418,35 @@ class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
 
     The ResourceTreeService.__init__ call sets the model.
     """
+    def __init__(self, service_cls):
+        self.model = RemoteResource
+        super(RemoteResourceTreeServicePostgresSQL, self).__init__(service_cls)
+
+    # FIXME: https://github.com/ergo/ziggurat_foundations/pull/70
+    @classmethod
+    def build_subtree_strut(cls, result, *args, **kwargs):
+        """
+        Returns a dictionary in form of
+        {node:Resource, children:{node_id: Resource}}
+
+        :param result:
+        :return:
+        """
+        items = list(result)
+        root_elem = {"node": None, "children": dict()}
+        if len(items) == 0:
+            return root_elem
+        for _, node in enumerate(items):
+            node_res = getattr(node, cls.model.__name__)
+            new_elem = {"node": node_res, "children": dict()}
+            path = list(map(int, node.path.split("/")))
+            parent_node = root_elem
+            normalized_path = path[:-1]
+            if normalized_path:
+                for path_part in normalized_path:
+                    parent_node = parent_node["children"][path_part]
+            parent_node["children"][new_elem["node"].resource_id] = new_elem
+        return root_elem
 
 
 class TemporaryToken(BaseModel, Base):

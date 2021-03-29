@@ -136,12 +136,12 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name="app:m
     return get_db_session_from_settings(settings)
 
 
-def run_database_migration(settings=None, db_session=None):
-    # type: (Optional[SettingsType], Optional[Session]) -> None
+def run_database_migration(container=None, db_session=None):
+    # type: (Optional[AnySettingsContainer], Optional[Session]) -> None
     """
     Runs database migration operations with :mod:`alembic`, using the provided session or a new engine connection.
     """
-    ini_file = get_constant("MAGPIE_INI_FILE_PATH", settings)
+    ini_file = get_constant("MAGPIE_INI_FILE_PATH", container)
     LOGGER.info("Using file '%s' for migration.", ini_file)
     alembic_args = ["-c", ini_file, "upgrade", "heads"]
     with warnings.catch_warnings():
@@ -205,7 +205,7 @@ def run_database_migration_when_ready(settings, db_session=None):
                       logger=LOGGER, level=logging.WARNING)
         for i in range(1, attempts + 1):
             try:
-                run_database_migration(db_session=db_session, settings=settings)
+                run_database_migration(db_session=db_session, container=settings)
             except ImportError as exc:
                 print_log("Database migration produced [{!r}] (ignored).".format(exc),
                           logger=LOGGER, level=logging.WARNING, exc_info=exc)
@@ -217,7 +217,7 @@ def run_database_migration_when_ready(settings, db_session=None):
                     continue
                 raise_log("Database migration failed [{!r}]".format(exc), exception=RuntimeError, logger=LOGGER)
 
-            db_ready = is_database_ready(db_session)
+            db_ready = is_database_ready(db_session=db_session, container=settings)
             if not db_ready:
                 if i <= attempts:
                     print_log("Database not ready. Retrying... ({}/{})".format(i, attempts),
@@ -229,7 +229,7 @@ def run_database_migration_when_ready(settings, db_session=None):
             break
     else:
         print_log("Database migration skipped as per 'MAGPIE_DB_MIGRATION' requirement...", logger=LOGGER)
-        db_ready = is_database_ready(db_session)
+        db_ready = is_database_ready(db_session=db_session, container=settings)
     if not db_ready:
         raise_log("Database not ready", exception=RuntimeError, logger=LOGGER)
 

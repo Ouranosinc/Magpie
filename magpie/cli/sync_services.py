@@ -67,6 +67,7 @@ class SyncServiceInterface(object):
 
     @abc.abstractmethod
     def get_resources(self):
+        # type: () -> JSON
         """
         This is the function actually fetching the data from the remote service. Implement this for every specific
         service.
