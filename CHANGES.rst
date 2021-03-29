@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`3.8.0 <https://github.com/Ouranosinc/Magpie/tree/3.8.0>`_ (2021-03-29)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Explicitly require ``MAGPIE_ADMIN_USER`` and ``MAGPIE_ADMIN_PASSWORD`` to be updated through configuration and
