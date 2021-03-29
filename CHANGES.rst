@@ -4,7 +4,8 @@
 Changes
 *******
 
-.. tmp "future 3.9" 
+`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -23,12 +24,6 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add missing ``Max-Age`` and ``expires`` indications in generated ``Cookie`` when ``MAGPIE_COOKIE_EXPIRE`` is defined.
-
-
-`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
-------------------------------------------------------------------------------------
-
-* Nothing yet.
 
 `3.8.0 <https://github.com/Ouranosinc/Magpie/tree/3.8.0>`_ (2021-03-29)
 ------------------------------------------------------------------------------------
