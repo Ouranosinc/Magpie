@@ -68,7 +68,7 @@ disable=C0111,missing-docstring,
         C0415,import-outside-toplevel,
         C1801,len-as-condition,
         E0401,import-error,
-        R0201,no-self-use
+        R0201,no-self-use,
         R0205,useless-object-inheritance,
         R0801,duplicate-code,
         R0904,too-many-public-methods,
