@@ -297,7 +297,7 @@ def get_authenticate_headers(request, error_type="invalid_token"):
     # Bearer Token: https://tools.ietf.org/html/rfc6750
     # Cookie Token: https://tools.ietf.org/id/draft-broyer-http-cookie-auth-00.html#anchor1
 
-    from magpie.api.schemas import SigninAPI
+    from magpie.api.schemas import SigninAPI  # pylint: disable=C0415
 
     # avoid adding headers when explicitly requested
     #   https://stackoverflow.com/questions/9859627
