@@ -460,9 +460,12 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         data_bad = {"user_name": self.test_user_name, "password": "random-dont-care"}
         for ctype in [CONTENT_TYPE_JSON, CONTENT_TYPE_HTML, CONTENT_TYPE_PLAIN]:
             headers = {"Accept": ctype}
+
+            utils.check_or_try_logout_user(self)
             resp = utils.test_request(self, "GET", path, params=data_ok, headers=headers)
             utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=ctype)
 
+            utils.check_or_try_logout_user(self)
             resp = utils.test_request(self, "GET", path, params=data_bad, headers=headers, expect_errors=True)
             utils.check_response_basic_info(resp, 401, expected_method="GET", expected_type=ctype)
 
