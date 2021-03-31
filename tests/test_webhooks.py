@@ -15,7 +15,7 @@ import requests
 import yaml
 from six.moves.urllib.parse import urlparse
 
-from magpie.api.schemas import UserOKStatus, UserWebhookErrorStatus
+from magpie.api.schemas import UserStatuses
 from magpie.api.webhooks import WebhookAction
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_HTML
@@ -148,7 +148,7 @@ class TestWebhooks(ti.BaseTestCase):
             # Check if user creation was successful
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
-            self.checkTestUserStatus(UserOKStatus)
+            self.checkTestUserStatus(UserStatuses.OK.value)
 
     def test_Webhook_CreateUser_EmptyUrl(self):
         """
@@ -175,7 +175,7 @@ class TestWebhooks(ti.BaseTestCase):
             # Check if user creation was successful even if no webhook were defined in the config
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
-            self.checkTestUserStatus(UserOKStatus)
+            self.checkTestUserStatus(UserStatuses.OK.value)
 
     def test_Webhook_CreateUser_FailingWebhook(self):
         """
@@ -217,7 +217,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is still set to 1, since the tmp_url has not been called yet
-            self.checkTestUserStatus(UserOKStatus)
+            self.checkTestUserStatus(UserStatuses.OK.value)
 
             # Retrieve the tmp_url and send the request to the magpie app
             resp = requests.get(self.base_webhook_url + "/get_tmp_url")
@@ -225,7 +225,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.test_request(self, "GET", urlparse(resp.text).path)
 
             # Check if the user's status is set to 0
-            self.checkTestUserStatus(UserWebhookErrorStatus)
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus.value)
 
     def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
         """
@@ -263,7 +263,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is set to 0
-            self.checkTestUserStatus(UserWebhookErrorStatus)
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus.value)
 
     def test_Webhook_DeleteUser(self):
         """

@@ -19,6 +19,7 @@ from six.moves.urllib.parse import urlparse
 
 from magpie import __meta__
 from magpie.api import schemas as s
+from magpie.api.webhooks import webhook_update_error_status
 from magpie.constants import MAGPIE_ROOT, get_constant
 from magpie.models import RESOURCE_TYPE_DICT, Directory, Route
 from magpie.permissions import (
@@ -1744,6 +1745,29 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(len(body["user_names"]) > 1, True)     # should have more than only 'anonymous'
         utils.check_val_is_in("anonymous", body["user_names"])       # anonymous always in users
         utils.check_val_is_in(self.usr, body["user_names"])          # current test user in users
+
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUsers_FilteredByStatus(self):
+        utils.warn_version(self, "users names filtered by statuses", "3.9.0", skip=True)
+
+        resp = utils.test_request(self, "GET", "/users", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        all_users = body["users"]
+
+        test_bad_user = "invalid-user-bad-status"
+        utils.TestSetup.create_TestUser(self, override_user_name=test_bad_user)
+        webhook_update_error_status(test_bad_user)  #
+
+        test_bad_only = {test_bad_user}
+        test_good_only = set(all_users) - test_bad_only
+        for user_list, user_status in [(test_good_only, 1), (test_bad_only, 0)]:
+            query = {"status": user_status}
+            resp = utils.test_request(self, "GET", "/users", params=query,
+                                      headers=self.json_headers, cookies=self.cookies)
+            body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+            utils.check_val_is_in("user_names", body)
+            utils.check_val_type(body["user_names"], list)
+            utils.check_all_equal(body["user_names"], user_list, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS

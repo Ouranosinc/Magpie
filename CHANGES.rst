@@ -24,6 +24,8 @@ Features / Changes
 * Change HTTP ``Forbidden [403]`` responses during login to generic ``Unauthorized [401]`` to avoid leaking details
   about which are valid and invalid user names. Any failure to login using correctly formatted credentials will be
   errored out indistinctly as ``Unauthorized [401]``.
+* Add API user list ``status`` to filter query by given user account statuses.
+* Add UI icon to provide user status feedback on individual user info page and through user list summary.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

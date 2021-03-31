@@ -8,8 +8,8 @@ from pyramid.threadlocal import get_current_registry
 from six.moves.urllib.parse import urlparse
 
 from magpie import models
-from magpie.api.schemas import UserWebhookErrorStatus
-from magpie.constants import MAGPIE_INI_FILE_PATH
+from magpie.api.schemas import UserStatuses
+from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import get_all_configs
 from magpie.utils import ExtendedEnum, get_logger, get_settings, raise_log
@@ -111,9 +111,9 @@ def webhook_update_error_status(user_name):
     Updates the user's status to indicate an error occurred with the webhook requests.
     """
     # find user and change its status to 0 to indicate a webhook error happened
-    db_session = get_db_session_from_config_ini(MAGPIE_INI_FILE_PATH)
+    db_session = get_db_session_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
     user = db_session.query(models.User).filter(models.User.user_name == user_name)  # pylint: disable=E1101,no-member
-    user.update({"status": UserWebhookErrorStatus})
+    user.update({"status": UserStatuses.WebhookErrorStatus.value})
     transaction.commit()
 
 

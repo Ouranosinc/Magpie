@@ -26,14 +26,21 @@ from magpie.utils import get_logger
 LOGGER = get_logger(__name__)
 
 
-@s.UsersAPI.get(tags=[s.UsersTag], response_schemas=s.Users_GET_responses)
+@s.UsersAPI.get(schema=s.Users_GET_RequestSchema, tags=[s.UsersTag], response_schemas=s.Users_GET_responses)
 @view_config(route_name=s.UsersAPI.name, request_method="GET")
 def get_users_view(request):
     """
     List all registered user names.
     """
-    user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
-                                               UserService.all(models.User, db_session=request.db)],
+    user_status_filter = request.params.get("status")
+    user_status_valid = list(str(status) for status in s.UserStatuses.values())
+    user_status_valid.append(None)  # allow unspecified as 'all'
+    ax.verify_param(user_status_filter, is_in=True, param_compare=user_status_valid, param_name="status",
+                    http_error=HTTPBadRequest, msg_on_fail=s.Users_GET_BadRequestSchema.description)
+    user_status_filter if user_status_filter is None else int(user_status_filter)
+    user_name_list = ax.evaluate_call(lambda: [user.user_name for user in models.UserSearchService.search(
+                                                   status=user_status_filter, db_session=request.db
+                                               )],
                                       fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                       msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, content={"user_names": sorted(user_name_list)},
