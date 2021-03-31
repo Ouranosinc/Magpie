@@ -46,16 +46,17 @@ if TYPE_CHECKING:
     from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
 
     from pyramid.request import Request
+    from webtest.forms import BeautifulSoup
 
     import tests.interfaces as ti
     from magpie.services import ServiceInterface
     from magpie.typedefs import (
         JSON,
+        AnyKey,
         AnyCookiesType,
         AnyHeadersType,
         AnyPermissionType,
         AnyResponseType,
-        AnyValue,
         CookiesType,
         HeadersType,
         SettingsType,
@@ -69,6 +70,9 @@ if TYPE_CHECKING:
     OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]
     TestAppOrUrlType = Union[Str, TestApp]
     AnyMagpieTestItemType = Union[AnyMagpieTestCaseType, TestAppOrUrlType]
+
+    HTMLSearch = List[Dict[Str, Union[Str, List[Str]]]]
+    FormSearch = Union[Form, Str, Dict[Str, Str]]
 
 OPTIONAL_STRING_TYPES = six.string_types + tuple([type(None)])
 
@@ -1152,6 +1156,98 @@ def check_error_param_structure(body,                                   # type: 
                 check_val_equal(body["param_compare"], param_compare)
 
 
+def find_html_body_contents(response_or_body, html_search=None):
+    # type: (Union[TestResponse, BeautifulSoup], Optional[HTMLSearch]) -> Any
+    """
+    Given a successful (200) response, retrieves the *important* content of the UI page matching search criteria.
+
+    :param response_or_body: Magpie UI HTML response to search for contents, or directly an HTML content object.
+    :param html_search:
+        Optional nested definitions (css-class, name, index) to filter final content, retrieving matching sub-elements.
+
+        Definitions must be a list of dict. First level list are the nested depth-wise elements to search for, and
+        each dictionary can have ``class``, ``name`` definitions to match against the body elements for retrieval.
+        If provided, definition ``class`` must be a list of strings defining possible matches.
+        If provided, definition ``name`` must be a single string matching exactly the HTML element (e.g.: "div").
+
+        Only the last nested element can return multiple matches (list of elements), intermediate elements must all be
+        unique in order to search deeper in the nested definitions. If multiple intermediate elements can be matched,
+        a specific one must be requested by ``index`` in the corresponding search to determine where to continue search.
+
+        By default (when not provided), uses only ``class: "content"`` to return the top-level HTML body contents.
+    :returns: matched element(s) as :mod:`BeautifulSoup` definition.
+    """
+    if isinstance(response_or_body, TestResponse):
+        body = response_or_body.html.contents[2].contents[3]  # html->body
+    else:
+        body = response_or_body
+    main_body = {"class": ["content"]}
+    if not html_search:
+        html_search = [main_body]
+
+    for i, search_element in enumerate(html_search):
+        elements = body.contents
+        parts = [item for item in elements if str(item).strip()]  # remove empty items separators
+        parts = [
+            item for item in parts if
+            # ignore 'dont care' items like comments
+            hasattr(item, "attrs") and
+            # filter by class names, any one matched if element as any
+            (len(item.attrs.get("class", [])) and
+             any(cls in search_element.get("class", []) for cls in item.attrs.get("class", []))) or
+            # filter by html element name
+            (search_element.get("name", "") != "" and search_element.get("name") == item.name)
+        ]
+        if i + 1 != len(html_search):
+            msg_err = "Could not retrieve filtered HTML contents matching classes {}.".format(search_element)
+            elem_idx = search_element.get("index")
+            if len(parts) > 1 and isinstance(elem_idx, int):
+                parts = [parts[elem_idx]]
+            else:
+                check_val_equal(len(parts), 1, msg=msg_err)
+            body = parts[0]  # move to next child element to search
+        # otherwise, search is done, return found item or list of elements
+        elif len(parts) == 1:
+            return parts[0]
+        else:
+            parts = [item for item in parts if str(item).strip()]  # remove empty items separators
+            elem_idx = search_element.get("index")
+            if elem_idx is not None:
+                return parts[elem_idx]
+            return parts
+
+
+def find_html_form(forms, form_match):
+    # type: (Dict[AnyKey, Form], FormSearch) -> Optional[Form]
+    """
+    Searches for the specified form amongst a group of multiple forms.
+
+    :param forms: Possible forms to distinguish and look for a specific one.
+    :param form_match:
+        Search criteria to retrieve the specific form.
+
+        Can be a form name, the form index (from all available forms on page) or an iterable of key/values of
+        form fields to search for a match (first match is used if many are available).
+        Also, can be directly the targeted form if already retrieved (pass-through operation).
+    :return: matched form or ``None`` when not found.
+    """
+    form = None
+    # direct instance match
+    if isinstance(form_match, Form):
+        form = form_match
+    # match by name or index
+    elif isinstance(form_match, (int, six.string_types)):
+        form = forms[form_match]
+    else:
+        # select form if all key/value pairs specified match the current one
+        for f in forms.values():
+            f_fields = [(fk, fv[0].value) for fk, fv in f.fields.items()]
+            if all((mk, mv) in f_fields for mk, mv in form_match.items()):
+                form = f
+                break
+    return form
+
+
 class TestSetup(object):
     """
     Generic setup and validation methods across unittests.
@@ -1271,7 +1367,7 @@ class TestSetup(object):
     @staticmethod
     def check_FormSubmit(test_case,                         # type: AnyMagpieTestCaseType
                          form_match,                        # type: Union[Str, int, Dict[Str, Str], Form]
-                         form_data=None,                    # type: Optional[Dict[Str, AnyValue]]
+                         form_data=None,                    # type: Optional[FormSearch]
                          form_submit="submit",              # type: Union[Str, int]
                          previous_response=None,            # type: AnyResponseType
                          path=None,                         # type: Optional[Str]
@@ -1289,6 +1385,9 @@ class TestSetup(object):
 
         Successive calls using form submits can be employed to simulate sequential page navigation by providing back
         the returned `response` object as input to the following page with argument :paramref:`previous_response`.
+
+        .. seealso::
+            :func:`find_html_form` for specific details about search criteria of :paramref:`form_match`
 
         .. code-block:: python
 
@@ -1329,18 +1428,7 @@ class TestSetup(object):
             resp = test_request(app_or_url, method, path, timeout=timeout,
                                 cookies=override_cookies if override_cookies is not null else test_case.cookies)
         check_val_equal(resp.status_code, 200, msg="Cannot test form submission, initial page returned an error.")
-        form = None
-        if isinstance(form_match, Form):
-            form = form_match
-        elif isinstance(form_match, (int, six.string_types)):
-            form = resp.forms[form_match]
-        else:
-            # select form if all key/value pairs specified match the current one
-            for f in resp.forms.values():
-                f_fields = [(fk, fv[0].value) for fk, fv in f.fields.items()]
-                if all((mk, mv) in f_fields for mk, mv in form_match.items()):
-                    form = f
-                    break
+        form = find_html_form(resp.forms, form_match)
         if not form:
             available_forms = {fm: {fk: fv[0].value for fk, fv in f.fields.items()} for fm, f in resp.forms.items()}
             available_forms = json_msg(available_forms)
@@ -2112,9 +2200,10 @@ class TestSetup(object):
         if override_data is not null:
             data = override_data
         else:
+            test_user = override_user_name if override_user_name is not null else test_case.test_user_name
             data = {
-                "user_name": override_user_name if override_user_name is not null else test_case.test_user_name,
-                "password": override_password if override_password is not null else test_case.test_user_name,
+                "user_name": test_user,
+                "password": override_password if override_password is not null else test_user,
                 "group_name": override_group_name if override_group_name is not null else test_case.test_group_name,
             }
             data["email"] = override_email if override_email is not null else "{}@mail.com".format(data["user_name"])

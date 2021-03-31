@@ -310,8 +310,8 @@ class UserTestCase(BaseAdminTestCase):
     def tearDown(self):
         utils.check_or_try_logout_user(self)
 
-    def login_test_user(self):
-        # type: () -> utils.OptionalHeaderCookiesType
+    def login_test_user(self, override_user_name=None):
+        # type: (Optional[Str]) -> utils.OptionalHeaderCookiesType
         """
         Logs out any current user session and login the ``test_user_name`` instead.
 
@@ -329,8 +329,9 @@ class UserTestCase(BaseAdminTestCase):
         :raises AssertionError: if test user could not be logged in or is an administrator
         """
         utils.check_or_try_logout_user(self)
+        test_user = override_user_name if override_user_name is not None else self.test_user_name
         self.test_headers, self.test_cookies = utils.check_or_try_login_user(
-            self, username=self.test_user_name, password=self.test_user_name, use_ui_form_submit=True)
+            self, username=test_user, password=test_user, use_ui_form_submit=True)
         for header in ["Location", "Content-Type", "Content-Length"]:
             self.test_headers.pop(header, None)
         assert self.test_cookies, "Cannot test user-level access routes without logged user"
@@ -1752,15 +1753,20 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         resp = utils.test_request(self, "GET", "/users", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        all_users = body["users"]
+        all_users = body["user_names"]
 
         test_bad_user = "invalid-user-bad-status"
+        utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self, override_user_name=test_bad_user)
-        webhook_update_error_status(test_bad_user)  #
+        webhook_update_error_status(test_bad_user)  # simulate a webhook failure that sets the bad status to user
 
         test_bad_only = {test_bad_user}
         test_good_only = set(all_users) - test_bad_only
-        for user_list, user_status in [(test_good_only, 1), (test_bad_only, 0)]:
+        test_cases = [
+            (test_good_only, s.UserStatuses.OK.value),
+            (test_bad_only, s.UserStatuses.WebhookErrorStatus.value)
+        ]
+        for user_list, user_status in test_cases:
             query = {"status": user_status}
             resp = utils.test_request(self, "GET", "/users", params=query,
                                       headers=self.json_headers, cookies=self.cookies)
@@ -5408,6 +5414,32 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_val_is_in("Account User", resp.text)
         utils.check_val_is_in(self.test_user_name, resp.text)
 
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_USERS
+    def test_UserAccount_DisplayedStatus(self):
+        utils.warn_version(self, "user status displayed in UI user account page", "3.9.0", skip=True)
+
+        test_user = "test-{}".format(uuid.uuid4())
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user)
+
+        self.login_test_user(override_user_name=test_user)
+        path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        html_search = [
+            {"class": ["content"]}, {"class": ["panel-box"]}, {"class": ["panel-body"]},        # main user info box
+            {"class": ["panel-box"]}, {"class": ["panel-fields"]}, {"class": ["panel-line"]},   # sub 'details' box
+            {"name": "tr", "index": 3}, {"name": "td", "index": 1}, {"class": ["status-container"]}   # user status
+        ]
+        user_status = utils.find_html_body_contents(resp, html_search)
+        utils.check_val_is_in("OK", str(user_status))
+
+        webhook_update_error_status(test_user)  # change to bad status to test other case
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        user_status = utils.find_html_body_contents(resp, html_search)
+        utils.check_val_not_in("OK", str(user_status))
+        utils.check_val_is_in("WARNING", str(user_status))
+
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     @runner.MAGPIE_TEST_FUNCTIONAL
@@ -5472,17 +5504,16 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         utils.TestSetup.create_TestUser(self, override_user_name=other_user)
         utils.check_or_try_logout_user(self)
 
-        self.headers, self.cookies = utils.check_or_try_login_user(self,
-                                                                   username=other_user, password=self.test_user_name)
+        _, cookies = utils.check_or_try_login_user(self, username=other_user, password=other_user)
 
         # trigger the Delete Account button form to obtain the 1st response, then trigger the confirmation Delete button
         path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
         resp = utils.TestSetup.check_FormSubmit(self, form_match="delete_user", form_submit="delete",
-                                                method="GET", path=path)
+                                                method="GET", path=path, override_cookies=cookies)
         utils.check_ui_response_basic_info(resp, expected_title="Magpie Administration")
 
         # verify if user cannot log back in
-        data = {"user_name": other_user, "password": self.test_user_name}
+        data = {"user_name": other_user, "password": other_user}
         resp = utils.test_request(self, "POST", "/signin", json=data, expect_errors=True,
                                   headers=self.json_headers, cookies={})
         utils.check_response_basic_info(resp, 401, expected_method="POST")
@@ -5618,6 +5649,75 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         # empty fields, same page but with 'incorrect' indicator due to invalid form inputs
         utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
+
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUsersList_DisplayedStatuses(self):
+        """
+        Validate that UI user list page displays user account status with correct information for each user.
+        """
+        utils.warn_version(self, "user statuses displayed in UI user list page", "3.9.0", skip=True)
+
+        # use known user names for test and ignore others that might exist in database from other test cases
+        u1_name = "test-{}".format(uuid.uuid4())
+        u2_name = "test-{}".format(uuid.uuid4())
+        u3_name = "test-{}".format(uuid.uuid4())
+        u4_name = "test-{}".format(uuid.uuid4())
+        utils.TestSetup.create_TestGroup(self)
+        for user_name in [u1_name, u2_name, u3_name, u4_name]:
+            utils.TestSetup.create_TestUser(self, override_user_name=user_name)
+        # assume special users are valid as they shouldn't have any associated webhook / applicable status
+        anonym = get_constant("MAGPIE_ANONYMOUS_USER")
+        admin = get_constant("MAGPIE_ADMIN_USER")
+        good_users = {u1_name, u2_name, anonym, admin}
+        bad_users = {u3_name, u4_name}
+        test_users = good_users | bad_users
+
+        # simulate bad status from webhook
+        for user in bad_users:
+            webhook_update_error_status(user)
+
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/users", expected_type=CONTENT_TYPE_HTML)
+        user_forms = resp.forms  # every user is in a distinct form
+        # filter only to users of this test to avoid failing side-effects from other test data
+        test_user_forms = {user: utils.find_html_form(user_forms, {"user_name": user}) for user in test_users}
+        utils.check_val_equal(len(test_user_forms), len(test_users), msg="Could not find all test user forms")
+        # each form has an HTML body with 'status' in it, the status is located on second column (index = 1)
+        html_search = [{"name": "form"}, {"class": ["list-row-even", "list-row-odd"]},
+                       {"name": "td", "index": 1}, {"class": ["status-container"]}]
+        test_user_statuses = {user: utils.find_html_body_contents(form.html, html_search)
+                              for user, form in test_user_forms.items()}
+        for user in test_users:
+            if user in bad_users:
+                utils.check_val_not_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'bad' status.")
+                utils.check_val_is_in("WARNING", str(test_user_statuses[user]), msg="Expected user 'bad' status.")
+            else:
+                utils.check_val_is_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'good' status.")
+
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUser_AdminPage_DisplayedStatus(self):
+        utils.warn_version(self, "user status displayed in UI user info page", "3.9.0", skip=True)
+
+        test_user = "test-{}".format(uuid.uuid4())
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user)
+
+        path = "/ui/users/{}/default".format(test_user)
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        html_search = [
+            {"class": ["content"]}, {"class": ["panel-box"]}, {"class": ["panel-body"]},        # main user info box
+            {"class": ["panel-box"]}, {"class": ["panel-fields"]}, {"class": ["panel-line"]},   # sub 'details' box
+            {"name": "tr", "index": 3}, {"name": "td", "index": 1}, {"class": ["status-container"]}   # user status
+        ]
+        user_status = utils.find_html_body_contents(resp, html_search)
+        utils.check_val_is_in("OK", str(user_status))
+
+        webhook_update_error_status(test_user)
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+        user_status = utils.find_html_body_contents(resp, html_search)
+        utils.check_val_not_in("OK", str(user_status))
+        utils.check_val_is_in("WARNING", str(user_status))
 
 
 @unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")

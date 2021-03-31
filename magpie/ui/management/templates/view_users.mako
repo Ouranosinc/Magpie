@@ -31,13 +31,15 @@
         %endif
             <td><input type="hidden" value="${user_name}" name="user_name">${user_name}</td>
             <td>
-                %if user_name in users_with_error:
-                    <img title="User account status has an issue." class="icon-warning" alt="WARNING"
-                         src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"/>
-                %else:
-                    <img title="User account status is valid." class="icon-info" alt="OK"
-                         src="${request.static_url('magpie.ui.home:static/checkmark-circle.png')}"/>
-                %endif
+                <div class="status-container">
+                    %if user_name in users_with_error:
+                        <img title="User account status has an issue." class="icon-warning" alt="WARNING"
+                             src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"/>
+                    %else:
+                        <img title="User account status is valid." class="icon-check" alt="OK"
+                             src="${request.static_url('magpie.ui.home:static/checkmark-circle.png')}"/>
+                    %endif
+                </div>
             </td>
             <td style="white-space: nowrap">
                 <input type="submit" value="Edit" name="edit" class="button theme">

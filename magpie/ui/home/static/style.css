@@ -530,7 +530,7 @@ table.panel-line td {
     margin-top: 0.05em;
 }
 
-.info-ok {
+.icon-check {
     width: 1.25em;
     height: 1.25em;
     margin-top: 0.05em;
@@ -552,6 +552,9 @@ table.panel-line td {
 .icon-color-invert {
     filter: saturate(0) invert(100%);
     -webkit-filter: saturate(0) invert(100%);
+}
+
+.status-container {
 }
 
 .hidden {
