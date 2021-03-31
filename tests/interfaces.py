@@ -819,11 +819,11 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
     def setUpClass(cls):
         raise NotImplementedError
 
-    def login_test_user(self):
+    def login_test_user(self, override_user_name=None):
         """
         Apply JSON headers on top of login headers for API calls.
         """
-        UserTestCase.login_test_user(self)
+        UserTestCase.login_test_user(self, override_user_name=override_user_name)
         self.test_headers.update(self.json_headers)
         return self.test_headers, self.test_cookies
 
@@ -1753,18 +1753,25 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         resp = utils.test_request(self, "GET", "/users", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        all_users = body["user_names"]
+        all_users = body["user_names"]  # users to ignore (could have any status)
 
-        test_bad_user = "invalid-user-bad-status"
+        test_users_template = "invalid-user-status-{}-{}"
         utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.create_TestUser(self, override_user_name=test_bad_user)
-        webhook_update_error_status(test_bad_user)  # simulate a webhook failure that sets the bad status to user
+        test_bad_users = []
+        test_good_users = []
+        for i in range(3):
+            user = test_users_template.format("bad", i)
+            utils.TestSetup.create_TestUser(self, override_user_name=user)
+            webhook_update_error_status(user)  # simulate a webhook failure that sets the bad status to user
+            test_bad_users.append(user)
+        for i in range(3):
+            user = test_users_template.format("good", i)
+            utils.TestSetup.create_TestUser(self, override_user_name=user)
+            test_good_users.append(user)
 
-        test_bad_only = {test_bad_user}
-        test_good_only = set(all_users) - test_bad_only
         test_cases = [
-            (test_good_only, s.UserStatuses.OK.value),
-            (test_bad_only, s.UserStatuses.WebhookErrorStatus.value)
+            (test_good_users, s.UserStatuses.OK.value),
+            (test_bad_users, s.UserStatuses.WebhookErrorStatus.value)
         ]
         for user_list, user_status in test_cases:
             query = {"status": user_status}
@@ -1773,7 +1780,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.check_val_is_in("user_names", body)
             utils.check_val_type(body["user_names"], list)
-            utils.check_all_equal(body["user_names"], user_list, any_order=True)
+            only_test_users = set(body["user_names"]) - set(all_users)
+            utils.check_all_equal(only_test_users, user_list, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
