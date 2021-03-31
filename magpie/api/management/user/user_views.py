@@ -37,7 +37,7 @@ def get_users_view(request):
     user_status_valid.append(None)  # allow unspecified as 'all'
     ax.verify_param(user_status_filter, is_in=True, param_compare=user_status_valid, param_name="status",
                     http_error=HTTPBadRequest, msg_on_fail=s.Users_GET_BadRequestSchema.description)
-    user_status_filter if user_status_filter is None else int(user_status_filter)
+    user_status_filter = user_status_filter if user_status_filter is None else int(user_status_filter)
     user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
                                                models.UserSearchService.search(status=user_status_filter,
                                                                                db_session=request.db)],
