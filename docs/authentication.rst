@@ -22,7 +22,7 @@ could be added later on.
 Authentication Requests
 ---------------------------
 
-The most convenient way sign-in with `Magpie` is to employ the user interface provided on path
+The most convenient way to sign-in with `Magpie` is to employ the user interface provided on path
 ``{MAGPIE_URL}/ui/login``. This page will present fields that allow both :term:`Internal Provider` and
 :term:`External Provider` login methods.
 

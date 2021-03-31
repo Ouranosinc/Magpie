@@ -287,7 +287,8 @@ def get_authenticate_headers(request, error_type="invalid_token"):
     Obtains all required headers by 401 responses based on executed :paramref:`request`.
 
     :param request: request that was sent to attempt authentication or access which must respond with Unauthorized.
-    :param error_type: additional detail of the cause of error, one of (invalid_token, invalid_token
+    :param error_type:
+        Additional detail of the cause of error. Must be one of (invalid_request, invalid_token, insufficient_scope).
     """
     # FIXME: support other authentication methods (JWT, HTTP, Basic, Bearer Token, etc.)
     #        in such case, must resolve specified challenge method according to request if provided
@@ -306,7 +307,7 @@ def get_authenticate_headers(request, error_type="invalid_token"):
         return None
 
     # select error type: https://tools.ietf.org/html/rfc6750#section-3.1
-    if error_type not in ["invalid_token", "invalid_token", "insufficient_scope"]:
+    if error_type not in ["invalid_request", "invalid_token", "insufficient_scope"]:
         error_type = "invalid_token"
     cookie_name = get_constant("MAGPIE_COOKIE_NAME", request)
     magpie_url = get_magpie_url(request)
