@@ -1,5 +1,4 @@
 import uuid
-from enum import IntEnum
 from typing import TYPE_CHECKING
 
 import colander
@@ -95,7 +94,7 @@ _LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
 LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
 
 
-class UserStatuses(ExtendedEnum, IntEnum):
+class UserStatuses(ExtendedEnum):
     """
     Values for the 'status' field of Users
     """
