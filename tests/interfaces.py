@@ -1710,10 +1710,18 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 utils.check_val_equal(body["code"], 403)
 
         # call a route that is admin-only
-        utils.check_or_try_logout_user(app_or_url)
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+        utils.check_or_try_logout_user(self)
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, expect_errors=True)
         body = utils.check_response_basic_info(resp, 401, expected_method="GET")
         utils.check_val_equal(body["code"], 401)
+
+        # when logged in as non-admin to get 403
+        utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
+        resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 403, expected_method="GET")
+        utils.check_val_equal(body["code"], 403)
 
     @runner.MAGPIE_TEST_LOGIN
     def test_GetSession_Administrator(self):
