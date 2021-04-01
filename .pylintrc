@@ -161,6 +161,8 @@ generated-members=Interface_MagpieAPI_AdminAuth.*,
                   cornice.Service.*,
                   cornice.service.Service.*,
                   str.value,
+                  int.value,
+                  UserStatuses.*.value,
                   magpie.permissions.Permission
 # note: 'str.value' is flagged by Enum members defined with strings
 
@@ -183,7 +185,14 @@ ignore-on-opaque-inference=yes
 # List of class names for which member attributes should not be checked (useful
 # for classes with dynamically set attributes). This supports the use of
 # qualified names.
-ignored-classes=optparse.Values,thread._local,_thread._local,str,cornice.Service,cornice.service.Service
+ignored-classes=optparse.Values,
+                thread._local,
+                _thread._local,
+                str,
+                int,
+                magpie.api.schemas.UserStatuses,
+                cornice.Service,
+                cornice.service.Service
 
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime

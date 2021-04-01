@@ -138,9 +138,7 @@ class UserSearchService(UserService):
         db_session = get_db_session(db_session)
         query = db_session.query(cls.model)
         if status is not None:
-            query = query.filter(
-                cls.model.status.in_(status)
-            )
+            query = query.filter(cls.model.status == status)
         return query
 
 
