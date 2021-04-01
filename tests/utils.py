@@ -52,9 +52,9 @@ if TYPE_CHECKING:
     from magpie.services import ServiceInterface
     from magpie.typedefs import (
         JSON,
-        AnyKey,
         AnyCookiesType,
         AnyHeadersType,
+        AnyKey,
         AnyPermissionType,
         AnyResponseType,
         CookiesType,
