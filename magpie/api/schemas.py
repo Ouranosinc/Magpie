@@ -1647,6 +1647,11 @@ class Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema(BaseResponseSchem
 User_Check_BadRequestResponseSchema = Users_CheckInfo_UserNameValue_BadRequestResponseSchema
 
 
+class User_Check_Status_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid 'status' value specified."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
 class User_Check_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     description = "User check query was refused by db."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
@@ -1706,21 +1711,27 @@ class UserNew_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 class User_PATCH_RequestBodySchema(colander.MappingSchema):
     user_name = colander.SchemaNode(
         colander.String(),
-        description="New name to apply to the user",
+        description="New name to apply to the user (admin-only operation).",
         missing=colander.drop,
         example="john",
     )
     email = colander.SchemaNode(
         colander.String(),
-        description="New email to apply to the user",
+        description="New email to apply to the user (admin or logged user operation).",
         missing=colander.drop,
         example="john@mail.com",
     )
     password = colander.SchemaNode(
         colander.String(),
-        description="New password to apply to the user",
+        description="New password to apply to the user (admin or logged user operation).",
         missing=colander.drop,
         example="itzaseekit",
+    )
+    status = colander.SchemaNode(
+        colander.Integer(),
+        missing=colander.drop,
+        description="New status to apply to the user (admin-only operation).",
+        validator=colander.OneOf(UserStatuses.values())
     )
 
 
@@ -1735,7 +1746,7 @@ class Users_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class User_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Missing new user parameters to update."
+    description = "Missing parameters to update user or parameters do not provide any modification."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 

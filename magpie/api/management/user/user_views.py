@@ -72,16 +72,18 @@ def update_user_view(request):
     new_user_name = ar.get_multiformat_body(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_body(request, "email", default=user.email)
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
+    new_status = ar.get_multiformat_body(request, "status", default=None)
 
     update_username = new_user_name is not None and not compare_digest(user.user_name, str(new_user_name))
     update_password = new_password is not None and not compare_digest(user.user_password, str(new_password))
     update_email = new_email is not None and not compare_digest(user.email, str(new_email))
-    ax.verify_param(any([update_username, update_password, update_email]), is_true=True,
+    update_status = new_status is not None and user.status != new_status
+    ax.verify_param(any([update_username, update_password, update_email, update_status]), is_true=True,
                     with_param=False,  # params are not useful in response for this case
                     content={"user_name": user.user_name},
                     http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
-    # user name change is admin-only operation
-    if update_username:
+    # user name/status change is admin-only operation
+    if update_username or update_status:
         ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP", request), is_in=True,
                         param_compare=uu.get_user_groups_checked(request.user, request.db), with_param=False,
                         http_error=HTTPForbidden, msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
@@ -114,7 +116,10 @@ def update_user_view(request):
         uu.check_user_info(password=new_password, check_name=False, check_email=False, check_group=False)
         UserService.set_password(user, new_password)
         UserService.regenerate_security_code(user)
-
+    if update_status:
+        ax.verify_param(new_status, is_in=True, param_compare=s.UserStatuses.values(), param_name="status",
+                        msg_on_fail=s.User_Check_Status_BadRequestResponseSchema.description, http_error=HTTPBadRequest)
+        user.status = new_status
     return ax.valid_http(http_success=HTTPOk, detail=s.Users_PATCH_OkResponseSchema.description)
 
 
