@@ -9,6 +9,9 @@
 Permissions
 ===========
 
+This chapter describes the various :term:`Permission` types, format representation, and usage.
+For details regarding :term:`Authentication`, please refer to :ref:`auth_methods` instead.
+
 .. _permission_types:
 
 Types of Permissions
@@ -17,7 +20,7 @@ Types of Permissions
 Across the documentation and the code, term :term:`Permission` is often employed interchangeably to represent different
 and more subtle contextual functionalities. This is mostly an abuse of language, but is preserved regardless in order
 to maintain backward compatibility of features and API response content with older systems that could employ `Magpie`.
-Therefore, care must be taken to consider under which context this term is observed to ensure correct interpretation
+Therefore, care must be taken to consider under which context this term is employed to ensure correct interpretation
 of observed results.
 
 .. versionchanged:: 3.0
@@ -135,6 +138,7 @@ employed by `Magpie`:
         maybe could be combined used with group permissions and 'access permissions' do, but there
         is still a need to check view access dynamic group with them, might require some GroupFactory?
 
+.. _perm_access:
 
 Route Access
 -------------
@@ -239,6 +243,8 @@ for example an administrator as :term:`Context User` which should be masked to n
 For all presented reasons above, it is important to distinguish between :ref:`Access Permissions` applied to request
 view configuration and :ref:`Applied Permissions` on resources, and they conceptually represent completely different
 operations, but are managed according to overlapping :term:`User` and :term:`Group` definitions.
+
+.. _perm_public:
 
 Public Access
 -------------
@@ -442,6 +448,8 @@ complementary or even contradicting :term:`Permission` entries are defined on th
     - `Permissions Resolution`_
     - |perm_example_resolve|_
 
+
+.. _perm_resolution:
 
 Permissions Resolution
 ------------------------

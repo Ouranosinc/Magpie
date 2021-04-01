@@ -43,7 +43,7 @@
 .. _magpie-cron: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 .. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
 .. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini
-.. _MagpieSecurity: https://github.com/Ouranosinc/Magpie/tree/master/magpie/security.py
+.. _Magpie Security: https://github.com/Ouranosinc/Magpie/tree/master/magpie/security.py
 .. _permissions.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
 .. _postgres.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/postgres.env.example
 .. _providers.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg

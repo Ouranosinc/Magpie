@@ -2889,7 +2889,7 @@ class Signin_POST_UnauthorizedResponseSchema(BaseResponseSchemaAPI):
 
 
 class Signin_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Could not verify 'user_name'."
+    description = "Login was refused for this user."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
@@ -3605,7 +3605,7 @@ Signin_POST_responses = {
     "200": Signin_POST_OkResponseSchema(),
     "400": Signin_POST_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": Signin_POST_UnauthorizedResponseSchema(),
-    "403": Signin_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "403": Signin_POST_ForbiddenResponseSchema(),
     "404": ProviderSignin_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "409": Signin_POST_ConflictResponseSchema(),

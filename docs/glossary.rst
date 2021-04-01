@@ -15,9 +15,10 @@ Glossary
     ACE
         Access Control Entry.
 
-        Definition of an access control rule as Allow/Deny condition for a given :term:`User` or :term:`Group` to
-        act according to a certain :term:`Permission` name. Multiple :term:`ACE` form the effective :term:`ACL`
-        conditions to be evaluated to either grant or refuse access.
+        Definition of an access control rule (or policy) with `Allow` or `Deny` decision for a given :term:`User` or
+        :term:`Group` active according to a certain :term:`Permission` name and scope. Multiple :term:`ACE` form the
+        effective :term:`ACL` conditions to be evaluated to either grant or refuse access (i.e.: to provide
+        the :term:`Authorization` result based on the authenticated :term:`User`).
 
     ACL
         Access Control List.
@@ -35,12 +36,12 @@ Glossary
 
     Authentication
         Process of identifying one-self using credentials in order to login into `Magpie`, or retrieving connected
-        session :term:`User` during an HTTP request using supported methods.
+        session :term:`User` during an HTTP request using supported methods. See also :ref:`auth_methods`.
 
     Authorization
         Process of allowing or denying access to a :term:`Resource` or :term:`Service` according to :term:`Logged User`
-        identified through :term:`Authentication` methods. This process typically falls into the hands of a
-        :term:`Proxy` application.
+        identified through one of the :term:`Authentication Methods`. This process typically falls into the hands of a
+        :term:`Proxy` application as policy enforcement point (PEP) using policy access decisions provided by `Magpie`.
 
     Context User
         Specific :term:`User` that is being targeted by a request from specified value for the ``{user_name}`` request
@@ -122,7 +123,7 @@ Glossary
     Proxy
         Sibling service (typically `Twitcher`_) that employs `Magpie` as access management of :term:`User`,
         :term:`Group`, :term:`Service` and :term:`Resource` to obtain applicable sets of :term:`Permission`.
-        Provided these, it acts as policy enforcement point (PEP).
+        Provided these, it acts as Policy Enforcement Point (PEP).
 
     Public
         Refers to a :term:`Permission` applied on a :term:`Service` or :term:`Resource` to special elements in order

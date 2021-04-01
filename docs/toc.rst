@@ -8,6 +8,7 @@
     usage
     installation
     configuration
+    authentication
     permissions
     services
     utilities

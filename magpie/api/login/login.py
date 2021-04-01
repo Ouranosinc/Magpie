@@ -36,7 +36,14 @@ from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
 from magpie.constants import get_constant
 from magpie.security import authomatic_setup, get_provider_names
-from magpie.utils import CONTENT_TYPE_JSON, convert_response, get_logger, get_magpie_url
+from magpie.utils import (
+    CONTENT_TYPE_JSON,
+    convert_response,
+    get_authenticate_headers,
+    get_json,
+    get_logger,
+    get_magpie_url
+)
 
 if TYPE_CHECKING:
     from magpie.typedefs import Session, Str
@@ -84,9 +91,19 @@ def signin_in_param(request):
     Signs in a user session using query parameters.
     """
     data = dict(request.params)
-    subreq = Request.blank(s.SigninAPI.path, base_url=request.application_url,
-                           headers={"Content-Type": CONTENT_TYPE_JSON}, POST=json.dumps(data))
-    return request.invoke_subrequest(subreq, use_tweens=True)
+    headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
+    subreq = Request.blank(s.SigninAPI.path, base_url=request.application_url, headers=headers, POST=json.dumps(data))
+    resp = request.invoke_subrequest(subreq, use_tweens=True)
+
+    # rewrite the contents since dispatched subrequest returns different metadata than initial request
+    info = ag.get_request_info(request)
+    info.pop("detail", None)  # retain result of subrequest for explanation of success/failure login
+    body = get_json(resp)
+    fmt, _ = ag.guess_target_format(request)
+    body["type"] = fmt  # ignore format employed by subrequest, and return the real one requested
+    body.update(info)
+    resp.body = json.dumps(body).encode()
+    return resp  # don't raise any http error that should already have been handled by subrequest
 
 
 @s.SigninAPI.post(schema=s.Signin_POST_RequestSchema, tags=[s.SessionTag], response_schemas=s.Signin_POST_responses)
@@ -103,10 +120,21 @@ def sign_in(request):
     pattern = ax.EMAIL_REGEX if "@" in user_name else ax.PARAM_REGEX
     ax.verify_param(user_name, matches=True, param_compare=pattern, param_name="user_name",
                     http_error=HTTPUnprocessableEntity, msg_on_fail=s.UnprocessableEntityResponseSchema.description)
+
+    # Because failure to login arises when reserved user name is detected, but requesting user it still not
+    # authenticated, the raised Forbidden is converted to Unauthorized automatically by 'unauthorized_or_forbidden'
+    # request handler. Catch that specific exception and return it to bypass the EXCVIEW tween that result in that
+    # automatic convert to return 403 directly.
+    try:
+        anonymous = get_constant("MAGPIE_ANONYMOUS_USER", request)
+        ax.verify_param(user_name, not_equal=True, param_compare=anonymous, param_name="user_name",
+                        http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
+    except HTTPForbidden as http_error:
+        return http_error
     verify_provider(provider_name)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
-        # password can be None for external login, validate only here as needed
+        # password can be None for external login, validate only here as it is required for internal login
         password = ar.get_value_multiformat_body_checked(request, "password", pattern=None)
         # check manually to avoid inserting value in result body
         # obtain the raw path, without any '/magpie' prefix (if any), let 'application_url' handle it
@@ -149,6 +177,13 @@ def login_failure(request, reason=None):
     .. seealso::
         - :func:`sign_in`
     """
+    # WARNING:
+    #   To avoid trial/error login attempts leaking valid vs invalid username credentials, all failures to login
+    #   MUST return the same message and error code. Multiple login attempts must not provide any way to identify
+    #   potential combinations that would greatly simplify guessing credentials.
+    #   Only pre-check of field formats or reserved special user name values can return something different since
+    #   those are guaranteed to be a non-existing user.
+    http_kw = None
     http_err = HTTPUnauthorized
     if reason is None:
         reason = s.Signin_POST_UnauthorizedResponseSchema.description
@@ -159,16 +194,21 @@ def login_failure(request, reason=None):
             http_err = HTTPBadRequest
             reason = s.Signin_POST_BadRequestResponseSchema.description
         else:
+            # failure to login with correctly formatted credentials and existing user means something wrong happened
+            # failure to retrieve users and validating against existing ones means db is either corrupted or code error
             user_name_list = ax.evaluate_call(
                 lambda: [user.user_name for user in UserService.all(models.User, db_session=request.db)],
-                fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
+                fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                msg_on_fail=s.Signin_POST_Internal_InternalServerErrorResponseSchema.description)
             if user_name in user_name_list:
                 http_err = HTTPInternalServerError
                 reason = s.Signin_POST_Internal_InternalServerErrorResponseSchema.description
     content = ag.get_request_info(request, default_message=s.Signin_POST_UnauthorizedResponseSchema.description)
     content.setdefault("detail", str(reason))
-    ax.raise_http(http_error=http_err, content=content, detail=s.Signin_POST_UnauthorizedResponseSchema.description)
+    if http_err is HTTPUnauthorized:
+        http_kw = {"headers": get_authenticate_headers(request)}
+    ax.raise_http(http_error=http_err, http_kwargs=http_kw, content=content,
+                  detail=s.Signin_POST_UnauthorizedResponseSchema.description)
 
 
 def new_user_external(external_user_name, external_id, email, provider_name, db_session):

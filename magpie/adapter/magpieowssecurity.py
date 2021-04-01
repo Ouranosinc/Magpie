@@ -5,7 +5,7 @@ import requests
 from beaker.cache import cache_region, cache_regions
 from pyramid.authentication import IAuthenticationPolicy
 from pyramid.authorization import IAuthorizationPolicy
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPOk, HTTPUnauthorized
 from pyramid.settings import asbool
 from requests.cookies import RequestsCookieJar
 from six.moves.urllib.parse import urlparse
@@ -16,7 +16,7 @@ from magpie.constants import get_constant
 from magpie.models import Service
 from magpie.permissions import Permission
 from magpie.services import invalidate_service, service_factory
-from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url, get_settings
+from magpie.utils import CONTENT_TYPE_JSON, get_authenticate_headers, get_logger, get_magpie_url, get_settings
 
 # WARNING:
 #   Twitcher available only when this module is imported from it.
@@ -145,19 +145,28 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                 if has_permission:
                     return  # allowed
 
-            raise OWSAccessForbidden("Not authorized to access this resource. "
-                                     "User does not meet required permissions.")
+            if request.user is None:
+                error_base = HTTPUnauthorized
+                error_desc = "Not authorized to access this resource. Missing user authentication."
+                error_kw = {"headers": get_authenticate_headers(request)}
+            else:
+                error_base = HTTPForbidden
+                error_desc = "Not authorized to access this resource. User does not meet required permissions."
+                error_kw = {}
+            raise OWSAccessForbidden(error_desc, status_base=error_base, **error_kw)
 
     def update_request_cookies(self, request):
         """
         Ensure login of the user and update the request cookies if Twitcher is in a special configuration.
 
-        Only update if `MAGPIE_COOKIE_NAME` is missing and is retrievable from `access_token` in `Authorization` header.
-        Counter-validate the login procedure by calling Magpie's `/session` which should indicated a logged user.
+        Only update if ``MAGPIE_COOKIE_NAME`` is missing and is retrievable from ``access_token`` field within the
+        ``Authorization`` header. Counter-validate the login procedure by calling Magpie's ``/session`` which should
+        indicate if there is a logged user.
         """
-        token_name = get_constant("MAGPIE_COOKIE_NAME", settings_container=request.registry.settings)
+        settings = get_settings(request)
+        token_name = get_constant("MAGPIE_COOKIE_NAME", settings_container=settings)
         if "Authorization" in request.headers and token_name not in request.cookies:
-            magpie_prov = request.params.get("provider", "WSO2")
+            magpie_prov = request.params.get("provider_name", get_constant("MAGPIE_DEFAULT_PROVIDER", settings))
             magpie_path = ProviderSigninAPI.path.format(provider_name=magpie_prov)
             magpie_auth = "{}{}".format(self.magpie_url, magpie_path)
             headers = dict(request.headers)

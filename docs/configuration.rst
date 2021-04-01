@@ -25,6 +25,8 @@ the constants defined in `constants.py`_ and can be used interchangeably.
 Configuration Files
 -------------------
 
+.. _config_magpie_ini:
+
 File: magpie.ini
 ~~~~~~~~~~~~~~~~~~~
 
@@ -33,6 +35,8 @@ provided in `magpie.ini`_ which should allow any user to run the application loc
 is used by default in each tagged Docker image. If you want to provide different configuration, the file should be
 overridden in the Docker image using a volume mount parameter, or by specifying an alternative path through the
 environment variable ``MAGPIE_INI_FILE_PATH``.
+
+.. _config_magpie_env:
 
 File: magpie.env
 ~~~~~~~~~~~~~~~~~~~
@@ -50,6 +54,8 @@ variables for this file is presented in `magpie.env.example`_.
     When loading variables from the ``.env`` file, any conflicting environment variable will **NOT** be overridden.
     Therefore, only *missing but required* values will be added to the environment to ensure proper setup of `Magpie`.
 
+.. _config_postgres_env:
+
 File: postgres.env
 ~~~~~~~~~~~~~~~~~~~
 
@@ -57,6 +63,8 @@ This file behaves exactly in the same manner as for ``magpie.env`` above, but fo
 employed to setup the `postgres` database connection (see ``MAGPIE_POSTGRES_ENV_FILE`` setting below).
 File `postgres.env.example`_ and auto-resolution of missing ``postgres.env`` is identical to ``magpie.env``
 case.
+
+.. _config_providers:
 
 File: providers.cfg
 ~~~~~~~~~~~~~~~~~~~
@@ -72,6 +80,8 @@ details.
     Some services, such as :ref:`ServiceTHREDDS` for instance, can take additional parameters to customize some of
     their behaviour. Please refer to :ref:`Services` chapter for specific configuration supported.
 
+.. _config_permissions:
+
 File: permissions.cfg
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -85,6 +95,8 @@ using tree-path in this case, see format in :func:`magpie.api.management.resourc
 See ``MAGPIE_PERMISSIONS_CONFIG_PATH`` setting below to setup alternate references to this type of configuration.
 Please refer to the comment header of sample file `permissions.cfg`_ for specific format details as well as specific
 behaviour of each parameter according to encountered use cases.
+
+.. _config_formats:
 
 Configuration File Formats
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -207,6 +219,8 @@ Each webhook should define the following parameters :
 
   ``"user_name_param": "{user_name}"``
 
+.. _config_constants:
+
 Settings and Constants
 ----------------------
 
@@ -217,6 +231,8 @@ activatable setting (e.g.: ``True`` or ``False``), or when specified with more s
 Configuration variables will be used by `Magpie` on startup unless prior definition is found within `magpie.ini`_.
 All variables (i.e.: non-``[constant]`` parameters) can also be specified by their ``magpie.[variable_name]`` setting
 counterpart as described at the start of the :ref:`configuration` section.
+
+.. _config_load_settings:
 
 Loading Settings
 ~~~~~~~~~~~~~~~~~
@@ -296,6 +312,8 @@ These settings can be used to specify where to find other settings through custo
   | (Default: ``"${MAGPIE_ENV_DIR}/postgres.env"``)
 
   File path to ``postgres.env`` file with additional environment variables to configure the `postgres` connection.
+
+.. _config_app_settings:
 
 Application Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -387,6 +405,7 @@ at the start of the :ref:`Configuration` section.
   generic interface items, but could be extended at a later date. The value must be one of the CSS file names located
   within the `themes`_ subdirectory.
 
+.. _config_security:
 
 Security Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -611,7 +630,9 @@ remain available as described at the start of the :ref:`Configuration` section.
   | (Value: ``"ziggurat"``)
 
   Name of the :term:`Provider` used for login. This represents the identifier that is set to define how to
-  differentiate between a local sign-in procedure and a dispatched one some known `Authentication Providers`_.
+  differentiate between a local sign-in procedure and a dispatched one some known :ref:`authn_providers`.
+
+.. _config_phoenix:
 
 Phoenix Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -648,6 +669,7 @@ Following settings provide some integration support for `Phoenix`_ in order to s
 
   Whether to push new :ref:`Service Synchronization` settings to the referenced `Phoenix`_ connection.
 
+.. _config_twitcher:
 
 Twitcher Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -704,6 +726,7 @@ employed `Twitcher`_ instance will also need to have access to `Magpie`'s databa
 must therefore be shared between the two services, as well as ``MAGPIE_SECRET`` value in order for successful
 completion of the handshake during :term:`Authentication` procedure of the request :term:`User` token.
 
+.. _config_postgres_settings:
 
 Postgres Settings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -789,50 +812,7 @@ configuration names are supported where mentioned.
 .. _SQLAlchemy Engine: https://docs.sqlalchemy.org/en/13/core/engines.html
 
 
-Authentication Providers
----------------------------
-
-In order to perform :term:`Authentication` in `Magpie`, multiple :term:`Providers` are supported. By default,
-the :term:`Internal Provider` named ``ziggurat``, which corresponds to the package used to manage all `Magpie` elements
-internally, is employed. Supported :term:`External Providers` are presented in the table below, although more could be
-added later on. To signin using one of these :term:`Providers`, the corresponding identifier must be provided within
-the signin request contents.
-
-Each as different configuration parameters as defined in `MagpieSecurity`_ and use various protocols amongst
-``OpenID``, ``ESGF``-flavored ``OpenID`` and ``OAuth2``. Further :term:`External Providers` can be defined using this
-module's dictionary configuration style following parameter specification of `Authomatic`_ package used for managing
-this :term:`Authentication` procedure.
-
-+--------------------------------+-----------------------------------------------------------------------+
-| Category                       | Provider                                                              |
-+================================+=======================================================================+
-| Open Identity (``OpenID``)     | `OpenID`_                                                             |
-+--------------------------------+-----------------------------------------------------------------------+
-| *Earth System Grid Federation* | *German Climate Computing Centre* (`DKRZ`_)                           |
-| (`ESGF`_) :sup:`(1)`           |                                                                       |
-|                                +-----------------------------------------------------------------------+
-|                                | *French Research Institute for Environment Science* (`IPSL`_)         |
-|                                +-----------------------------------------------------------------------+
-|                                | *British Centre for Environmental Data Analysis* (`CEDA`_) :sup:`(2)` |
-|                                +-----------------------------------------------------------------------+
-|                                | *US Lawrence Livermore National Laboratory* (`LLNL`_) :sup:`(3)`      |
-|                                +-----------------------------------------------------------------------+
-|                                | *Swedish Meteorological and Hydrological Institute* (`SMHI`_)         |
-+--------------------------------+-----------------------------------------------------------------------+
-| ``OAuth2``                     | `GitHub_AuthN`_ Authentication                                        |
-|                                +-----------------------------------------------------------------------+
-|                                | `WSO2`_ Open Source Identity Server                                   |
-+--------------------------------+-----------------------------------------------------------------------+
-
-| :sup:`(1)` extended variant of ``OpenID``
-| :sup:`(2)` formerly identified as *British Atmospheric Data Centre* (`BADC`_)
-| :sup:`(3)` formerly identified as *Program for Climate Model Diagnosis & Intercomparison* (`PCMDI`_)
-
-.. note::
-    Please note that due to the constantly changing nature of multiple of these external providers (APIs and moved
-    Websites), rarely used authentication bridges by the developers could break without prior notice. If this is the
-    case and you use one of the broken connectors, summit a new `issue`_.
-
+.. _config_auth_github:
 
 GitHub Settings
 ~~~~~~~~~~~~~~~~~
@@ -843,6 +823,11 @@ must be configured. These settings correspond to the values retrieved from follo
 
 Furthermore, the callback URL used for configuring the OAuth application on Github must match the running `Magpie`
 instance URL. For this reason, the values of ``MAGPIE_URL``, ``MAGPIE_HOST`` and ``HOSTNAME`` must be considered.
+
+.. seealso::
+    Refer to :ref:`auth_requests` and :ref:`auth_providers` for details.
+
+.. _config_auth_wso2:
 
 WSO2 Settings
 ~~~~~~~~~~~~~~~~~
@@ -857,3 +842,6 @@ To use `WSO2`_ authentication provider, following variables must be set:
 
 To configure your `Magpie` instance as a trusted application for ``WSO2`` (and therefore retrieve values of above
 parameters), please refer to `WSO2_doc`_.
+
+.. seealso::
+    Refer to :ref:`auth_requests` and :ref:`auth_providers` for details.

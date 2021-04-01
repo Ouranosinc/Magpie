@@ -24,6 +24,7 @@ from six.moves import configparser
 from six.moves.urllib.parse import urlparse
 from webob.headers import EnvironHeaders, ResponseHeaders
 
+from magpie import __meta__
 from magpie.constants import get_constant
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
         AnyResponseType,
         AnySettingsContainer,
         CookiesType,
+        HeadersType,
         SettingsType,
         Str
     )
@@ -279,6 +281,54 @@ def convert_response(response):
     return pyramid_response
 
 
+def get_authenticate_headers(request, error_type="invalid_token"):
+    # type: (Request, Str) -> Optional[HeadersType]
+    """
+    Obtains all required headers by 401 responses based on executed :paramref:`request`.
+
+    :param request: request that was sent to attempt authentication or access which must respond with Unauthorized.
+    :param error_type:
+        Additional detail of the cause of error. Must be one of (invalid_request, invalid_token, insufficient_scope).
+    """
+    # FIXME: support other authentication methods (JWT, HTTP, Basic, Bearer Token, etc.)
+    #        in such case, must resolve specified challenge method according to request if provided
+    #        (https://github.com/Ouranosinc/Magpie/issues/255)
+    # Generic Auth: https://tools.ietf.org/html/rfc7235#section-2.1  (section for schema of 'WWW-Authenticate')
+    # Basic/Digest: https://tools.ietf.org/html/rfc2617
+    # Bearer Token: https://tools.ietf.org/html/rfc6750
+    # Cookie Token: https://tools.ietf.org/id/draft-broyer-http-cookie-auth-00.html#anchor1
+
+    from magpie.api.schemas import SigninAPI  # pylint: disable=C0415
+
+    # avoid adding headers when explicitly requested
+    #   https://stackoverflow.com/questions/9859627
+    #   https://stackoverflow.com/questions/86105
+    if get_header("X-Requested-With", request.headers) == "XMLHttpRequest":
+        return None
+
+    # select error type: https://tools.ietf.org/html/rfc6750#section-3.1
+    if error_type not in ["invalid_request", "invalid_token", "insufficient_scope"]:
+        error_type = "invalid_token"
+    cookie_name = get_constant("MAGPIE_COOKIE_NAME", request)
+    magpie_url = get_magpie_url(request)
+    signin_url = "{}{}".format(magpie_url, SigninAPI.path)
+    login_url = "{}/ui/login".format(magpie_url)
+    hostname = urlparse(magpie_url).hostname
+    title = "{} Login".format(__meta__.__title__)
+    headers = {
+        # Challenge Schema: https://tools.ietf.org/html/rfc2617#section-3.2.1  (section for schema of extra params)
+        #   WWW-Authenticate: challenge-1 [realm="<>" title="<>" ...],
+        #                     challenge-2 [...], ...
+        # provide URL with both 'domain' and 'uri' which are two variants that can exist, depending on implementation
+        "WWW-Authenticate": ("Cookie cookie-name=\"{c}\" error=\"{e}\" title=\"{t}\" "
+                             "domain=\"{u}\" uri=\"{u}\" realm=\"{r}\" "
+                             .format(c=cookie_name, e=error_type, u=signin_url, r=hostname, t=title)),
+        # https://tools.ietf.org/html/rfc8053#section-4.3
+        "Location-When-Unauthenticated": login_url,
+    }
+    return headers
+
+
 def get_admin_cookies(container, verify=True, raise_message=None):
     # type: (AnySettingsContainer, bool, Optional[Str]) -> CookiesType
     from magpie.api.schemas import SigninAPI  # pylint: disable=C0415
@@ -338,6 +388,15 @@ def patch_magpie_url(container):
 
 def get_magpie_url(container=None):
     # type: (Optional[AnySettingsContainer]) -> Str
+    """
+    Obtains the configured Magpie URL entrypoint based on the various combinations of supported configuration settings.
+
+    .. seealso::
+        Documentation section :ref:`config_app_settings` for available setting combinations.
+
+    :param container: container that provides access to application settings.
+    :return: resolved Magpie URL
+    """
     if container is None:
         LOGGER.warning("Registry not specified, trying to find Magpie URL from environment")
         url = get_constant("MAGPIE_URL", raise_missing=False, raise_not_set=False, print_missing=False)
@@ -368,6 +427,15 @@ def get_magpie_url(container=None):
 
 def get_phoenix_url(container=None):
     # type: (Optional[AnySettingsContainer]) -> Str
+    """
+    Obtains the configured Phoenix URL entrypoint based on the various combinations of supported configuration settings.
+
+    .. seealso::
+        Documentation section :ref:`config_phoenix` for available setting combinations.
+
+    :param container: container that provides access to application settings.
+    :return: resolved Phoenix URL
+    """
     hostname = (get_constant("PHOENIX_HOST", container, raise_missing=False, raise_not_set=False) or
                 get_constant("HOSTNAME", raise_missing=False, raise_not_set=False))
     if not hostname:
@@ -377,6 +445,16 @@ def get_phoenix_url(container=None):
 
 
 def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
+    """
+    Obtains the protected service URL behind Twitcher Proxy based on combination of supported configuration settings.
+
+    .. seealso::
+        Documentation section :ref:`config_twitcher` for available setting combinations.
+
+    :param magpie_service_name: name of the service to employ in order to form the URL path behind the proxy.
+    :param hostname: override literal hostname to generate the URL instead of resolving using settings.
+    :return: resolved Twitcher Proxy protected service URL
+    """
     twitcher_proxy_url = get_constant("TWITCHER_PROTECTED_URL", raise_not_set=False)
     if not twitcher_proxy_url:
         twitcher_proxy = get_constant("TWITCHER_PROTECTED_PATH", raise_not_set=False)

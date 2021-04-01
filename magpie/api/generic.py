@@ -24,6 +24,7 @@ from magpie.utils import (
     CONTENT_TYPE_JSON,
     FORMAT_TYPE_MAPPING,
     SUPPORTED_ACCEPT_TYPES,
+    get_authenticate_headers,
     get_header,
     get_logger,
     is_magpie_ui_path
@@ -76,12 +77,12 @@ def not_found_or_method_not_allowed(request):
 def unauthorized_or_forbidden(request):
     # type: (Request) -> HTTPException
     """
-    Overrides the default ``HTTPForbidden`` [403] by appropriate ``HTTPUnauthorized`` [401] when applicable.
+    Overrides the default HTTP ``Forbidden [403]`` by appropriate ``Unauthorized [401]`` when applicable.
 
     Unauthorized response is for restricted user access according to missing credentials and/or authorization headers.
     Forbidden response is for operation refused by the underlying process operations or due to insufficient permissions.
 
-    Without this fix, both situations return [403] regardless.
+    Without this fix, both situations return ``Forbidden [403]`` regardless.
 
     .. seealso::
         - http://www.restapitutorial.com/httpstatuscodes.html
@@ -89,18 +90,21 @@ def unauthorized_or_forbidden(request):
     In case the request references to `Magpie UI` route, it is redirected to
     :meth:`magpie.ui.home.HomeViews.error_view` for it to handle and display the error accordingly.
     """
+    http_kw = None
     http_err = HTTPForbidden
     http_msg = s.HTTPForbiddenResponseSchema.description
     principals = get_principals(request)
     if Authenticated not in principals:
         http_err = HTTPUnauthorized
         http_msg = s.UnauthorizedResponseSchema.description
+        http_kw = {"headers": get_authenticate_headers(request)}
     content = get_request_info(request, default_message=http_msg)
     if is_magpie_ui_path(request):
         # need to handle 401/403 immediately otherwise target view is not even called
         from magpie.ui.utils import redirect_error
         return redirect_error(request, code=http_err.code, content=content)
-    return ax.raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content)
+    return ax.raise_http(nothrow=True, http_error=http_err, http_kwargs=http_kw,
+                         detail=content["detail"], content=content)
 
 
 def guess_target_format(request):
