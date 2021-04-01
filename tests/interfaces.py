@@ -1700,17 +1700,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         utils.warn_version(self, "check for response (401/403) statuses", "0.9.1", skip=True)
 
-        app_or_url = utils.get_app_or_url(self)
-        if isinstance(app_or_url, six.string_types):
-            warnings.warn("cannot validate 403 status with remote server (no mock possible, must test with local)",
-                          RuntimeWarning)
-        else:
-            # call a route that will make a forbidden access to db
-            with mock.patch("magpie.models.User", side_effect=Exception("Test")):
-                resp = utils.test_request(self, "GET", "/users", headers=self.json_headers, expect_errors=True)
-                body = utils.check_response_basic_info(resp, 403, expected_method="GET")
-                utils.check_val_equal(body["code"], 403)
-
         # call a route that is admin-only
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
