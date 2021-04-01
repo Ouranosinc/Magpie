@@ -159,11 +159,12 @@ a combined configuration as follows.
 
     webhooks:
       - name: <webhook_name>
-        action: create_user | remove_user
+        action: <webhook_action>
         method: GET | HEAD | POST | PUT | PATCH | DELETE
         url: <location>
-        payload: # add any parameters required with the webhook url here
-          <param_name> : <param_value>
+        payload:
+          <param_raw>: "value"              # some literal value that will be added to the payload as is
+          <param_subst>: "{<param_value>}"  # <param_value> will be substituted (must be available for that action)
           ...
 
 
@@ -181,43 +182,10 @@ creation. Otherwise defaults are assumed and only the specified user or group na
 `providers.cfg`_ and `permissions.cfg`_ for further details about specific formatting and behaviour of each available
 field.
 
-  .. versionadded:: 3.6
+.. versionadded:: 3.6
+    The ``webhook`` section allows to define external connectors to which `Magpie` should send requests following
+    certain events. These are described in further details in :ref:`config_webhooks` section.
 
-A section for webhooks has also been added to the combined configuration file. This section defines a list of
-urls that should be called after creating or deleting a user. The webhooks urls are responsible for any extra
-steps that should be taken on external services after the user creation/deletion. Note that the webhook requests are
-asynchronous, so Magpie might execute other requests before the webhooks requests are fully done.
-
-Each webhook should define the following parameters :
-
-- | ``name``
-
-  The webhook's name
-
-- | ``action``
-  | (Values: ``create_user | delete_user``)
-
-  The action where the webhook will be executed, either during the user's creation (create_user),
-  or the user's deletion (delete_user)
-
-- | ``method``
-
-  The http method used for the webhook request
-
-- | ``url``
-
-  A valid http url that should be called for the webhook request
-
-- | ``payload``
-
-  A list of parameters that will be sent with the request. Note that those parameters can contain
-  template variables using the braces characters {}.
-  The only permitted template variables for now are ``user_name`` and ``tmp_url``. These variables will get replaced
-  by the corresponding value at the time of the request.
-
-  For example, the parameter "user_name_param" could be defined in the config using a template variable ``user_name``:
-
-  ``"user_name_param": "{user_name}"``
 
 .. _config_constants:
 
@@ -845,3 +813,108 @@ parameters), please refer to `WSO2_doc`_.
 
 .. seealso::
     Refer to :ref:`auth_requests` and :ref:`auth_providers` for details.
+
+
+.. _config_webhook:
+
+Webhook Configuration
+------------------------
+
+.. versionadded:: 3.6
+    The concept of :term:`Webhook` is introduced only following this version, and further improved in following ones.
+
+A ``webhooks`` section can be added to the :ref:`config_file`. This section defines a list of URLs and request
+parameters that should be called following or during specific events, such as but not limited to, creating or deleting
+a :term:`User`.
+
+.. note::
+    Webhook requests are asynchronous, so `Magpie` might execute other requests before the webhooks requests are
+    completed and processed.
+
+Each webhook implementation provides different sets of information in the request payload according to its ``action``.
+See :class:`magpie.api.webhook.WebhookAction` and below sub-sections for supported values.
+
+To register webhooks to be called at runtime upon corresponding events, following parameters should be defined.
+Configuration parameters are all required unless explicitly indicated to have a default value.
+
+- | ``name``
+
+  The webhook's name for reference. Must be unique.
+
+- | ``action``
+  | (Values: one of :class:`magpie.api.webhook.WebhookAction`)
+
+  The action event defining when the corresponding webhook must be triggered for execution.
+
+- | ``method``
+  | (Values: one of :data:`magpie.api.webhook.WEBHOOK_HTTP_METHODS`)
+
+  The HTTP method used for the webhook request.
+
+- | ``url``
+
+  A valid HTTP(S) URL location where the triggered webhook request will be sent.
+
+- | ``format``
+  | (Default: ``"json"``, Value: one of :data:`magpie.utils.FORMAT_TYPE_MAPPING`)
+
+  A valid format definition of the content type of ``payload``.
+
+- | ``payload``
+
+  Format of the payload that will be sent in the request body of the triggered webhook.
+  The payload can be anything between a literal string or a JSON/YAML formatted structure.
+
+  .. note::
+    The payload can employ parameters that contain template variables using braces characters ``{<variable>}``.
+    Applicable ``{<variable>}`` substitution are respective to each webhook ``action``, as presented in
+    :ref:`webhook_actions`.
+
+.. seealso::
+    :ref:`config_file` for a minimal example of a :term:`Webhook` definition.
+
+
+Webhook Actions
+------------------------
+
+.. default location to quickly reference items without the explicit and long prefix
+.. using the full name when introducing the element (to make the location obvious), then reuse shorthand variant
+.. py:currentmodule:: magpie.api.webhooks
+
+This section presents the supported :term:`Webhook` ``action`` values that can be registered and corresponding template
+parameters available in each case to generate the payload.
+
+User Creation
+~~~~~~~~~~~~~~~
+
+.. list-table::
+    * - Action
+      - :attr:`WebhookAction.CREATE_USER`
+    * - Parameters
+      - ``user_name``, ``callback_url``
+
+Triggered whenever a :term:`User` gets created. The name is
+
+User Deletion
+~~~~~~~~~~~~~~~
+
+.. list-table::
+    * - Action
+      - :attr:`WebhookAction.CREATE_USER`
+    * - Parameters
+      - ``user_name``
+
+
+
+    The only permitted template variables for now are ``user_name`` and ``tmp_url``. These variables will get replaced
+    by the corresponding value at the time of the request.
+
+  For example, the parameter "user_name_param" could be defined in the config using a template variable ``user_name``:
+
+  ``"user_name_param": "{user_name}"``
+
+
+
+
+The webhooks URLs are responsible for any extra steps that should be taken on external services after the user creation/deletion.
+

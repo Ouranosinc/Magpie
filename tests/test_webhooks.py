@@ -100,7 +100,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
+                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
                 },
                 {
                     "name": "test_webhook_2",
@@ -192,7 +192,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_fail_url,
-                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
+                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
                 }
 
             ],
@@ -220,7 +220,7 @@ class TestWebhooks(ti.BaseTestCase):
             self.checkTestUserStatus(UserStatuses.OK.value)
 
             # Retrieve the tmp_url and send the request to the magpie app
-            resp = requests.get(self.base_webhook_url + "/get_tmp_url")
+            resp = requests.get(self.base_webhook_url + "/get_callback_url")
             utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=CONTENT_TYPE_HTML)
             utils.test_request(self, "GET", urlparse(resp.text).path)
 
@@ -240,7 +240,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_url,
-                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
+                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
                 }
 
             ],
@@ -369,7 +369,7 @@ class TestFailingWebhooks(unittest.TestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "tmp_url": "{tmp_url}"}
+                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
                 }
             ],
             "providers": "",

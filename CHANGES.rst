@@ -27,6 +27,8 @@ Features / Changes
 * Add API user ``status`` update operation using ``PATCH`` request (admin-only).
 * Add API user list ``status`` to filter query by given user account statuses.
 * Add UI icon to provide user status feedback on individual user info page and through user list summary.
+* Change ``tmp_url`` to ``callback_url`` for webhook template and provided parameter to webhook requests to better
+  represent its intended use.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

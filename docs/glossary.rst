@@ -156,3 +156,7 @@ Glossary
         Unitary entity containing details about the user allowing it to log into `Magpie` and that can have other
         relationships applied to it such as :term:`Permission` and :term:`Group` that extend his specific access rights
         to :term:`Service` and :term:`Resource` elements. Implemented by :py:class:`magpie.models.User`.
+
+    Webhook
+        Subscribable events handlers to send HTTP(S) requests following the occurrence of a given `Magpie` action.
+        See :ref:`config_webhook` and :ref:`config_file` sections for details.
