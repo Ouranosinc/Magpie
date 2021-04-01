@@ -88,7 +88,19 @@ class ManagementViews(BaseViews):
 
     @handle_errors
     def get_user_names(self):
+        """
+        Obtains all user names.
+        """
         resp = request_api(self.request, schemas.UsersAPI.path, "GET")
+        check_response(resp)
+        return get_json(resp)["user_names"]
+
+    @handle_errors
+    def get_user_statuses(self, status=0):
+        """
+        Obtains all user names that have the corresponding status value.
+        """
+        resp = request_api(self.request, schemas.UsersAPI.path + "?status={}".format(status), "GET")
         check_response(resp)
         return get_json(resp)["user_names"]
 
@@ -202,7 +214,9 @@ class ManagementViews(BaseViews):
             user_name = self.request.POST.get("user_name")
             return HTTPFound(self.request.route_url("edit_user", user_name=user_name, cur_svc_type="default"))
 
-        return self.add_template_data({"users": self.get_user_names()})
+        user_names = self.get_user_names()
+        user_error = self.get_user_statuses(status=0)
+        return self.add_template_data({"users": user_names, "users_with_error": user_error})
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
     def add_user(self):
@@ -307,6 +321,7 @@ class ManagementViews(BaseViews):
 
         # set default values needed by the page in case of early return due to error
         user_info = get_json(user_resp)["user"]
+        user_info["user_with_error"] = user_info["status"] != schemas.UserStatuses.OK.value
         user_info["edit_mode"] = "no_edit"
         user_info["own_groups"] = own_groups
         user_info["groups"] = all_groups

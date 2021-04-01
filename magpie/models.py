@@ -132,6 +132,16 @@ class User(UserMixin, Base):
         return "<User: %s, %s>" % (self.id, self.user_name)
 
 
+class UserSearchService(UserService):
+    @classmethod
+    def search(cls, status=None, db_session=None):
+        db_session = get_db_session(db_session)
+        query = db_session.query(cls.model)
+        if status is not None:
+            query = query.filter(cls.model.status == status)
+        return query
+
+
 class ExternalIdentity(ExternalIdentityMixin, Base):
     pass
 

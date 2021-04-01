@@ -181,6 +181,22 @@
                         %endif
                         </td>
                     </tr>
+                    <tr>
+                        <td>
+                            <span class="panel-entry">Status: </span>
+                        </td>
+                        <td>
+                            <div class="status-container">
+                                %if user_with_error:
+                                    <img title="User account status has an issue." class="icon-warning" alt="WARNING"
+                                         src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"/>
+                                %else:
+                                    <img title="User account status is valid." class="icon-check" alt="OK"
+                                         src="${request.static_url('magpie.ui.home:static/checkmark-circle.png')}"/>
+                                %endif
+                            </div>
+                        </td>
+                    </tr>
                 </table>
             </div>
         </div>

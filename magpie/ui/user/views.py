@@ -70,6 +70,7 @@ class UserViews(BaseViews):
         user_info["edit_mode"] = "no_edit"
         user_info["joined_groups"] = joined_groups
         user_info["groups"] = public_groups
+        user_info["user_with_error"] = user_info["status"] != schemas.UserStatuses.OK.value
         # reset error messages/flags
         user_info["error_message"] = ""
         for field in ["password", "user_email", "user_name"]:

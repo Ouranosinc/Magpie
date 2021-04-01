@@ -32,7 +32,8 @@ from magpie.utils import (
     CONTENT_TYPE_JSON,
     KNOWN_CONTENT_TYPES,
     SUPPORTED_ACCEPT_TYPES,
-    SUPPORTED_FORMAT_TYPES
+    SUPPORTED_FORMAT_TYPES,
+    ExtendedEnum
 )
 
 if TYPE_CHECKING:
@@ -92,9 +93,14 @@ def service_api_route_info(service_api, **kwargs):
 _LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
 LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
 
-# Values for the 'status' field in the Users database
-UserOKStatus = 1
-UserWebhookErrorStatus = 0
+
+class UserStatuses(ExtendedEnum):
+    """
+    Values for the 'status' field of Users
+    """
+    WebhookErrorStatus = 0
+    OK = 1  # use 1 for ok since this value is set by default by ziggurat
+
 
 SwaggerGenerator = Service(
     path="/json",
@@ -1568,6 +1574,19 @@ class ServiceTypeResourceTypes_GET_NotFoundResponseSchema(BaseResponseSchemaAPI)
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
+class UsersStatusQuery(QueryRequestSchemaAPI):
+    status = colander.SchemaNode(
+        colander.Integer(),
+        missing=colander.drop,
+        description="Obtain the user name list filtered by their account status. Returns all regardless otherwise.",
+        validator=colander.OneOf(UserStatuses.values())
+    )
+
+
+class Users_GET_RequestSchema(BaseRequestSchemaAPI):
+    querystring = UsersStatusQuery()
+
+
 class Users_GET_ResponseBodySchema(BaseResponseBodySchema):
     user_names = UserNamesListSchema()
 
@@ -1575,6 +1594,11 @@ class Users_GET_ResponseBodySchema(BaseResponseBodySchema):
 class Users_GET_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Get users successful."
     body = Users_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class Users_GET_BadRequestSchema(BaseResponseSchemaAPI):
+    description = "Invalid search parameter provided."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class Users_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -3118,6 +3142,7 @@ ServiceResource_DELETE_responses = {
 }
 Users_GET_responses = {
     "200": Users_GET_OkResponseSchema(),
+    "400": Users_GET_BadRequestSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": Users_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
