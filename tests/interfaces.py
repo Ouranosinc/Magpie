@@ -4,12 +4,10 @@ import secrets
 import string
 import unittest
 import uuid
-import warnings
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
-import mock
 import pyramid.testing
 import pytest
 import six
