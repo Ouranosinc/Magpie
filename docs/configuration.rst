@@ -254,7 +254,7 @@ These settings can be used to specify where to find other settings through custo
   .. note::
     When provided, all other combinations of ``MAGPIE_CONFIG_DIR``, ``MAGPIE_PERMISSIONS_CONFIG_PATH`` and
     ``MAGPIE_PROVIDERS_CONFIG_PATH`` are effectively ignored in favour of definitions in this file.
-    See :ref:config_file` for further details and example.
+    See `config_file`_ for further details and example.
 
 - ``MAGPIE_INI_FILE_PATH``
 
@@ -358,6 +358,16 @@ at the start of the :ref:`Configuration` section.
   | (Default: ``True``)
 
   Specifies whether `Magpie` should log a raised exception during a process execution.
+
+- | ``MAGPIE_TOKEN_EXPIRE`` [:class:`int`]
+  | (Default: ``86400`` seconds)
+
+  .. versionadded:: 3.7
+
+  Duration for which temporary URL tokens will remain valid until automatically removed.
+
+  These tokens can be used for many different applications within `Magpie`, but are notably employed for handling
+  callback URL operations in tandem with a given :term:`Webhook` (see also: :ref:`config_webhook_actions`).
 
 - | ``MAGPIE_UI_ENABLED``
   | (Default: ``True``)
@@ -729,7 +739,10 @@ configuration names are supported where mentioned.
     By default, ``postgresql`` database connection URL is inferred by combining al below ``MAGPIE_POSTGRES_<>``
     parameters if the value was not explicitly provided.
 
-- | ``MAGPIE_POSTGRES_USERNAME``
+.. _MAGPIE_POSTGRES_USERNAME:
+.. |MAGPIE_POSTGRES_USERNAME| replace:: ``MAGPIE_POSTGRES_USERNAME``
+
+- | |MAGPIE_POSTGRES_USERNAME|_
   | (Default: ``"magpie"``)
 
   Database connection username to retrieve `Magpie` data stored in `PostgreSQL`_.
@@ -831,48 +844,68 @@ a :term:`User`.
     Webhook requests are asynchronous, so `Magpie` might execute other requests before the webhooks requests are
     completed and processed.
 
-Each webhook implementation provides different sets of information in the request payload according to its ``action``.
-See :class:`magpie.api.webhook.WebhookAction` and below sub-sections for supported values.
+Each :term:`Webhook` implementation provides different sets of information in the request payload according to its
+``action``. See :class:`magpie.api.webhook.WebhookAction` and below sub-sections for supported values.
 
-To register webhooks to be called at runtime upon corresponding events, following parameters should be defined.
+To register any :term:`Webhook` to be called at runtime upon corresponding events, following parameters must be defined.
 Configuration parameters are all required unless explicitly indicated to have a default value.
 
-- | ``name``
+.. _webhook_param_name:
+.. |webhook_param_name| replace:: ``name``
 
-  The webhook's name for reference. Must be unique.
+- | |webhook_param_name|_
 
-- | ``action``
+  The name of the :term:`Webhook` for reference. Must be unique.
+
+.. _webhook_param_action:
+.. |webhook_param_action| replace:: ``action``
+
+- | |webhook_param_action|_
   | (Values: one of :class:`magpie.api.webhook.WebhookAction`)
 
-  The action event defining when the corresponding webhook must be triggered for execution.
+  The action event defining when the corresponding :term:`Webhook` must be triggered for execution.
 
-- | ``method``
+.. _webhook_param_method:
+.. |webhook_param_method| replace:: ``method``
+
+- | |webhook_param_method|_
   | (Values: one of :data:`magpie.api.webhook.WEBHOOK_HTTP_METHODS`)
 
-  The HTTP method used for the webhook request.
+  The HTTP method used for the :term:`Webhook` request.
 
-- | ``url``
+.. _webhook_param_url:
+.. |webhook_param_url| replace:: ``url``
 
-  A valid HTTP(S) URL location where the triggered webhook request will be sent.
+- | |webhook_param_url|_
 
-- | ``format``
+  A valid HTTP(S) URL location where the triggered :term:`Webhook` request will be sent.
+
+.. _webhook_param_format:
+.. |webhook_param_format| replace:: ``format``
+
+- | |webhook_param_format|_
   | (Default: ``"json"``, Value: one of :data:`magpie.utils.FORMAT_TYPE_MAPPING`)
 
   A valid format definition of the content type of ``payload``.
 
-- | ``payload``
+.. _webhook_param_payload:
+.. |webhook_param_payload| replace:: ``payload``
 
-  Format of the payload that will be sent in the request body of the triggered webhook.
+- | |webhook_param_payload|_
+
+  Format of the payload that will be sent in the request body of the triggered :term:`Webhook`.
   The payload can be anything between a literal string or a JSON/YAML formatted structure.
 
   .. note::
     The payload can employ parameters that contain template variables using braces characters ``{<variable>}``.
     Applicable ``{<variable>}`` substitution are respective to each webhook ``action``, as presented in
-    :ref:`webhook_actions`.
+    :ref:`config_webhook_actions`.
 
 .. seealso::
     :ref:`config_file` for a minimal example of a :term:`Webhook` definition.
 
+
+.. _config_webhook_actions:
 
 Webhook Actions
 ------------------------
@@ -881,40 +914,38 @@ Webhook Actions
 .. using the full name when introducing the element (to make the location obvious), then reuse shorthand variant
 .. py:currentmodule:: magpie.api.webhooks
 
-This section presents the supported :term:`Webhook` ``action`` values that can be registered and corresponding template
-parameters available in each case to generate the payload.
+This section presents the supported :term:`Webhook` |webhook_param_action|_ values that can be registered and
+corresponding template parameters available in each case to generate the payload.
 
 User Creation
 ~~~~~~~~~~~~~~~
 
 .. list-table::
+    :stub-columns: 1
+
     * - Action
       - :attr:`WebhookAction.CREATE_USER`
     * - Parameters
-      - ``user_name``, ``callback_url``
+      - ``user_name``, ``user_id``, ``callback_url``
 
-Triggered whenever a :term:`User` gets created. The name is
+Triggered whenever a :term:`User` gets successfully created.
+
+The name and ID are provided for reference as needed for the receiving external web application defined by the
+configured |webhook_param_url|_.
+The ``callback_url`` serves as follow-up endpoint, should that external application need it, to request using ``GET``
+method (no body) that `Magpie` sets the :term:`User` account status as erroneous. That :term:`User` would then be
+affected with ``status`` value :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. The ``callback_url``
+location will be available until called or expired according to ``MAGPIE_TOKEN_EXPIRE`` setting.
 
 User Deletion
 ~~~~~~~~~~~~~~~
 
 .. list-table::
+    :stub-columns: 1
+
     * - Action
-      - :attr:`WebhookAction.CREATE_USER`
+      - :attr:`WebhookAction.DELETE_USER`
     * - Parameters
       - ``user_name``
 
-
-
-    The only permitted template variables for now are ``user_name`` and ``tmp_url``. These variables will get replaced
-    by the corresponding value at the time of the request.
-
-  For example, the parameter "user_name_param" could be defined in the config using a template variable ``user_name``:
-
-  ``"user_name_param": "{user_name}"``
-
-
-
-
-The webhooks URLs are responsible for any extra steps that should be taken on external services after the user creation/deletion.
-
+Triggered whenever a :term:`User` gets successfully deleted.

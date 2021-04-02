@@ -47,8 +47,12 @@ class WebhookAction(ExtendedEnum):
     """
     Actions supported by webhooks.
     """
+
     CREATE_USER = "create_user"
+    """Triggered when a new user gets successfully created."""
+
     DELETE_USER = "delete_user"
+    """Triggered when an existing user gets successfully deleted."""
 
 
 def process_webhook_requests(action, params, update_user_status_on_error=False, settings=None):

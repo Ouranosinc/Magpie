@@ -60,7 +60,8 @@ if TYPE_CHECKING:
         CookiesType,
         HeadersType,
         SettingsType,
-        Str
+        Str,
+        TypedDict
     )
 
     # pylint: disable=C0103,invalid-name
@@ -71,7 +72,8 @@ if TYPE_CHECKING:
     TestAppOrUrlType = Union[Str, TestApp]
     AnyMagpieTestItemType = Union[AnyMagpieTestCaseType, TestAppOrUrlType]
 
-    HTMLSearch = List[Dict[Str, Union[Str, List[Str]]]]
+    HTMLSearchElement = TypedDict("HTMLSearchElement", {"name": Str, "class": List[Str], "index": int})
+    HTMLSearch = List[HTMLSearchElement]
     FormSearch = Union[Form, Str, Dict[Str, Str]]
 
 OPTIONAL_STRING_TYPES = six.string_types + tuple([type(None)])
@@ -336,7 +338,7 @@ def get_test_webhook_app(webhook_url):
         # Returns the status number
         return Response(str(settings["webhook_status"]))
 
-    def get_tmp_url(*_):
+    def get_callback_url(*_):
         # Returns the tmp_url
         return Response(str(settings["callback_url"]))
 
@@ -371,7 +373,7 @@ def get_test_webhook_app(webhook_url):
         config.add_view(webhook_fail_request, route_name="webhook_fail",
                         request_method="POST")
         config.add_view(get_status, route_name="get_status", request_method="GET")
-        config.add_view(get_tmp_url, route_name="get_callback_url", request_method="GET")
+        config.add_view(get_callback_url, route_name="get_callback_url", request_method="GET")
         config.add_view(check_payload, route_name="check_payload", request_method="POST")
         config.add_view(reset, route_name="reset", request_method="POST")
         webhook_app_instance = config.make_wsgi_app()
@@ -1157,7 +1159,7 @@ def check_error_param_structure(body,                                   # type: 
 
 
 def find_html_body_contents(response_or_body, html_search=None):
-    # type: (Union[TestResponse, BeautifulSoup], Optional[HTMLSearch]) -> Any
+    # type: (Union[TestResponse, BeautifulSoup], Optional[HTMLSearch]) -> Union[BeautifulSoup, List[BeautifulSoup]]
     """
     Given a successful (200) response, retrieves the *important* content of the UI page matching search criteria.
 
@@ -1183,7 +1185,7 @@ def find_html_body_contents(response_or_body, html_search=None):
         body = response_or_body
     main_body = {"class": ["content"]}
     if not html_search:
-        html_search = [main_body]
+        html_search = [main_body]  # type: HTMLSearch
 
     for i, search_element in enumerate(html_search):
         elements = body.contents

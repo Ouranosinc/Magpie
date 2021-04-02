@@ -219,7 +219,7 @@ class TestWebhooks(ti.BaseTestCase):
             # Check if the user's status is still set to 1, since the tmp_url has not been called yet
             self.checkTestUserStatus(UserStatuses.OK.value)
 
-            # Retrieve the tmp_url and send the request to the magpie app
+            # Retrieve the callback URL and send the request to the magpie app
             resp = requests.get(self.base_webhook_url + "/get_callback_url")
             utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=CONTENT_TYPE_HTML)
             utils.test_request(self, "GET", urlparse(resp.text).path)
