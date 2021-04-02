@@ -135,7 +135,9 @@ def create_user(user_name, password, email, group_name, db_session):
     # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
     transaction.commit()
 
-    process_webhook_requests(WebhookAction.CREATE_USER, {"user_name": user_name, "callback_url": tmp_url}, True)
+    webhook_params = {"user_name": user_name, "user_id": new_user.id,
+                      "user_email": new_user.email, "callback_url": tmp_url}
+    process_webhook_requests(WebhookAction.CREATE_USER, webhook_params, True)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": user_content})

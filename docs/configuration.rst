@@ -781,7 +781,10 @@ configuration names are supported where mentioned.
     Environment variable ``POSTGRES_PORT`` and setting ``postgres.port`` are also supported if not previously
     identified by their `Magpie`-prefixed variants.
 
-- | ``MAGPIE_POSTGRES_DB``
+.. _MAGPIE_POSTGRES_DB:
+.. |MAGPIE_POSTGRES_DB| replace:: ``MAGPIE_POSTGRES_DB``
+
+- | |MAGPIE_POSTGRES_DB|_
   | (Default: ``"magpie"``)
 
   Name of the database located at the specified connection to retrieve `Magpie` data stored in `PostgreSQL`_.
@@ -917,6 +920,8 @@ Webhook Actions
 This section presents the supported :term:`Webhook` |webhook_param_action|_ values that can be registered and
 corresponding template parameters available in each case to generate the payload.
 
+.. _webhook_user_create:
+
 User Creation
 ~~~~~~~~~~~~~~~
 
@@ -926,16 +931,19 @@ User Creation
     * - Action
       - :attr:`WebhookAction.CREATE_USER`
     * - Parameters
-      - ``user_name``, ``user_id``, ``callback_url``
+      - ``user_name``, ``user_id``, ``user_email``, ``callback_url``
 
 Triggered whenever a :term:`User` gets successfully created.
 
-The name and ID are provided for reference as needed for the receiving external web application defined by the
+The :term:`User` details are provided for reference as needed for the receiving external web application defined by the
 configured |webhook_param_url|_.
+
 The ``callback_url`` serves as follow-up endpoint, should that external application need it, to request using ``GET``
 method (no body) that `Magpie` sets the :term:`User` account status as erroneous. That :term:`User` would then be
 affected with ``status`` value :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. The ``callback_url``
 location will be available until called or expired according to ``MAGPIE_TOKEN_EXPIRE`` setting.
+
+.. _webhook_user_delete:
 
 User Deletion
 ~~~~~~~~~~~~~~~
@@ -946,6 +954,6 @@ User Deletion
     * - Action
       - :attr:`WebhookAction.DELETE_USER`
     * - Parameters
-      - ``user_name``
+      - ``user_name``, ``user_id``, ``user_email``
 
 Triggered whenever a :term:`User` gets successfully deleted.

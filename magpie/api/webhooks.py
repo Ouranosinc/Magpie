@@ -27,16 +27,21 @@ if TYPE_CHECKING:
     )
 
 # List of keys that should be found for a single webhook item in the config
-WEBHOOK_KEYS = {
+WEBHOOK_KEYS_REQUIRED = {
     "name",
     "action",
     "method",
     "url",
     "payload"
 }
+WEBHOOK_KEYS_OPTIONAL = {
+    "format"
+}
+WEBHOOK_KEYS = WEBHOOK_KEYS_REQUIRED | WEBHOOK_KEYS_OPTIONAL
 
-# These are the parameters permitted to use the template form in the webhook payload.
-WEBHOOK_TEMPLATE_PARAMS = ["user_name", "callback_url"]
+# These are *potential* parameters permitted to use the template form in the webhook payload.
+# Each parameter transferred to any given webhook are provided distinctively for each case.
+WEBHOOK_TEMPLATE_PARAMS = ["user_name", "user_id", "user_email", "callback_url"]
 
 WEBHOOK_HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
@@ -45,7 +50,7 @@ LOGGER = get_logger(__name__)
 
 class WebhookAction(ExtendedEnum):
     """
-    Actions supported by webhooks.
+    Supported :term:`Webhook` actions.
     """
 
     CREATE_USER = "create_user"
@@ -91,8 +96,8 @@ def replace_template(params, payload):
     if isinstance(payload, list):
         return [replace_template(params, value) for value in payload]
     if isinstance(payload, str):
-        for template_param in WEBHOOK_TEMPLATE_PARAMS:
-            if template_param in params:
+        for template_param in params:
+            if template_param in WEBHOOK_TEMPLATE_PARAMS:
                 payload = payload.replace("{" + template_param + "}", params[template_param])
         return payload
     # For any other type, no replacing to do
@@ -156,7 +161,7 @@ def setup_webhooks(config_path, settings):
                         exception=ValueError, logger=LOGGER
                     )
                 LOGGER.debug("Validating webhook: %s", webhook.get("name", "<undefined-name>"))
-                if set(webhook) != WEBHOOK_KEYS or not all(value for value in webhook.values()):
+                if set(webhook) != WEBHOOK_KEYS_REQUIRED or not all(value for value in webhook.values()):
                     raise_log(
                         "Missing or invalid key/value in webhook config from the config file {}".format(config_path),
                         exception=ValueError, logger=LOGGER
