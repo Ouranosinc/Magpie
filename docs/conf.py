@@ -209,7 +209,10 @@ html_theme = "nature"
 # theme further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    "navigation_depth": 3,   # TOC, RTD theme
+    # NOTE: navigation depth of '2' create the side menu down to '~~~' titles
+    #       avoid using deeper otherwise items that also generate index entries
+    #       that we don't want there (:envvar:) would be listed
+    "navigation_depth": 2,   # TOC, RTD theme
     "body_max_width": 1200,  # really narrow default 850, we are in widescreen era
 }
 

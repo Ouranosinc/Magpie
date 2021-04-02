@@ -12,16 +12,16 @@ Glossary
         Required :term:`Group` membership to obtain sufficient privileges in order to be permitted the execution of
         a given request. Requests under different scopes require variable access levels depending on context.
 
+    Access Control Entry
     ACE
-        Access Control Entry.
 
         Definition of an access control rule (or policy) with `Allow` or `Deny` decision for a given :term:`User` or
         :term:`Group` active according to a certain :term:`Permission` name and scope. Multiple :term:`ACE` form the
         effective :term:`ACL` conditions to be evaluated to either grant or refuse access (i.e.: to provide
         the :term:`Authorization` result based on the authenticated :term:`User`).
 
+    Access Control List
     ACL
-        Access Control List.
 
         Set of :term:`User` and :term:`Group` scopes, provided session :term:`Authentication` elements, that either
         grants or denies :term:`Permission` access to the applicable :term:`User` for the targeted :term:`Resource`.
@@ -41,7 +41,8 @@ Glossary
     Authorization
         Process of allowing or denying access to a :term:`Resource` or :term:`Service` according to :term:`Logged User`
         identified through one of the :term:`Authentication Methods`. This process typically falls into the hands of a
-        :term:`Proxy` application as policy enforcement point (PEP) using policy access decisions provided by `Magpie`.
+        :term:`Proxy` application as :term:`Policy Enforcement Point` using policy access decisions provided
+        by `Magpie`.
 
     Context User
         Specific :term:`User` that is being targeted by a request from specified value for the ``{user_name}`` request
@@ -116,6 +117,21 @@ Glossary
             See :ref:`permissions` chapter for more exhaustive details, including contextual comparisons for all other
             *Permission*-related terms presented here.
 
+    Policy Decision Point
+    PDP
+
+        Application that has the responsibility to take the decision whether or not to allow or deny access of a given
+        :term:`User` to some targeted :term:`Resource` based on applicable :term:`Permission` rules. This is the role
+        that `Magpie` fulfills.
+
+    Policy Enforcement Point
+    PEP
+
+        Application that has the responsibility of applying the decision provided by the :term:`PDP` in order to grant
+        access or block access to the :term:`Resource` by the intended :term:`User`. This is typically accomplished by
+        `Twitcher`_ :term:`Proxy`, but can be implemented by any application that can communicate with `Magpie` through
+        the API endpoint it provides.
+
     Provider
         Corresponds to the reference user-identity to employ in order to attempt :term:`Authentication`.
         See also :term:`Internal Providers`, :term:`External Providers` and section :ref:`Authentication Providers`.
@@ -123,7 +139,7 @@ Glossary
     Proxy
         Sibling service (typically `Twitcher`_) that employs `Magpie` as access management of :term:`User`,
         :term:`Group`, :term:`Service` and :term:`Resource` to obtain applicable sets of :term:`Permission`.
-        Provided these, it acts as Policy Enforcement Point (PEP).
+        Provided these, it acts as :term:`Policy Enforcement Point`.
 
     Public
         Refers to a :term:`Permission` applied on a :term:`Service` or :term:`Resource` to special elements in order
