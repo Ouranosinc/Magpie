@@ -123,8 +123,8 @@ Authentication Providers
 ---------------------------
 
 For any of the :term:`Authentication` requests, omitting the ``provider_name`` identifier
-(or explicitly using value ``ziggurat``) will default to employ :term:`Internal Provider` method.
-This means that :term:`User` identity resolution will be attempted against locally registered users in `Magpie`
+(or explicitly using value of :envvar:`MAGPIE_DEFAULT_PROVIDER`) will default to employ :term:`Internal Provider`
+method. This means that :term:`User` identity resolution will be attempted against locally registered users in `Magpie`
 database.
 
 To instead use one of the :term:`External Providers`, the corresponding provider identifier must be provided within
@@ -273,7 +273,7 @@ The format of the ``Authorization`` header is has follows.
 
 Where the ``access_token`` must correspond with the applicable ``provider_name`` specified by query parameter in order
 to orchestrate the :term:`Authentication` operation accordingly. Once again, omitting the ``provider_name`` will default
-to :term:`User` identification against local accounts in `Magpie`.
+to :term:`User` identification against local accounts in `Magpie` using :envvar:`MAGPIE_DEFAULT_PROVIDER`.
 
 
 .. fixme: https://github.com/Ouranosinc/Magpie/issues/255
