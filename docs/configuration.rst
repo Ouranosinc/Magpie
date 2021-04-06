@@ -243,7 +243,7 @@ These settings can be used to specify where to find other settings through custo
 
 .. envvar:: MAGPIE_PERMISSIONS_CONFIG_PATH
 
-    (default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
+    (Default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)
 
     Path where to find `permissions.cfg`_ file. Can also be a directory path, where all contained configuration files
     will be parsed for ``permissions`` section and will be loaded sequentially.
