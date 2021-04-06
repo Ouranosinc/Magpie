@@ -400,7 +400,7 @@ Extended Representation
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _perm_type:
-.. |perm_type| replace:: |perm_type|_
+.. |perm_type| replace:: ``type``
 
 It can be noted that the previous JSON representation also provides a fourth |perm_type|_ parameter which serves as
 indicative detail about the kind of :term:`Permission` being displayed. This field is provided in attempt to reduce

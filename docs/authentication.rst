@@ -246,10 +246,10 @@ Access to Protected Resources
 
 When sending requests to the :term:`Policy Enforcement Point` (e.g.: `Twitcher`_ :term:`Proxy`),
 appropriate ``Cookie`` headers must be defined for it to identify the :term:`Logged User` and resolve its
-:term:`Effective Permissions` accordingly. Not providing those tokens will default to using :envvar:`MAGPIE_ANONYMOUS_USER`,
-which will result into either one of HTTP ``Unauthorized [401]`` or ``Forbidden [403]``, depending on how the PEP
-interprets and returns the response indicated by `Magpie`, unless the corresponding :term:`Resource` was allowed
-for :ref:`perm_public_access`.
+:term:`Effective Permissions` accordingly. Not providing those tokens will default to using
+:envvar:`MAGPIE_ANONYMOUS_USER`, which will result into either one of HTTP ``Unauthorized [401]`` or
+``Forbidden [403]``, depending on how the PEP interprets and returns the response indicated by `Magpie`, unless the
+corresponding :term:`Resource` was allowed for :ref:`perm_public_access`.
 
 When appropriately authenticated, access to the targeted :term:`Resource` will be granted or denied depending on the
 :term:`Effective Permissions` that :term:`Logged User` has for it. This decision is extensively explained in section
