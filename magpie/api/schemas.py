@@ -909,13 +909,13 @@ class ResourceBodySchema(colander.MappingSchema):
     )
     permission_names = PermissionNameListSchema(
         description="List of resource permissions applicable or effective for a given user/group according to context.",
-        example=[Permission.READ.value, Permission.WRITE.value]
+        example=[Permission.READ.value, Permission.WRITE.value],
+        default=colander.null,  # if no parent
+        missing=colander.drop   # if not returned (basic_info = True)
     )
     permissions = PermissionObjectListSchema(
         description="List of detailed resource permissions applicable or effective for user/group according to context."
     )
-    permission_names.default = colander.null  # if no parent
-    permission_names.missing = colander.drop  # if not returned (basic_info = True)
 
 
 # FIXME: improve by making recursive resources work (?)
