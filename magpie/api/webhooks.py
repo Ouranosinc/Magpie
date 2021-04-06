@@ -75,6 +75,8 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     # Check for webhook requests
     settings = get_settings(settings, app=True)
     webhooks = settings.get("webhooks", {})  # type: WebhookConfig
+    if not webhooks:
+        return
     action_webhooks = webhooks[action]
     if len(action_webhooks) > 0:
         # Execute all webhook requests
@@ -83,23 +85,38 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
         pool.starmap_async(send_webhook_request, args)
 
 
-def replace_template(params, payload):
-    # type: (WebhookTemplateParameters, WebhookPayload) -> WebhookPayload
+def replace_template(params, payload, force_str=False):
+    # type: (WebhookTemplateParameters, WebhookPayload, bool) -> WebhookPayload
     """
     Replace each template parameter from the payload by its corresponding value.
 
     :param params: the values of the template parameters
     :param payload: structure containing the data to be processed by the template replacement
+    :param force_str: enforce string conversion of applicable fields where non-string values are detected.
     :return: structure containing the data with the replaced template parameters
     """
     if isinstance(payload, dict):
-        return {replace_template(params, key): replace_template(params, value) for key, value in payload.items()}
+        return {replace_template(params, key, force_str=True): replace_template(params, value)
+                for key, value in payload.items()}
     if isinstance(payload, list):
         return [replace_template(params, value) for value in payload]
-    if isinstance(payload, str):
+    if isinstance(payload, str):  # template fields are always string since '{<param>}' must be provided
         for template_param in params:
-            if template_param in WEBHOOK_TEMPLATE_PARAMS:
-                payload = payload.replace("{" + template_param + "}", params[template_param])
+            template_replace = "{" + template_param + "}"
+            if template_param in WEBHOOK_TEMPLATE_PARAMS and template_replace in payload:
+                template_value = params[template_param]
+                # if result field is not a string and template is defined as is, allow value type replacement
+                if not force_str and not isinstance(template_value, str) and payload == template_replace:
+                    payload = template_value
+                # otherwise, enforce convert to string to avoid failing string replacement,
+                # but remove any additional quotes that might be defined to enforce non-string to string conversion
+                else:
+                    template_single_string = "'" + template_replace + "'"
+                    template_double_string = "\"" + template_replace + "\""
+                    for template_str in [template_single_string, template_double_string]:
+                        if payload == template_str and not isinstance(template_value, str):
+                            template_replace = template_str
+                    payload = payload.replace(template_replace, str(template_value))
         return payload
     # For any other type, no replacing to do
     return payload
@@ -118,8 +135,10 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
     try:
         # Replace template parameters if a corresponding value was defined in input and send the webhook request
         ctype = FORMAT_TYPE_MAPPING.get(webhook_config.get("format", "json"), CONTENT_TYPE_JSON)
-        resp = requests.request(webhook_config["method"], webhook_config["url"], headers={"Content-Type": ctype},
-                                data=replace_template(params, webhook_config["payload"]))
+        headers = {"Content-Type": ctype}
+        data = replace_template(params, webhook_config["payload"])
+        data_kw = {"json": data} if ctype == CONTENT_TYPE_JSON else {"data": data}  # json parsing error using 'data'
+        resp = requests.request(webhook_config["method"], webhook_config["url"], headers=headers, **data_kw)
         resp.raise_for_status()
     except Exception as exception:
         LOGGER.error("An exception has occurred with the webhook request : %s", webhook_config["name"])
@@ -185,6 +204,6 @@ def setup_webhooks(config_path, settings):
                     )
 
                 # Regroup webhooks by action key
-                webhook_sub_config = {k: webhook[k] for k in WEBHOOK_KEYS}  # noqa
+                webhook_cfg = {k: webhook[k] for k in WEBHOOK_KEYS if k in webhook}  # noqa # ignore optional fields
                 webhook_action = WebhookAction.get(webhook["action"])
-                webhooks_conf[webhook_action].append(webhook_sub_config)
+                webhooks_conf[webhook_action].append(webhook_cfg)

@@ -29,6 +29,8 @@ Features / Changes
 * Add UI icon to provide user status feedback on individual user info page and through user list summary.
 * Change ``tmp_url`` to ``callback_url`` for webhook template and provided parameter to webhook requests to better
   represent its intended use.
+* Improve webhook template replacement to allow specification of ``format`` (default ``json``) and preserve non-string
+  parameters following replacement. Other content-types will enforce string of the whole body.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

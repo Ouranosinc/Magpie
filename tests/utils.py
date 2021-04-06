@@ -34,6 +34,7 @@ from magpie.services import SERVICE_TYPE_DICT, ServiceAccess
 from magpie.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
+    CONTENT_TYPE_PLAIN,
     SingletonMeta,
     fully_qualified_name,
     get_header,
@@ -314,12 +315,12 @@ def get_test_webhook_app(webhook_url):
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
         # Save the request's payload
-        settings["payload"].append(request.body)
+        settings["payload"].append(request.text)
         return Response("Successful webhook url")
 
     def webhook_delete_request(request):
         # Simulates a webhook url call during user deletion
-        user = json_pkg.loads(request.body.decode("utf-8"))["user_name"]
+        user = json_pkg.loads(request.text)["user_name"]
 
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
@@ -327,7 +328,7 @@ def get_test_webhook_app(webhook_url):
 
     def webhook_fail_request(request):
         # Simulates a webhook url call during user creation
-        body = json_pkg.loads(request.body.decode("utf-8"))
+        body = json_pkg.loads(request.text)
         user = body["user_name"]
         # Since we can't call a local magpie app directly here, we save the tmp_url here,
         # and retrieve it in the test case
@@ -344,7 +345,8 @@ def get_test_webhook_app(webhook_url):
 
     def check_payload(request):
         # Check if the input payload is present in the webhook app saved payload
-        assert request.body in settings["payload"]
+        msg = "Request Body not in Payload settings\nbody: {}\npayload: {}".format(request.text, settings["payload"])
+        assert request.text in settings["payload"], msg
         return Response("Content is correct")
 
     def reset(*_):
@@ -352,6 +354,13 @@ def get_test_webhook_app(webhook_url):
         settings["payload"] = []
         settings["callback_url"] = ""
         return Response("Webhook app has been reset.")
+
+    def error_body(exc, request):  # noqa
+        """
+        Make the assertion error text available as webhook response text.
+        """
+        # use the unknown error '520' to distinguish from any '500' real error
+        return HTTPException(body=str(exc), headers={"Content-Type": CONTENT_TYPE_PLAIN})
 
     with Configurator() as config:
         settings = config.registry.settings
@@ -366,16 +375,14 @@ def get_test_webhook_app(webhook_url):
         config.add_route("get_callback_url", "/get_callback_url")
         config.add_route("check_payload", "/check_payload")
         config.add_route("reset", "/reset")
-        config.add_view(webhook_create_request, route_name="webhook_create",
-                        request_method="POST")
-        config.add_view(webhook_delete_request, route_name="webhook_delete",
-                        request_method="POST")
-        config.add_view(webhook_fail_request, route_name="webhook_fail",
-                        request_method="POST")
+        config.add_view(webhook_create_request, route_name="webhook_create", request_method="POST")
+        config.add_view(webhook_delete_request, route_name="webhook_delete", request_method="POST")
+        config.add_view(webhook_fail_request, route_name="webhook_fail", request_method="POST")
         config.add_view(get_status, route_name="get_status", request_method="GET")
         config.add_view(get_callback_url, route_name="get_callback_url", request_method="GET")
         config.add_view(check_payload, route_name="check_payload", request_method="POST")
         config.add_view(reset, route_name="reset", request_method="POST")
+        config.add_exception_view(error_body)
         webhook_app_instance = config.make_wsgi_app()
 
     def webhook_app():
