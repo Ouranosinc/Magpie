@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`3.9.0 <https://github.com/Ouranosinc/Magpie/tree/3.9.0>`_ (2021-04-06)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add missing ``WWW-Authentication`` and ``Location-When-Unauthenticated`` headers when HTTP ``Unauthorized [401]``
