@@ -11,7 +11,9 @@ Make sure you are using the latest available version to receive latest vulnerabi
 Reporting a Vulnerability
 ==========================
 
-Please submit a new issue with the tag `security` and detail it so we can reproduce it and work on it.
+Please submit a `new issue`_ with the tag ``security`` and detail it so we can reproduce it and work on it.
 
 Updates against a validated vulnerability will be addressed as quickly as possible.
 If you can provide a fix directly, a pull request will be welcomed!
+
+.. _new issue: https://github.com/Ouranosinc/Magpie/issues/new

@@ -255,9 +255,16 @@ $(DOC_LOCATION):
 		"$(MAKE)" -C "$(APP_ROOT)/docs" html;'
 	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
+.PHONY: _force_docs
+_force_docs:
+	@-rm -f "$(DOC_LOCATION)"
+
+.PHONY: docs-only
+docs-only: _force_docs $(DOC_LOCATION) 	## generate documentation without requirements installation or cleanup
+
 # NOTE: we need almost all base dependencies because magpie package needs to be parsed to generate OpenAPI
 .PHONY: docs
-docs: install-docs install-pkg clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
+docs: install-docs install-pkg clean-docs docs-only	## generate Sphinx HTML documentation, including API docs
 
 .PHONY: docs-show
 docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (build docs if missing)

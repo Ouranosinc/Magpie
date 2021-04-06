@@ -121,7 +121,7 @@ tests should be your reference to see if new features are working and not breaki
 are intended to validate older or pre-deployed servers, although with slightly more limited coverage.
 
 A basic `Magpie` instance can also be initialized by using the `docker-compose.yml.example`_ file.
-Note that the environment variables ``MAGPIE_TEST_REMOTE_SERVER_URL`` and ``HOST_FQDN``
+Note that the environment variables :envvar:`MAGPIE_TEST_REMOTE_SERVER_URL` and :envvar:`HOST_FQDN`
 must first be defined for the `remote` tests.
 For example, these default values should work with ``docker-compose``::
 
@@ -135,7 +135,7 @@ To start the tests, you can simply run one of the following command::
     make test-remote
 
 .. note::
-    Although targeted URL is ``localhost``, using ``MAGPIE_TEST_REMOTE_SERVER_URL`` makes the test `remote`.
+    Although targeted URL is ``localhost``, using :envvar:`MAGPIE_TEST_REMOTE_SERVER_URL` makes the test `remote`.
     A `Magpie` instance should be running with that served location (e.g.: using ``make start`` or ``docker-compose``).
     Running `local` tests will boot its own Web Applicable instance, but `PostgreSQL`_ must still be accessible.
 

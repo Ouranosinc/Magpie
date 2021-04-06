@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 
 import dotenv
 from pyramid.settings import asbool
-from pyramid.threadlocal import get_current_registry
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -217,12 +216,7 @@ def get_constant(constant_name,             # type: Str
         return globals()[constant_name]
     missing = True
     magpie_value = None
-    if settings_container:
-        settings = get_settings(settings_container)
-    else:
-        # note: this will work only after include of magpie will have triggered configurator setup
-        print_log("Using settings from local thread.", level=logging.DEBUG)
-        settings = get_settings(get_current_registry())
+    settings = get_settings(settings_container, app=True)
     if settings and constant_name in settings:  # pylint: disable=E1135
         missing = False
         magpie_value = settings.get(constant_name)

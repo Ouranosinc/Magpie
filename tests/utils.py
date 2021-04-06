@@ -34,6 +34,7 @@ from magpie.services import SERVICE_TYPE_DICT, ServiceAccess
 from magpie.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
+    CONTENT_TYPE_PLAIN,
     SingletonMeta,
     fully_qualified_name,
     get_header,
@@ -60,7 +61,8 @@ if TYPE_CHECKING:
         CookiesType,
         HeadersType,
         SettingsType,
-        Str
+        Str,
+        TypedDict
     )
 
     # pylint: disable=C0103,invalid-name
@@ -71,7 +73,8 @@ if TYPE_CHECKING:
     TestAppOrUrlType = Union[Str, TestApp]
     AnyMagpieTestItemType = Union[AnyMagpieTestCaseType, TestAppOrUrlType]
 
-    HTMLSearch = List[Dict[Str, Union[Str, List[Str]]]]
+    HTMLSearchElement = TypedDict("HTMLSearchElement", {"name": Str, "class": List[Str], "index": int})
+    HTMLSearch = List[HTMLSearchElement]
     FormSearch = Union[Form, Str, Dict[Str, Str]]
 
 OPTIONAL_STRING_TYPES = six.string_types + tuple([type(None)])
@@ -312,12 +315,12 @@ def get_test_webhook_app(webhook_url):
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
         # Save the request's payload
-        settings["payload"].append(request.body)
+        settings["payload"].append(request.text)
         return Response("Successful webhook url")
 
     def webhook_delete_request(request):
         # Simulates a webhook url call during user deletion
-        user = json_pkg.loads(request.body.decode("utf-8"))["user_name"]
+        user = json_pkg.loads(request.text)["user_name"]
 
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
@@ -325,55 +328,61 @@ def get_test_webhook_app(webhook_url):
 
     def webhook_fail_request(request):
         # Simulates a webhook url call during user creation
-        body = json_pkg.loads(request.body.decode("utf-8"))
+        body = json_pkg.loads(request.text)
         user = body["user_name"]
         # Since we can't call a local magpie app directly here, we save the tmp_url here,
         # and retrieve it in the test case
-        settings["tmp_url"] = body["tmp_url"]
-        return Response("Failing webhook url with user " + user + " and tmp_url " + settings["tmp_url"])
+        settings["callback_url"] = body["callback_url"]
+        return Response("Failing webhook url with user " + user + " and callback_url " + settings["callback_url"])
 
     def get_status(*_):
         # Returns the status number
         return Response(str(settings["webhook_status"]))
 
-    def get_tmp_url(*_):
+    def get_callback_url(*_):
         # Returns the tmp_url
-        return Response(str(settings["tmp_url"]))
+        return Response(str(settings["callback_url"]))
 
     def check_payload(request):
         # Check if the input payload is present in the webhook app saved payload
-        assert request.body in settings["payload"]
+        msg = "Request Body not in Payload settings\nbody: {}\npayload: {}".format(request.text, settings["payload"])
+        assert request.text in settings["payload"], msg
         return Response("Content is correct")
 
     def reset(*_):
         settings["webhook_status"] = 0
         settings["payload"] = []
-        settings["tmp_url"] = ""
+        settings["callback_url"] = ""
         return Response("Webhook app has been reset.")
+
+    def error_body(exc, request):  # noqa
+        """
+        Make the assertion error text available as webhook response text.
+        """
+        # use the unknown error '520' to distinguish from any '500' real error
+        return HTTPException(body=str(exc), headers={"Content-Type": CONTENT_TYPE_PLAIN})
 
     with Configurator() as config:
         settings = config.registry.settings
         # Initialize status
         settings["webhook_status"] = 0
         settings["payload"] = []
-        settings["tmp_url"] = ""
+        settings["callback_url"] = ""
         config.add_route("webhook_create", "/webhook_create")
         config.add_route("webhook_delete", "/webhook_delete")
         config.add_route("webhook_fail", "/webhook_fail")
         config.add_route("get_status", "/get_status")
-        config.add_route("get_tmp_url", "/get_tmp_url")
+        config.add_route("get_callback_url", "/get_callback_url")
         config.add_route("check_payload", "/check_payload")
         config.add_route("reset", "/reset")
-        config.add_view(webhook_create_request, route_name="webhook_create",
-                        request_method="POST")
-        config.add_view(webhook_delete_request, route_name="webhook_delete",
-                        request_method="POST")
-        config.add_view(webhook_fail_request, route_name="webhook_fail",
-                        request_method="POST")
+        config.add_view(webhook_create_request, route_name="webhook_create", request_method="POST")
+        config.add_view(webhook_delete_request, route_name="webhook_delete", request_method="POST")
+        config.add_view(webhook_fail_request, route_name="webhook_fail", request_method="POST")
         config.add_view(get_status, route_name="get_status", request_method="GET")
-        config.add_view(get_tmp_url, route_name="get_tmp_url", request_method="GET")
+        config.add_view(get_callback_url, route_name="get_callback_url", request_method="GET")
         config.add_view(check_payload, route_name="check_payload", request_method="POST")
         config.add_view(reset, route_name="reset", request_method="POST")
+        config.add_exception_view(error_body)
         webhook_app_instance = config.make_wsgi_app()
 
     def webhook_app():
@@ -498,10 +507,10 @@ def mock_get_settings(arg=None):
         """
         from magpie.utils import get_settings as real_get_settings
 
-        def mocked(container):
+        def mocked(container, *args, **kwargs):
             if isinstance(container, DummyRequest):
                 return container.registry.settings
-            return real_get_settings(container)
+            return real_get_settings(container, *args, **kwargs)
 
         @functools.wraps(test)
         def wrapped(*_, **__):
@@ -1157,7 +1166,7 @@ def check_error_param_structure(body,                                   # type: 
 
 
 def find_html_body_contents(response_or_body, html_search=None):
-    # type: (Union[TestResponse, BeautifulSoup], Optional[HTMLSearch]) -> Any
+    # type: (Union[TestResponse, BeautifulSoup], Optional[HTMLSearch]) -> Union[BeautifulSoup, List[BeautifulSoup]]
     """
     Given a successful (200) response, retrieves the *important* content of the UI page matching search criteria.
 
@@ -1183,7 +1192,7 @@ def find_html_body_contents(response_or_body, html_search=None):
         body = response_or_body
     main_body = {"class": ["content"]}
     if not html_search:
-        html_search = [main_body]
+        html_search = [main_body]  # type: HTMLSearch
 
     for i, search_element in enumerate(html_search):
         elements = body.contents

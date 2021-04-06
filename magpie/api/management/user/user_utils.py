@@ -130,13 +130,15 @@ def create_user(user_name, password, email, group_name, db_session):
         group_id=_get_group(group_name).id)
     ax.evaluate_call(lambda: db_session.add(webhook_token), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.TemporaryToken_POST_ForbiddenResponseSchema.description)
-    tmp_url = webhook_token.url()
+    callback_url = webhook_token.url()
 
     # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
     transaction.commit()
 
-    process_webhook_requests(WebhookAction.CREATE_USER,
-                             {"user_name": user_name, "tmp_url": tmp_url}, True)
+    # note: after committed transaction, 'new_user' object becomes detached and cannot be used directly
+    webhook_params = {"user_name": user_name, "user_id": user_content["user_id"],
+                      "user_email": user_content["email"], "callback_url": callback_url}
+    process_webhook_requests(WebhookAction.CREATE_USER, webhook_params, True)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": user_content})

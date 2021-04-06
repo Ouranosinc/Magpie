@@ -1083,6 +1083,69 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_response_basic_info(resp)
 
     @runner.MAGPIE_TEST_USERS
+    def test_UpdateUsers_status_Forbidden_AnyNonAdmin(self):
+        """
+        .. seealso::
+            - :meth:`Interface_MagpieAPI_AdminAuth.test_UpdateUser_status`
+        """
+        utils.warn_version(self, "User update status", "3.9.0", skip=True)
+
+        test_user1 = "test-user-{}".format(uuid.uuid4())
+        test_user2 = "test-user-{}".format(uuid.uuid4())
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user1)
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user2)
+        webhook_update_error_status(test_user1)
+        self.login_test_user(override_user_name=test_user1)
+
+        data = {"status": s.UserStatuses.OK.value}
+        path = "/users/{}".format(test_user1)  # try update its own status to 'OK' when it was bad
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
+
+        data = {"status": s.UserStatuses.WebhookErrorStatus.value}
+        path = "/users/{}".format(test_user2)  # try update other user's status to be considered bad
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_UpdateUsers_PartiallyAllowedFields_Forbidden_AnyNonAdmin(self):
+        """
+        Validate that update operation gets completely forbidden even if *some* fields are allowed update.
+
+        For instance, any non-admin logged user can update its own password, but cannot update its own name or status.
+        If a request is made with both new password, and name and/or status, the request must be forbidden altogether.
+        """
+        utils.warn_version(self, "User update status missing to validate combined operation", "3.9.0", skip=True)
+
+        test_user = "test-user-{}".format(uuid.uuid4())
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user)
+        # update status only available after this version
+        if TestVersion(self.version) >= TestVersion("3.9"):
+            webhook_update_error_status(test_user)
+        self.login_test_user(override_user_name=test_user)
+
+        data = {
+            "user_name": test_user + "-new-name",       # forbidden by non-admin
+            "password": test_user + "-new-password"     # allowed if it was by itself, but not with user name
+        }
+        path = "/users/{}".format(test_user)
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
+
+        # update status only available after this version
+        if TestVersion(self.version) >= TestVersion("3.9"):
+            data = {
+                "status": s.UserStatuses.OK.value,       # forbidden by non-admin
+                "password": test_user + "-new-password"  # allowed if it was by itself, but not with user name
+            }
+            resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                      headers=self.test_headers, cookies=self.test_cookies)
+            utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
+
+    @runner.MAGPIE_TEST_USERS
     def test_DeleteUser_DeleteSelf(self):
         """
         Logged user is allowed to delete his own account.
@@ -3799,6 +3862,43 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_UpdateUser_status(self):
+        """
+        .. seealso::
+             :meth:`Interface_MagpieAPI_UsersAuth.test_UpdateUsers_status_Forbidden_AnyNonAdmin`
+        """
+        utils.warn_version(self, "user status update", "3.9.0", skip=True)
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+
+        path = "/users/{}".format(self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["user"]["status"], s.UserStatuses.OK.value)
+
+        data = {"status": s.UserStatuses.OK.value}
+        resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method,
+                                        extra_message="Status update raised as bad request if no update required.")
+
+        bad_value = {"status": -1}
+        resp = utils.test_request(self, self.update_method, path, json=bad_value, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method,
+                                        extra_message="Status update raised if value is not applicable.")
+
+        webhook_update_error_status(self.test_user_name)  # simulate status invalid updated by webhook
+        resp = utils.test_request(self, self.update_method, path, json=data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+
+        # getting user information displays the updated status
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(body["user"]["status"], s.UserStatuses.OK.value)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUser_existing(self):

@@ -24,8 +24,13 @@ Features / Changes
 * Change HTTP ``Forbidden [403]`` responses during login to generic ``Unauthorized [401]`` to avoid leaking details
   about which are valid and invalid user names. Any failure to login using correctly formatted credentials will be
   errored out indistinctly as ``Unauthorized [401]``.
+* Add API user ``status`` update operation using ``PATCH`` request (admin-only).
 * Add API user list ``status`` to filter query by given user account statuses.
 * Add UI icon to provide user status feedback on individual user info page and through user list summary.
+* Change ``tmp_url`` to ``callback_url`` for webhook template and provided parameter to webhook requests to better
+  represent its intended use.
+* Improve webhook template replacement to allow specification of ``format`` (default ``json``) and preserve non-string
+  parameters following replacement. Other content-types will enforce string of the whole body.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
