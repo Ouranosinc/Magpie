@@ -372,7 +372,8 @@ def get_settings(container, app=False):
         return container
     if container is None and app:
         print_log("Using settings from local thread.", level=logging.DEBUG)
-        return get_current_registry()
+        registry = get_current_registry()
+        return registry.settings
     raise TypeError("Could not retrieve settings from container object [{}]".format(type(container)))
 
 

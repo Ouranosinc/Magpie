@@ -500,10 +500,10 @@ def mock_get_settings(arg=None):
         """
         from magpie.utils import get_settings as real_get_settings
 
-        def mocked(container):
+        def mocked(container, *args, **kwargs):
             if isinstance(container, DummyRequest):
                 return container.registry.settings
-            return real_get_settings(container)
+            return real_get_settings(container, *args, **kwargs)
 
         @functools.wraps(test)
         def wrapped(*_, **__):

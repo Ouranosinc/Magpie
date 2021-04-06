@@ -88,11 +88,9 @@ if TYPE_CHECKING:
     ConfigList = List[ConfigItem]
     ConfigDict = Dict[Str, Union[Str, ConfigItem, ConfigList, JSON]]
 
+    WebhookPayload = Union[JSON, Str]
     WebhookTemplateParameters = Dict[Str, AnyValue]
     WebhookConfigSettings = TypedDict("WebhookConfigSettings", {
-        "name": Str, "action": Str, "method": Str, "url": Str, "format": Str, "payload": JSON
+        "name": Str, "action": Str, "method": Str, "url": Str, "format": Str, "payload": WebhookPayload
     })
-    WebhookLoadedSettings = TypedDict("WebhookLoadedSettings", {
-        "name": Str, "method": Str, "url": Str, "format": Str, "payload": JSON
-    })
-    WebhookConfig = Dict[WebhookAction, List[WebhookLoadedSettings]]
+    WebhookConfig = Dict[WebhookAction, List[WebhookConfigSettings]]

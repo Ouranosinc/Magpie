@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 
     from magpie.typedefs import (
         AnySettingsContainer,
-        JSON,
         SettingsType,
         Str,
         WebhookConfig,
         WebhookConfigSettings,
+        WebhookPayload,
         WebhookTemplateParameters
     )
 
@@ -73,7 +73,8 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     :param settings: application settings where webhooks configuration can be retrieved.
     """
     # Check for webhook requests
-    webhooks = get_settings(settings)["webhooks"]  # type: WebhookConfig
+    settings = get_settings(settings, app=True)
+    webhooks = settings.get("webhooks", {})  # type: WebhookConfig
     action_webhooks = webhooks[action]
     if len(action_webhooks) > 0:
         # Execute all webhook requests
@@ -83,7 +84,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
 
 
 def replace_template(params, payload):
-    # type: (WebhookTemplateParameters, JSON) -> JSON
+    # type: (WebhookTemplateParameters, WebhookPayload) -> WebhookPayload
     """
     Replace each template parameter from the payload by its corresponding value.
 
@@ -184,7 +185,6 @@ def setup_webhooks(config_path, settings):
                     )
 
                 # Regroup webhooks by action key
-                webhook_allowed_keys = set(WEBHOOK_KEYS) - {"action"}
-                webhook_sub_config = {k: webhook[k] for k in webhook_allowed_keys}
+                webhook_sub_config = {k: webhook[k] for k in WEBHOOK_KEYS}  # noqa
                 webhook_action = WebhookAction.get(webhook["action"])
                 webhooks_conf[webhook_action].append(webhook_sub_config)
