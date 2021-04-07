@@ -787,6 +787,8 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
 
     kwargs.pop("expect_errors", None)  # remove keyword specific to TestApp
     content_type = get_header("Content-Type", headers)
+    if headers:
+        headers.pop("Content-Length", None)  # let requests recalculate to avoid mismatch against real content
     if json or content_type == CONTENT_TYPE_JSON:
         kwargs["json"] = _body
     elif data or body:
