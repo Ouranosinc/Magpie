@@ -1,3 +1,4 @@
+import difflib
 import functools
 import importlib
 import itertools
@@ -976,9 +977,10 @@ def check_val_false(val, msg=None):
     assert val is False, format_test_val_ref(val, False, pre="Not False", msg=msg)
 
 
-def check_val_equal(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+def check_val_equal(val, ref, msg=None, diff=False):
+    # type: (Any, Union[Any, NullType], Optional[Str], bool) -> None
     """:raises AssertionError: if :paramref:`val` is not equal to :paramref:`ref`."""
+    difflib.
     assert is_null(ref) or val == ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg)
 
 

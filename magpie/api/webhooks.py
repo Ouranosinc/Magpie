@@ -54,10 +54,27 @@ class WebhookAction(ExtendedEnum):
     """
 
     CREATE_USER = "create_user"
-    """Triggered when a new user gets successfully created."""
+    """
+    Triggered when a new user gets successfully created.
+    
+    .. seealso:: 
+        :ref:`webhook_user_create`
+    """
 
     DELETE_USER = "delete_user"
-    """Triggered when an existing user gets successfully deleted."""
+    """Triggered when an existing user gets successfully deleted.
+    
+    .. seealso:: 
+        :ref:`webhook_user_delete`
+    """
+
+    UPDATE_USER_STATUS = "update_user_status"
+    """
+    Triggered when an existing user status gets successfully updated.
+    
+    .. seealso:: 
+        :ref:`webhook_user_update_status`
+    """
 
 
 def process_webhook_requests(action, params, update_user_status_on_error=False, settings=None):
@@ -102,7 +119,7 @@ def replace_template(params, payload, force_str=False):
         return [replace_template(params, value) for value in payload]
     if isinstance(payload, str):  # template fields are always string since '{<param>}' must be provided
         for template_param in params:
-            template_replace = "{" + template_param + "}"
+            template_replace = "{{" + template_param + "}}"
             if template_param in WEBHOOK_TEMPLATE_PARAMS and template_replace in payload:
                 template_value = params[template_param]
                 # if result field is not a string and template is defined as is, allow value type replacement

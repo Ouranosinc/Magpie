@@ -7,6 +7,7 @@ test_webhooks
 
 Tests for the webhooks implementation
 """
+import inspect
 import tempfile
 import unittest
 from time import sleep
@@ -24,6 +25,7 @@ from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_WEBHOOKS
+@runner.MAGPIE_TEST_FUNCTIONAL
 @runner.MAGPIE_TEST_LOCAL
 class TestWebhooks(ti.BaseTestCase):
     # pylint: disable=C0103,invalid-name
@@ -348,22 +350,92 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.TestSetup.check_NonExistingTestUser(self)
 
-    def test_Webhook_ReplaceNonString(self):
-        """
-        Verify that webhook template replacement works even when parameter value is not a string.
 
-        For example, a list or dictionary value can be an class:`int`, which should be preserved.
-        If quotes are added, the class:`int` fields is then converted to string as expected.
-        """
-        params = {"user_name": "test", "user_id": 123}
-        payload = {"param": {"name": "{user_name}", "id": "{user_id}", "id_str": "'{user_id}'"},
-                   "compose": {"id": "user_{user_id}"},
-                   "key_str": {"{user_id}": "id"}}
-        expect = {"param": {"name": params["user_name"], "id": params["user_id"], "id_str": str(params["user_id"])},
-                  "compose": {"id": "user_{}".format(params["user_id"])},
-                  "key_str": {str(params["user_id"]): "id"}}
-        data = utils.check_no_raise(lambda: replace_template(params, payload))
-        utils.check_val_equal(data, expect)
+@runner.MAGPIE_TEST_WEBHOOKS
+@runner.MAGPIE_TEST_LOCAL
+def test_webhook_template_substitution():
+    """
+    Verify that webhook template replacement works as expected against parameter values of different types.
+
+    For example, a list item or dictionary value can be an class:`int`, which should be preserved.
+    If quotes are added, the class:`int` fields is then converted to string as expected.
+    Quotes on string fields though are redundant and should be ignored.
+    Additional repeated quotes should leave them as specified.
+    """
+    params = {"user_name": "test", "user_id": 123}
+    spec = yaml.safe_load(inspect.cleandoc("""
+    payload:
+      param: 
+        name: "{{user_name}}"
+        id: "{{user_id}}"
+        id_str: "'{{user_id}}'"
+        none: user_id               # not template, only plain name 
+        str: "{user_name}"          # literal field with '{user_name}'
+        obj: {user_name}            # object with field 'user_name'
+      compose:
+        id: user_{{user_id}}
+        msg: Hello {{user_name}}, your ID is {{user_id}}
+      key_str: 
+        "{{user_id}}": "id"
+        "{{user_name}}": "name"
+      listed: 
+        - "{{user_id}}"
+        - "{{user_name}}"
+        - "'{{user_id}}'"
+      quoted: 
+        explicit: "{{user_name}}"
+        single: "\'{{user_name}}\'"
+        double: "\\"{{user_name}}\\""
+        multi: \\"\\'\\'\\"{{user_name}}\\"\\'\\'\\"
+    """))
+    expect = {
+        "param": {
+            "name": params["user_name"],
+            "id": params["user_id"],
+            "id_str": str(params["user_id"]),
+            "str": "{user_name}",
+            "bad": {"user_name": None},  # format is not a template, but a valid YAML definition
+            "none": "user_id"  # was not a template, remains literal string not replaced by value
+        },
+        "compose": {
+            "id": "user_{}".format(params["user_id"]),
+            "msg": "Hello {}, your ID is {}".format(params["user_name"], params["user_id"])
+        },
+        "key_str": {
+            str(params["user_id"]): "id",
+            params["user_name"]: "name"
+        },
+        "listed": [
+            params["user_id"],
+            params["user_name"],
+            str(params["user_id"])
+        ],
+        "quoted": {
+            "explicit": "{}".format(params["user_name"]),
+            "single": "'{}'".format(params["user_name"]),
+            "double": "\"{}\"".format(params["user_name"]),
+            "multi": "\"\'\'\"{}\"\'\'\"".format(params["user_name"])
+        }
+    }
+    data = utils.check_no_raise(lambda: replace_template(params, spec["payload"]))
+    utils.check_val_equal(data, expect, diff=True)
+
+
+@runner.MAGPIE_TEST_WEBHOOKS
+@runner.MAGPIE_TEST_LOCAL
+def test_webhook_template_literal():
+    """
+    Verify that webhook literal string payload works as intended.
+    """
+    params = {"user_name": "test", "user_id": 123}
+    spec = yaml.safe_load(inspect.cleandoc("""
+    payload: |
+      param: {{user_name}}
+      quote: "{{user_id}}"
+    """))
+    expect = "param: {}\nquote: \"{}\"".format(params["user_name"], params["user_id"])
+    data = utils.check_no_raise(lambda: replace_template(params, spec["payload"]))
+    utils.check_val_equal(data, expect)
 
 
 @runner.MAGPIE_TEST_WEBHOOKS
@@ -399,4 +471,5 @@ class TestFailingWebhooks(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
             yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
             # create the magpie app with the test webhook config
-            self.assertRaises(ValueError, utils.get_test_magpie_app, {"magpie.config_path": webhook_tmp_config.name})
+            utils.check_raises(lambda: utils.get_test_magpie_app({"magpie.config_path": webhook_tmp_config.name}),
+                               ValueError, msg="Invalid URL in webhook configuration should be raised.")

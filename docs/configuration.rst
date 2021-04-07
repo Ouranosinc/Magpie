@@ -943,7 +943,9 @@ Webhook Configuration
 .. versionadded:: 3.6
     The concept of :term:`Webhook` is introduced only following this version, and further improved in following ones.
 
-A ``webhooks`` section can be added to the :ref:`config_file`. This section defines a list of URLs and request
+.. |webhooks_section| replace:: ``webhooks``
+
+A |webhooks_section| section can be added to the :ref:`config_file`. This section defines a list of URLs and request
 parameters that should be called following or during specific events, such as but not limited to, creating or deleting
 a :term:`User`.
 
@@ -951,8 +953,12 @@ a :term:`User`.
     Webhook requests are asynchronous, so `Magpie` might execute other requests before the webhooks requests are
     completed and processed.
 
-Each :term:`Webhook` implementation provides different sets of information in the request payload according to its
-``action``. See :class:`magpie.api.webhook.WebhookAction` and below sub-sections for supported values.
+.. seealso::
+    See :ref:`config_file` for a minimal example of where and how to define the |webhooks_section| section.
+
+Each :term:`Webhook` implementation provides different sets of parameters according to its |webhook_param_action|_.
+Those parameters can be employed to fill a template request payload defined under |webhook_param_payload|_.
+See :class:`magpie.api.webhook.WebhookAction` and below sub-sections for supported values.
 
 To register any :term:`Webhook` to be called at runtime upon corresponding events, following parameters must be defined.
 Configuration parameters are all required unless explicitly indicated to have a default value.
@@ -971,6 +977,9 @@ Configuration parameters are all required unless explicitly indicated to have a 
   | (Values: one of :class:`magpie.api.webhook.WebhookAction`)
 
   The action event defining when the corresponding :term:`Webhook` must be triggered for execution.
+
+  .. seealso::
+    :ref:`config_webhook_actions` for details about each implementation.
 
 .. _webhook_param_method:
 .. |webhook_param_method| replace:: ``method``
@@ -1004,12 +1013,12 @@ Configuration parameters are all required unless explicitly indicated to have a 
   The payload can be anything between a literal string or a JSON/YAML formatted structure.
 
   .. note::
-    The payload can employ parameters that contain template variables using braces characters ``{<variable>}``.
-    Applicable ``{<variable>}`` substitution are respective to each webhook |webhook_param_action|_, as presented in
+    The payload can employ parameters that contain template variables using brace characters ``{{<variable>}}``.
+    Applicable ``{{<variable>}}`` substitution are respective to each webhook |webhook_param_action|_, as presented in
     :ref:`config_webhook_actions`.
 
-.. seealso::
-    :ref:`config_file` for a minimal example of a :term:`Webhook` definition.
+  .. seealso::
+    See :ref:`config_webhook_template` for a more concrete example of templated |webhook_param_payload|_ definition.
 
 
 .. _config_webhook_actions:
@@ -1037,14 +1046,14 @@ User Creation
     * - Parameters
       - ``user_name``, ``user_id``, ``user_email``, ``callback_url``
 
-Triggered whenever a :term:`User` gets successfully created.
+Triggered whenever a :term:`User` gets successfully created, using a ``POST /users`` request.
 
 The :term:`User` details are provided for reference as needed for the receiving external web application defined by the
 configured |webhook_param_url|_.
 
-The ``callback_url`` serves as follow-up endpoint, should that external application need it, to request using ``GET``
-method (no body) that `Magpie` sets the :term:`User` account status as erroneous. That :term:`User` would then be
-affected with ``status`` value :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. The ``callback_url``
+The ``callback_url`` serves as follow-up endpoint, should that external application need it, to request using the
+HTTP ``GET`` method (no body) that `Magpie` sets the :term:`User` account status as erroneous. That :term:`User` would
+then be affected with ``status`` value :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. The ``callback_url``
 location will be available until called or expired according to :envvar:`MAGPIE_TOKEN_EXPIRE` setting.
 
 .. _webhook_user_delete:
@@ -1060,4 +1069,134 @@ User Deletion
     * - Parameters
       - ``user_name``, ``user_id``, ``user_email``
 
-Triggered whenever a :term:`User` gets successfully deleted.
+Triggered whenever a :term:`User` gets successfully deleted, using a ``DELETE /users/{user_name}`` request.
+
+
+.. _webhook_user_update_status:
+
+User Status Update
+~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+    :stub-columns: 1
+
+    * - Action
+      - :attr:`WebhookAction.UPDATE_USER_STATUS`
+    * - Parameters
+      - ``user_name``, ``user_id``, ``user_status``
+
+Triggered whenever a :term:`User` status gets successfully updated, using a ``PATCH /users/{user_name}`` request.
+
+This event **DOES NOT** apply to changes of :term:`User` status caused by callback URL request received following
+an :ref:`webhook_user_create` event.
+
+
+.. _config_webhook_template:
+
+Webhook Template Payload
+------------------------
+
+JSON body request
+~~~~~~~~~~~~~~~~~
+
+This is a minimal example to demonstrate how the :term:`Webhook` template payload functionality can help customize
+requests sent following given event triggers. For simplicity, lets assume that a ``demo`` :term:`Webhook` provides
+two parameters, namely ``user_name = "demo"`` and ``user_id = 123``. Let's assume the following configuration was
+defined and loaded by `Magpie`.
+
+.. code-block:: YAML
+
+    webhooks:
+      - name: demo_webhook
+        action: demo
+        method: POST
+        url: https://receiving-middleware.example.com
+        payload:
+          user:
+            name: "{{user_name}}"
+            id: "{{user_id}}"
+            str: "'{{user_id}}'"
+          msg: Hello {{user_name}}, your ID is {{user_id}}
+
+
+Upon trigger of the ``demo`` event, the above :term:`Webhook` definition would result in a request sent with the
+following |webhook_param_payload|_ contents.
+
+.. code-block:: JSON
+
+    {
+        "user": {
+            "name": "demo",
+            "id": 123,
+            "str": "123"
+        },
+        "msg": "Hello demo, your ID is 123"
+    }
+
+As presented above, the ``"{{user_name}}"`` from the template gets substituted by the corresponding ``"demo"`` value.
+Similarly, ``"{{user_id}}"`` is replaced by ``123``. An important thing to notice is that value types are preserved,
+which is why the ``id`` field is an integer since that corresponding parameter is an integer in `Magpie`. Using the
+specification ``"'{{user_id}}'"`` (with additional single quotes) instead tells the template parser to replace the
+value by its string representation. It is also possible to define any combination of parameters as indicated in the
+``msg`` field of the example, and for any kind of structure, as long as JSON/YAML valid definitions are respected.
+
+It is important to take into consideration how YAML parsing operates in this case. Quotes are *not mandatory*
+everywhere, such as for values where inferred type is guaranteed to be strings as for ``msg``, but this can rapidly
+become a problem in other cases such as within an object definition or for field keys. It is therefore recommended to
+employ quotes whenever possible to remove ambiguity.
+
+Another example where YAML parsing must be carefully considered is as in the following definition that could produce
+an unexpected outcome.
+
+.. code-block:: YAML
+
+    payload:
+      user:
+        - {user_name}
+
+
+This would generate the following JSON content.
+
+
+.. code-block:: JSON
+
+    {
+        "user": {
+            "user_name": null
+        }
+    }
+
+
+This is because YAML interprets ``{user_name}`` within an array list as an object with a field named ``user_name`` and
+no corresponding value (i.e.: ``null``). For this reason, `Magpie` employs the double-braced ``{{<variable>}}`` format
+to remove this ambiguity. An unknown parameter value defined in |webhook_param_payload|_ during substitution or an ill
+defined configuration at application startup would immediately generate an error since YAML parsing will not correctly
+understand nor be able to infer these formats, instead of silently failing. When using a parameter by themselves, such
+as in the original example's ``"{{user_name}}"`` and ``"{{user_id}}"`` values, quotes will usually be required.
+
+String body request
+~~~~~~~~~~~~~~~~~~~
+
+Literal string body can also be employed using templated |webhook_param_payload|_ definition to form a custom
+:term:`Webhook` request content format. To do so, one only needs to define the payload as a string. For convenience,
+multiline character (e.g.: ``|``) can be employed to ease *literal* formatting of the content as in the below example.
+
+.. code-block:: YAML
+
+    payload: |
+      param: {{user_name}}
+      quote: "{{user_id}}"
+
+
+This would produce the literal string output as below.
+
+.. code-block:: text
+
+    param: demo
+    quote: "123"
+
+
+It is important to consider that in this case, because the whole |webhook_param_payload|_ is a string, explicit quotes
+and newlines defined in its value will remain as is, according to the selected multiline character. Also, this kind of
+:term:`Webhook` should most probably define the appropriate |webhook_param_format|_ value if the default ``json`` is
+not the desired ``Content-Type``, as `Magpie` will not attempt to infer the content structure to generate the request.
