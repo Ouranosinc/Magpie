@@ -1809,6 +1809,13 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestGroup(self)
         test_bad_users = []
         test_good_users = []
+        # cleanup in case of failed previous test run
+        for i in range(3):
+            user = test_users_template.format("bad", i)
+            utils.TestSetup.delete_TestUser(self, override_user_name=user)
+            user = test_users_template.format("good", i)
+            utils.TestSetup.delete_TestUser(self, override_user_name=user)
+        # create test users with statuses
         for i in range(3):
             user = test_users_template.format("bad", i)
             utils.TestSetup.create_TestUser(self, override_user_name=user)
@@ -1819,6 +1826,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.TestSetup.create_TestUser(self, override_user_name=user)
             test_good_users.append(user)
 
+        # test response results
         test_cases = [
             (test_good_users, s.UserStatuses.OK.value),
             (test_bad_users, s.UserStatuses.WebhookErrorStatus.value)
