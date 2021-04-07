@@ -36,8 +36,7 @@ from magpie.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
     CONTENT_TYPE_PLAIN,
-    CONTENT_TYPE_TXT_XML,
-    get_twitcher_protected_service_url
+    CONTENT_TYPE_TXT_XML
 )
 from tests import runner, utils
 from tests.utils import TestVersion
@@ -1770,8 +1769,11 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(body["code"], 401)
 
         # when logged in as non-admin to get 403
-        utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name)
-        resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, expect_errors=True)
+        headers, cookies = utils.check_or_try_login_user(self,
+                                                         username=self.test_user_name,
+                                                         password=self.test_user_name)
+        resp = utils.test_request(self, "GET", "/services", expect_errors=True,
+                                  headers=headers, cookies=cookies)
         body = utils.check_response_basic_info(resp, 403, expected_method="GET")
         utils.check_val_equal(body["code"], 403)
 
@@ -1809,6 +1811,13 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestGroup(self)
         test_bad_users = []
         test_good_users = []
+        # cleanup in case of failed previous test run
+        for i in range(3):
+            user = test_users_template.format("bad", i)
+            utils.TestSetup.delete_TestUser(self, override_user_name=user)
+            user = test_users_template.format("good", i)
+            utils.TestSetup.delete_TestUser(self, override_user_name=user)
+        # create test users with statuses
         for i in range(3):
             user = test_users_template.format("bad", i)
             utils.TestSetup.create_TestUser(self, override_user_name=user)
@@ -1819,6 +1828,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.TestSetup.create_TestUser(self, override_user_name=user)
             test_good_users.append(user)
 
+        # test response results
         test_cases = [
             (test_good_users, s.UserStatuses.OK.value),
             (test_bad_users, s.UserStatuses.WebhookErrorStatus.value)
@@ -5029,17 +5039,18 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             svc_name = svc["service_name"]
             if svc_name in self.test_services_info:
                 utils.check_val_equal(svc["service_type"], self.test_services_info[svc_name]["type"])
-                hostname = utils.get_hostname(self)
+                p_url = utils.get_parsed_url(self)
                 # private service URL should match format of Magpie (schema/host)
-                svc_url = self.test_services_info[svc_name]["url"].replace("${HOSTNAME}", hostname)
+                # default use '${HOSTNAME}' with predefined ports, therefore only employ the literal hostname
+                svc_url = self.test_services_info[svc_name]["url"].replace("${HOSTNAME}", p_url.hostname)
                 utils.check_val_equal(svc["service_url"], svc_url)
-                # public service URL should match Twitcher config, but ignore schema that depends on each server config
-                twitcher_svc_url = get_twitcher_protected_service_url(svc_name, hostname=hostname)
-                twitcher_parsed_url = urlparse(twitcher_svc_url)
-                twitcher_test_url = twitcher_parsed_url.netloc + twitcher_parsed_url.path
+                # public service URL should match configured Twitcher URL
+                #   since the only way to validate that exactly the same hostname+port where employed are to derive
+                #   the value from the same config, there is no advantage to test against the same procedure here...
+                #   instead, only check that the URL minimally contains service path detail and is not Magpie URL
                 svc_parsed_url = urlparse(svc["public_url"])
-                svc_test_public_url = svc_parsed_url.netloc + svc_parsed_url.path
-                utils.check_val_equal(svc_test_public_url, twitcher_test_url)
+                utils.check_val_true(svc_parsed_url.path.endswith("/" + svc_name))
+                utils.check_val_not_equal(svc_parsed_url.netloc, p_url.netloc, msg="Public URL cannot be under Magpie")
 
         # ensure that no providers are missing from registered services
         registered_svc_names = [svc["service_name"] for svc in services_list]
