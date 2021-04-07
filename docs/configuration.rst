@@ -790,9 +790,9 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
 
 Please note that although `Twitcher`_ URL references are needed to configure interactive parameters with `Magpie`, the
 employed `Twitcher`_ instance will also need to have access to `Magpie`'s database in order to allow proper
-:term:`Service` resolution with `magpie.adapter.magpieservice.MagpieServiceStore`. Appropriate database credentials
-must therefore be shared between the two services, as well as :envvar:`MAGPIE_SECRET` value in order for successful
-completion of the handshake during :term:`Authentication` procedure of the request :term:`User` token.
+:term:`Service` resolution with :class:`magpie.adapter.magpieservice.MagpieServiceStore`. Appropriate database
+credentials must therefore be shared between the two services, as well as :envvar:`MAGPIE_SECRET` value in order for
+successful completion of the handshake during :term:`Authentication` procedure of the request :term:`User` token.
 
 
 .. _config_postgres_settings:

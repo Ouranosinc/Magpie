@@ -4,23 +4,32 @@
 Installation
 =============
 
-At the command line::
+At the command line:
+
+.. code-block:: console
 
     pip install magpie
 
-Or, if you have conda installed::
+
+Or, if you have conda installed:
+
+.. code-block:: console
 
     conda create -n magpie
     conda activate magpie
     pip install magpie
 
 
-All above is done automatically with::
+All above is done automatically with:
+
+.. code-block:: console
 
     make install-pkg
 
 
-If you want the full setup for development (including dependencies for test execution), use::
+If you want the full setup for development (including dependencies for test execution), use:
+
+.. code-block:: console
 
     make install-dev
 

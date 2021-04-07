@@ -24,7 +24,7 @@ def main(global_config=None, **settings):  # noqa: F811
     """
     import magpie.constants  # pylint: disable=C0415  # avoid circular import
 
-    # override magpie ini if provided with --paste to gunicorn, otherwise use environment variable
+    # override magpie ini if provided with --paste to gunicorn (or pserve), otherwise use environment variable
     config_env = get_constant("MAGPIE_INI_FILE_PATH", settings, raise_missing=True)
     config_ini = (global_config or {}).get("__file__", config_env)
     if config_ini != config_env:
