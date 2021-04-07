@@ -36,8 +36,7 @@ from magpie.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
     CONTENT_TYPE_PLAIN,
-    CONTENT_TYPE_TXT_XML,
-    get_twitcher_protected_service_url
+    CONTENT_TYPE_TXT_XML
 )
 from tests import runner, utils
 from tests.utils import TestVersion
