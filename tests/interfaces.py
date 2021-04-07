@@ -5037,12 +5037,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             svc_name = svc["service_name"]
             if svc_name in self.test_services_info:
                 utils.check_val_equal(svc["service_type"], self.test_services_info[svc_name]["type"])
-                hostname = utils.get_hostname(self)
+                netloc = utils.get_netloc(self)
                 # private service URL should match format of Magpie (schema/host)
-                svc_url = self.test_services_info[svc_name]["url"].replace("${HOSTNAME}", hostname)
+                svc_url = self.test_services_info[svc_name]["url"].replace("${HOSTNAME}", netloc)
                 utils.check_val_equal(svc["service_url"], svc_url)
                 # public service URL should match Twitcher config, but ignore schema that depends on each server config
-                twitcher_svc_url = get_twitcher_protected_service_url(svc_name, hostname=hostname)
+                twitcher_svc_url = get_twitcher_protected_service_url(svc_name, hostname=netloc)
                 twitcher_parsed_url = urlparse(twitcher_svc_url)
                 twitcher_test_url = twitcher_parsed_url.netloc + twitcher_parsed_url.path
                 svc_parsed_url = urlparse(svc["public_url"])

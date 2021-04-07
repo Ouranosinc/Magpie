@@ -403,15 +403,15 @@ def get_test_webhook_app(webhook_url):
     return webhook_app_instance
 
 
-def get_hostname(test_item):
+def get_netloc(test_item):
     # type: (AnyMagpieTestItemType) -> Str
     """
-    Obtains stored hostname in the class implementation.
+    Obtains stored network location including hostname and applicable port from the test class implementation.
     """
     app_or_url = get_app_or_url(test_item)
     if isinstance(app_or_url, TestApp):
         app_or_url = get_magpie_url(app_or_url.app.registry)
-    return urlparse(app_or_url).hostname
+    return urlparse(app_or_url).netloc
 
 
 def get_headers(app_or_url, header_dict):
