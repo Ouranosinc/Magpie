@@ -35,7 +35,6 @@ RUN apk update \
     && apk --purge del .build-deps
 
 # install app package source, avoid copying the rest
-COPY ./bin $MAGPIE_DIR/bin/
 COPY ./config/magpie.ini $MAGPIE_CONFIG_DIR/magpie.ini
 COPY ./env/*.env.example $MAGPIE_ENV_DIR/
 COPY ./magpie $MAGPIE_DIR/magpie/
