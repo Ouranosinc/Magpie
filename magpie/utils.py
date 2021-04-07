@@ -457,20 +457,21 @@ def get_phoenix_url(container=None):
     return "https://{0}{1}".format(hostname, ":{}".format(phoenix_port) if phoenix_port else "")
 
 
-def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
+def get_twitcher_url(container=None, hostname=None):
+    # type: (Optional[AnySettingsContainer], Optional[Str]) -> Str
     """
-    Obtains the protected service URL behind Twitcher Proxy based on combination of supported configuration settings.
+    Obtains the configured Twitcher URL entrypoint based on various combinations of supported configuration settings.
 
     .. seealso::
         Documentation section :ref:`config_twitcher` for available setting combinations.
 
-    :param magpie_service_name: name of the service to employ in order to form the URL path behind the proxy.
+    :param container: container that provides access to application settings.
     :param hostname: override literal hostname to generate the URL instead of resolving using settings.
-    :return: resolved Twitcher Proxy protected service URL
+    :return: resolved Twitcher URL
     """
-    twitcher_proxy_url = get_constant("TWITCHER_PROTECTED_URL", raise_not_set=False)
+    twitcher_proxy_url = get_constant("TWITCHER_PROTECTED_URL", container, raise_not_set=False)
     if not twitcher_proxy_url:
-        twitcher_proxy = get_constant("TWITCHER_PROTECTED_PATH", raise_not_set=False)
+        twitcher_proxy = get_constant("TWITCHER_PROTECTED_PATH", container, raise_not_set=False)
         if not twitcher_proxy.endswith("/"):
             twitcher_proxy = twitcher_proxy + "/"
         if not twitcher_proxy.startswith("/"):
@@ -478,12 +479,28 @@ def get_twitcher_protected_service_url(magpie_service_name, hostname=None):
         if not twitcher_proxy.startswith("/twitcher"):
             twitcher_proxy = "/twitcher" + twitcher_proxy
         hostname = (hostname or
-                    get_constant("TWITCHER_HOST", raise_not_set=False, raise_missing=False) or
-                    get_constant("HOSTNAME", raise_not_set=False, raise_missing=False))
+                    get_constant("TWITCHER_HOST", container, raise_not_set=False, raise_missing=False) or
+                    get_constant("HOSTNAME", container, raise_not_set=False, raise_missing=False))
         if not hostname:
             raise ConfigurationError("Missing or unset TWITCHER_PROTECTED_URL, TWITCHER_HOST or HOSTNAME value.")
         twitcher_proxy_url = "https://{0}{1}".format(hostname, twitcher_proxy)
     twitcher_proxy_url = twitcher_proxy_url.rstrip("/")
+    return twitcher_proxy_url
+
+
+def get_twitcher_protected_service_url(magpie_service_name, container=None, hostname=None):
+    """
+    Obtains the protected service URL behind Twitcher Proxy based on combination of supported configuration settings.
+
+    .. seealso::
+        Documentation section :ref:`config_twitcher` for available setting combinations.
+
+    :param magpie_service_name: name of the service to employ in order to form the URL path behind the proxy.
+    :param container: container that provides access to application settings.
+    :param hostname: override literal hostname to generate the URL instead of resolving using settings.
+    :return: resolved Twitcher Proxy protected service URL
+    """
+    twitcher_proxy_url = get_twitcher_url(container=container, hostname=hostname)
     return "{0}/{1}".format(twitcher_proxy_url, magpie_service_name)
 
 

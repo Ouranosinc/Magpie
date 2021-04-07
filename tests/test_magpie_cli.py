@@ -37,7 +37,8 @@ KNOWN_HELPERS = [
 def run_and_get_output(command, trim=True):
     if isinstance(command, (list, tuple)):
         command = " ".join(command)
-    proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)  # nosec
+    env = {"PATH": os.path.expandvars(os.environ["PATH"])}  # when debugging, explicit expand of install path required
+    proc = subprocess.Popen(command, shell=True, env=env, universal_newlines=True, stdout=subprocess.PIPE)  # nosec
     out, err = proc.communicate()
     assert not err, "process returned with error code {}".format(err)
     # when no output is present, it is either because CLI was not installed correctly, or caused by some other error
