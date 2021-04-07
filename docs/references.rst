@@ -39,6 +39,7 @@
 
 .. file/source references
 .. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
+.. _Dockerfile: https://github.com/Ouranosinc/Magpie/tree/master/Dockerfile
 .. _docker-compose.yml.example: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
 .. _magpie-cron: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 .. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example

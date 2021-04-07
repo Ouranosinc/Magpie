@@ -114,7 +114,7 @@ Two `Docker` images are provided for very version released.
 The first, simply named ``pavics/magpie``, is to execute `Magpie` itself as a :ref:`usage_webapp`.
 This simultaneously offers both :ref:`usage_api` and :ref:`usage_ui` interfaces accessible from the configured endpoint.
 Using the same image and an override of the ``CMD``, it is also possible to run any of the :ref:`usage_cli` operations
-with all preinstalled package dependencies. This image is a good reference to understand how to run the
+with all preinstalled package dependencies. This image's `Dockerfile`_ is a good reference to understand how to run the
 :ref:`usage_webapp` locally if desired.
 
 The second `Docker` image consists of `Twitcher`_ code base with integrated :class:`magpie.adapter.MagpieAdapter` such
@@ -122,8 +122,8 @@ that they can communicate between each other. Each tagged `Magpie` version will 
 corresponding `Twitcher`_ image tag as ``pavics/twitcher:magpie-<version>``.
 
 Usually, both images are employed in tandem with a `PostgreSQL`_ database connexion within a ``docker-compose.yml``
-configuration, similar to the following. It is recommended to keep the versions in sync to ensure their
-inter-compatibility. Both images must share some configurations, such as but not limited to, the same
+configuration, similar to the following example. It is recommended to keep the versions in sync to ensure their
+interoperability. Both images must also share some configurations, such as but not limited to, the same
 :envvar:`MAGPIE_SECRET` in order to resolve operations in the same manner. See :ref:`config_twitcher` for
 further details.
 
