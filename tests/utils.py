@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
 
     from pyramid.request import Request
+    from six.moves.urllib.parse import ParseResult
     from webtest.forms import BeautifulSoup
 
     import tests.interfaces as ti
@@ -403,15 +404,15 @@ def get_test_webhook_app(webhook_url):
     return webhook_app_instance
 
 
-def get_netloc(test_item):
-    # type: (AnyMagpieTestItemType) -> Str
+def get_parsed_url(test_item):
+    # type: (AnyMagpieTestItemType) -> ParseResult
     """
-    Obtains stored network location including hostname and applicable port from the test class implementation.
+    Obtains the parsed URL result from the test class web application implementation.
     """
     app_or_url = get_app_or_url(test_item)
     if isinstance(app_or_url, TestApp):
         app_or_url = get_magpie_url(app_or_url.app.registry)
-    return urlparse(app_or_url).netloc
+    return urlparse(app_or_url)
 
 
 def get_headers(app_or_url, header_dict):
@@ -961,6 +962,18 @@ def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
     r_val = repr(iter_val)
     r_ref = repr(iter_ref)
     assert all_equal(iter_val, iter_ref, any_order), format_test_val_ref(r_val, r_ref, pre="All Equal Fail", msg=msg)
+
+
+def check_val_true(val, msg=None):
+    # type: (Any, Optional[Str]) -> None
+    """:raises AssertionError: if :paramref:`val` is not ``True``."""
+    assert val is True, format_test_val_ref(val, True, pre="Not True", msg=msg)
+
+
+def check_val_false(val, msg=None):
+    # type: (Any, Optional[Str]) -> None
+    """:raises AssertionError: if :paramref:`val` is not ``False``."""
+    assert val is False, format_test_val_ref(val, False, pre="Not False", msg=msg)
 
 
 def check_val_equal(val, ref, msg=None):

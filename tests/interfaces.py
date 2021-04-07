@@ -5040,17 +5040,18 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             svc_name = svc["service_name"]
             if svc_name in self.test_services_info:
                 utils.check_val_equal(svc["service_type"], self.test_services_info[svc_name]["type"])
-                netloc = utils.get_netloc(self)
+                p_url = utils.get_parsed_url(self)
                 # private service URL should match format of Magpie (schema/host)
-                svc_url = self.test_services_info[svc_name]["url"].replace("${HOSTNAME}", netloc)
+                # default use '${HOSTNAME}' with predefined ports, therefore only employ the literal hostname
+                svc_url = self.test_services_info[svc_name]["url"].replace("${HOSTNAME}", p_url.hostname)
                 utils.check_val_equal(svc["service_url"], svc_url)
-                # public service URL should match Twitcher config, but ignore schema that depends on each server config
-                twitcher_svc_url = get_twitcher_protected_service_url(svc_name, hostname=netloc)
-                twitcher_parsed_url = urlparse(twitcher_svc_url)
-                twitcher_test_url = twitcher_parsed_url.netloc + twitcher_parsed_url.path
+                # public service URL should match configured Twitcher URL
+                #   since the only way to validate that exactly the same hostname+port where employed are to derive
+                #   the value from the same config, there is no advantage to test against the same procedure here...
+                #   instead, only check that the URL minimally contains service path detail and is not Magpie URL
                 svc_parsed_url = urlparse(svc["public_url"])
-                svc_test_public_url = svc_parsed_url.netloc + svc_parsed_url.path
-                utils.check_val_equal(svc_test_public_url, twitcher_test_url)
+                utils.check_val_true(svc_parsed_url.path.endswith("/" + svc_name))
+                utils.check_val_not_equal(svc_parsed_url.netloc, p_url.netloc, msg="Public URL cannot be under Magpie")
 
         # ensure that no providers are missing from registered services
         registered_svc_names = [svc["service_name"] for svc in services_list]
