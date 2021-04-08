@@ -394,7 +394,7 @@ def test_webhook_template_substitution():
             "id": params["user_id"],
             "id_str": str(params["user_id"]),
             "str": "{user_name}",
-            "bad": {"user_name": None},  # format is not a template, but a valid YAML definition
+            "obj": {"user_name": None},  # format is not a template, but a valid YAML definition
             "none": "user_id"  # was not a template, remains literal string not replaced by value
         },
         "compose": {

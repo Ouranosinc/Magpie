@@ -929,13 +929,41 @@ def visual_repr(item):
     return "'{}'".format(repr(item))
 
 
-def format_test_val_ref(val, ref, pre="Fail", msg=None):
+def generate_diff(val, ref, val_name="Test", ref_name="Reference"):
+    # type: (Any, Any, Str, Str) -> Str
+    """
+    Generates a line-by-line diff result of the test value against the reference value.
+
+    Attempts to parse the contents as JSON to provide better diff of matched/sorted lines, and falls back to plain
+    line-based string representations otherwise.
+
+    :returns: formatted multiline diff
+    """
+    try:
+        val = json_pkg.dumps(val, sort_keys=True, indent=2, ensure_ascii=False)
+    except Exception:  # noqa
+        val = str(val)
+    try:
+        ref = json_pkg.dumps(ref, sort_keys=True, indent=2, ensure_ascii=False)
+    except Exception:  # noqa
+        ref = str(ref)
+    val = val.splitlines()
+    ref = ref.splitlines()
+    return "\n".join(difflib.context_diff(val, ref, fromfile=val_name, tofile=ref_name))
+
+
+def format_test_val_ref(val, ref, pre="Fail", msg=None, diff=False):
     if is_null(msg):
         _msg = "({}) Failed condition between test and reference values.".format(pre)
     else:
-        _msg = "({}) Test value: {}, Reference value: {}".format(pre, visual_repr(val), visual_repr(ref))
-        if isinstance(msg, six.string_types):
-            _msg = "{}\n{}".format(msg, _msg)
+        _msg = "({})".format(pre, visual_repr(val), visual_repr(ref))
+    if diff:
+        _diff = generate_diff(val, ref, val_name="Test value", ref_name="Reference value")
+    else:
+        _diff = "Test value: {}, Reference value: {}".format(visual_repr(val), visual_repr(ref))
+    if isinstance(msg, six.string_types):
+        _msg = "{}\n{}".format(msg, _msg)
+    _msg = "{}\n{}".format(_msg, _diff)
     return _msg
 
 
@@ -949,20 +977,22 @@ def all_equal(iter_val, iter_ref, any_order=False):
     return all(it == ir for it, ir in zip(iter_val, iter_ref))
 
 
-def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
-    # type: (Collection[Any], Union[Collection[Any], NullType], Optional[Str], bool) -> None
+def check_all_equal(iter_val, iter_ref, msg=None, any_order=False, diff=False):
+    # type: (Collection[Any], Union[Collection[Any], NullType], Optional[Str], bool, bool) -> None
     """
     :param iter_val: tested values.
     :param iter_ref: reference values.
     :param msg: override message to display if failing test.
     :param any_order: allow equal values to be provided in any order, otherwise order must match as well as values.
+    :param diff: generate a detailed diff result within indications of different fields (best when JSON formatted).
     :raises AssertionError:
         If all values in :paramref:`iter_val` are not equal to values within :paramref:`iter_ref`.
         If :paramref:`any_order` is ``False``, also raises if equal items are not in the same order.
     """
     r_val = repr(iter_val)
     r_ref = repr(iter_ref)
-    assert all_equal(iter_val, iter_ref, any_order), format_test_val_ref(r_val, r_ref, pre="All Equal Fail", msg=msg)
+    assert all_equal(iter_val, iter_ref, any_order), \
+        format_test_val_ref(r_val, r_ref, pre="All Equal Fail", msg=msg, diff=diff)
 
 
 def check_val_true(val, msg=None):
@@ -980,14 +1010,13 @@ def check_val_false(val, msg=None):
 def check_val_equal(val, ref, msg=None, diff=False):
     # type: (Any, Union[Any, NullType], Optional[Str], bool) -> None
     """:raises AssertionError: if :paramref:`val` is not equal to :paramref:`ref`."""
-    difflib.
-    assert is_null(ref) or val == ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg)
+    assert is_null(ref) or val == ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg, diff=diff)
 
 
-def check_val_not_equal(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+def check_val_not_equal(val, ref, msg=None, diff=False):
+    # type: (Any, Union[Any, NullType], Optional[Str], bool) -> None
     """:raises AssertionError: if :paramref:`val` is equal to :paramref:`ref`."""
-    assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre="Not Equal Fail", msg=msg)
+    assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre="Not Equal Fail", msg=msg, diff=diff)
 
 
 def check_val_is_in(val, ref, msg=None):
