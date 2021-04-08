@@ -1209,8 +1209,12 @@ Advanced Payload Substitutions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An extensive representation of supported template replacement patterns is presented in the following
-:func:`tests.test_webhooks.test_webhook_template_substitution` function. As presented, the resulting
-|webhook_param_payload|_ can therefore be extensively customized to match exactly the desired format.
+|func_test_webhook|_ function. As presented, the resulting |webhook_param_payload|_ can therefore be
+extensively customized to match exactly the desired format.
+
+.. because 'tests' are not included in autodoc, reference doesn't produce a link, so provide it via repository
+.. _func_test_webhook: https://github.com/Ouranosinc/Magpie/blob/master/tests/test_webhooks.py
+.. |func_test_webhook| replace:: :func:`tests.test_webhooks.test_webhook_template_substitution`
 
 .. include starting at line of the function definition to skip unnecessary display of decorated test markers
 .. literalinclude:: ../tests/test_webhooks.py

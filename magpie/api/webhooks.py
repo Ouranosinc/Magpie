@@ -41,7 +41,7 @@ WEBHOOK_KEYS = WEBHOOK_KEYS_REQUIRED | WEBHOOK_KEYS_OPTIONAL
 
 # These are *potential* parameters permitted to use the template form in the webhook payload.
 # Each parameter transferred to any given webhook are provided distinctively for each case.
-WEBHOOK_TEMPLATE_PARAMS = ["user_name", "user_id", "user_email", "callback_url"]
+WEBHOOK_TEMPLATE_PARAMS = ["user_name", "user_id", "user_email", "user_status", "callback_url"]
 
 WEBHOOK_HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
@@ -168,7 +168,11 @@ def webhook_update_error_status(user_name):
     """
     Updates the user's status to indicate an error occurred with the webhook requests.
     """
-    # find user and change its status to 0 to indicate a webhook error happened
+    # find user and change its status to indicate a webhook error happened
+    # NOTE:
+    #   It is very important to use database connection and not request here, otherwise we could trigger more webhooks.
+    #   This could be problematic as it could potentially create a loop of user create/update/delete back-and-forth
+    #   requests between Magpie and the middleware URL subscribed in webhooks.
     db_session = get_db_session_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
     user = db_session.query(models.User).filter(models.User.user_name == user_name)  # pylint: disable=E1101,no-member
     user.update({"status": UserStatuses.WebhookErrorStatus.value})

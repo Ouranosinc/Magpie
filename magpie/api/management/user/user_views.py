@@ -120,6 +120,9 @@ def update_user_view(request):
         ax.verify_param(new_status, is_in=True, param_compare=s.UserStatuses.values(), param_name="status",
                         msg_on_fail=s.User_Check_Status_BadRequestResponseSchema.description, http_error=HTTPBadRequest)
         user.status = new_status
+        webhook_params = {"user_name": user.user_name, "user_id": user.id, "user_status": user.status}
+        process_webhook_requests(WebhookAction.UPDATE_USER_STATUS, webhook_params)
+
     return ax.valid_http(http_success=HTTPOk, detail=s.Users_PATCH_OkResponseSchema.description)
 
 
