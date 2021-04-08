@@ -60,14 +60,14 @@ class WebhookAction(ExtendedEnum):
     CREATE_USER = "create_user"
     """
     Triggered when a new user gets successfully created.
-    
+
     .. seealso:: 
         :ref:`webhook_user_create`
     """
 
     DELETE_USER = "delete_user"
     """Triggered when an existing user gets successfully deleted.
-    
+
     .. seealso:: 
         :ref:`webhook_user_delete`
     """
@@ -75,7 +75,7 @@ class WebhookAction(ExtendedEnum):
     UPDATE_USER_STATUS = "update_user_status"
     """
     Triggered when an existing user status gets successfully updated.
-    
+
     .. seealso:: 
         :ref:`webhook_user_update_status`
     """

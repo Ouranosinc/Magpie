@@ -969,7 +969,7 @@ def format_test_val_ref(val, ref, pre="Fail", msg=None, diff=False):
     if is_null(msg):
         _msg = "({}) Failed condition between test and reference values.".format(pre)
     else:
-        _msg = "({})".format(pre, visual_repr(val), visual_repr(ref))
+        _msg = "({})".format(pre)
     if diff:
         _diff = generate_diff(val, ref, val_name="Test value", ref_name="Reference value")
     else:
