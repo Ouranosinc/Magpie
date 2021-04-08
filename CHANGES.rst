@@ -12,7 +12,7 @@ Features / Changes
 * | Update ``gunicorn>=20.x`` to receive latest security patches
     (fixes `#410 <https://github.com/Ouranosinc/Magpie/issues/410>`_).
   |
-  | **NOTE**:
+  | **IMPORTANT**:
   | Because ``gunicorn`` changed how its CLI handles INI files, ``pserve`` should be employed instead to ensure the
     configured web application port is properly applied with the provided ``magpie.ini`` configuration file.
     Furthermore, the (``host``, ``port``) or ``bind`` should be updated to employ ``0.0.0.0:2001`` instead of
