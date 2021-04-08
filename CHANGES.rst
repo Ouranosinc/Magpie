@@ -16,10 +16,15 @@ Features / Changes
   | Because ``gunicorn`` changed how its CLI handles INI files, ``pserve`` should be employed instead to ensure the
     configured web application port is properly applied with the provided ``magpie.ini`` configuration file.
 
-* Modify webhook template variables to employ double braces (i.e.: ``{{<variable>}}``) to avoid ambiguity during
+* Modify `Webhook` template variables to employ double braces (i.e.: ``{{<variable>}}``) to avoid ambiguity during
   parsing by YAML configuration files.
-* Update documentation to provide further details about webhook configuration and resulting event requests.
-* Add ``update_user_status`` Webhook implementation.
+* Update documentation to provide further details about `Webhook` configuration, examples and resulting event requests.
+* Add ``update_user_status`` `Webhook` implementation.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix an edge case where `Webhook` template replacement could sporadically raise an error according to the replaced
+  value not being a string.
 
 `3.9.0 <https://github.com/Ouranosinc/Magpie/tree/3.9.0>`_ (2021-04-06)
 ------------------------------------------------------------------------------------

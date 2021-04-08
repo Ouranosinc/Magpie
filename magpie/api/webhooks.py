@@ -1,13 +1,15 @@
 import multiprocessing
+import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import requests
 import transaction
+from pyramid.httpexceptions import HTTPInternalServerError
 from six.moves.urllib.parse import urlparse
 
 from magpie import models
-from magpie.api.schemas import UserStatuses
+from magpie.api import exception as ax, schemas as s
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import get_all_configs
@@ -15,6 +17,8 @@ from magpie.utils import CONTENT_TYPE_JSON, FORMAT_TYPE_MAPPING, ExtendedEnum, g
 
 if TYPE_CHECKING:
     from typing import List, Optional
+
+    from sqlalchemy.orm.session import Session
 
     from magpie.typedefs import (
         AnySettingsContainer,
@@ -102,6 +106,30 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
         pool.starmap_async(send_webhook_request, args)
 
 
+def generate_callback_url(operation, db_session, user=None, group=None):
+    # type: (models.TokenOperation, Session, Optional[models.User], Optional[models.Group]) -> Str
+    """
+    Generates a callback URL using `Magpie` temporary tokens for use by the webhook implementation.
+
+    :param operation: targeted operation that employs the callback URL for reference.
+    :param db_session: database session to store the generated temporary token.
+    :param user: user reference associated to the operation as applicable.
+    :param group: group reference associated to the operation as applicable.
+    :return: generated callback URL.
+    """
+    ax.verify_param(operation, is_type=True, param_compare=models.TokenOperation,
+                    param_name="token", http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
+    webhook_token = models.TemporaryToken(
+        token=uuid.uuid4(),
+        operation=operation,
+        user_id=user.id if user is not None else None,
+        group_id=group.id if group is not None else None)
+    ax.evaluate_call(lambda: db_session.add(webhook_token), fallback=lambda: db_session.rollback(),
+                     http_error=HTTPInternalServerError, msg_on_fail=s.InternalServerErrorResponseSchema.description)
+    callback_url = webhook_token.url()
+    return callback_url
+
+
 def replace_template(params, payload, force_str=False):
     # type: (WebhookTemplateParameters, WebhookPayload, bool) -> WebhookPayload
     """
@@ -124,7 +152,7 @@ def replace_template(params, payload, force_str=False):
                 template_value = params[template_param]
                 # if result field is not a string and template is defined as is, allow value type replacement
                 if not force_str and not isinstance(template_value, str) and payload == template_replace:
-                    payload = template_value
+                    return template_value
                 # otherwise, enforce convert to string to avoid failing string replacement,
                 # but remove any additional quotes that might be defined to enforce non-string to string conversion
                 else:
@@ -165,6 +193,7 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
 
 
 def webhook_update_error_status(user_name):
+    # type: (Str) -> None
     """
     Updates the user's status to indicate an error occurred with the webhook requests.
     """
@@ -175,7 +204,7 @@ def webhook_update_error_status(user_name):
     #   requests between Magpie and the middleware URL subscribed in webhooks.
     db_session = get_db_session_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
     user = db_session.query(models.User).filter(models.User.user_name == user_name)  # pylint: disable=E1101,no-member
-    user.update({"status": UserStatuses.WebhookErrorStatus.value})
+    user.update({"status": s.UserStatuses.WebhookErrorStatus.value})
     transaction.commit()
 
 

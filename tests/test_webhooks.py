@@ -17,7 +17,7 @@ import yaml
 from six.moves.urllib.parse import urlparse
 
 from magpie.api.schemas import UserStatuses
-from magpie.api.webhooks import WebhookAction, replace_template
+from magpie.api.webhooks import WebhookAction, replace_template, webhook_update_error_status
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_HTML
 from tests import interfaces as ti
@@ -80,6 +80,7 @@ class TestWebhooks(ti.BaseTestCase):
         utils.TestSetup.delete_TestGroup(self)
 
     def checkTestUserStatus(self, status):
+        # type: (UserStatuses) -> None
         """
         Checks if the test user has the expected status value.
 
@@ -89,14 +90,14 @@ class TestWebhooks(ti.BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         info = utils.TestSetup.get_UserInfo(self, override_body=body)
-        utils.check_val_equal(info["status"], status)
+        utils.check_val_equal(info["status"], status.value)
 
     def test_Webhook_CreateUser(self):
         """
         Test creating a user using webhooks.
         """
         # Write temporary config for testing webhooks
-        create_webhook_url = self.base_webhook_url + "/webhook_create"
+        create_webhook_url = self.base_webhook_url + "/webhook_json"
         data = {
             "webhooks": [
                 {
@@ -117,7 +118,9 @@ class TestWebhooks(ti.BaseTestCase):
                             "nested_dict": {
                                 "{{user_name}}": "{{user_name}} {{user_name}}",
                         }},
-                        "{{user_name}}", False, 1
+                        "{{user_name}}",
+                        False,
+                        1
                     ]
                 }
             ],
@@ -130,7 +133,6 @@ class TestWebhooks(ti.BaseTestCase):
 
             # create the magpie app with the test webhook config
             self.setup_webhook_test(webhook_tmp_config.name)
-
             utils.get_test_webhook_app(self.base_webhook_url)
 
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
@@ -148,12 +150,12 @@ class TestWebhooks(ti.BaseTestCase):
 
             # Check if both webhook requests have completed successfully
             resp = requests.get(self.base_webhook_url + "/get_status")
-            assert resp.text == "2"
+            utils.check_val_equal(resp.text, "2")
 
             # Check if user creation was successful
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
-            self.checkTestUserStatus(UserStatuses.OK.value)
+            self.checkTestUserStatus(UserStatuses.OK)
 
     def test_Webhook_CreateUser_EmptyUrl(self):
         """
@@ -180,7 +182,7 @@ class TestWebhooks(ti.BaseTestCase):
             # Check if user creation was successful even if no webhook were defined in the config
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
-            self.checkTestUserStatus(UserStatuses.OK.value)
+            self.checkTestUserStatus(UserStatuses.OK)
 
     def test_Webhook_CreateUser_FailingWebhook(self):
         """
@@ -222,7 +224,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is still set to 1, since the callback URL has not been called yet
-            self.checkTestUserStatus(UserStatuses.OK.value)
+            self.checkTestUserStatus(UserStatuses.OK)
 
             # Retrieve the callback URL and send the request to the magpie app
             resp = requests.get(self.base_webhook_url + "/get_callback_url")
@@ -230,7 +232,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.test_request(self, "GET", urlparse(resp.text).path)
 
             # Check if the user's status is set to 0
-            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus.value)
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
 
     def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
         """
@@ -268,14 +270,14 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is set to 0
-            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus.value)
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
 
     def test_Webhook_DeleteUser(self):
         """
         Test deleting a user using webhooks.
         """
         # Write temporary config for testing webhooks
-        delete_webhook_url = self.base_webhook_url + "/webhook_delete"
+        delete_webhook_url = self.base_webhook_url + "/webhook_json"
         data = {
             "webhooks": [
                 {
@@ -301,15 +303,15 @@ class TestWebhooks(ti.BaseTestCase):
             yaml.dump(data, webhook_tmp_config, default_flow_style=False)
             # create the magpie app with the test webhook config
             self.setup_webhook_test(webhook_tmp_config.name)
-
             utils.get_test_webhook_app(self.base_webhook_url)
+
             # create the test user first
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Webhooks shouldn't have been called during the user creation
             sleep(1)
             resp = requests.get(self.base_webhook_url + "/get_status")
-            assert resp.text == "0"
+            utils.check_val_equal(resp.text, "0")
 
             # delete the test user, webhooks should be called during this delete request
             path = "/users/{usr}".format(usr=self.test_user_name)
@@ -349,6 +351,59 @@ class TestWebhooks(ti.BaseTestCase):
             sleep(1)
             utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.TestSetup.check_NonExistingTestUser(self)
+
+    def test_Webhook_UpdateUserStatus(self):
+        update_webhook_url = self.base_webhook_url + "/webhook_json"
+        data = {
+            "webhooks": [
+                {
+                    "name": "test_webhook",
+                    "action": WebhookAction.UPDATE_USER_STATUS.value,
+                    "method": "POST",
+                    "url": update_webhook_url,
+                    "payload": {
+                        "name": "{{user_name}}",
+                        "status": "{{user_status}}",
+                        "callback_url": "{{callback_url}}"
+                    }
+                }
+            ],
+            "providers": "",
+            "permissions": ""
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
+            yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
+
+            # create the magpie app with the test webhook config
+            self.setup_webhook_test(webhook_tmp_config.name)
+            utils.get_test_webhook_app(self.base_webhook_url)
+
+            utils.TestSetup.create_TestGroup(self)
+            utils.TestSetup.create_TestUser(self)
+            webhook_update_error_status(self.test_user_name)  # modify the status to be invalid
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
+
+            # trigger the webhook with update request
+            path = "/users/{}".format(self.test_user_name)
+            data = {"status": UserStatuses.OK.value}
+            utils.test_request(self, "PATCH", path, json=data, headers=self.json_headers, cookies=self.cookies)
+
+            # Wait for the webhook requests to complete and check it was received by the middleware
+            sleep(1)
+            resp = requests.get(self.base_webhook_url + "/get_status")
+            utils.check_val_equal(resp.text, "1")
+            # at this point, the user is considered valid following status update in magpie
+            self.checkTestUserStatus(UserStatuses.OK)
+
+            # simulate that the middleware operation fails, so it sends the callback request to revert status
+            resp = requests.get(self.base_webhook_url + "/get_callback_url")
+            callback_url = urlparse(resp.text).path
+            resp = utils.test_request(self, "GET", callback_url)
+            utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=None)
+
+            # now that callback request was accomplished, use should have been reverted to bad status
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
 
 
 # NOTE:

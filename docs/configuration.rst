@@ -1051,10 +1051,12 @@ Triggered whenever a :term:`User` gets successfully created, using a ``POST /use
 The :term:`User` details are provided for reference as needed for the receiving external web application defined by the
 configured |webhook_param_url|_.
 
-The ``callback_url`` serves as follow-up endpoint, should that external application need it, to request using the
+The ``callback_url`` serves as follow-up endpoint, should the registered external application need it, to request using
 HTTP ``GET`` method (no body) that `Magpie` sets the :term:`User` account status as erroneous. That :term:`User` would
 then be affected with ``status`` value :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. The ``callback_url``
-location will be available until called or expired according to :envvar:`MAGPIE_TOKEN_EXPIRE` setting.
+location will be available until called or expired according to :envvar:`MAGPIE_TOKEN_EXPIRE` setting. When no request
+is sent to the ``callback_url``, the created :term:`User` is assumed valid and its account is attributed
+:attr:`magpie.api.schemas.UserStatuses.OK` status.
 
 .. _webhook_user_delete:
 
@@ -1083,12 +1085,17 @@ User Status Update
     * - Action
       - :attr:`WebhookAction.UPDATE_USER_STATUS`
     * - Parameters
-      - ``user_name``, ``user_id``, ``user_status``
+      - ``user_name``, ``user_id``, ``user_status``, ``callback_url``
 
 Triggered whenever a :term:`User` status gets successfully updated, using a ``PATCH /users/{user_name}`` request.
 
 This event **DOES NOT** apply to changes of :term:`User` status caused by callback URL request received following
-an :ref:`webhook_user_create` event.
+a :ref:`webhook_user_create` event.
+
+The ``callback_url`` in this case can be requested with ``GET`` method (no body) to ask `Magpie` to reset the just
+updated :term:`User` account status to :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. This :term:`Webhook`
+can be employed to retry an external operation of the registered application, by triggering status updates, and only
+consider the complete operation successful when no further ``callback_url`` requests are received.
 
 
 .. _config_webhook_template:

@@ -1,4 +1,4 @@
-import uuid
+from secrets import compare_digest
 from typing import TYPE_CHECKING
 
 import six
@@ -20,11 +20,10 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.api.management.register.register_utils import TokenOperation
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
-from magpie.api.webhooks import WebhookAction, process_webhook_requests
+from magpie.api.webhooks import WebhookAction, generate_callback_url, process_webhook_requests
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
@@ -121,27 +120,84 @@ def create_user(user_name, password, email, group_name, db_session):
 
     user_content = uf.format_user(new_user, new_user_groups)
 
-    # Create a token for the tmp_url, in case an error happens in the webhook services
-    token_id = uuid.uuid4()
-    webhook_token = models.TemporaryToken(
-        token=token_id,
-        operation=TokenOperation.WEBHOOK_CREATE_USER_ERROR.value,
-        user_id=new_user.id,
-        group_id=_get_group(group_name).id)
-    ax.evaluate_call(lambda: db_session.add(webhook_token), fallback=lambda: db_session.rollback(),
-                     http_error=HTTPForbidden, msg_on_fail=s.TemporaryToken_POST_ForbiddenResponseSchema.description)
-    callback_url = webhook_token.url()
-
+    callback_url = generate_callback_url(models.TokenOperation.WEBHOOK_USER_STATUS_ERROR, db_session, user=new_user)
     # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
     transaction.commit()
 
     # note: after committed transaction, 'new_user' object becomes detached and cannot be used directly
     webhook_params = {"user_name": user_name, "user_id": user_content["user_id"],
                       "user_email": user_content["email"], "callback_url": callback_url}
-    process_webhook_requests(WebhookAction.CREATE_USER, webhook_params, True)
+    process_webhook_requests(WebhookAction.CREATE_USER, webhook_params, update_user_status_on_error=True)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"user": user_content})
+
+
+def update_user(user, request, new_user_name=None, new_password=None, new_email=None, new_status=None):
+    # type: (models.User, Request, Optional[Str], Optional[Str], Optional[Str], Optional[s.UserStatuses]) -> None
+    """
+    Applies updates of user details with specified values after validation.
+
+    :param user: targeted user to update .
+    :param request: request that produced this update operation.
+    :param new_user_name: new name to apply (if provided).
+    :param new_password: new password to apply (if provided).
+    :param new_email: new email to apply (if provided).
+    :param new_status: new status to apply (if provided).
+    :return: None if update was successful.
+    """
+    update_username = new_user_name is not None and not compare_digest(user.user_name, str(new_user_name))
+    update_password = new_password is not None and not compare_digest(user.user_password, str(new_password))
+    update_email = new_email is not None and not compare_digest(user.email, str(new_email))
+    update_status = new_status is not None and user.status != new_status
+    ax.verify_param(any([update_username, update_password, update_email, update_status]), is_true=True,
+                    with_param=False,  # params are not useful in response for this case
+                    content={"user_name": user.user_name},
+                    http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
+    # user name/status change is admin-only operation
+    if update_username or update_status:
+        ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP", request), is_in=True,
+                        param_compare=get_user_groups_checked(request.user, request.db), with_param=False,
+                        http_error=HTTPForbidden, msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
+
+    # logged user updating itself is forbidden if it corresponds to special users
+    # cannot edit reserved keywords nor apply them to another user
+    forbidden_user_names = [
+        get_constant("MAGPIE_ADMIN_USER", request),
+        get_constant("MAGPIE_ANONYMOUS_USER", request),
+        get_constant("MAGPIE_LOGGED_USER", request),
+    ]
+    check_user_name_cases = [user.user_name, new_user_name] if update_username else [user.user_name]
+    for check_user_name in check_user_name_cases:
+        ax.verify_param(check_user_name, not_in=True, param_compare=forbidden_user_names,
+                        param_name="user_name", with_param=False,  # don't leak the user names
+                        http_error=HTTPForbidden, content={"user_name": str(check_user_name)},
+                        msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
+    if update_username:
+        check_user_info(user_name=new_user_name, check_email=False, check_password=False, check_group=False)
+        existing_user = ax.evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
+                                         fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                         msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
+        ax.verify_param(existing_user, is_none=True, with_param=False, http_error=HTTPConflict,
+                        msg_on_fail=s.User_PATCH_ConflictResponseSchema.description)
+        user.user_name = new_user_name
+    if update_email:
+        check_user_info(email=new_email, check_name=False, check_password=False, check_group=False)
+        user.email = new_email
+    if update_password:
+        check_user_info(password=new_password, check_name=False, check_email=False, check_group=False)
+        UserService.set_password(user, new_password)
+        UserService.regenerate_security_code(user)
+    if update_status:
+        ax.verify_param(new_status, is_in=True, param_compare=s.UserStatuses.values(), param_name="status",
+                        msg_on_fail=s.User_Check_Status_BadRequestResponseSchema.description, http_error=HTTPBadRequest)
+        user.status = new_status
+        callback_url = generate_callback_url(models.TokenOperation.WEBHOOK_USER_STATUS_ERROR, request.db, user=user)
+        webhook_params = {"user_name": user.user_name, "user_id": user.id,
+                          "user_status": user.status, "callback_url": callback_url}
+        # force commit before webhook requests, so that the user's status can be reverted if a webhook error occurs
+        transaction.commit()
+        process_webhook_requests(WebhookAction.UPDATE_USER_STATUS, webhook_params)
 
 
 def create_user_resource_permission_response(user, resource, permission, db_session, overwrite=False):

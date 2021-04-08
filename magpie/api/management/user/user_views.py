@@ -1,14 +1,11 @@
 """
 User Views, both for specific user-name provided as request path variable and special keyword for logged session user.
 """
-from secrets import compare_digest
-
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
-from ziggurat_foundations.models.services.user import UserService
 
 from magpie import models
 from magpie.api import exception as ax
@@ -73,56 +70,7 @@ def update_user_view(request):
     new_email = ar.get_multiformat_body(request, "email", default=user.email)
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
     new_status = ar.get_multiformat_body(request, "status", default=None)
-
-    update_username = new_user_name is not None and not compare_digest(user.user_name, str(new_user_name))
-    update_password = new_password is not None and not compare_digest(user.user_password, str(new_password))
-    update_email = new_email is not None and not compare_digest(user.email, str(new_email))
-    update_status = new_status is not None and user.status != new_status
-    ax.verify_param(any([update_username, update_password, update_email, update_status]), is_true=True,
-                    with_param=False,  # params are not useful in response for this case
-                    content={"user_name": user.user_name},
-                    http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
-    # user name/status change is admin-only operation
-    if update_username or update_status:
-        ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP", request), is_in=True,
-                        param_compare=uu.get_user_groups_checked(request.user, request.db), with_param=False,
-                        http_error=HTTPForbidden, msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
-
-    # logged user updating itself is forbidden if it corresponds to special users
-    # cannot edit reserved keywords nor apply them to another user
-    forbidden_user_names = [
-        get_constant("MAGPIE_ADMIN_USER", request),
-        get_constant("MAGPIE_ANONYMOUS_USER", request),
-        get_constant("MAGPIE_LOGGED_USER", request),
-    ]
-    check_user_name_cases = [user.user_name, new_user_name] if update_username else [user.user_name]
-    for check_user_name in check_user_name_cases:
-        ax.verify_param(check_user_name, not_in=True, param_compare=forbidden_user_names,
-                        param_name="user_name", with_param=False,  # don't leak the user names
-                        http_error=HTTPForbidden, content={"user_name": str(check_user_name)},
-                        msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
-    if update_username:
-        uu.check_user_info(user_name=new_user_name, check_email=False, check_password=False, check_group=False)
-        existing_user = ax.evaluate_call(lambda: UserService.by_user_name(new_user_name, db_session=request.db),
-                                         fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                                         msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
-        ax.verify_param(existing_user, is_none=True, with_param=False, http_error=HTTPConflict,
-                        msg_on_fail=s.User_PATCH_ConflictResponseSchema.description)
-        user.user_name = new_user_name
-    if update_email:
-        uu.check_user_info(email=new_email, check_name=False, check_password=False, check_group=False)
-        user.email = new_email
-    if update_password:
-        uu.check_user_info(password=new_password, check_name=False, check_email=False, check_group=False)
-        UserService.set_password(user, new_password)
-        UserService.regenerate_security_code(user)
-    if update_status:
-        ax.verify_param(new_status, is_in=True, param_compare=s.UserStatuses.values(), param_name="status",
-                        msg_on_fail=s.User_Check_Status_BadRequestResponseSchema.description, http_error=HTTPBadRequest)
-        user.status = new_status
-        webhook_params = {"user_name": user.user_name, "user_id": user.id, "user_status": user.status}
-        process_webhook_requests(WebhookAction.UPDATE_USER_STATUS, webhook_params)
-
+    uu.update_user(user, request, new_user_name, new_password, new_email, new_status)
     return ax.valid_http(http_success=HTTPOk, detail=s.Users_PATCH_OkResponseSchema.description)
 
 
