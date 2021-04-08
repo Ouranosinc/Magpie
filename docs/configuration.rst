@@ -1096,7 +1096,10 @@ an :ref:`webhook_user_create` event.
 Webhook Template Payload
 ------------------------
 
-JSON body request
+Following subsections demonstrate common substitution patterns for templated request payload according to desired
+content format.
+
+JSON Payload
 ~~~~~~~~~~~~~~~~~
 
 This is a minimal example to demonstrate how the :term:`Webhook` template payload functionality can help customize
@@ -1120,7 +1123,7 @@ defined and loaded by `Magpie`.
 
 
 Upon trigger of the ``demo`` event, the above :term:`Webhook` definition would result in a request sent with the
-following |webhook_param_payload|_ contents.
+following JSON |webhook_param_payload|_ contents.
 
 .. code-block:: JSON
 
@@ -1171,10 +1174,11 @@ This is because YAML interprets ``{user_name}`` within an array list as an objec
 no corresponding value (i.e.: ``null``). For this reason, `Magpie` employs the double-braced ``{{<variable>}}`` format
 to remove this ambiguity. An unknown parameter value defined in |webhook_param_payload|_ during substitution or an ill
 defined configuration at application startup would immediately generate an error since YAML parsing will not correctly
-understand nor be able to infer these formats, instead of silently failing. When using a parameter by themselves, such
-as in the original example's ``"{{user_name}}"`` and ``"{{user_id}}"`` values, quotes will usually be required.
+understand nor be able to infer the format of the double-braces definitions, instead of silently failing. When using a
+parameter by themselves, such as in the top example's ``"{{user_name}}"`` and ``"{{user_id}}"`` values, quotes will
+usually be required.
 
-String body request
+String Payload
 ~~~~~~~~~~~~~~~~~~~
 
 Literal string body can also be employed using templated |webhook_param_payload|_ definition to form a custom
@@ -1200,3 +1204,17 @@ It is important to consider that in this case, because the whole |webhook_param_
 and newlines defined in its value will remain as is, according to the selected multiline character. Also, this kind of
 :term:`Webhook` should most probably define the appropriate |webhook_param_format|_ value if the default ``json`` is
 not the desired ``Content-Type``, as `Magpie` will not attempt to infer the content structure to generate the request.
+
+Advanced Payload Substitutions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An extensive representation of supported template replacement patterns is presented in the following
+:func:`tests.test_webhooks.test_webhook_template_substitution` function. As presented, the resulting
+|webhook_param_payload|_ can therefore be extensively customized to match exactly the desired format.
+
+.. include starting at line of the function definition to skip unnecessary display of decorated test markers
+.. literalinclude:: ../tests/test_webhooks.py
+    :language: python
+    :pyobject: test_webhook_template_substitution
+    :linenos:
+    :lines: 3-

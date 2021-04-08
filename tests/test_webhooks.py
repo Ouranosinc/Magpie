@@ -351,14 +351,18 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.check_NonExistingTestUser(self)
 
 
+# NOTE:
+#   This function is also included in docs to provide a detailed and working example of substitution patterns.
+#   If the name is modified or more decorators are added, docs must be updated accordingly.
+
 @runner.MAGPIE_TEST_WEBHOOKS
 @runner.MAGPIE_TEST_LOCAL
 def test_webhook_template_substitution():
     """
     Verify that webhook template replacement works as expected against parameter values of different types.
 
-    For example, a list item or dictionary value can be an class:`int`, which should be preserved.
-    If quotes are added, the class:`int` fields is then converted to string as expected.
+    For example, a list item or dictionary value can be an integer, which should be preserved.
+    If quotes are added, the non-string fields should then be converted to string as expected.
     Quotes on string fields though are redundant and should be ignored.
     Additional repeated quotes should leave them as specified.
     """
@@ -369,9 +373,9 @@ def test_webhook_template_substitution():
         name: "{{user_name}}"
         id: "{{user_id}}"
         id_str: "'{{user_id}}'"
-        none: user_id               # not template, only plain name 
-        str: "{user_name}"          # literal field with '{user_name}'
-        obj: {user_name}            # object with field 'user_name'
+        none: user_id               # only plain name, not a template substitution
+        str: "{user_name}"          # literal field with '{user_name}', not a template substitution
+        obj: {user_name}            # object with field 'user_name', not a template substitution
       compose:
         id: user_{{user_id}}
         msg: Hello {{user_name}}, your ID is {{user_id}}
@@ -386,7 +390,7 @@ def test_webhook_template_substitution():
         explicit: "{{user_name}}"
         single: "\'{{user_name}}\'"
         double: "\\"{{user_name}}\\""
-        multi: \\"\\'\\'\\"{{user_name}}\\"\\'\\'\\"
+        multi: "\\"\'\'\\"{{user_name}}\\"\'\'\\""
     """))
     expect = {
         "param": {
