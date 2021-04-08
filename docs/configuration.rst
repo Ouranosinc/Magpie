@@ -1098,6 +1098,40 @@ can be employed to retry an external operation of the registered application, by
 consider the complete operation successful when no further ``callback_url`` requests are received.
 
 
+.. _webhook_permission_updates:
+
+Permission Updates
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Below :term:`Webhook` implementations can all be configured for any combination of creation/deletion of a
+:term:`Permission` for a :term:`User` or :term:`Group`, and targeting either a :term:`Service` or a :term:`Resource`.
+
+.. list-table::
+    :stub-columns: 1
+
+    * - Action
+      - :attr:`WebhookAction.CREATE_USER_PERMISSION`, :attr:`WebhookAction.DELETE_USER_PERMISSION`,
+        :attr:`WebhookAction.CREATE_GROUP_PERMISSION`, :attr:`WebhookAction.DELETE_GROUP_PERMISSION`
+    * - Parameters
+      - ``{{user.name}}`` or ``{{group.name}}``, ``{{user.id}}`` or ``{{group.id}}``,
+        ``{{resource.id}}``, ``{{resource.type}}``, ``{{resource.name}}``, ``{{resource.display_name}}``,
+        ``{{service.name}}``, ``{{service.type}}``,
+        ``{{permission.name}}``, ``{{permission.access}}``, ``{{permission.scope}}``, ``{{permission}}``
+
+The parameters available for the |webhook_param_payload|_ are very similar in each case, except that they are adjusted
+accordingly to the :term:`User` or :term:`Group` the modification applies to.
+
+The :term:`Resource` details are available regardless of if it refers to a :term:`Service` or any children
+:term:`Resource`. The value of ``{{resource.type}}`` will be ``"service"`` if the reference was a :term:`Service`.
+The ``{{service.name}}`` and ``{{service.type}}`` will only be defined if the target was a :term:`Service`, and will
+be ``null`` otherwise.
+
+The created or deleted :term:`Permission` details are available with different formats. The ``{{permission.name}}``,
+``{{permission.access}}`` and ``{{permission.scope}}`` correspond to the same fields presented in
+:ref:`permission_modifiers` chapter. The ``permission`` parameter corresponds to the *explicit* name,
+as defined in :ref:`permission_representations`.
+
+
 .. _config_webhook_template:
 
 Webhook Template Payload

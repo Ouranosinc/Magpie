@@ -46,7 +46,11 @@ WEBHOOK_KEYS = WEBHOOK_KEYS_REQUIRED | WEBHOOK_KEYS_OPTIONAL
 
 # These are *potential* parameters permitted to use the template form in the webhook payload.
 # Each parameter transferred to any given webhook are provided distinctively for each case.
-WEBHOOK_TEMPLATE_PARAMS = ["user_name", "user_id", "user_email", "user_status", "callback_url"]
+WEBHOOK_TEMPLATE_PARAMS = [
+    "group_name", "group_id",
+    "user_name", "user_id", "user_email", "user_status",
+    "callback_url"
+]
 
 WEBHOOK_HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
@@ -60,14 +64,14 @@ class WebhookAction(ExtendedEnum):
 
     CREATE_USER = "create_user"
     """
-    Triggered when a new user gets successfully created.
+    Triggered when a new :term:`User` gets successfully created.
 
     .. seealso::
         :ref:`webhook_user_create`
     """
 
     DELETE_USER = "delete_user"
-    """Triggered when an existing user gets successfully deleted.
+    """Triggered when an existing :term:`User` gets successfully deleted.
 
     .. seealso::
         :ref:`webhook_user_delete`
@@ -75,10 +79,42 @@ class WebhookAction(ExtendedEnum):
 
     UPDATE_USER_STATUS = "update_user_status"
     """
-    Triggered when an existing user status gets successfully updated.
+    Triggered when an existing :term:`User` status gets successfully updated.
 
     .. seealso::
         :ref:`webhook_user_update_status`
+    """
+
+    CREATE_USER_PERMISSION = "create_user_permission"
+    """
+    Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets created for a :term:`User`.
+
+    .. seealso:: 
+        :ref:`webhook_permission_updates`
+    """
+
+    DELETE_USER_PERMISSION = "delete_user_permission"
+    """
+    Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets deleted for a :term:`User`.
+
+    .. seealso:: 
+        :ref:`webhook_permission_updates`
+    """
+
+    CREATE_GROUP_PERMISSION = "create_group_permission"
+    """
+    Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets created for a :term:`Group`.
+
+    .. seealso:: 
+        :ref:`webhook_permission_updates`
+    """
+
+    DELETE_GROUP_PERMISSION = "delete_group_permission"
+    """
+    Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets deleted for a :term:`Group`.
+
+    .. seealso:: 
+        :ref:`webhook_permission_updates`
     """
 
 
