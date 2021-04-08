@@ -43,4 +43,4 @@ RUN pip install --no-dependencies -e $MAGPIE_DIR
 
 # equivalent of `make cron start` without conda env
 # bind to '0.0.0.0' such that any IP employed by the server will retrieve the application endpoint by default
-CMD crond -c $CRON_DIR && pserve $MAGPIE_CONFIG_DIR/magpie.ini bind=0.0.0.0:2001
+CMD crond -c $CRON_DIR && pserve "$MAGPIE_CONFIG_DIR/magpie.ini"

@@ -408,6 +408,10 @@ docker-test: docker-build-magpie	## execute a smoke test of the built image for 
 	curl localhost:2001 | grep "Magpie Administration"
 	docker-compose $(DOCKER_TEST_COMPOSES) stop
 
+.PHONY: docker-test-stop
+docker-test-stop:  ## explicitly stop any running instance that could remain from 'docker-test' target
+	docker-compose $(DOCKER_TEST_COMPOSES) stop
+
 .PHONY: docker-clean
 docker-clean: 	## remove any leftover images from docker target operations
 	docker rmi $(docker images -f "reference=$(MAGPIE_DOCKER_REPO)" -q)
