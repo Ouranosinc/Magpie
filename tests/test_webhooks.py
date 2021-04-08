@@ -104,7 +104,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
+                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
                 },
                 {
                     "name": "test_webhook_2",
@@ -113,11 +113,11 @@ class TestWebhooks(ti.BaseTestCase):
                     "url": create_webhook_url,
                     # Test with a more complex payload, that includes different types and nested arrays / dicts
                     "payload": [
-                        {"user_name": ["{user_name}", "other_param"],
+                        {"user_name": ["{{user_name}}", "other_param"],
                             "nested_dict": {
-                                "{user_name}": "{user_name} {user_name}",
+                                "{{user_name}}": "{{user_name}} {{user_name}}",
                         }},
-                        "{user_name}", False, 1
+                        "{{user_name}}", False, 1
                     ]
                 }
             ],
@@ -197,7 +197,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_fail_url,
-                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
+                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
                 }
 
             ],
@@ -245,7 +245,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_url,
-                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
+                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
                 }
 
             ],
@@ -283,14 +283,14 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
-                    "payload": {"user_name": "{user_name}"}
+                    "payload": {"user_name": "{{user_name}}"}
                 },
                 {
                     "name": "test_webhook_2",
                     "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
-                    "payload": {"user_name": "{user_name}"}
+                    "payload": {"user_name": "{{user_name}}"}
                 }
             ],
             "providers": "",
@@ -465,7 +465,7 @@ class TestFailingWebhooks(unittest.TestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
+                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
                 }
             ],
             "providers": "",
