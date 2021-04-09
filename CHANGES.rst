@@ -17,7 +17,8 @@ Features / Changes
     configured web application port is properly applied with the provided ``magpie.ini`` configuration file.
 
 * Modify `Webhook` template variables to employ double braces (i.e.: ``{{<variable>}}``) to avoid ambiguity during
-  parsing by YAML configuration files.
+  parsing by YAML configuration files. Also employ dotted notation (e.g.: ``{{user.name}}``) to better represent which
+  parameters come from a given entity.
 * Update documentation to provide further details about `Webhook` configuration, examples and resulting event requests.
 * Add ``update_user_status`` `Webhook` implementation.
 

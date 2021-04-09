@@ -20,10 +20,16 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
+from magpie.api.management.resource import resource_formats as rf
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
-from magpie.api.webhooks import WebhookAction, generate_callback_url, process_webhook_requests
+from magpie.api.webhooks import (
+    WebhookAction,
+    get_permission_update_params,
+    generate_callback_url,
+    process_webhook_requests
+)
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
@@ -125,8 +131,8 @@ def create_user(user_name, password, email, group_name, db_session):
     transaction.commit()
 
     # note: after committed transaction, 'new_user' object becomes detached and cannot be used directly
-    webhook_params = {"user_name": user_name, "user_id": user_content["user_id"],
-                      "user_email": user_content["email"], "callback_url": callback_url}
+    webhook_params = {"user.name": user_name, "user.id": user_content["user_id"],
+                      "user.email": user_content["email"], "callback_url": callback_url}
     process_webhook_requests(WebhookAction.CREATE_USER, webhook_params, update_user_status_on_error=True)
 
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
@@ -193,8 +199,8 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
                         msg_on_fail=s.User_Check_Status_BadRequestResponseSchema.description, http_error=HTTPBadRequest)
         user.status = new_status
         callback_url = generate_callback_url(models.TokenOperation.WEBHOOK_USER_STATUS_ERROR, request.db, user=user)
-        webhook_params = {"user_name": user.user_name, "user_id": user.id,
-                          "user_status": user.status, "callback_url": callback_url}
+        webhook_params = {"user.name": user.user_name, "user.id": user.id,
+                          "user.status": user.status, "callback_url": callback_url}
         # force commit before webhook requests, so that the user's status can be reverted if a webhook error occurs
         transaction.commit()
         process_webhook_requests(WebhookAction.UPDATE_USER_STATUS, webhook_params)
@@ -241,6 +247,8 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=err_content,
                      msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
+    webhook_params = get_permission_update_params(user, resource, permission)
+    process_webhook_requests(WebhookAction.CREATE_USER_PERMISSION, webhook_params)
     return ax.valid_http(http_success=http_success, content=err_content, detail=http_detail)
 
 
@@ -312,6 +320,8 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPNotFound, content=err_content,
                      msg_on_fail=s.UserResourcePermissionName_DELETE_NotFoundResponseSchema.description)
+    webhook_params = get_permission_update_params(user, resource, permission)
+    process_webhook_requests(WebhookAction.DELETE_USER_PERMISSION, webhook_params)
     return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissionName_DELETE_OkResponseSchema.description)
 
 

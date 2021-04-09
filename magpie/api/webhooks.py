@@ -11,18 +11,24 @@ from six.moves.urllib.parse import urlparse
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
+from magpie.api.management.group.group_formats import format_group
+from magpie.api.management.resource.resource_formats import format_resource
+from magpie.api .management.service.service_formats import format_service
+from magpie.api .management.user.user_formats import format_user
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import get_all_configs
 from magpie.utils import CONTENT_TYPE_JSON, FORMAT_TYPE_MAPPING, ExtendedEnum, get_logger, get_settings, raise_log
 
 if TYPE_CHECKING:
-    from typing import List, Optional
+    from typing import List, Optional, Union
 
     from sqlalchemy.orm.session import Session
 
+    from magpie.permissions import PermissionSet
     from magpie.typedefs import (
         AnySettingsContainer,
+        ServiceOrResourceType,
         SettingsType,
         Str,
         WebhookConfig,
@@ -47,8 +53,11 @@ WEBHOOK_KEYS = WEBHOOK_KEYS_REQUIRED | WEBHOOK_KEYS_OPTIONAL
 # These are *potential* parameters permitted to use the template form in the webhook payload.
 # Each parameter transferred to any given webhook are provided distinctively for each case.
 WEBHOOK_TEMPLATE_PARAMS = [
-    "group_name", "group_id",
-    "user_name", "user_id", "user_email", "user_status",
+    "group.name", "group.id",
+    "user.name", "user.id", "user.email", "user.status",
+    "resource.id", "resource.type", "resource.name", "resource.display_name",
+    "service.name", "service.type", "service.public_url", "service.sync_type",
+    "permission.name", "permission.access", "permission.scope", "permission"
     "callback_url"
 ]
 
@@ -89,7 +98,7 @@ class WebhookAction(ExtendedEnum):
     """
     Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets created for a :term:`User`.
 
-    .. seealso:: 
+    .. seealso::
         :ref:`webhook_permission_updates`
     """
 
@@ -97,7 +106,7 @@ class WebhookAction(ExtendedEnum):
     """
     Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets deleted for a :term:`User`.
 
-    .. seealso:: 
+    .. seealso::
         :ref:`webhook_permission_updates`
     """
 
@@ -105,7 +114,7 @@ class WebhookAction(ExtendedEnum):
     """
     Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets created for a :term:`Group`.
 
-    .. seealso:: 
+    .. seealso::
         :ref:`webhook_permission_updates`
     """
 
@@ -113,9 +122,30 @@ class WebhookAction(ExtendedEnum):
     """
     Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets deleted for a :term:`Group`.
 
-    .. seealso:: 
+    .. seealso::
         :ref:`webhook_permission_updates`
     """
+
+
+def get_permission_update_params(target,         # type: Union[models.User, models.Group]
+                                 resource,       # type: ServiceOrResourceType
+                                 permission,     # type: PermissionSet
+                                 ):              # type: (...) -> WebhookTemplateParameters
+    """
+    Generates the :term:`Webhook` parameters based on provided references.
+    """
+    if isinstance(target, models.User):
+        target_params = format_user(target, basic_info=True, dotted=True)
+    else:
+        target_params = format_group(target, basic_info=True, dotted=True)
+    if resource.resource_type == "service":
+        res_params = format_service(resource, basic_info=True, dotted=True)
+    else:
+        res_params = format_resource(resource, basic_info=True, dotted=True)
+    params = permission.webhook_params()
+    params.update(target_params)
+    params.update(res_params)
+    return params
 
 
 def process_webhook_requests(action, params, update_user_status_on_error=False, settings=None):
@@ -130,8 +160,10 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     :param update_user_status_on_error: update the user status or not in case of a webhook error.
     :param settings: application settings where webhooks configuration can be retrieved.
     """
-    # Check for webhook requests
     settings = get_settings(settings, app=True)
+    # ignore if triggered during application startup, settings not yet loaded
+    if not settings:
+        return
     webhooks = settings.get("webhooks", {})  # type: WebhookConfig
     if not webhooks:
         return

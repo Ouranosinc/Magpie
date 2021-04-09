@@ -21,28 +21,57 @@ if TYPE_CHECKING:
     from magpie.typedefs import JSON, ResourcePermissionMap
 
 
-def format_service(service, permissions=None, permission_type=None,
-                   show_private_url=False, show_resources_allowed=False,
-                   show_configuration=False, basic_info=False):
-    # type: (Service, Optional[List[PermissionSet]], Optional[PermissionType], bool, bool, bool, bool) -> JSON
+def format_service(service,                         # type: Service
+                   permissions=None,                # type: Optional[List[PermissionSet]]
+                   permission_type=None,            # type: Optional[PermissionType]
+                   show_private_url=False,          # type: bool
+                   show_public_url=True,            # type: bool
+                   show_resources_allowed=False,    # type: bool
+                   show_configuration=False,        # type: bool
+                   basic_info=False,                # type: bool
+                   dotted=False,                    # type: bool
+                   ):                               # type: (...) -> JSON
     """
-    Formats the ``service`` information into JSON.
+    Formats a :term:`Service` information into JSON.
 
-    Note:
-        Automatically finds ``permissions`` of the service if not specified.
+    .. note::
+        Automatically finds :paramref:`permissions` of the :paramref:`service` if not specified.
         To preserve `empty` permissions such as during listing of `user`/`group` resource permissions,
         an empty ``list`` should be specified.
+
+    :param service: :term:`Service` to be formatted.
+    :param permissions:
+        Permissions to list along with the :paramref:`resource`.
+        By default, these are the applicable permissions for that corresponding resource type.
+    :param permission_type:
+        Override indication of provenance to apply to :paramref:`permissions`. Only applicable when they are provided.
+    :param show_private_url: Display the protected and private URL employed at service registration.
+    :param show_public_url: Display the generated public URL from configured :ref:`config_twitcher`.
+    :param show_resources_allowed: Display children resource details.
+    :param show_configuration: Display the applicable configuration of the :term:`Service` if it supports it.
+    :param basic_info:
+        If ``True``, return only sufficient details to identify the service, without any additional details about
+        :paramref:`permissions`, children resources or configuration information is returned.
+    :param dotted:
+        Employ a dot (``.``) instead of underscore (``_``) to separate :term:`Service` from its basic information.
+
+    .. seealso::
+        :func:`magpie.api.management.resource.resource_formats.format_resource`
     """
     def fmt_svc():
+        sep = "." if dotted else "_"
+        svc_sync_type = str(service.sync_type) if service.sync_type is not None else service.sync_type
         svc_info = {
-            "public_url": str(get_twitcher_protected_service_url(service.resource_name)),
-            "service_name": str(service.resource_name),
-            "service_type": str(service.type),
-            "service_sync_type": str(service.sync_type) if service.sync_type is not None else service.sync_type,
-            "resource_id": service.resource_id,
+            "service{}name".format(sep): str(service.resource_name),
+            "service{}type".format(sep): str(service.type),
+            "service{}sync_type".format(sep): svc_sync_type,
+            "resource{}id".format(sep): service.resource_id,
         }
+        if show_public_url:
+            svc_public_url = "service.public_url" if dotted else "public_url"  # backward compat
+            svc_info[svc_public_url] = str(get_twitcher_protected_service_url(service.resource_name))
         if show_private_url:
-            svc_info["service_url"] = str(service.url)
+            svc_info["service{}url".format(sep)] = str(service.url)
         if basic_info:
             return svc_info
         if show_configuration:

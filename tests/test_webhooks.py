@@ -105,7 +105,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
                 },
                 {
                     "name": "test_webhook_2",
@@ -114,11 +114,11 @@ class TestWebhooks(ti.BaseTestCase):
                     "url": create_webhook_url,
                     # Test with a more complex payload, that includes different types and nested arrays / dicts
                     "payload": [
-                        {"user_name": ["{{user_name}}", "other_param"],
+                        {"user_name": ["{{user.name}}", "other_param"],
                             "nested_dict": {
-                                "{{user_name}}": "{{user_name}} {{user_name}}",
+                                "{{user.name}}": "{{user.name}} {{user.name}}",
                         }},
-                        "{{user_name}}",
+                        "{{user.name}}",
                         False,
                         1
                     ]
@@ -199,7 +199,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_fail_url,
-                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
                 }
 
             ],
@@ -247,7 +247,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_url,
-                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
                 }
 
             ],
@@ -285,14 +285,14 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
-                    "payload": {"user_name": "{{user_name}}"}
+                    "payload": {"user_name": "{{user.name}}"}
                 },
                 {
                     "name": "test_webhook_2",
                     "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
-                    "payload": {"user_name": "{{user_name}}"}
+                    "payload": {"user_name": "{{user.name}}"}
                 }
             ],
             "providers": "",
@@ -362,8 +362,8 @@ class TestWebhooks(ti.BaseTestCase):
                     "method": "POST",
                     "url": update_webhook_url,
                     "payload": {
-                        "name": "{{user_name}}",
-                        "status": "{{user_status}}",
+                        "name": "{{user.name}}",
+                        "status": "{{user.status}}",
                         "callback_url": "{{callback_url}}"
                     }
                 }
@@ -425,27 +425,27 @@ def test_webhook_template_substitution():
     spec = yaml.safe_load(inspect.cleandoc("""
     payload:
       param: 
-        name: "{{user_name}}"
-        id: "{{user_id}}"
-        id_str: "'{{user_id}}'"
-        none: user_id               # only plain name, not a template substitution
-        str: "{user_name}"          # literal field with '{user_name}', not a template substitution
-        obj: {user_name}            # object with field 'user_name', not a template substitution
+        name: "{{user.name}}"
+        id: "{{user.id}}"
+        id_str: "'{{user.id}}'"
+        none: user.id               # only plain name, not a template substitution
+        str: "{user.name}"          # literal field with '{user_name}', not a template substitution
+        obj: {user.name}            # object with field 'user_name', not a template substitution
       compose:
-        id: user_{{user_id}}
-        msg: Hello {{user_name}}, your ID is {{user_id}}
+        id: user_{{user.id}}
+        msg: Hello {{user.name}}, your ID is {{user.id}}
       key_str: 
-        "{{user_id}}": "id"
-        "{{user_name}}": "name"
+        "{{user.id}}": "id"
+        "{{user.name}}": "name"
       listed: 
-        - "{{user_id}}"
-        - "{{user_name}}"
-        - "'{{user_id}}'"
+        - "{{user.id}}"
+        - "{{user.name}}"
+        - "'{{user.id}}'"
       quoted: 
-        explicit: "{{user_name}}"
-        single: "\'{{user_name}}\'"
-        double: "\\"{{user_name}}\\""
-        multi: "\\"\'\'\\"{{user_name}}\\"\'\'\\""
+        explicit: "{{user.name}}"
+        single: "\'{{user.name}}\'"
+        double: "\\"{{user.name}}\\""
+        multi: "\\"\'\'\\"{{user.name}}\\"\'\'\\""
     """))
     expect = {
         "param": {
@@ -489,8 +489,8 @@ def test_webhook_template_literal():
     params = {"user_name": "test", "user_id": 123}
     spec = yaml.safe_load(inspect.cleandoc("""
     payload: |
-      param: {{user_name}}
-      quote: "{{user_id}}"
+      param: {{user.name}}
+      quote: "{{user.id}}"
     """))
     expect = "param: {}\nquote: \"{}\"".format(params["user_name"], params["user_id"])
     data = utils.check_no_raise(lambda: replace_template(params, spec["payload"]))
@@ -520,7 +520,7 @@ class TestFailingWebhooks(unittest.TestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
                 }
             ],
             "providers": "",

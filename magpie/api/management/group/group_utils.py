@@ -21,6 +21,7 @@ from magpie.api.management.group.group_formats import format_group
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.service.service_formats import format_service, format_service_resources
+from magpie.api.webhooks import WebhookAction, get_permission_update_params, process_webhook_requests
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
@@ -181,6 +182,8 @@ def create_group_resource_permission_response(group, resource, permission, db_se
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=perm_content,
                      msg_on_fail=s.GroupResourcePermissions_POST_ForbiddenAddResponseSchema.description)
+    webhook_params = get_permission_update_params(group, resource, permission)
+    process_webhook_requests(WebhookAction.CREATE_GROUP_PERMISSION, webhook_params)
     return ax.valid_http(http_success=http_success, content=perm_content, detail=http_detail)
 
 
@@ -266,6 +269,8 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=perm_content,
                      msg_on_fail=s.GroupServicePermission_DELETE_ForbiddenResponseSchema.description)
+    webhook_params = get_permission_update_params(group, resource, permission)
+    process_webhook_requests(WebhookAction.DELETE_GROUP_PERMISSION, webhook_params)
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupServicePermission_DELETE_OkResponseSchema.description)
 
 

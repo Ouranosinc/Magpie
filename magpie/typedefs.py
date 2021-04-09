@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
     from magpie import models
-    from magpie.api.webhooks import WebhookAction
+    from magpie.api.webhooks import WEBHOOK_TEMPLATE_PARAMS, WebhookAction
     from magpie.permissions import Permission, PermissionSet
 
     if hasattr(typing, "TypedDict"):
@@ -89,7 +89,9 @@ if TYPE_CHECKING:
     ConfigDict = Dict[Str, Union[Str, ConfigItem, ConfigList, JSON]]
 
     WebhookPayload = Union[JSON, Str]
-    WebhookTemplateParameters = Dict[Str, AnyValue]
+    WebhookTemplateParameters = TypedDict("WebhookTemplateParameters", {
+        param: AnyValue for param in WEBHOOK_TEMPLATE_PARAMS
+    })
     WebhookConfigSettings = TypedDict("WebhookConfigSettings", {
         "name": Str, "action": Str, "method": Str, "url": Str, "format": Str, "payload": WebhookPayload
     })

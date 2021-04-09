@@ -256,6 +256,17 @@ class PermissionSet(object):
             perm.update({"reason": self.reason})
         return perm
 
+    def webhook_params(self):
+        """
+        Obtain JSON representation employed for :term:`Webhook` reference.
+        """
+        return {
+            "permission": str(self),
+            "permission.name": self.name.value,
+            "permission.access": self.access.value,
+            "permission.scope": self.scope.value,
+        }
+
     def ace(self, user_or_group):
         # type: (Optional[Union[models.User, models.Group]]) -> AccessControlEntryType
         """

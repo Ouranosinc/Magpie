@@ -15,10 +15,10 @@ if TYPE_CHECKING:
     from magpie.typedefs import JSON
 
 
-def format_group(group, basic_info=False, public_info=False, db_session=None):
-    # type: (Group, bool, bool, Optional[Session]) -> JSON
+def format_group(group, basic_info=False, public_info=False, dotted=False, db_session=None):
+    # type: (Group, bool, bool, bool, Optional[Session]) -> JSON
     """
-    Obtains the JSON formatted group definition according to field selection flags.
+    Obtains the JSON formatted :term:`Group` definition according to field selection flags.
 
     :param group: Group for which to provide details.
     :param basic_info:
@@ -28,24 +28,27 @@ def format_group(group, basic_info=False, public_info=False, db_session=None):
     :param public_info:
         Indicate if the returned details are intended for public information (``True``) or admin-only (``False``).
         Only higher level users should be provided additional details to avoid leaking potentially sensitive parameters.
+    :param dotted:
+        Employ a dot (``.``) instead of underscore (``_``) to separate :term:`Group` from its basic information.
     :param db_session: Database connection to retrieve additional details (required when ``public_info=False``).
     """
-    def fmt_grp(grp, is_basic, is_public):
-        info = {"group_name": str(grp.group_name)}
-        if not is_public:
-            info["group_id"] = grp.id
-        if is_basic:
+    def fmt_grp():
+        sep = "." if dotted else "_"
+        info = {"group{}name".format(sep): str(group.group_name)}
+        if not public_info:
+            info["group{}id".format(sep)] = group.id
+        if basic_info:
             return info
-        info["description"] = str(grp.description) if grp.description else None
-        if is_public:
+        info["description"] = str(group.description) if group.description else None
+        if public_info:
             return info
-        info["discoverable"] = grp.discoverable
-        info["priority"] = "max" if grp.priority == math.inf else int(grp.priority)
-        info["member_count"] = grp.get_member_count(db_session)
-        info["user_names"] = [usr.user_name for usr in grp.users]
+        info["discoverable"] = group.discoverable
+        info["priority"] = "max" if group.priority == math.inf else int(group.priority)
+        info["member_count"] = group.get_member_count(db_session)
+        info["user_names"] = [usr.user_name for usr in group.users]
         return info
 
     return evaluate_call(
-        lambda: fmt_grp(group, basic_info, public_info), http_error=HTTPInternalServerError,
+        lambda: fmt_grp(), http_error=HTTPInternalServerError,
         msg_on_fail="Failed to format group.", content={"group": repr(group)}
     )
