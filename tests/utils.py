@@ -343,15 +343,19 @@ def get_test_webhook_app(webhook_url):
         """
         Returns the temporary URL assigned by the webhook as ``callback_url``.
         """
+        payload = _payload_json()
+        return Response(str(payload["callback_url"]))
+
+    def get_payload(*_):
+        return Response(json=_payload_json())
+
+    def _payload_json():
         payload = settings["payload"]
         if isinstance(payload, list):
             payload = payload[0]
         if isinstance(payload, str):
             payload = json_pkg.loads(payload)
-        return Response(str(payload["callback_url"]))
-
-    def get_payload(*_):
-        return Response(json=settings["payload"])
+        return payload
 
     def check_payload(request):
         """
@@ -1788,9 +1792,14 @@ class TestSetup(object):
                 res_name = res_type[0]
             res_type = [res_type] * resource_depth
         if res_name is null:
-            res_name = ["resource_{}_{}".format(i, uuid.uuid4()) for i in range(resource_depth)]
+            if resource_depth is null:
+                res_name = [test_case.test_resource_name]
+            else:
+                res_name = ["resource_{}_{}".format(i, uuid.uuid4()) for i in range(resource_depth)]
         elif resource_depth:
             res_name = [res_name] * resource_depth
+        if not isinstance(res_type, list):
+            res_type = [res_type]
         body = TestSetup.create_TestService(test_case,
                                             override_service_name=svc_name, override_service_type=svc_type,
                                             override_headers=override_headers, override_cookies=override_cookies)

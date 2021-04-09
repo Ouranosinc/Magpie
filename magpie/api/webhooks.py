@@ -57,7 +57,7 @@ WEBHOOK_TEMPLATE_PARAMS = [
     "user.name", "user.id", "user.email", "user.status",
     "resource.id", "resource.type", "resource.name", "resource.display_name",
     "service.name", "service.type", "service.public_url", "service.sync_type",
-    "permission.name", "permission.access", "permission.scope", "permission"
+    "permission.name", "permission.access", "permission.scope", "permission",
     "callback_url"
 ]
 
@@ -141,7 +141,8 @@ def get_permission_update_params(target,         # type: Union[models.User, mode
     if resource.resource_type == "service":
         res_params = format_service(resource, basic_info=True, dotted=True)
     else:
-        res_params = format_resource(resource, basic_info=True, dotted=True)
+        res_params = {"service.{}".format(param): None for param in ["name", "type", "sync_type", "public_url"]}
+    res_params.update(format_resource(resource, basic_info=True, dotted=True))
     params = permission.webhook_params()
     params.update(target_params)
     params.update(res_params)
