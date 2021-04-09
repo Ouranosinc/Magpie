@@ -30,7 +30,7 @@ from ziggurat_foundations.permissions import permission_to_pyramid_acls
 from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.permissions import Permission
-from magpie.utils import get_magpie_url
+from magpie.utils import ExtendedEnum, get_magpie_url
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -459,6 +459,29 @@ class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
         return root_elem
 
 
+class TokenOperation(ExtendedEnum):
+    """
+    Supported operations by the temporary tokens.
+    """
+
+    GROUP_ACCEPT_TERMS = "group-accept-terms"
+    """
+    Temporary token associated to an URL endpoint called by an user that accepts the terms and conditions (T&C)
+    to join a particular group.
+    """
+
+    USER_PASSWORD_RESET = "user-password-reset"  # nosec: B105
+    """
+    Temporary token associated to an URL endpoint to request a user password reset.
+    """
+
+    WEBHOOK_USER_STATUS_ERROR = "webhook-user-status-error"
+    """
+    Temporary token employed to provide a callback URL that a registered webhook can call following the triggered
+    event to indicate that the corresponding operation resulted into an invalid user status.
+    """
+
+
 class TemporaryToken(BaseModel, Base):
     """
     Model that defines a token for temporary URL completion of a given pending operation.
@@ -466,7 +489,7 @@ class TemporaryToken(BaseModel, Base):
     __tablename__ = "tmp_tokens"
 
     token = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
-    operation = sa.Column(sa.Unicode(32), nullable=False)
+    operation = sa.Column(sa.Enum(TokenOperation, name=TokenOperation.__name__, length=32), nullable=False)
     created = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
 
     user_id = sa.Column(sa.Integer,

@@ -7,6 +7,7 @@ test_webhooks
 
 Tests for the webhooks implementation
 """
+import inspect
 import tempfile
 import unittest
 from time import sleep
@@ -16,7 +17,7 @@ import yaml
 from six.moves.urllib.parse import urlparse
 
 from magpie.api.schemas import UserStatuses
-from magpie.api.webhooks import WebhookAction, replace_template
+from magpie.api.webhooks import WebhookAction, replace_template, webhook_update_error_status
 from magpie.constants import get_constant
 from magpie.utils import CONTENT_TYPE_HTML
 from tests import interfaces as ti
@@ -24,6 +25,7 @@ from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_WEBHOOKS
+@runner.MAGPIE_TEST_FUNCTIONAL
 @runner.MAGPIE_TEST_LOCAL
 class TestWebhooks(ti.BaseTestCase):
     # pylint: disable=C0103,invalid-name
@@ -78,6 +80,7 @@ class TestWebhooks(ti.BaseTestCase):
         utils.TestSetup.delete_TestGroup(self)
 
     def checkTestUserStatus(self, status):
+        # type: (UserStatuses) -> None
         """
         Checks if the test user has the expected status value.
 
@@ -87,14 +90,14 @@ class TestWebhooks(ti.BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         info = utils.TestSetup.get_UserInfo(self, override_body=body)
-        utils.check_val_equal(info["status"], status)
+        utils.check_val_equal(info["status"], status.value)
 
     def test_Webhook_CreateUser(self):
         """
         Test creating a user using webhooks.
         """
         # Write temporary config for testing webhooks
-        create_webhook_url = self.base_webhook_url + "/webhook_create"
+        create_webhook_url = self.base_webhook_url + "/webhook_json"
         data = {
             "webhooks": [
                 {
@@ -102,7 +105,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
+                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
                 },
                 {
                     "name": "test_webhook_2",
@@ -111,11 +114,13 @@ class TestWebhooks(ti.BaseTestCase):
                     "url": create_webhook_url,
                     # Test with a more complex payload, that includes different types and nested arrays / dicts
                     "payload": [
-                        {"user_name": ["{user_name}", "other_param"],
+                        {"user_name": ["{{user_name}}", "other_param"],
                             "nested_dict": {
-                                "{user_name}": "{user_name} {user_name}",
+                                "{{user_name}}": "{{user_name}} {{user_name}}",
                         }},
-                        "{user_name}", False, 1
+                        "{{user_name}}",
+                        False,
+                        1
                     ]
                 }
             ],
@@ -128,7 +133,6 @@ class TestWebhooks(ti.BaseTestCase):
 
             # create the magpie app with the test webhook config
             self.setup_webhook_test(webhook_tmp_config.name)
-
             utils.get_test_webhook_app(self.base_webhook_url)
 
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
@@ -146,12 +150,12 @@ class TestWebhooks(ti.BaseTestCase):
 
             # Check if both webhook requests have completed successfully
             resp = requests.get(self.base_webhook_url + "/get_status")
-            assert resp.text == "2"
+            utils.check_val_equal(resp.text, "2")
 
             # Check if user creation was successful
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
-            self.checkTestUserStatus(UserStatuses.OK.value)
+            self.checkTestUserStatus(UserStatuses.OK)
 
     def test_Webhook_CreateUser_EmptyUrl(self):
         """
@@ -178,7 +182,7 @@ class TestWebhooks(ti.BaseTestCase):
             # Check if user creation was successful even if no webhook were defined in the config
             users = utils.TestSetup.get_RegisteredUsersList(self)
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
-            self.checkTestUserStatus(UserStatuses.OK.value)
+            self.checkTestUserStatus(UserStatuses.OK)
 
     def test_Webhook_CreateUser_FailingWebhook(self):
         """
@@ -195,7 +199,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_fail_url,
-                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
+                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
                 }
 
             ],
@@ -220,7 +224,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is still set to 1, since the callback URL has not been called yet
-            self.checkTestUserStatus(UserStatuses.OK.value)
+            self.checkTestUserStatus(UserStatuses.OK)
 
             # Retrieve the callback URL and send the request to the magpie app
             resp = requests.get(self.base_webhook_url + "/get_callback_url")
@@ -228,7 +232,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.test_request(self, "GET", urlparse(resp.text).path)
 
             # Check if the user's status is set to 0
-            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus.value)
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
 
     def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
         """
@@ -243,7 +247,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_url,
-                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
+                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
                 }
 
             ],
@@ -266,14 +270,14 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is set to 0
-            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus.value)
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
 
     def test_Webhook_DeleteUser(self):
         """
         Test deleting a user using webhooks.
         """
         # Write temporary config for testing webhooks
-        delete_webhook_url = self.base_webhook_url + "/webhook_delete"
+        delete_webhook_url = self.base_webhook_url + "/webhook_json"
         data = {
             "webhooks": [
                 {
@@ -281,14 +285,14 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
-                    "payload": {"user_name": "{user_name}"}
+                    "payload": {"user_name": "{{user_name}}"}
                 },
                 {
                     "name": "test_webhook_2",
                     "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
-                    "payload": {"user_name": "{user_name}"}
+                    "payload": {"user_name": "{{user_name}}"}
                 }
             ],
             "providers": "",
@@ -299,15 +303,15 @@ class TestWebhooks(ti.BaseTestCase):
             yaml.dump(data, webhook_tmp_config, default_flow_style=False)
             # create the magpie app with the test webhook config
             self.setup_webhook_test(webhook_tmp_config.name)
-
             utils.get_test_webhook_app(self.base_webhook_url)
+
             # create the test user first
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Webhooks shouldn't have been called during the user creation
             sleep(1)
             resp = requests.get(self.base_webhook_url + "/get_status")
-            assert resp.text == "0"
+            utils.check_val_equal(resp.text, "0")
 
             # delete the test user, webhooks should be called during this delete request
             path = "/users/{usr}".format(usr=self.test_user_name)
@@ -348,22 +352,149 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.TestSetup.check_NonExistingTestUser(self)
 
-    def test_Webhook_ReplaceNonString(self):
-        """
-        Verify that webhook template replacement works even when parameter value is not a string.
+    def test_Webhook_UpdateUserStatus(self):
+        update_webhook_url = self.base_webhook_url + "/webhook_json"
+        data = {
+            "webhooks": [
+                {
+                    "name": "test_webhook",
+                    "action": WebhookAction.UPDATE_USER_STATUS.value,
+                    "method": "POST",
+                    "url": update_webhook_url,
+                    "payload": {
+                        "name": "{{user_name}}",
+                        "status": "{{user_status}}",
+                        "callback_url": "{{callback_url}}"
+                    }
+                }
+            ],
+            "providers": "",
+            "permissions": ""
+        }
 
-        For example, a list or dictionary value can be an class:`int`, which should be preserved.
-        If quotes are added, the class:`int` fields is then converted to string as expected.
-        """
-        params = {"user_name": "test", "user_id": 123}
-        payload = {"param": {"name": "{user_name}", "id": "{user_id}", "id_str": "'{user_id}'"},
-                   "compose": {"id": "user_{user_id}"},
-                   "key_str": {"{user_id}": "id"}}
-        expect = {"param": {"name": params["user_name"], "id": params["user_id"], "id_str": str(params["user_id"])},
-                  "compose": {"id": "user_{}".format(params["user_id"])},
-                  "key_str": {str(params["user_id"]): "id"}}
-        data = utils.check_no_raise(lambda: replace_template(params, payload))
-        utils.check_val_equal(data, expect)
+        with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
+            yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
+
+            # create the magpie app with the test webhook config
+            self.setup_webhook_test(webhook_tmp_config.name)
+            utils.get_test_webhook_app(self.base_webhook_url)
+
+            utils.TestSetup.create_TestGroup(self)
+            utils.TestSetup.create_TestUser(self)
+            webhook_update_error_status(self.test_user_name)  # modify the status to be invalid
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
+
+            # trigger the webhook with update request
+            path = "/users/{}".format(self.test_user_name)
+            data = {"status": UserStatuses.OK.value}
+            utils.test_request(self, "PATCH", path, json=data, headers=self.json_headers, cookies=self.cookies)
+
+            # Wait for the webhook requests to complete and check it was received by the middleware
+            sleep(1)
+            resp = requests.get(self.base_webhook_url + "/get_status")
+            utils.check_val_equal(resp.text, "1")
+            # at this point, the user is considered valid following status update in magpie
+            self.checkTestUserStatus(UserStatuses.OK)
+
+            # simulate that the middleware operation fails, so it sends the callback request to revert status
+            resp = requests.get(self.base_webhook_url + "/get_callback_url")
+            callback_url = urlparse(resp.text).path
+            resp = utils.test_request(self, "GET", callback_url)
+            utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=None)
+
+            # now that callback request was accomplished, use should have been reverted to bad status
+            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
+
+
+# NOTE:
+#   This function is also included in docs to provide a detailed and working example of substitution patterns.
+#   If the name is modified or more decorators are added, docs must be updated accordingly.
+
+@runner.MAGPIE_TEST_WEBHOOKS
+@runner.MAGPIE_TEST_LOCAL
+def test_webhook_template_substitution():
+    """
+    Verify that webhook template replacement works as expected against parameter values of different types.
+
+    For example, a list item or dictionary value can be an integer, which should be preserved.
+    If quotes are added, the non-string fields should then be converted to string as expected.
+    Quotes on string fields though are redundant and should be ignored.
+    Additional repeated quotes should leave them as specified.
+    """
+    params = {"user_name": "test", "user_id": 123}
+    spec = yaml.safe_load(inspect.cleandoc("""
+    payload:
+      param: 
+        name: "{{user_name}}"
+        id: "{{user_id}}"
+        id_str: "'{{user_id}}'"
+        none: user_id               # only plain name, not a template substitution
+        str: "{user_name}"          # literal field with '{user_name}', not a template substitution
+        obj: {user_name}            # object with field 'user_name', not a template substitution
+      compose:
+        id: user_{{user_id}}
+        msg: Hello {{user_name}}, your ID is {{user_id}}
+      key_str: 
+        "{{user_id}}": "id"
+        "{{user_name}}": "name"
+      listed: 
+        - "{{user_id}}"
+        - "{{user_name}}"
+        - "'{{user_id}}'"
+      quoted: 
+        explicit: "{{user_name}}"
+        single: "\'{{user_name}}\'"
+        double: "\\"{{user_name}}\\""
+        multi: "\\"\'\'\\"{{user_name}}\\"\'\'\\""
+    """))
+    expect = {
+        "param": {
+            "name": params["user_name"],
+            "id": params["user_id"],
+            "id_str": str(params["user_id"]),
+            "str": "{user_name}",
+            "obj": {"user_name": None},  # format is not a template, but a valid YAML definition
+            "none": "user_id"  # was not a template, remains literal string not replaced by value
+        },
+        "compose": {
+            "id": "user_{}".format(params["user_id"]),
+            "msg": "Hello {}, your ID is {}".format(params["user_name"], params["user_id"])
+        },
+        "key_str": {
+            str(params["user_id"]): "id",
+            params["user_name"]: "name"
+        },
+        "listed": [
+            params["user_id"],
+            params["user_name"],
+            str(params["user_id"])
+        ],
+        "quoted": {
+            "explicit": "{}".format(params["user_name"]),
+            "single": "'{}'".format(params["user_name"]),
+            "double": "\"{}\"".format(params["user_name"]),
+            "multi": "\"\'\'\"{}\"\'\'\"".format(params["user_name"])
+        }
+    }
+    data = utils.check_no_raise(lambda: replace_template(params, spec["payload"]))
+    utils.check_val_equal(data, expect, diff=True)
+
+
+@runner.MAGPIE_TEST_WEBHOOKS
+@runner.MAGPIE_TEST_LOCAL
+def test_webhook_template_literal():
+    """
+    Verify that webhook literal string payload works as intended.
+    """
+    params = {"user_name": "test", "user_id": 123}
+    spec = yaml.safe_load(inspect.cleandoc("""
+    payload: |
+      param: {{user_name}}
+      quote: "{{user_id}}"
+    """))
+    expect = "param: {}\nquote: \"{}\"".format(params["user_name"], params["user_id"])
+    data = utils.check_no_raise(lambda: replace_template(params, spec["payload"]))
+    utils.check_val_equal(data, expect)
 
 
 @runner.MAGPIE_TEST_WEBHOOKS
@@ -389,7 +520,7 @@ class TestFailingWebhooks(unittest.TestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{user_name}", "callback_url": "{callback_url}"}
+                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
                 }
             ],
             "providers": "",
@@ -399,4 +530,5 @@ class TestFailingWebhooks(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
             yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
             # create the magpie app with the test webhook config
-            self.assertRaises(ValueError, utils.get_test_magpie_app, {"magpie.config_path": webhook_tmp_config.name})
+            utils.check_raises(lambda: utils.get_test_magpie_app({"magpie.config_path": webhook_tmp_config.name}),
+                               ValueError, msg="Invalid URL in webhook configuration should be raised.")
