@@ -478,7 +478,7 @@ class TokenOperation(ExtendedEnum):
     WEBHOOK_USER_STATUS_ERROR = "webhook-user-status-error"
     """
     Temporary token employed to provide a callback URL that a registered webhook can call following the triggered
-    event to indicate that the corresponding operation resulted into an invalid user status. 
+    event to indicate that the corresponding operation resulted into an invalid user status.
     """
 
 

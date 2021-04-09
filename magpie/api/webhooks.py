@@ -9,7 +9,8 @@ from pyramid.httpexceptions import HTTPInternalServerError
 from six.moves.urllib.parse import urlparse
 
 from magpie import models
-from magpie.api import exception as ax, schemas as s
+from magpie.api import exception as ax
+from magpie.api import schemas as s
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import get_all_configs
@@ -61,14 +62,14 @@ class WebhookAction(ExtendedEnum):
     """
     Triggered when a new user gets successfully created.
 
-    .. seealso:: 
+    .. seealso::
         :ref:`webhook_user_create`
     """
 
     DELETE_USER = "delete_user"
     """Triggered when an existing user gets successfully deleted.
 
-    .. seealso:: 
+    .. seealso::
         :ref:`webhook_user_delete`
     """
 
@@ -76,7 +77,7 @@ class WebhookAction(ExtendedEnum):
     """
     Triggered when an existing user status gets successfully updated.
 
-    .. seealso:: 
+    .. seealso::
         :ref:`webhook_user_update_status`
     """
 
@@ -155,13 +156,12 @@ def replace_template(params, payload, force_str=False):
                     return template_value
                 # otherwise, enforce convert to string to avoid failing string replacement,
                 # but remove any additional quotes that might be defined to enforce non-string to string conversion
-                else:
-                    template_single_string = "'" + template_replace + "'"
-                    template_double_string = "\"" + template_replace + "\""
-                    for template_str in [template_single_string, template_double_string]:
-                        if payload == template_str and not isinstance(template_value, str):
-                            template_replace = template_str
-                    payload = payload.replace(template_replace, str(template_value))
+                template_single_string = "'" + template_replace + "'"
+                template_double_string = "\"" + template_replace + "\""
+                for template_str in [template_single_string, template_double_string]:
+                    if payload == template_str and not isinstance(template_value, str):
+                        template_replace = template_str
+                payload = payload.replace(template_replace, str(template_value))
         return payload
     # For any other type, no replacing to do
     return payload
