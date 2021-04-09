@@ -35,7 +35,6 @@ RUN apk update \
     && apk --purge del .build-deps
 
 # install app package source, avoid copying the rest
-COPY ./bin $MAGPIE_DIR/bin/
 COPY ./config/magpie.ini $MAGPIE_CONFIG_DIR/magpie.ini
 COPY ./env/*.env.example $MAGPIE_ENV_DIR/
 COPY ./magpie $MAGPIE_DIR/magpie/
@@ -43,5 +42,4 @@ COPY ./magpie $MAGPIE_DIR/magpie/
 RUN pip install --no-dependencies -e $MAGPIE_DIR
 
 # equivalent of `make cron start` without conda env
-# bind to '0.0.0.0' such that any IP employed by the server will retrieve the application endpoint by default
-CMD crond -c $CRON_DIR && pserve $MAGPIE_CONFIG_DIR/magpie.ini bind=0.0.0.0:2001
+CMD crond -c $CRON_DIR && pserve "$MAGPIE_CONFIG_DIR/magpie.ini"

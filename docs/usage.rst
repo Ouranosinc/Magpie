@@ -155,6 +155,12 @@ further details.
         - <data-persistence-dir>:/var/lib/postgresql/data/pgdata
 
 
+.. note::
+    Exposing the web application endpoints and ports to the outside world is left to the discretion of the developer
+    maintaining the server. This can be accomplished with basic mapping of ports using ``expose`` keyword, but can
+    also be more securely achieved with ``links`` and specific `Nginx`_ configurations to route locations as desired.
+
+
 .. _usage_tests:
 
 Testing
