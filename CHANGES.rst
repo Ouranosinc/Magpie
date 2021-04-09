@@ -7,7 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix default ``MAGPIE_PORT`` value not applied and validate other parsing resolution order for any environment
+  variable or settings that can interact with ``MAGPIE_URL`` definition
+  (resolves `#417 <https://github.com/Ouranosinc/Magpie/issues/417>`_).
 
 `3.9.0 <https://github.com/Ouranosinc/Magpie/tree/3.9.0>`_ (2021-04-06)
 ------------------------------------------------------------------------------------

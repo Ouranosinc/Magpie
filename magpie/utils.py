@@ -410,24 +410,26 @@ def get_magpie_url(container=None):
     :param container: container that provides access to application settings.
     :return: resolved Magpie URL
     """
-    if container is None:
-        LOGGER.warning("Registry not specified, trying to find Magpie URL from environment")
-        url = get_constant("MAGPIE_URL", raise_missing=False, raise_not_set=False, print_missing=False)
-        if url:
-            return url
-        hostname = (get_constant("HOSTNAME", raise_not_set=False, raise_missing=False) or
-                    get_constant("MAGPIE_HOST", raise_not_set=False, raise_missing=False))
-        if not hostname:
-            raise ConfigurationError("Missing or unset MAGPIE_HOST or HOSTNAME value.")
-        magpie_port = get_constant("MAGPIE_PORT", raise_not_set=False)
-        magpie_scheme = get_constant("MAGPIE_SCHEME", raise_not_set=False, raise_missing=False, default_value="http")
-        return "{}://{}{}".format(magpie_scheme, hostname, ":{}".format(magpie_port) if magpie_port else "")
     try:
+        settings = get_settings(container, app=True)
+        magpie_url = get_constant("MAGPIE_URL", settings, raise_missing=False, raise_not_set=False, print_missing=False)
+        if not magpie_url:
+            hostname = (get_constant("MAGPIE_HOST", settings, raise_not_set=False, raise_missing=False,
+                                     print_missing=True) or
+                        get_constant("HOSTNAME", settings, raise_not_set=False, raise_missing=False,
+                                     print_missing=True, default_value="localhost"))
+            if not hostname:
+                raise ConfigurationError("Missing, unset or empty value for MAGPIE_HOST or HOSTNAME setting.")
+            magpie_port = get_constant("MAGPIE_PORT", settings, print_missing=True,
+                                       raise_not_set=False, raise_missing=False, default_value=2001)
+            magpie_scheme = get_constant("MAGPIE_SCHEME", settings, print_missing=True,
+                                         raise_not_set=False, raise_missing=False, default_value="http")
+            magpie_url = "{}://{}{}".format(magpie_scheme, hostname, ":{}".format(magpie_port) if magpie_port else "")
+
         # add "http" scheme to url if omitted from config since further 'requests' calls fail without it
         # mostly for testing when only "localhost" is specified
         # otherwise config should explicitly define it with 'MAGPIE_URL' env or 'magpie.url' config
-        settings = get_settings(container)
-        url_parsed = urlparse(get_constant("MAGPIE_URL", settings, "magpie.url").strip("/"))
+        url_parsed = urlparse(magpie_url.strip("/"))
         if url_parsed.scheme in ["http", "https"]:
             return url_parsed.geturl()
         magpie_url = "http://{}".format(url_parsed.geturl())
