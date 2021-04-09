@@ -355,7 +355,7 @@ start: install start-app  ## start application instance with gunicorn after inst
 .PHONY: start-app
 start-app: stop		## start application instance with gunicorn
 	@echo "Starting $(APP_NAME)..."
-	@bash -c '$(CONDA_CMD) exec gunicorn -b 0.0.0.0:2001 --paste "$(APP_INI)" --preload &'
+	@bash -c '$(CONDA_CMD) pserve "$(APP_INI)" "bind=127.0.0.1:2001" --reload &'
 	@sleep 5
 	@curl -H "Accept: application/json" "http://localhost:2001/version" | grep '"code": 200'
 
@@ -406,6 +406,10 @@ docker-test: docker-build-magpie	## execute a smoke test of the built image for 
 	docker-compose $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
 	curl localhost:2001 | grep "Magpie Administration"
+	docker-compose $(DOCKER_TEST_COMPOSES) stop
+
+.PHONY: docker-test-stop
+docker-test-stop:  ## explicitly stop any running instance that could remain from 'docker-test' target
 	docker-compose $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-clean

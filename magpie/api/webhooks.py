@@ -1,13 +1,16 @@
 import multiprocessing
+import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import requests
 import transaction
+from pyramid.httpexceptions import HTTPInternalServerError
 from six.moves.urllib.parse import urlparse
 
 from magpie import models
-from magpie.api.schemas import UserStatuses
+from magpie.api import exception as ax
+from magpie.api import schemas as s
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import get_all_configs
@@ -15,6 +18,8 @@ from magpie.utils import CONTENT_TYPE_JSON, FORMAT_TYPE_MAPPING, ExtendedEnum, g
 
 if TYPE_CHECKING:
     from typing import List, Optional
+
+    from sqlalchemy.orm.session import Session
 
     from magpie.typedefs import (
         AnySettingsContainer,
@@ -41,7 +46,7 @@ WEBHOOK_KEYS = WEBHOOK_KEYS_REQUIRED | WEBHOOK_KEYS_OPTIONAL
 
 # These are *potential* parameters permitted to use the template form in the webhook payload.
 # Each parameter transferred to any given webhook are provided distinctively for each case.
-WEBHOOK_TEMPLATE_PARAMS = ["user_name", "user_id", "user_email", "callback_url"]
+WEBHOOK_TEMPLATE_PARAMS = ["user_name", "user_id", "user_email", "user_status", "callback_url"]
 
 WEBHOOK_HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
@@ -54,10 +59,27 @@ class WebhookAction(ExtendedEnum):
     """
 
     CREATE_USER = "create_user"
-    """Triggered when a new user gets successfully created."""
+    """
+    Triggered when a new user gets successfully created.
+
+    .. seealso::
+        :ref:`webhook_user_create`
+    """
 
     DELETE_USER = "delete_user"
-    """Triggered when an existing user gets successfully deleted."""
+    """Triggered when an existing user gets successfully deleted.
+
+    .. seealso::
+        :ref:`webhook_user_delete`
+    """
+
+    UPDATE_USER_STATUS = "update_user_status"
+    """
+    Triggered when an existing user status gets successfully updated.
+
+    .. seealso::
+        :ref:`webhook_user_update_status`
+    """
 
 
 def process_webhook_requests(action, params, update_user_status_on_error=False, settings=None):
@@ -85,6 +107,30 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
         pool.starmap_async(send_webhook_request, args)
 
 
+def generate_callback_url(operation, db_session, user=None, group=None):
+    # type: (models.TokenOperation, Session, Optional[models.User], Optional[models.Group]) -> Str
+    """
+    Generates a callback URL using `Magpie` temporary tokens for use by the webhook implementation.
+
+    :param operation: targeted operation that employs the callback URL for reference.
+    :param db_session: database session to store the generated temporary token.
+    :param user: user reference associated to the operation as applicable.
+    :param group: group reference associated to the operation as applicable.
+    :return: generated callback URL.
+    """
+    ax.verify_param(operation, is_type=True, param_compare=models.TokenOperation,
+                    param_name="token", http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
+    webhook_token = models.TemporaryToken(
+        token=uuid.uuid4(),
+        operation=operation,
+        user_id=user.id if user is not None else None,
+        group_id=group.id if group is not None else None)
+    ax.evaluate_call(lambda: db_session.add(webhook_token), fallback=lambda: db_session.rollback(),
+                     http_error=HTTPInternalServerError, msg_on_fail=s.InternalServerErrorResponseSchema.description)
+    callback_url = webhook_token.url()
+    return callback_url
+
+
 def replace_template(params, payload, force_str=False):
     # type: (WebhookTemplateParameters, WebhookPayload, bool) -> WebhookPayload
     """
@@ -102,21 +148,20 @@ def replace_template(params, payload, force_str=False):
         return [replace_template(params, value) for value in payload]
     if isinstance(payload, str):  # template fields are always string since '{<param>}' must be provided
         for template_param in params:
-            template_replace = "{" + template_param + "}"
+            template_replace = "{{" + template_param + "}}"
             if template_param in WEBHOOK_TEMPLATE_PARAMS and template_replace in payload:
                 template_value = params[template_param]
                 # if result field is not a string and template is defined as is, allow value type replacement
                 if not force_str and not isinstance(template_value, str) and payload == template_replace:
-                    payload = template_value
+                    return template_value
                 # otherwise, enforce convert to string to avoid failing string replacement,
                 # but remove any additional quotes that might be defined to enforce non-string to string conversion
-                else:
-                    template_single_string = "'" + template_replace + "'"
-                    template_double_string = "\"" + template_replace + "\""
-                    for template_str in [template_single_string, template_double_string]:
-                        if payload == template_str and not isinstance(template_value, str):
-                            template_replace = template_str
-                    payload = payload.replace(template_replace, str(template_value))
+                template_single_string = "'" + template_replace + "'"
+                template_double_string = "\"" + template_replace + "\""
+                for template_str in [template_single_string, template_double_string]:
+                    if payload == template_str and not isinstance(template_value, str):
+                        template_replace = template_str
+                payload = payload.replace(template_replace, str(template_value))
         return payload
     # For any other type, no replacing to do
     return payload
@@ -148,13 +193,18 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
 
 
 def webhook_update_error_status(user_name):
+    # type: (Str) -> None
     """
     Updates the user's status to indicate an error occurred with the webhook requests.
     """
-    # find user and change its status to 0 to indicate a webhook error happened
+    # find user and change its status to indicate a webhook error happened
+    # NOTE:
+    #   It is very important to use database connection and not request here, otherwise we could trigger more webhooks.
+    #   This could be problematic as it could potentially create a loop of user create/update/delete back-and-forth
+    #   requests between Magpie and the middleware URL subscribed in webhooks.
     db_session = get_db_session_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
     user = db_session.query(models.User).filter(models.User.user_name == user_name)  # pylint: disable=E1101,no-member
-    user.update({"status": UserStatuses.WebhookErrorStatus.value})
+    user.update({"status": s.UserStatuses.WebhookErrorStatus.value})
     transaction.commit()
 
 

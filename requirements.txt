@@ -8,8 +8,9 @@ cornice_swagger>=0.7.0
 dicttoxml
 # futures is required for gunicorn threads
 futures; python_version < "3"
-# flag --paste breaks for >20 unless using pserve
-gunicorn<20
+# flag --paste breaks for >20, must use pserve instead
+gunicorn<20; python_version < "3.5"  # pyup: ignore
+gunicorn>=20; python_version >= "3"
 humanize
 lxml>=3.7
 paste

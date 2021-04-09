@@ -9,6 +9,7 @@
 .. _Magpie Docker Images: https://hub.docker.com/r/pavics/magpie/tags
 .. _Magpie REST API: https://pavics-magpie.readthedocs.io/en/latest/api.html
 .. _ncWMS2: https://github.com/Reading-eScience-Centre/ncwms
+.. _Nginx: https://www.nginx.com/
 .. _Ouranosinc/requests-magpie: https://github.com/Ouranosinc/requests-magpie
 .. _Phoenix: https://github.com/bird-house/pyramid-phoenix
 .. _PostgreSQL: https://www.postgresql.org/
@@ -39,6 +40,7 @@
 
 .. file/source references
 .. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
+.. _Dockerfile: https://github.com/Ouranosinc/Magpie/tree/master/Dockerfile
 .. _docker-compose.yml.example: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
 .. _magpie-cron: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 .. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example

@@ -14,12 +14,14 @@ We can take advantage of the fact that individual :temr:`Permission` and :term:`
 susceptible to change often and cache the results of these queries.
 
 While not activated by default, it's possible to cache the :term:`Access Control Lists` (ACLs) and :term:`Service`
-retrieval operations for all services, and give it an expiration timeout::
+retrieval operations for all services, and give it an expiration timeout.
 
-  # example Paste Deploy configuration
-  cache.regions = acl
-  cache.type = memory
-  cache.acl.expire = 5  # seconds
+.. code-block:: ini
+
+    # example Paste Deploy configuration
+    cache.regions = acl
+    cache.type = memory
+    cache.acl.expire = 5  # seconds
 
 .. warning::
     Take into consideration that settings must be applied to `Twitcher`_ INI file such that incoming proxy requests

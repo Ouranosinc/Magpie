@@ -7,8 +7,26 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* | Update ``gunicorn>=20.x`` to receive latest security patches
+    (fixes `#410 <https://github.com/Ouranosinc/Magpie/issues/410>`_).
+  |
+  | **IMPORTANT**:
+  | Because ``gunicorn`` changed how its CLI handles INI files, ``pserve`` should be employed instead to ensure the
+    configured web application port is properly applied with the provided ``magpie.ini`` configuration file.
+    Furthermore, the (``host``, ``port``) or ``bind`` should be updated to employ ``0.0.0.0:2001`` instead of
+    ``localhost:2001``, or any other combination of desired port to serve the application.
+
+* Modify `Webhook` template variables to employ double braces (i.e.: ``{{<variable>}}``) to avoid ambiguity during
+  parsing by YAML configuration files.
+* Update documentation to provide further details about `Webhook` configuration, examples and resulting event requests.
+* Add ``update_user_status`` `Webhook` implementation.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
+* Fix an edge case where `Webhook` template replacement could sporadically raise an error according to the replaced
+  value not being a string.
 * Fix default ``MAGPIE_PORT`` value not applied and validate other parsing resolution order for any environment
   variable or settings that can interact with ``MAGPIE_URL`` definition
   (resolves `#417 <https://github.com/Ouranosinc/Magpie/issues/417>`_).
@@ -36,9 +54,9 @@ Features / Changes
 * Add API user ``status`` update operation using ``PATCH`` request (admin-only).
 * Add API user list ``status`` to filter query by given user account statuses.
 * Add UI icon to provide user status feedback on individual user info page and through user list summary.
-* Change ``tmp_url`` to ``callback_url`` for webhook template and provided parameter to webhook requests to better
+* Change ``tmp_url`` to ``callback_url`` for `Webhook` template and provided parameter to `Webhook` requests to better
   represent its intended use.
-* Improve webhook template replacement to allow specification of ``format`` (default ``json``) and preserve non-string
+* Improve `Webhook` template replacement to allow specification of ``format`` (default ``json``) and preserve non-string
   parameters following replacement. Other content-types will enforce string of the whole body.
 
 Bug Fixes
@@ -70,7 +88,7 @@ Bug Fixes
 * Fix password update of pre-registered administrator upon configuration change of ``MAGPIE_ADMIN_PASSWORD`` without
   modification to ``MAGPIE_ADMIN_USER`` (fixes `#402 <https://github.com/Ouranosinc/Magpie/issues/402>`_).
 * Apply backward compatibility fixes to handle regexes in Python 3.5 (pending deprecation).
-* Remove `MagpieAdapter` from Python 2.7 test suite to get passing results against obsolete version and unsupported
+* Remove ``MagpieAdapter`` from Python 2.7 test suite to get passing results against obsolete version and unsupported
   code by `Twitcher`.
 * Fix default value resolution of ``MAGPIE_CONFIG_DIR`` if the specified value is parsed as empty string.
 * Fix mismatching resolution of database URL from different locations because of invalid settings forwarding.
@@ -108,7 +126,7 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add a list of webhook URLs, defined in the configuration, that will be called when creating or deleting a user
+* Add a list of `Webhook` URLs, defined in the configuration, that will be called when creating or deleting a user
   (resolves `#343 <https://github.com/Ouranosinc/Magpie/issues/343>`_).
 
 `3.5.1 <https://github.com/Ouranosinc/Magpie/tree/3.5.1>`_ (2021-02-08)
@@ -465,9 +483,11 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* When using logging level ``DEBUG``, `Magpie` requests will log additional details.
-
-  **WARNING**: these log entries will potentially also include sensible information such as authentication cookies.
+* | When using logging level ``DEBUG``, `Magpie` requests will log additional details.
+  |
+  | **WARNING**:
+  | Log entries with ``DEBUG`` level will potentially also include sensible information such as authentication cookies.
+  | This level **SHOULD NOT** be used in production environments.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

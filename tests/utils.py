@@ -1,3 +1,4 @@
+import difflib
 import functools
 import importlib
 import itertools
@@ -310,53 +311,66 @@ def get_app_or_url(test_item):
 
 def get_test_webhook_app(webhook_url):
     """
-    Instantiate a local test application used for the pre-hook for user creation and deletion.
+    Instantiate a local test application used to simulate a receiving middleware.
     """
-    def webhook_create_request(request):
+
+    def webhook_json_request(request):
+        """
+        Simulates a receiving endpoint middleware registered by webhook URL and returns the received payload.
+        """
+        data = json_pkg.loads(request.text)
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
-        # Save the request's payload
         settings["payload"].append(request.text)
-        return Response("Successful webhook url")
-
-    def webhook_delete_request(request):
-        # Simulates a webhook url call during user deletion
-        user = json_pkg.loads(request.text)["user_name"]
-
-        # Status is incremented to count the number of successful test webhooks
-        settings["webhook_status"] += 1
-        return Response("Successful webhook url with user " + user)
+        return Response(json=data)
 
     def webhook_fail_request(request):
-        # Simulates a webhook url call during user creation
+        """
+        Simulates a callback request from the middleware using provided webhook URL.
+        """
         body = json_pkg.loads(request.text)
         user = body["user_name"]
-        # Since we can't call a local magpie app directly here, we save the tmp_url here,
-        # and retrieve it in the test case
-        settings["callback_url"] = body["callback_url"]
-        return Response("Failing webhook url with user " + user + " and callback_url " + settings["callback_url"])
+        settings["payload"] = body
+        return Response("Failing webhook url with user " + user + " and callback_url " + body["callback_url"])
 
     def get_status(*_):
-        # Returns the status number
+        """
+        Returns the number of times a webhook request was received.
+        """
         return Response(str(settings["webhook_status"]))
 
     def get_callback_url(*_):
-        # Returns the tmp_url
-        return Response(str(settings["callback_url"]))
+        """
+        Returns the temporary URL assigned by the webhook as ``callback_url``.
+        """
+        payload = settings["payload"]
+        if isinstance(payload, list):
+            payload = payload[0]
+        if isinstance(payload, str):
+            payload = json_pkg.loads(payload)
+        return Response(str(payload["callback_url"]))
+
+    def get_payload(*_):
+        return Response(json=settings["payload"])
 
     def check_payload(request):
-        # Check if the input payload is present in the webhook app saved payload
+        """
+        Checks if the input payload is present in the webhook app saved payload.
+        """
         msg = "Request Body not in Payload settings\nbody: {}\npayload: {}".format(request.text, settings["payload"])
         assert request.text in settings["payload"], msg
         return Response("Content is correct")
 
     def reset(*_):
+        """
+        Resets the middleware for future webhook requests.
+        """
         settings["webhook_status"] = 0
         settings["payload"] = []
         settings["callback_url"] = ""
         return Response("Webhook app has been reset.")
 
-    def error_body(exc, request):  # noqa
+    def error_body(exc, *_):
         """
         Make the assertion error text available as webhook response text.
         """
@@ -369,18 +383,18 @@ def get_test_webhook_app(webhook_url):
         settings["webhook_status"] = 0
         settings["payload"] = []
         settings["callback_url"] = ""
-        config.add_route("webhook_create", "/webhook_create")
-        config.add_route("webhook_delete", "/webhook_delete")
+        config.add_route("webhook_json", "/webhook_json")
         config.add_route("webhook_fail", "/webhook_fail")
         config.add_route("get_status", "/get_status")
         config.add_route("get_callback_url", "/get_callback_url")
+        config.add_route("get_payload", "/get_payload")
         config.add_route("check_payload", "/check_payload")
         config.add_route("reset", "/reset")
-        config.add_view(webhook_create_request, route_name="webhook_create", request_method="POST")
-        config.add_view(webhook_delete_request, route_name="webhook_delete", request_method="POST")
+        config.add_view(webhook_json_request, route_name="webhook_json", request_method="POST")
         config.add_view(webhook_fail_request, route_name="webhook_fail", request_method="POST")
         config.add_view(get_status, route_name="get_status", request_method="GET")
         config.add_view(get_callback_url, route_name="get_callback_url", request_method="GET")
+        config.add_view(get_payload, route_name="get_payload", request_method="GET")
         config.add_view(check_payload, route_name="check_payload", request_method="POST")
         config.add_view(reset, route_name="reset", request_method="POST")
         config.add_exception_view(error_body)
@@ -928,13 +942,41 @@ def visual_repr(item):
     return "'{}'".format(repr(item))
 
 
-def format_test_val_ref(val, ref, pre="Fail", msg=None):
+def generate_diff(val, ref, val_name="Test", ref_name="Reference"):
+    # type: (Any, Any, Str, Str) -> Str
+    """
+    Generates a line-by-line diff result of the test value against the reference value.
+
+    Attempts to parse the contents as JSON to provide better diff of matched/sorted lines, and falls back to plain
+    line-based string representations otherwise.
+
+    :returns: formatted multiline diff
+    """
+    try:
+        val = json_pkg.dumps(val, sort_keys=True, indent=2, ensure_ascii=False)
+    except Exception:  # noqa
+        val = str(val)
+    try:
+        ref = json_pkg.dumps(ref, sort_keys=True, indent=2, ensure_ascii=False)
+    except Exception:  # noqa
+        ref = str(ref)
+    val = val.splitlines()
+    ref = ref.splitlines()
+    return "\n".join(difflib.context_diff(val, ref, fromfile=val_name, tofile=ref_name))
+
+
+def format_test_val_ref(val, ref, pre="Fail", msg=None, diff=False):
     if is_null(msg):
         _msg = "({}) Failed condition between test and reference values.".format(pre)
     else:
-        _msg = "({}) Test value: {}, Reference value: {}".format(pre, visual_repr(val), visual_repr(ref))
-        if isinstance(msg, six.string_types):
-            _msg = "{}\n{}".format(msg, _msg)
+        _msg = "({})".format(pre)
+    if diff:
+        _diff = generate_diff(val, ref, val_name="Test value", ref_name="Reference value")
+    else:
+        _diff = "Test value: {}, Reference value: {}".format(visual_repr(val), visual_repr(ref))
+    if isinstance(msg, six.string_types):
+        _msg = "{}\n{}".format(msg, _msg)
+    _msg = "{}\n{}".format(_msg, _diff)
     return _msg
 
 
@@ -948,20 +990,22 @@ def all_equal(iter_val, iter_ref, any_order=False):
     return all(it == ir for it, ir in zip(iter_val, iter_ref))
 
 
-def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
-    # type: (Collection[Any], Union[Collection[Any], NullType], Optional[Str], bool) -> None
+def check_all_equal(iter_val, iter_ref, msg=None, any_order=False, diff=False):
+    # type: (Collection[Any], Union[Collection[Any], NullType], Optional[Str], bool, bool) -> None
     """
     :param iter_val: tested values.
     :param iter_ref: reference values.
     :param msg: override message to display if failing test.
     :param any_order: allow equal values to be provided in any order, otherwise order must match as well as values.
+    :param diff: generate a detailed diff result within indications of different fields (best when JSON formatted).
     :raises AssertionError:
         If all values in :paramref:`iter_val` are not equal to values within :paramref:`iter_ref`.
         If :paramref:`any_order` is ``False``, also raises if equal items are not in the same order.
     """
     r_val = repr(iter_val)
     r_ref = repr(iter_ref)
-    assert all_equal(iter_val, iter_ref, any_order), format_test_val_ref(r_val, r_ref, pre="All Equal Fail", msg=msg)
+    assert all_equal(iter_val, iter_ref, any_order), \
+        format_test_val_ref(r_val, r_ref, pre="All Equal Fail", msg=msg, diff=diff)
 
 
 def check_val_true(val, msg=None):
@@ -976,16 +1020,16 @@ def check_val_false(val, msg=None):
     assert val is False, format_test_val_ref(val, False, pre="Not False", msg=msg)
 
 
-def check_val_equal(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+def check_val_equal(val, ref, msg=None, diff=False):
+    # type: (Any, Union[Any, NullType], Optional[Str], bool) -> None
     """:raises AssertionError: if :paramref:`val` is not equal to :paramref:`ref`."""
-    assert is_null(ref) or val == ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg)
+    assert is_null(ref) or val == ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg, diff=diff)
 
 
-def check_val_not_equal(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[Str]) -> None
+def check_val_not_equal(val, ref, msg=None, diff=False):
+    # type: (Any, Union[Any, NullType], Optional[Str], bool) -> None
     """:raises AssertionError: if :paramref:`val` is equal to :paramref:`ref`."""
-    assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre="Not Equal Fail", msg=msg)
+    assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre="Not Equal Fail", msg=msg, diff=diff)
 
 
 def check_val_is_in(val, ref, msg=None):
@@ -1041,8 +1085,8 @@ def check_no_raise(func, msg=None):
 
 def check_response_basic_info(response,                         # type: AnyResponseType
                               expected_code=200,                # type: int
-                              expected_type=CONTENT_TYPE_JSON,  # type: Str
-                              expected_method="GET",            # type: Str
+                              expected_type=CONTENT_TYPE_JSON,  # type: Optional[Str]
+                              expected_method="GET",            # type: Optional[Str]
                               extra_message=None,               # type: Optional[Str]
                               version=None,                     # type: Optional[Str]
                               ):                                # type: (...) -> Union[JSON, Str]
@@ -1055,8 +1099,8 @@ def check_response_basic_info(response,                         # type: AnyRespo
 
     :param response: response to validate.
     :param expected_code: status code to validate from the response.
-    :param expected_type: Content-Type to validate from the response.
-    :param expected_method: method 'GET', 'POST', etc. to validate from the response if an error.
+    :param expected_type: Content-Type to validate from the response. Ignored if non-string is passed.
+    :param expected_method: HTTP method 'GET', 'POST', etc. to validate from the response if an error and is a string.
     :param extra_message: additional message to append to every specific test message if provided.
     :param version: perform conditional checks according to test instance version (default to latest if not provided).
     :return: json body of the response for convenience.
@@ -1066,7 +1110,8 @@ def check_response_basic_info(response,                         # type: AnyRespo
 
     check_val_is_in("Content-Type", dict(response.headers), msg=_("Response doesn't define 'Content-Type' header."))
     content_types = get_response_content_types_list(response)
-    check_val_is_in(expected_type, content_types, msg=_("Response doesn't match expected HTTP Content-Type header."))
+    if isinstance(expected_type, six.string_types):
+        check_val_is_in(expected_type, content_types, msg=_("Response doesn't have expected HTTP Content-Type header."))
     code_message = "Response doesn't match expected HTTP status code."
     if expected_type == CONTENT_TYPE_JSON:
         # provide more details about mismatching code since to help debug cause of error
@@ -1093,7 +1138,8 @@ def check_response_basic_info(response,                         # type: AnyRespo
         check_val_is_in("url" if v2_and_up else "request_url", body, msg=_("Request URL missing from contents,"))
         check_val_is_in("path" if v2_and_up else "route_name", body, msg=_("Request path missing from contents."))
         check_val_is_in("method", body, msg=_("Request method missing from contents."))
-        if expected_type == CONTENT_TYPE_JSON:  # explicitly check by dict-key if JSON
+        # explicitly check by dict-key if JSON
+        if expected_type == CONTENT_TYPE_JSON and isinstance(expected_method, six.string_types):
             check_val_equal(body["method"], expected_method, msg=_("Request method not matching expected value."))
 
     return body

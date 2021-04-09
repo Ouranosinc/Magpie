@@ -12,7 +12,9 @@ To use `Magpie` in a project, first you need to install it. To do so, you can do
 For more details or other installation variants and environment preparation, see :ref:`installation` and
 :ref:`configuration` procedures.
 
-After this, you should be able to import the Python package to validate it is installed properly using::
+After this, you should be able to import the Python package to validate it is installed properly using:
+
+.. code-block:: python
 
     import magpie
 
@@ -24,7 +26,9 @@ Web Application
 
 In most situation, you will want to run `Magpie` as a Web Application in combination with some Web Proxy
 (e.g.: `Twitcher`_) that can interrogate `Magpie` about applicable user authentication and permission authorization
-from the HTTP request session. To start the application, you can simply run the following command::
+from the HTTP request session. To start the application, you can simply run the following command.
+
+.. code-block:: console
 
     make start
 
@@ -33,11 +37,10 @@ start a basic Web Application on ``localhost:2001`` with default configurations.
 `PostgreSQL`_ database connection configured prior to running `Magpie` for it to operate (refer to :ref:`Configuration`
 for details).
 
-For running the application, multiple
-`WSGI HTTP Servers` can be employed (e.g.: `Gunicorn`_, `Waitress`_, etc.). They usually all support as input an INI
-configuration file for specific settings. `Magpie` also employs such INI file to customize its behaviour.
-See `Configuration`_ for further details, and please refer to the employed `WSGI` application documentation of your
-liking for their respective setup requirements.
+For running the application, multiple `WSGI HTTP Servers` can be employed (e.g.: `Gunicorn`_, `Waitress`_, etc.).
+They usually all support as input an INI configuration file for specific settings. `Magpie` also employs such INI file
+to customize its behaviour. See `Configuration`_ for further details, and please refer to the employed `WSGI`
+application documentation of your liking for their respective setup requirements.
 
 
 .. _usage_api:
@@ -101,6 +104,63 @@ administrator permissions.
     using the ``Account`` button from the main entrypoint of the `Magpie` UI.
 
 
+.. _usage_docker:
+
+Docker Application
+-----------------------
+
+Two `Docker` images are provided for very version released.
+
+The first, simply named ``pavics/magpie``, is to execute `Magpie` itself as a :ref:`usage_webapp`.
+This simultaneously offers both :ref:`usage_api` and :ref:`usage_ui` interfaces accessible from the configured endpoint.
+Using the same image and an override of the ``CMD``, it is also possible to run any of the :ref:`usage_cli` operations
+with all preinstalled package dependencies. This image's `Dockerfile`_ is a good reference to understand how to run the
+:ref:`usage_webapp` locally if desired.
+
+The second `Docker` image consists of `Twitcher`_ code base with integrated :class:`magpie.adapter.MagpieAdapter` such
+that they can communicate between each other. Each tagged `Magpie` version will have an automatically deployed and
+corresponding `Twitcher`_ image tag as ``pavics/twitcher:magpie-<version>``.
+
+Usually, both images are employed in tandem with a `PostgreSQL`_ database connexion within a ``docker-compose.yml``
+configuration, similar to the following example. It is recommended to keep the versions in sync to ensure their
+interoperability. Both images must also share some configurations, such as but not limited to, the same
+:envvar:`MAGPIE_SECRET` in order to resolve operations in the same manner. See :ref:`config_twitcher` for
+further details.
+
+
+.. code-block:: YAML
+
+    magpie:
+      image: pavics/magpie:<version>
+      # ... other Magpie configs ...
+      links:
+        - postgres
+      volumes:
+        - <some-path>/magpie.ini:/opt/local/src/magpie/config/magpie.ini
+
+    twitcher:
+      image: pavics/twitcher:magpie-<version>
+      # ... other Twitcher configs ...
+      links:
+        - postgres
+      volumes:
+        - <some-path>/twitcher.ini:/opt/birdhouse/src/twitcher/twitcher.ini
+
+    postgres:
+      image: postgres:9.6
+      # ... other PostgreSQL configs ...
+      environment:
+        PGDATA: /var/lib/postgresql/data/pgdata
+      volumes:
+        - <data-persistence-dir>:/var/lib/postgresql/data/pgdata
+
+
+.. note::
+    Exposing the web application endpoints and ports to the outside world is left to the discretion of the developer
+    maintaining the server. This can be accomplished with basic mapping of ports using ``expose`` keyword, but can
+    also be more securely achieved with ``links`` and specific `Nginx`_ configurations to route locations as desired.
+
+
 .. _usage_tests:
 
 Testing
@@ -123,12 +183,16 @@ are intended to validate older or pre-deployed servers, although with slightly m
 A basic `Magpie` instance can also be initialized by using the `docker-compose.yml.example`_ file.
 Note that the environment variables :envvar:`MAGPIE_TEST_REMOTE_SERVER_URL` and :envvar:`HOST_FQDN`
 must first be defined for the `remote` tests.
-For example, these default values should work with ``docker-compose``::
+For example, these default values should work with ``docker-compose``:
+
+.. code-block:: console
 
     export MAGPIE_TEST_REMOTE_SERVER_URL=http://localhost:2001
     export HOST_FQDN=localhost
 
-To start the tests, you can simply run one of the following command::
+To start the tests, you can simply run one of the following command:
+
+.. code-block:: console
 
     make test
     make test-local
@@ -145,7 +209,9 @@ Customizing Tests
 
 Specific tests can be enabled or disabled by *category*, using variables in ``magpie.env``
 (copy of `magpie.env.example`_). Tests marked with the corresponding variables will be executed or not if they were
-marked as matching that category. Alternatively, you can also provide the conditions directly using::
+marked as matching that category. Alternatively, you can also provide the conditions directly using:
+
+.. code-block:: console
 
     make test-custom SPEC="utils and local"
     make test-custom SPEC="not remote"
