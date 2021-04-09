@@ -81,6 +81,7 @@ def _split_requirement(requirement, version=False, python=False, merge=False):
     if python and "python_version" not in requirement:
         return ("", "") if version and not merge else ""
     requirement = requirement.split("python_version")[idx_pyv].replace(";", "").replace("\"", "")
+    requirement = requirement.split(" #")[0]    # ignore comments, space important because 'pkg#egg=' is valid
     op_str = ""
     pkg_name = requirement
     for operator in [">=", ">", "<=", "<", "!=", "==", "="]:

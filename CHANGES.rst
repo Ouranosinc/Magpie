@@ -7,7 +7,16 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* | Update ``gunicorn>=20.x`` to receive latest security patches
+    (fixes `#410 <https://github.com/Ouranosinc/Magpie/issues/410>`_).
+  |
+  | **IMPORTANT**:
+  | Because ``gunicorn`` changed how its CLI handles INI files, ``pserve`` should be employed instead to ensure the
+    configured web application port is properly applied with the provided ``magpie.ini`` configuration file.
+    Furthermore, the (``host``, ``port``) or ``bind`` should be updated to employ ``0.0.0.0:2001`` instead of
+    ``localhost:2001``, or any other combination of desired port to serve the application.
 
 `3.9.0 <https://github.com/Ouranosinc/Magpie/tree/3.9.0>`_ (2021-04-06)
 ------------------------------------------------------------------------------------
@@ -461,9 +470,11 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* When using logging level ``DEBUG``, `Magpie` requests will log additional details.
-
-  **WARNING**: these log entries will potentially also include sensible information such as authentication cookies.
+* | When using logging level ``DEBUG``, `Magpie` requests will log additional details.
+  |
+  | **WARNING**:
+  | Log entries with ``DEBUG`` level will potentially also include sensible information such as authentication cookies.
+  | This level **SHOULD NOT** be used in production environments.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

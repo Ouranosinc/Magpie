@@ -323,6 +323,15 @@ at the start of the :ref:`Configuration` section.
         as possible from the individual parts. The result of these parts (potential using corresponding defaults) will
         have the following format: ``"${MAGPIE_SCHEME}//:${MAGPIE_HOST}:${MAGPIE_PORT}"``.
 
+    .. note::
+        The definition of :envvar:`MAGPIE_URL` or any of its parts to reconstruct it must not be confused with
+        parameters defined in the ``[server:main]`` section of the provided `magpie.ini`_ configuration. The purpose
+        of variable :envvar:`MAGPIE_URL` is to define where the *exposed* application is located, often representing
+        the server endpoint for which the `Magpie` instance is employed. The values of ``host`` and ``port``, or
+        ``bind`` defined in ``[server:main]`` instead correspond to how the WSGI application is exposed (e.g.: through
+        `Gunicorn`_), and so represents a *local* web application that must be mapped one way or another to the server
+        when running within the :ref:`usage_docker`.
+
 .. envvar:: MAGPIE_SCHEME
 
     (Default: ``"http"``)
@@ -790,9 +799,9 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
 
 Please note that although `Twitcher`_ URL references are needed to configure interactive parameters with `Magpie`, the
 employed `Twitcher`_ instance will also need to have access to `Magpie`'s database in order to allow proper
-:term:`Service` resolution with `magpie.adapter.magpieservice.MagpieServiceStore`. Appropriate database credentials
-must therefore be shared between the two services, as well as :envvar:`MAGPIE_SECRET` value in order for successful
-completion of the handshake during :term:`Authentication` procedure of the request :term:`User` token.
+:term:`Service` resolution with :class:`magpie.adapter.magpieservice.MagpieServiceStore`. Appropriate database
+credentials must therefore be shared between the two services, as well as :envvar:`MAGPIE_SECRET` value in order for
+successful completion of the handshake during :term:`Authentication` procedure of the request :term:`User` token.
 
 
 .. _config_postgres_settings:
