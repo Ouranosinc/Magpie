@@ -19,11 +19,13 @@ from six.moves.urllib.parse import urlparse
 from magpie.api.schemas import UserStatuses
 from magpie.api.webhooks import WebhookAction, replace_template, webhook_update_error_status
 from magpie.constants import get_constant
-from magpie.permissions import Access, PermissionSet, Permission, Scope
+from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAPI
 from magpie.utils import CONTENT_TYPE_HTML
 from tests import interfaces as ti
 from tests import runner, utils
+
+WEBHOOK_TEST_DELAY = 0.25  # small delay to let webhook being processed before resuming tests
 
 
 @runner.MAGPIE_TEST_WEBHOOKS
@@ -150,7 +152,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Wait for the webhook requests to complete
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
 
             # Check if the webhook received the more complex payload, with the right template replacements
             expected_payload = [{"nested_dict": {self.test_user_name: self.test_user_name + " " + self.test_user_name},
@@ -189,7 +191,7 @@ class TestWebhooks(ti.BaseTestCase):
 
             # Wait for the potential webhook requests to complete
             # In this case, there should be no webhook request to execute
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
 
             # Check if user creation was successful even if no webhook were defined in the config
             users = utils.TestSetup.get_RegisteredUsersList(self)
@@ -228,7 +230,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Wait for the webhook requests to complete
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
 
             # Check if user creation was successful even if the webhook resulted in failure
             users = utils.TestSetup.get_RegisteredUsersList(self)
@@ -279,7 +281,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Wait for the webhook requests to complete
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
 
             # Check if user creation was successful even if the webhook resulted in failure
             users = utils.TestSetup.get_RegisteredUsersList(self)
@@ -325,7 +327,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Webhooks shouldn't have been called during the user creation
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
             resp = requests.get(self.base_webhook_url + "/get_status")
             utils.check_val_equal(resp.text, "0")
 
@@ -336,7 +338,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.check_NonExistingTestUser(self)
 
             # Wait for the webhook requests to complete and check their success
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
             resp = requests.get(self.base_webhook_url + "/get_status")
             assert resp.text == "2"
 
@@ -364,7 +366,7 @@ class TestWebhooks(ti.BaseTestCase):
             resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
 
             # Check if user deletion was successful even if no webhooks were defined in the config
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
             utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.TestSetup.check_NonExistingTestUser(self)
 
@@ -406,7 +408,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.test_request(self, "PATCH", path, json=data, headers=self.json_headers, cookies=self.cookies)
 
             # Wait for the webhook requests to complete and check it was received by the middleware
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
             resp = requests.get(self.base_webhook_url + "/get_status")
             utils.check_val_equal(resp.text, "1")
             # at this point, the user is considered valid following status update in magpie
@@ -478,7 +480,7 @@ class TestWebhooks(ti.BaseTestCase):
             self.setup_webhook_test(webhook_tmp_config.name)
             utils.get_test_webhook_app(self.base_webhook_url)
 
-            svc_id, res_id, = utils.TestSetup.create_TestServiceResourceTree(self)
+            svc_id, res_id = utils.TestSetup.create_TestServiceResourceTree(self)  # pylint: disable=W0632
             body = utils.TestSetup.create_TestGroup(self)
             info = utils.TestSetup.get_GroupInfo(self, override_body=body)
             grp_id = info["group_id"]
@@ -489,20 +491,21 @@ class TestWebhooks(ti.BaseTestCase):
             rAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)      # noqa
             wDR = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)  # noqa
 
-            def update_perm_and_validate_webhook(t_name, r_id, perm, action):
+            def _test(t_name, r_id, perm, action):
                 """
                 Trigger one of the webhooks with request and validate the corresponding result middleware payload.
                 """
                 # send request to magpie
                 meth = "DELETE" if "delete" in action.value else "POST"
                 code = 200 if meth == "DELETE" else 201
-                path = "/users/{}/resources/{}/permissions".format(t_name, r_id)
+                what = "users" if t_name == self.test_user_name else "groups"
+                path = "/{}/{}/resources/{}/permissions".format(what, t_name, r_id)
                 data = {"permission": perm.json()}
                 resp = utils.test_request(self, meth, path, json=data, headers=self.json_headers, cookies=self.cookies)
                 utils.check_response_basic_info(resp, expected_code=code, expected_method=meth)
 
                 # check that webhook was triggered and sent to the middleware
-                sleep(1)  # small delay to let webhook being processed
+                sleep(WEBHOOK_TEST_DELAY)
                 resp = requests.get(self.base_webhook_url + "/get_status")
                 utils.check_val_equal(resp.text, "1")
 
@@ -517,7 +520,7 @@ class TestWebhooks(ti.BaseTestCase):
                 else:
                     expected["data"]["group_name"] = self.test_group_name
                     expected["data"]["group_id"] = grp_id
-                url = "http://localhost/twitcher/ows/proxy/{}".format(self.test_service_name)
+                url = "https://localhost/twitcher/ows/proxy/{}".format(self.test_service_name)
                 if r_id == res_id:
                     expected["data"]["resource_name"] = self.test_resource_name
                     expected["data"]["resource_type"] = self.test_resource_type
@@ -540,19 +543,21 @@ class TestWebhooks(ti.BaseTestCase):
                 # validate and reset for next test
                 resp = requests.get(self.base_webhook_url + "/get_payload")
                 utils.check_val_equal(resp.json(), expected, diff=True)
-                requests.get(self.base_webhook_url + "/reset")
+                requests.post(self.base_webhook_url + "/reset")
 
-            # test cases
-            update_perm_and_validate_webhook(self.test_user_name, res_id, rAM, WebhookAction.CREATE_USER_PERMISSION)
-            update_perm_and_validate_webhook(self.test_user_name, res_id, rAM, WebhookAction.DELETE_USER_PERMISSION)
-            update_perm_and_validate_webhook(self.test_user_name, res_id, wDR, WebhookAction.CREATE_USER_PERMISSION)
-            update_perm_and_validate_webhook(self.test_user_name, svc_id, rAM, WebhookAction.CREATE_USER_PERMISSION)
-            update_perm_and_validate_webhook(self.test_group_name, svc_id, rAM, WebhookAction.CREATE_GROUP_PERMISSION)
-            update_perm_and_validate_webhook(self.test_user_name, svc_id, rAM, WebhookAction.DELETE_GROUP_PERMISSION)
-            update_perm_and_validate_webhook(self.test_group_name, res_id, wDR, WebhookAction.CREATE_GROUP_PERMISSION)
-            update_perm_and_validate_webhook(self.test_group_name, svc_id, rAM, WebhookAction.DELETE_GROUP_PERMISSION)
-            update_perm_and_validate_webhook(self.test_user_name, svc_id, wDR, WebhookAction.CREATE_USER_PERMISSION)
-            update_perm_and_validate_webhook(self.test_group_name, res_id, wDR, WebhookAction.DELETE_GROUP_PERMISSION)
+            # test cases, in mixed order of permissions, affected user/group, resource/service and create/delete action
+            _test(self.test_user_name, res_id, rAM, WebhookAction.CREATE_USER_PERMISSION)    # ──┐
+            _test(self.test_user_name, res_id, rAM, WebhookAction.DELETE_USER_PERMISSION)    # <─┘
+            _test(self.test_user_name, res_id, wDR, WebhookAction.CREATE_USER_PERMISSION)    # ──────────┐
+            _test(self.test_user_name, svc_id, rAM, WebhookAction.CREATE_USER_PERMISSION)    # ──────┐   |
+            _test(self.test_group_name, svc_id, rAM, WebhookAction.CREATE_GROUP_PERMISSION)  # ──┐   |   |
+            _test(self.test_group_name, svc_id, rAM, WebhookAction.DELETE_GROUP_PERMISSION)  # <─┘   |   |
+            _test(self.test_user_name, svc_id, wDR, WebhookAction.CREATE_USER_PERMISSION)    # ──────)─┐ |
+            _test(self.test_group_name, res_id, wDR, WebhookAction.CREATE_GROUP_PERMISSION)  # ───┐  | | |
+            _test(self.test_user_name, svc_id, rAM, WebhookAction.DELETE_USER_PERMISSION)    # <──)──┘ | |
+            _test(self.test_group_name, res_id, wDR, WebhookAction.DELETE_GROUP_PERMISSION)  # <──┘    | |
+            _test(self.test_user_name, res_id, wDR, WebhookAction.DELETE_USER_PERMISSION)    # <───────)─┘
+            _test(self.test_user_name, svc_id, wDR, WebhookAction.DELETE_USER_PERMISSION)    # <───────┘
 
 
 # NOTE:

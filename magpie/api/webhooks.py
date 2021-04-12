@@ -13,8 +13,8 @@ from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.management.group.group_formats import format_group
 from magpie.api.management.resource.resource_formats import format_resource
-from magpie.api .management.service.service_formats import format_service
-from magpie.api .management.user.user_formats import format_user
+from magpie.api.management.service.service_formats import format_service
+from magpie.api.management.user.user_formats import format_user
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import get_all_configs
@@ -257,8 +257,8 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
     except Exception as exception:
         LOGGER.error("An exception has occurred with the webhook request : %s", webhook_config["name"])
         LOGGER.error(str(exception))
-        if "user_name" in params and update_user_status_on_error:
-            webhook_update_error_status(params["user_name"])
+        if "user.name" in params and update_user_status_on_error:
+            webhook_update_error_status(params["user.name"])
 
 
 def webhook_update_error_status(user_name):

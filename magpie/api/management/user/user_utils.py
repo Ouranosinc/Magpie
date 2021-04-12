@@ -20,14 +20,13 @@ from ziggurat_foundations.models.services.user_resource_permission import UserRe
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.api.management.resource import resource_formats as rf
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
 from magpie.api.webhooks import (
     WebhookAction,
-    get_permission_update_params,
     generate_callback_url,
+    get_permission_update_params,
     process_webhook_requests
 )
 from magpie.constants import get_constant
