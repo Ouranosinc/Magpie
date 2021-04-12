@@ -25,6 +25,9 @@ Features / Changes
 * Add `Webhook` implementations for ``User`` status update operation.
 * Add `Webhook` implementations for every combination of ``User``/``Group``, ``Service``/``Resource``,
   creation/deletion operation of a ``Permission``.
+* Add ``Permission`` tag to applicable OpenAPI schemas to regroup them and facilitate retrieving their operations that
+  were otherwise scattered around in the various ``User``/``Group``, ``Service``/``Resource`` sections, amongst their
+  already crowded listing.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -33,6 +36,9 @@ Bug Fixes
 * Fix default ``MAGPIE_PORT`` value not applied and validate other parsing resolution order for any environment
   variable or settings that can interact with ``MAGPIE_URL`` definition
   (resolves `#417 <https://github.com/Ouranosinc/Magpie/issues/417>`_).
+* Fix OpenAPI schema definitions to employ the cookie authenticated security scheme when doing ``/users/...`` requests.
+  Although *some* requests are public (i.e.: getting items related to ``MAGPIE_ANONYMOUS_USER``), every other request
+  do require authentication, and is the most common method that the API is employed.
 
 `3.9.0 <https://github.com/Ouranosinc/Magpie/tree/3.9.0>`_ (2021-04-06)
 ------------------------------------------------------------------------------------
