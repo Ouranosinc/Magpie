@@ -11,7 +11,8 @@ if TYPE_CHECKING:
     from magpie.typedefs import JSON
 
 
-@s.SwaggerAPI.get(tags=[s.APITag], response_schemas=s.SwaggerAPI_GET_responses)
+@s.SwaggerAPI.get(tags=[s.APITag], api_security=s.SecurityEveryoneAPI,
+                  response_schemas=s.SwaggerAPI_GET_responses)
 def api_swagger(request):   # noqa: F811
     """
     Swagger UI route to display the Magpie REST API schemas.
@@ -24,14 +25,15 @@ def api_swagger(request):   # noqa: F811
     return return_data
 
 
-@s.SwaggerGenerator.get(tags=[s.APITag], response_schemas=s.SwaggerAPI_GET_responses)
+@s.SwaggerGenerator.get(tags=[s.APITag], api_security=s.SecurityEveryoneAPI,
+                        response_schemas=s.SwaggerAPI_GET_responses)
 def api_schema(request):
     # type: (Request) -> JSON
     """
     Return JSON Swagger specifications of Magpie REST API.
     """
     swagger_base_spec = {
-        "host": get_magpie_url(request.registry),
+        "host": get_magpie_url(request),
         "schemes": [request.scheme]
     }
     return s.generate_api_schema(swagger_base_spec)

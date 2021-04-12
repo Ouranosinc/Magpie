@@ -414,6 +414,7 @@ SessionTag = "Session"
 UsersTag = "User"
 LoggedUserTag = "Logged User"
 GroupsTag = "Group"
+PermissionTag = "Permission"
 RegisterTag = "Register"
 ResourcesTag = "Resource"
 ServicesTag = "Service"
@@ -427,11 +428,12 @@ TAG_DESCRIPTIONS = {
         "permitted additional access if the logged session user corresponds to the path variable user.",
     LoggedUserTag:
         "Utility paths that correspond to their {} counterparts, but that automatically ".format(UserAPI.path) +
-        "determine the applicable user from the logged session. If there is no active session, the public "
-        "unauthenticated access is employed.",
+        "determine the applicable user from the logged session.\n\n"
+        "If there is no active session, the public unauthenticated access is employed.",
     GroupsTag:
         "Groups management and control of their applicable users, services, resources and permissions.\n\n"
         "Administrator-level permissions are required to access most paths. ",
+    PermissionTag: "Management of user or group permissions over services and resources definitions.",
     RegisterTag: "Registration paths for operations available to users (including non-administrators).",
     ResourcesTag: "Management of resources that reside under a given service and their applicable permissions.",
     ServicesTag: "Management of service definitions, children resources and their applicable permissions.",
