@@ -11,18 +11,24 @@ from six.moves.urllib.parse import urlparse
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
+from magpie.api.management.group.group_formats import format_group
+from magpie.api.management.resource.resource_formats import format_resource
+from magpie.api.management.service.service_formats import format_service
+from magpie.api.management.user.user_formats import format_user
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import get_all_configs
 from magpie.utils import CONTENT_TYPE_JSON, FORMAT_TYPE_MAPPING, ExtendedEnum, get_logger, get_settings, raise_log
 
 if TYPE_CHECKING:
-    from typing import List, Optional
+    from typing import List, Optional, Union
 
     from sqlalchemy.orm.session import Session
 
+    from magpie.permissions import PermissionSet
     from magpie.typedefs import (
         AnySettingsContainer,
+        ServiceOrResourceType,
         SettingsType,
         Str,
         WebhookConfig,
@@ -46,7 +52,14 @@ WEBHOOK_KEYS = WEBHOOK_KEYS_REQUIRED | WEBHOOK_KEYS_OPTIONAL
 
 # These are *potential* parameters permitted to use the template form in the webhook payload.
 # Each parameter transferred to any given webhook are provided distinctively for each case.
-WEBHOOK_TEMPLATE_PARAMS = ["user_name", "user_id", "user_email", "user_status", "callback_url"]
+WEBHOOK_TEMPLATE_PARAMS = [
+    "group.name", "group.id",
+    "user.name", "user.id", "user.email", "user.status",
+    "resource.id", "resource.type", "resource.name", "resource.display_name",
+    "service.name", "service.type", "service.public_url", "service.sync_type",
+    "permission.name", "permission.access", "permission.scope", "permission",
+    "callback_url"
+]
 
 WEBHOOK_HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]
 
@@ -60,14 +73,14 @@ class WebhookAction(ExtendedEnum):
 
     CREATE_USER = "create_user"
     """
-    Triggered when a new user gets successfully created.
+    Triggered when a new :term:`User` gets successfully created.
 
     .. seealso::
         :ref:`webhook_user_create`
     """
 
     DELETE_USER = "delete_user"
-    """Triggered when an existing user gets successfully deleted.
+    """Triggered when an existing :term:`User` gets successfully deleted.
 
     .. seealso::
         :ref:`webhook_user_delete`
@@ -75,11 +88,65 @@ class WebhookAction(ExtendedEnum):
 
     UPDATE_USER_STATUS = "update_user_status"
     """
-    Triggered when an existing user status gets successfully updated.
+    Triggered when an existing :term:`User` status gets successfully updated.
 
     .. seealso::
         :ref:`webhook_user_update_status`
     """
+
+    CREATE_USER_PERMISSION = "create_user_permission"
+    """
+    Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets created for a :term:`User`.
+
+    .. seealso::
+        :ref:`webhook_permission_updates`
+    """
+
+    DELETE_USER_PERMISSION = "delete_user_permission"
+    """
+    Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets deleted for a :term:`User`.
+
+    .. seealso::
+        :ref:`webhook_permission_updates`
+    """
+
+    CREATE_GROUP_PERMISSION = "create_group_permission"
+    """
+    Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets created for a :term:`Group`.
+
+    .. seealso::
+        :ref:`webhook_permission_updates`
+    """
+
+    DELETE_GROUP_PERMISSION = "delete_group_permission"
+    """
+    Triggered when a :term:`Permission` onto a :term:`Service` or :term:`Resource` gets deleted for a :term:`Group`.
+
+    .. seealso::
+        :ref:`webhook_permission_updates`
+    """
+
+
+def get_permission_update_params(target,         # type: Union[models.User, models.Group]
+                                 resource,       # type: ServiceOrResourceType
+                                 permission,     # type: PermissionSet
+                                 ):              # type: (...) -> WebhookTemplateParameters
+    """
+    Generates the :term:`Webhook` parameters based on provided references.
+    """
+    if isinstance(target, models.User):
+        target_params = format_user(target, basic_info=True, dotted=True)
+    else:
+        target_params = format_group(target, basic_info=True, dotted=True)
+    if resource.resource_type == "service":
+        res_params = format_service(resource, basic_info=True, dotted=True)
+    else:
+        res_params = {"service.{}".format(param): None for param in ["name", "type", "sync_type", "public_url"]}
+    res_params.update(format_resource(resource, basic_info=True, dotted=True))
+    params = permission.webhook_params()
+    params.update(target_params)
+    params.update(res_params)
+    return params
 
 
 def process_webhook_requests(action, params, update_user_status_on_error=False, settings=None):
@@ -94,8 +161,10 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     :param update_user_status_on_error: update the user status or not in case of a webhook error.
     :param settings: application settings where webhooks configuration can be retrieved.
     """
-    # Check for webhook requests
     settings = get_settings(settings, app=True)
+    # ignore if triggered during application startup, settings not yet loaded
+    if not settings:
+        return
     webhooks = settings.get("webhooks", {})  # type: WebhookConfig
     if not webhooks:
         return
@@ -188,8 +257,8 @@ def send_webhook_request(webhook_config, params, update_user_status_on_error=Fal
     except Exception as exception:
         LOGGER.error("An exception has occurred with the webhook request : %s", webhook_config["name"])
         LOGGER.error(str(exception))
-        if "user_name" in params and update_user_status_on_error:
-            webhook_update_error_status(params["user_name"])
+        if "user.name" in params and update_user_status_on_error:
+            webhook_update_error_status(params["user.name"])
 
 
 def webhook_update_error_status(user_name):

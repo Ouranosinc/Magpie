@@ -19,9 +19,12 @@ Features / Changes
     ``localhost:2001``, or any other combination of desired port to serve the application.
 
 * Modify `Webhook` template variables to employ double braces (i.e.: ``{{<variable>}}``) to avoid ambiguity during
-  parsing by YAML configuration files.
+  parsing by YAML configuration files. Also employ dotted notation (e.g.: ``{{user.name}}``) to better represent which
+  parameters come from a given entity.
 * Update documentation to provide further details about `Webhook` configuration, examples and resulting event requests.
-* Add ``update_user_status`` `Webhook` implementation.
+* Add `Webhook` implementations for ``User`` status update operation.
+* Add `Webhook` implementations for every combination of ``User``/``Group``, ``Service``/``Resource``,
+  creation/deletion operation of a ``Permission``.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

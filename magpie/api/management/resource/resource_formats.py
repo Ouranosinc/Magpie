@@ -22,17 +22,33 @@ if TYPE_CHECKING:
     )
 
 
-def format_resource(resource, permissions=None, permission_type=None, basic_info=False):
-    # type: (Resource, Optional[Collection[AnyPermissionType]], Optional[PermissionType], bool) -> JSON
+def format_resource(resource, permissions=None, permission_type=None, basic_info=False, dotted=False):
+    # type: (Resource, Optional[Collection[AnyPermissionType]], Optional[PermissionType], bool, bool) -> JSON
     """
-    Formats the :paramref:`resource` information into JSON.
+    Formats a :term:`Resource` information into JSON.
+
+    :param resource: :term:`Resource` to be formatted.
+    :param permissions:
+        Permissions to list along with the :paramref:`resource`.
+        By default, these are the applicable permissions for that corresponding resource type.
+    :param permission_type:
+        Override indication of provenance to apply to :paramref:`permissions`. Only applicable when they are provided.
+    :param basic_info:
+        If ``True``, return only sufficient details to identify the resource, without any additional
+        :paramref:`permissions` detail, nor hierarchical :paramref:`resource` information is returned.
+    :param dotted:
+        Employ a dot (``.``) instead of underscore (``_``) to separate :term:`Resource` from its basic information.
+
+    .. seealso::
+        :func:`magpie.api.management.service.service_formats.format_service`
     """
     def fmt_res():
+        sep = "." if dotted else "_"
         result = {
-            "resource_name": str(resource.resource_name),
-            "resource_display_name": str(resource.resource_display_name or resource.resource_name),
-            "resource_type": str(resource.resource_type),
-            "resource_id": resource.resource_id
+            "resource{}name".format(sep): str(resource.resource_name),
+            "resource{}display_name".format(sep): str(resource.resource_display_name or resource.resource_name),
+            "resource{}type".format(sep): str(resource.resource_type),
+            "resource{}id".format(sep): resource.resource_id
         }
         if not basic_info:
             result.update({

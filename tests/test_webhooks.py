@@ -19,9 +19,13 @@ from six.moves.urllib.parse import urlparse
 from magpie.api.schemas import UserStatuses
 from magpie.api.webhooks import WebhookAction, replace_template, webhook_update_error_status
 from magpie.constants import get_constant
+from magpie.permissions import Access, Permission, PermissionSet, Scope
+from magpie.services import ServiceAPI
 from magpie.utils import CONTENT_TYPE_HTML
 from tests import interfaces as ti
 from tests import runner, utils
+
+WEBHOOK_TEST_DELAY = 0.25  # small delay to let webhook being processed before resuming tests
 
 
 @runner.MAGPIE_TEST_WEBHOOKS
@@ -45,13 +49,23 @@ class TestWebhooks(ti.BaseTestCase):
         cls.version = utils.TestSetup.get_Version(cls)
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
+        cls.test_service_name = "unittest-webhook-service"
+        cls.test_service_type = ServiceAPI.service_type
+        cls.test_resource_name = "unittest-webhook-resource"
+        cls.test_resource_type = list(ServiceAPI.resource_types_permissions.items())[0][0].resource_type_name
 
         # tmp app to prepare test admin access
         # discard afterwards to regenerate different configs per test
         cls.app = utils.get_test_magpie_app()
         cls.setup_admin()
-        cls.app = None
+        cls.login_admin()
 
+        # cleanup in case of test stopped midway before complete cleanup
+        utils.TestSetup.delete_TestService(cls)
+        utils.TestSetup.delete_TestGroup(cls)
+        utils.TestSetup.delete_TestUser(cls)
+
+        cls.app = None  # reset app, recreate on each test with specific webhook config
         cls.base_webhook_url = "http://localhost:8080"
 
     def tearDown(self):
@@ -105,7 +119,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
                 },
                 {
                     "name": "test_webhook_2",
@@ -114,11 +128,11 @@ class TestWebhooks(ti.BaseTestCase):
                     "url": create_webhook_url,
                     # Test with a more complex payload, that includes different types and nested arrays / dicts
                     "payload": [
-                        {"user_name": ["{{user_name}}", "other_param"],
+                        {"user_name": ["{{user.name}}", "other_param"],
                             "nested_dict": {
-                                "{{user_name}}": "{{user_name}} {{user_name}}",
+                                "{{user.name}}": "{{user.name}} {{user.name}}",
                         }},
-                        "{{user_name}}",
+                        "{{user.name}}",
                         False,
                         1
                     ]
@@ -138,7 +152,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Wait for the webhook requests to complete
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
 
             # Check if the webhook received the more complex payload, with the right template replacements
             expected_payload = [{"nested_dict": {self.test_user_name: self.test_user_name + " " + self.test_user_name},
@@ -177,7 +191,7 @@ class TestWebhooks(ti.BaseTestCase):
 
             # Wait for the potential webhook requests to complete
             # In this case, there should be no webhook request to execute
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
 
             # Check if user creation was successful even if no webhook were defined in the config
             users = utils.TestSetup.get_RegisteredUsersList(self)
@@ -199,7 +213,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_fail_url,
-                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
                 }
 
             ],
@@ -211,13 +225,12 @@ class TestWebhooks(ti.BaseTestCase):
             yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
             # create the magpie app with the test webhook config
             self.setup_webhook_test(webhook_tmp_config.name)
-
             utils.get_test_webhook_app(self.base_webhook_url)
 
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Wait for the webhook requests to complete
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
 
             # Check if user creation was successful even if the webhook resulted in failure
             users = utils.TestSetup.get_RegisteredUsersList(self)
@@ -229,6 +242,8 @@ class TestWebhooks(ti.BaseTestCase):
             # Retrieve the callback URL and send the request to the magpie app
             resp = requests.get(self.base_webhook_url + "/get_callback_url")
             utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=CONTENT_TYPE_HTML)
+            utils.check_val_true(resp.text.startswith("http://"),
+                                 msg="Expected to have a valid templated URL, but got: [{}]".format(resp.text))
             utils.test_request(self, "GET", urlparse(resp.text).path)
 
             # Check if the user's status is set to 0
@@ -237,6 +252,8 @@ class TestWebhooks(ti.BaseTestCase):
     def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
         """
         Test creating a user where the webhook config has a non existent url.
+
+        Because the webhook fails to send the request where it must, it should set the user status as error.
         """
         # Write temporary config for testing webhooks
         webhook_url = self.base_webhook_url + "/non_existent"
@@ -247,7 +264,7 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": webhook_url,
-                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
                 }
 
             ],
@@ -259,11 +276,12 @@ class TestWebhooks(ti.BaseTestCase):
             yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
             # create the magpie app with the test webhook config
             self.setup_webhook_test(webhook_tmp_config.name)
+            utils.get_test_webhook_app(self.base_webhook_url)
 
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Wait for the webhook requests to complete
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
 
             # Check if user creation was successful even if the webhook resulted in failure
             users = utils.TestSetup.get_RegisteredUsersList(self)
@@ -285,14 +303,14 @@ class TestWebhooks(ti.BaseTestCase):
                     "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
-                    "payload": {"user_name": "{{user_name}}"}
+                    "payload": {"user_name": "{{user.name}}"}
                 },
                 {
                     "name": "test_webhook_2",
                     "action": WebhookAction.DELETE_USER.value,
                     "method": "POST",
                     "url": delete_webhook_url,
-                    "payload": {"user_name": "{{user_name}}"}
+                    "payload": {"user_name": "{{user.name}}"}
                 }
             ],
             "providers": "",
@@ -309,7 +327,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
 
             # Webhooks shouldn't have been called during the user creation
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
             resp = requests.get(self.base_webhook_url + "/get_status")
             utils.check_val_equal(resp.text, "0")
 
@@ -320,7 +338,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.check_NonExistingTestUser(self)
 
             # Wait for the webhook requests to complete and check their success
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
             resp = requests.get(self.base_webhook_url + "/get_status")
             assert resp.text == "2"
 
@@ -348,7 +366,7 @@ class TestWebhooks(ti.BaseTestCase):
             resp = utils.test_request(self, "DELETE", path, headers=self.json_headers, cookies=self.cookies)
 
             # Check if user deletion was successful even if no webhooks were defined in the config
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
             utils.check_response_basic_info(resp, 200, expected_method="GET")
             utils.TestSetup.check_NonExistingTestUser(self)
 
@@ -362,8 +380,8 @@ class TestWebhooks(ti.BaseTestCase):
                     "method": "POST",
                     "url": update_webhook_url,
                     "payload": {
-                        "name": "{{user_name}}",
-                        "status": "{{user_status}}",
+                        "name": "{{user.name}}",
+                        "status": "{{user.status}}",
                         "callback_url": "{{callback_url}}"
                     }
                 }
@@ -390,7 +408,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.test_request(self, "PATCH", path, json=data, headers=self.json_headers, cookies=self.cookies)
 
             # Wait for the webhook requests to complete and check it was received by the middleware
-            sleep(1)
+            sleep(WEBHOOK_TEST_DELAY)
             resp = requests.get(self.base_webhook_url + "/get_status")
             utils.check_val_equal(resp.text, "1")
             # at this point, the user is considered valid following status update in magpie
@@ -404,6 +422,142 @@ class TestWebhooks(ti.BaseTestCase):
 
             # now that callback request was accomplished, use should have been reverted to bad status
             self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
+
+    def test_Webhook_UpdatePermissions(self):
+        """
+        Test every combination of (user|group, service|resource, permission, created|deleted) webhook operation.
+        """
+        update_webhook_url = self.base_webhook_url + "/webhook_json"
+        res_perm_payload = {
+            param.replace(".", "_"): "{{{{{}}}}}".format(param) for param in
+            ["resource.id", "resource.name", "resource.type",
+             "service.name", "service.type", "service.sync_type", "service.public_url",
+             "permission.name", "permission.scope", "permission.access"]
+        }
+        user_payload = {"user_name": "{{user.name}}", "user_id": "{{user.id}}"}
+        user_payload.update(res_perm_payload)
+        group_payload = {"group_name": "{{group.name}}", "group_id": "{{group.id}}"}
+        group_payload.update(res_perm_payload)
+        webhook_config = {
+            "webhooks": [
+                {
+                    "name": "test_webhook_{}".format(WebhookAction.CREATE_USER_PERMISSION.value),
+                    "action": WebhookAction.CREATE_USER_PERMISSION.value,
+                    "method": "POST",
+                    "url": update_webhook_url,
+                    "payload": {"data": user_payload, "action": WebhookAction.CREATE_USER_PERMISSION.value}
+                },
+                {
+                    "name": "test_webhook_{}".format(WebhookAction.DELETE_USER_PERMISSION.value),
+                    "action": WebhookAction.DELETE_USER_PERMISSION.value,
+                    "method": "POST",
+                    "url": update_webhook_url,
+                    "payload": {"data": user_payload, "action": WebhookAction.DELETE_USER_PERMISSION.value}
+                },
+                {
+                    "name": "test_webhook_{}".format(WebhookAction.CREATE_GROUP_PERMISSION.value),
+                    "action": WebhookAction.CREATE_GROUP_PERMISSION.value,
+                    "method": "POST",
+                    "url": update_webhook_url,
+                    "payload": {"data": group_payload, "action": WebhookAction.CREATE_GROUP_PERMISSION.value}
+                },
+                {
+                    "name": "test_webhook_{}".format(WebhookAction.DELETE_GROUP_PERMISSION.value),
+                    "action": WebhookAction.DELETE_GROUP_PERMISSION.value,
+                    "method": "POST",
+                    "url": update_webhook_url,
+                    "payload": {"data": group_payload, "action": WebhookAction.DELETE_GROUP_PERMISSION.value}
+                }
+            ],
+            "providers": "",
+            "permissions": ""
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
+            yaml.safe_dump(webhook_config, webhook_tmp_config, default_flow_style=False)
+
+            # create the magpie app with the test webhook config
+            self.setup_webhook_test(webhook_tmp_config.name)
+            utils.get_test_webhook_app(self.base_webhook_url)
+
+            svc_id, res_id = utils.TestSetup.create_TestServiceResourceTree(self)  # pylint: disable=W0632
+            body = utils.TestSetup.create_TestGroup(self)
+            info = utils.TestSetup.get_GroupInfo(self, override_body=body)
+            grp_id = info["group_id"]
+            body = utils.TestSetup.create_TestUser(self)
+            info = utils.TestSetup.get_UserInfo(self, override_body=body)
+            usr_id = info["user_id"]
+
+            rAM = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)      # noqa
+            wDR = PermissionSet(Permission.WRITE, Access.DENY, Scope.RECURSIVE)  # noqa
+
+            def _test(t_name, r_id, perm, action):
+                """
+                Trigger one of the webhooks with request and validate the corresponding result middleware payload.
+                """
+                # send request to magpie
+                meth = "DELETE" if "delete" in action.value else "POST"
+                code = 200 if meth == "DELETE" else 201
+                what = "users" if t_name == self.test_user_name else "groups"
+                path = "/{}/{}/resources/{}/permissions".format(what, t_name, r_id)
+                data = {"permission": perm.json()}
+                resp = utils.test_request(self, meth, path, json=data, headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, expected_code=code, expected_method=meth)
+
+                # check that webhook was triggered and sent to the middleware
+                sleep(WEBHOOK_TEST_DELAY)
+                resp = requests.get(self.base_webhook_url + "/get_status")
+                utils.check_val_equal(resp.text, "1")
+
+                # prepare expected payload the webhook should have sent based on templated parameters
+                expected = {
+                    "action": action.value,
+                    "data": {}
+                }
+                if t_name == self.test_user_name:
+                    expected["data"]["user_name"] = self.test_user_name
+                    expected["data"]["user_id"] = usr_id
+                else:
+                    expected["data"]["group_name"] = self.test_group_name
+                    expected["data"]["group_id"] = grp_id
+                url = "https://localhost/twitcher/ows/proxy/{}".format(self.test_service_name)
+                if r_id == res_id:
+                    expected["data"]["resource_name"] = self.test_resource_name
+                    expected["data"]["resource_type"] = self.test_resource_type
+                    expected["data"]["resource_id"] = res_id
+                    expected["data"]["service_name"] = None
+                    expected["data"]["service_type"] = None
+                    expected["data"]["service_public_url"] = None
+                else:
+                    expected["data"]["resource_name"] = self.test_service_name
+                    expected["data"]["resource_type"] = "service"
+                    expected["data"]["resource_id"] = svc_id
+                    expected["data"]["service_name"] = self.test_service_name
+                    expected["data"]["service_type"] = self.test_service_type
+                    expected["data"]["service_public_url"] = url
+                expected["data"]["service_sync_type"] = None
+                expected["data"]["permission_name"] = perm.name.value
+                expected["data"]["permission_access"] = perm.access.value
+                expected["data"]["permission_scope"] = perm.scope.value
+
+                # validate and reset for next test
+                resp = requests.get(self.base_webhook_url + "/get_payload")
+                utils.check_val_equal(resp.json(), expected, diff=True)
+                requests.post(self.base_webhook_url + "/reset")
+
+            # test cases, in mixed order of permissions, affected user/group, resource/service and create/delete action
+            _test(self.test_user_name, res_id, rAM, WebhookAction.CREATE_USER_PERMISSION)    # ──┐
+            _test(self.test_user_name, res_id, rAM, WebhookAction.DELETE_USER_PERMISSION)    # <─┘
+            _test(self.test_user_name, res_id, wDR, WebhookAction.CREATE_USER_PERMISSION)    # ──────────┐
+            _test(self.test_user_name, svc_id, rAM, WebhookAction.CREATE_USER_PERMISSION)    # ──────┐   |
+            _test(self.test_group_name, svc_id, rAM, WebhookAction.CREATE_GROUP_PERMISSION)  # ──┐   |   |
+            _test(self.test_group_name, svc_id, rAM, WebhookAction.DELETE_GROUP_PERMISSION)  # <─┘   |   |
+            _test(self.test_user_name, svc_id, wDR, WebhookAction.CREATE_USER_PERMISSION)    # ──────)─┐ |
+            _test(self.test_group_name, res_id, wDR, WebhookAction.CREATE_GROUP_PERMISSION)  # ───┐  | | |
+            _test(self.test_user_name, svc_id, rAM, WebhookAction.DELETE_USER_PERMISSION)    # <──)──┘ | |
+            _test(self.test_group_name, res_id, wDR, WebhookAction.DELETE_GROUP_PERMISSION)  # <──┘    | |
+            _test(self.test_user_name, res_id, wDR, WebhookAction.DELETE_USER_PERMISSION)    # <───────)─┘
+            _test(self.test_user_name, svc_id, wDR, WebhookAction.DELETE_USER_PERMISSION)    # <───────┘
 
 
 # NOTE:
@@ -421,59 +575,59 @@ def test_webhook_template_substitution():
     Quotes on string fields though are redundant and should be ignored.
     Additional repeated quotes should leave them as specified.
     """
-    params = {"user_name": "test", "user_id": 123}
+    params = {"user.name": "test", "user.id": 123}
     spec = yaml.safe_load(inspect.cleandoc("""
     payload:
       param: 
-        name: "{{user_name}}"
-        id: "{{user_id}}"
-        id_str: "'{{user_id}}'"
-        none: user_id               # only plain name, not a template substitution
-        str: "{user_name}"          # literal field with '{user_name}', not a template substitution
-        obj: {user_name}            # object with field 'user_name', not a template substitution
+        name: "{{user.name}}"
+        id: "{{user.id}}"
+        id_str: "'{{user.id}}'"
+        none: user.id               # only plain name, not a template substitution
+        str: "{user.name}"          # literal field with '{user.name}', not a template substitution
+        obj: {user.name}            # object with field 'user.name', not a template substitution
       compose:
-        id: user_{{user_id}}
-        msg: Hello {{user_name}}, your ID is {{user_id}}
+        id: user_{{user.id}}
+        msg: Hello {{user.name}}, your ID is {{user.id}}
       key_str: 
-        "{{user_id}}": "id"
-        "{{user_name}}": "name"
+        "{{user.id}}": "id"
+        "{{user.name}}": "name"
       listed: 
-        - "{{user_id}}"
-        - "{{user_name}}"
-        - "'{{user_id}}'"
+        - "{{user.id}}"
+        - "{{user.name}}"
+        - "'{{user.id}}'"
       quoted: 
-        explicit: "{{user_name}}"
-        single: "\'{{user_name}}\'"
-        double: "\\"{{user_name}}\\""
-        multi: "\\"\'\'\\"{{user_name}}\\"\'\'\\""
+        explicit: "{{user.name}}"
+        single: "\'{{user.name}}\'"
+        double: "\\"{{user.name}}\\""
+        multi: "\\"\'\'\\"{{user.name}}\\"\'\'\\""
     """))
     expect = {
         "param": {
-            "name": params["user_name"],
-            "id": params["user_id"],
-            "id_str": str(params["user_id"]),
-            "str": "{user_name}",
-            "obj": {"user_name": None},  # format is not a template, but a valid YAML definition
-            "none": "user_id"  # was not a template, remains literal string not replaced by value
+            "name": params["user.name"],
+            "id": params["user.id"],
+            "id_str": str(params["user.id"]),
+            "str": "{user.name}",
+            "obj": {"user.name": None},  # format is not a template, but a valid YAML definition
+            "none": "user.id"  # was not a template, remains literal string not replaced by value
         },
         "compose": {
-            "id": "user_{}".format(params["user_id"]),
-            "msg": "Hello {}, your ID is {}".format(params["user_name"], params["user_id"])
+            "id": "user_{}".format(params["user.id"]),
+            "msg": "Hello {}, your ID is {}".format(params["user.name"], params["user.id"])
         },
         "key_str": {
-            str(params["user_id"]): "id",
-            params["user_name"]: "name"
+            str(params["user.id"]): "id",
+            params["user.name"]: "name"
         },
         "listed": [
-            params["user_id"],
-            params["user_name"],
-            str(params["user_id"])
+            params["user.id"],
+            params["user.name"],
+            str(params["user.id"])
         ],
         "quoted": {
-            "explicit": "{}".format(params["user_name"]),
-            "single": "'{}'".format(params["user_name"]),
-            "double": "\"{}\"".format(params["user_name"]),
-            "multi": "\"\'\'\"{}\"\'\'\"".format(params["user_name"])
+            "explicit": "{}".format(params["user.name"]),
+            "single": "'{}'".format(params["user.name"]),
+            "double": "\"{}\"".format(params["user.name"]),
+            "multi": "\"\'\'\"{}\"\'\'\"".format(params["user.name"])
         }
     }
     data = utils.check_no_raise(lambda: replace_template(params, spec["payload"]))
@@ -486,13 +640,13 @@ def test_webhook_template_literal():
     """
     Verify that webhook literal string payload works as intended.
     """
-    params = {"user_name": "test", "user_id": 123}
+    params = {"user.name": "test", "user.id": 123}
     spec = yaml.safe_load(inspect.cleandoc("""
     payload: |
-      param: {{user_name}}
-      quote: "{{user_id}}"
+      param: {{user.name}}
+      quote: "{{user.id}}"
     """))
-    expect = "param: {}\nquote: \"{}\"".format(params["user_name"], params["user_id"])
+    expect = "param: {}\nquote: \"{}\"".format(params["user.name"], params["user.id"])
     data = utils.check_no_raise(lambda: replace_template(params, spec["payload"]))
     utils.check_val_equal(data, expect)
 
@@ -520,7 +674,7 @@ class TestFailingWebhooks(unittest.TestCase):
                     "action": WebhookAction.CREATE_USER.value,
                     "method": "POST",
                     "url": create_webhook_url,
-                    "payload": {"user_name": "{{user_name}}", "callback_url": "{{callback_url}}"}
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
                 }
             ],
             "providers": "",

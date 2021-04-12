@@ -1107,6 +1107,40 @@ can be employed to retry an external operation of the registered application, by
 consider the complete operation successful when no further ``callback_url`` requests are received.
 
 
+.. _webhook_permission_updates:
+
+Permission Updates
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Below :term:`Webhook` implementations can all be configured for any combination of creation/deletion of a
+:term:`Permission` for a :term:`User` or :term:`Group`, and targeting either a :term:`Service` or a :term:`Resource`.
+
+.. list-table::
+    :stub-columns: 1
+
+    * - Action
+      - :attr:`WebhookAction.CREATE_USER_PERMISSION`, :attr:`WebhookAction.DELETE_USER_PERMISSION`,
+        :attr:`WebhookAction.CREATE_GROUP_PERMISSION`, :attr:`WebhookAction.DELETE_GROUP_PERMISSION`
+    * - Parameters
+      - ``{{user.name}}`` or ``{{group.name}}``, ``{{user.id}}`` or ``{{group.id}}``,
+        ``{{resource.id}}``, ``{{resource.type}}``, ``{{resource.name}}``, ``{{resource.display_name}}``,
+        ``{{service.name}}``, ``{{service.type}}``, ``{{service.public_url}}``, ``{{service.sync_type}}``,
+        ``{{permission.name}}``, ``{{permission.access}}``, ``{{permission.scope}}``, ``{{permission}}``
+
+The parameters available for the |webhook_param_payload|_ are very similar in each case, except that they are adjusted
+accordingly to the :term:`User` or :term:`Group` the modification applies to.
+
+The :term:`Resource` details are available regardless of if it refers to a :term:`Service` or any children
+:term:`Resource`. The value of ``{{resource.type}}`` will be ``"service"`` if the reference was a :term:`Service`.
+The ``{{service.<field>}}`` parameters will only be defined if the target was indeed a :term:`Service`, and will
+be ``null`` otherwise.
+
+The created or deleted :term:`Permission` details are available with different formats. The ``{{permission.name}}``,
+``{{permission.access}}`` and ``{{permission.scope}}`` correspond to the same fields presented in
+:ref:`permission_modifiers` chapter. The ``permission`` parameter corresponds to the *explicit* name,
+as defined in :ref:`permission_representations`.
+
+
 .. _config_webhook_template:
 
 Webhook Template Payload
@@ -1132,10 +1166,10 @@ defined and loaded by `Magpie`.
         url: https://receiving-middleware.example.com
         payload:
           user:
-            name: "{{user_name}}"
-            id: "{{user_id}}"
-            str: "'{{user_id}}'"
-          msg: Hello {{user_name}}, your ID is {{user_id}}
+            name: "{{user.name}}"
+            id: "{{user.id}}"
+            str: "'{{user.id}}'"
+          msg: Hello {{user.name}}, your ID is {{user.id}}
 
 
 Upon trigger of the ``demo`` event, the above :term:`Webhook` definition would result in a request sent with the
@@ -1152,10 +1186,10 @@ following JSON |webhook_param_payload|_ contents.
         "msg": "Hello demo, your ID is 123"
     }
 
-As presented above, the ``"{{user_name}}"`` from the template gets substituted by the corresponding ``"demo"`` value.
-Similarly, ``"{{user_id}}"`` is replaced by ``123``. An important thing to notice is that value types are preserved,
+As presented above, the ``"{{user.name}}"`` from the template gets substituted by the corresponding ``"demo"`` value.
+Similarly, ``"{{user.id}}"`` is replaced by ``123``. An important thing to notice is that value types are preserved,
 which is why the ``id`` field is an integer since that corresponding parameter is an integer in `Magpie`. Using the
-specification ``"'{{user_id}}'"`` (with additional single quotes) instead tells the template parser to replace the
+specification ``"'{{user.id}}'"`` (with additional single quotes) instead tells the template parser to replace the
 value by its string representation. It is also possible to define any combination of parameters as indicated in the
 ``msg`` field of the example, and for any kind of structure, as long as JSON/YAML valid definitions are respected.
 
@@ -1191,7 +1225,7 @@ no corresponding value (i.e.: ``null``). For this reason, `Magpie` employs the d
 to remove this ambiguity. An unknown parameter value defined in |webhook_param_payload|_ during substitution or an ill
 defined configuration at application startup would immediately generate an error since YAML parsing will not correctly
 understand nor be able to infer the format of the double-braces definitions, instead of silently failing. When using a
-parameter by themselves, such as in the top example's ``"{{user_name}}"`` and ``"{{user_id}}"`` values, quotes will
+parameter by themselves, such as in the top example's ``"{{user.name}}"`` and ``"{{user.id}}"`` values, quotes will
 usually be required.
 
 String Payload
@@ -1204,8 +1238,8 @@ multiline character (e.g.: ``|``) can be employed to ease *literal* formatting o
 .. code-block:: YAML
 
     payload: |
-      param: {{user_name}}
-      quote: "{{user_id}}"
+      param: {{user.name}}
+      quote: "{{user.id}}"
 
 
 This would produce the literal string output as below.
