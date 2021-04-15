@@ -61,6 +61,10 @@ a:hover {
     text-decoration: underline;
 }
 
+button.button {
+    border-radius: 3px;
+}
+
 input[type="submit"].equal-width,
 input[type="button"].equal-width {
     min-width: 5em;
@@ -78,6 +82,7 @@ input[type="button"].button.disabled {
     pointer-events: none;
 }
 
+button.button.delete,
 input[type="button"].img-button.delete,
 input[type="submit"].img-button.delete,
 input[type="button"].button.delete,
@@ -89,6 +94,14 @@ input[type="submit"].button.delete {
     cursor: pointer;
 }
 
+button.button.delete {
+    display: inline-flex;
+    align-items: flex-end;
+    padding-bottom: 0.25em;
+}
+
+button.delete:hover,
+button.delete:focus,
 input[type="button"].img-button.delete:hover,
 input[type="button"].img-button.delete:focus,
 input[type="submit"].img-button.delete:hover,
@@ -491,6 +504,11 @@ table.panel-line td {
 .alert-form-text {
 }
 
+.alert-form-text-locked {
+    color: #48453F;
+    margin-top: 0.1em;
+}
+
 .alert-form-text-warning {
     color: #FF9900;
 }
@@ -540,6 +558,22 @@ table.panel-line td {
     width: 1.25em;
     height: 1.25em;
     margin-top: 0.05em;
+}
+
+.icon-locked {
+    width: 1.25em;
+    height: 1em;
+    margin: 0.25em 0.25em 0 0;
+    padding: 0.1em 0.2em 0.1em 0;
+    filter: saturate(0) invert(50%);
+}
+
+.icon-delete {
+    width: 1em;
+    height: 1em;
+    margin: 0.25em 0.5em 0 0;
+    padding: 0.1em;
+    filter: saturate(0) invert(80%);
 }
 
 .icon-loading {
