@@ -23,13 +23,26 @@
             <span class="panel-title">User: </span>
             <span class="panel-value">[${user_name}]</span>
             <span class="panel-heading-button">
-                <input value="Delete" name="delete"
+                <button value="Delete" name="delete"
                     %if user_name not in MAGPIE_FIXED_USERS:
                         type="submit" class="button delete"
                     %else:
                         type="button" class="button delete disabled" disabled
                     %endif
                 >
+                    %if user_name in MAGPIE_FIXED_USERS:
+                        <img src="${request.static_url('magpie.ui.home:static/lock.png')}" alt="LOCKED"
+                             class="icon-locked"/>
+                        <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                        <meta name="source" content="https://www.flaticon.com/free-icon/lock_2089784">
+                    %else:
+                        <img src="${request.static_url('magpie.ui.home:static/delete.png')}" alt=""
+                             class="icon-delete">
+                        <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                        <meta name="source" content="https://www.flaticon.com/free-icon/delete_2089743">
+                    %endif
+                    Delete
+                </button>
             </span>
         </form>
     </div>
@@ -123,9 +136,11 @@
                             </div>
                         %elif user_name in MAGPIE_USER_PWD_LOCKED or user_name in MAGPIE_USER_PWD_DISABLED:
                             <div class="panel-form-warning">
-                                <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
-                                     alt="WARNING" class="icon-warning"/>
-                                <div class="alert-form-text alert-form-text-warning">
+                                <img src="${request.static_url('magpie.ui.home:static/lock.png')}"
+                                     alt="LOCKED" class="icon-locked"/>
+                                <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                                <meta name="source" content="https://www.flaticon.com/free-icon/lock_2089784">
+                                <div class="alert-form-text alert-form-text-locked">
                                     %if user_name in MAGPIE_USER_PWD_LOCKED:
                                         This special user password is locked and can only be edited from configuration.
                                     %else:

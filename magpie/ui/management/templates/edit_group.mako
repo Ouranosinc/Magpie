@@ -23,13 +23,26 @@
             <span class="panel-title">Group: </span>
             <span class="panel-value">[${group_name}]</span>
             <span class="panel-heading-button">
-                <input value="Delete" name="delete"
+                <button value="Delete" name="delete"
                     %if group_name in MAGPIE_FIXED_GROUP_EDITS:
                         class="button delete disabled" type="button" disabled
                     %else:
                         class="button delete" type="submit"
                     %endif
                 >
+                    %if group_name in MAGPIE_FIXED_GROUP_EDITS:
+                        <img src="${request.static_url('magpie.ui.home:static/lock.png')}" alt="LOCKED"
+                             class="icon-locked"/>
+                        <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                        <meta name="source" content="https://www.flaticon.com/free-icon/lock_2089784">
+                    %else:
+                        <img src="${request.static_url('magpie.ui.home:static/delete.png')}" alt=""
+                             class="icon-delete">
+                        <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                        <meta name="source" content="https://www.flaticon.com/free-icon/delete_2089743">
+                    %endif
+                    Delete
+                </button>
             </span>
         </form>
     </div>
