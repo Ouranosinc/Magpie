@@ -8,7 +8,7 @@
 <h1>Users</h1>
 
 <button class="img-button theme" type="button" onclick="location.href='${request.route_url('add_user')}'">
-    <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
+    <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="" class="icon-add">
     Add User
 </button>
 
