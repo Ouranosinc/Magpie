@@ -37,13 +37,17 @@ body {
 }
 
 .img-button {
-    padding: 0.7em;
+    padding: 0.5em;
     margin: 1em 0 1em;
+    display: inline-flex;
+    /* align-items: flex-end; */
 }
 
-.img-button>img {
+.img-button > img {
     color: black;
     vertical-align: -0.1em;
+    height: 1.25em;
+    padding-right: 0.5em;
 }
 
 a {
@@ -180,10 +184,6 @@ input[type="submit"] {
 
 .tree input[type="submit"] {
     height: 1.5em;
-}
-
-.img-button>img {
-    height: 1em;
 }
 
 table {
@@ -558,6 +558,10 @@ table.panel-line td {
     width: 1.25em;
     height: 1.25em;
     margin-top: 0.05em;
+}
+
+.icon-add {
+    transform: scale(0.9);
 }
 
 .icon-locked {

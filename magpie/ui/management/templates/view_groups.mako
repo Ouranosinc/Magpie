@@ -9,7 +9,7 @@
 
 
 <button class="img-button theme" type="button" onclick="location.href='${request.route_url('add_group')}'">
-    <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
+    <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="" class="icon-add">
     Add Group
 </button>
 

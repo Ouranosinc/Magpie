@@ -108,7 +108,7 @@
     <td class="no-border">
         <button class="img-button theme" type="button"
                 onclick="location.href='${request.route_url('add_service', cur_svc_type=cur_svc_type)}'">
-            <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="">
+            <img src="${request.static_url('magpie.ui.home:static/add.png')}" alt="" class="icon-add">
             Add Service
         </button>
     </td>
