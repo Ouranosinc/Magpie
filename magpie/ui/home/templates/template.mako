@@ -65,6 +65,13 @@
                 </button>
             %else:
                 <button class="img-button theme" type="button"
+                        onclick="location.href='${request.route_url('add_user')}'">
+                    <img src="${request.static_url('magpie.ui.home:static/register-user.png')}" alt="">
+                    <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                    <meta name="source" content="https://www.flaticon.com/free-icon/login_2089700">
+                    Register
+                </button>
+                <button class="img-button theme" type="button"
                         onclick="location.href='${request.route_url('login')}'">
                     <img src="${request.static_url('magpie.ui.home:static/login.png')}" alt="">
                     <meta name="author" content="https://www.flaticon.com/authors/those-icons">

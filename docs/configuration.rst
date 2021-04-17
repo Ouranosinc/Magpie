@@ -1126,10 +1126,10 @@ configured |webhook_param_url|_.
 
 The ``callback_url`` serves as follow-up endpoint, should the registered external application need it, to request using
 HTTP ``GET`` method (no body) that `Magpie` sets the :term:`User` account status as erroneous. That :term:`User` would
-then be affected with ``status`` value :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. The ``callback_url``
+then be affected with ``status`` value :attr:`magpie.models.UserStatuses.WebhookError`. The ``callback_url``
 location will be available until called or expired according to :envvar:`MAGPIE_TOKEN_EXPIRE` setting. When no request
 is sent to the ``callback_url``, the created :term:`User` is assumed valid and its account is attributed
-:attr:`magpie.api.schemas.UserStatuses.OK` status.
+:attr:`magpie.models.UserStatuses.OK` status.
 
 .. _webhook_user_delete:
 
@@ -1166,7 +1166,7 @@ This event **DOES NOT** apply to changes of :term:`User` status caused by callba
 a :ref:`webhook_user_create` event.
 
 The ``callback_url`` in this case can be requested with ``GET`` method (no body) to ask `Magpie` to reset the just
-updated :term:`User` account status to :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. This :term:`Webhook`
+updated :term:`User` account status to :attr:`magpie.models.UserStatuses.WebhookError`. This :term:`Webhook`
 can be employed to retry an external operation of the registered application, by triggering status updates, and only
 consider the complete operation successful when no further ``callback_url`` requests are received.
 

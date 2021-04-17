@@ -1,13 +1,22 @@
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPForbidden, HTTPGone, HTTPInternalServerError, HTTPNotFound, HTTPNotImplemented
+from pyramid.httpexceptions import (
+    HTTPCreated,
+    HTTPConflict,
+    HTTPException,
+    HTTPForbidden,
+    HTTPGone,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPNotImplemented
+)
 from ziggurat_foundations.models.services.group import GroupService
 
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import webhook_update_error_status
-from magpie.models import Group, TemporaryToken, TokenOperation
+from magpie.models import Group, UserPending, UserSearchService, UserStatuses, TemporaryToken, TokenOperation
 from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
@@ -79,3 +88,68 @@ def get_discoverable_group_by_name(group_name, db_session):
                     http_error=HTTPNotFound, content_type=CONTENT_TYPE_JSON,
                     msg_on_fail=s.RegisterGroup_NotFoundResponseSchema.description)
     return found_group[0]
+
+
+def register_pending_user(user_name, password, email, db_session):
+    # type: (Str, Str, Str, Session) -> HTTPException
+    """
+    Registers a temporary user pending approval.
+
+    Procedure and validation workflow is similar to normal user creation by an administrator, but employs reduced
+    fields and different target table. Some operations are also simplified as they are not required for pending user.
+    There is also no user creation :term:`Webhook` triggers as :term:`User` doesn't exist yet.
+
+    .. seealso::
+        :func:`magpie.api.management.user.user_utils.create_user`
+
+    :return: HTTP created with relevant details if successful.
+    :raises HTTPException: HTTP error with relevant details upon any failing condition.
+    """
+
+    # check if user already exists
+    user_checked = ax.evaluate_call(lambda: UserSearchService.by_user_name(user_name=user_name,
+                                                                           status=UserStatuses.Pending,
+                                                                           db_session=db_session),
+                                    http_error=HTTPForbidden,
+                                    msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
+    ax.verify_param(user_checked, is_none=True, with_param=False, http_error=HTTPConflict,
+                    msg_on_fail=s.RegisterUser_Check_ConflictResponseSchema.description)
+
+    # create pending user with specified credentials
+    new_user = UserPending(user_name=user_name, email=email)  # noqa
+    UserSearchService.set_password(new_user, password)
+    ax.evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
+                     http_error=HTTPForbidden, msg_on_fail=s.Users_POST_ForbiddenResponseSchema.description)
+    # Fetch user to update fields
+    new_user = ax.evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db_session),
+                                http_error=HTTPForbidden,
+                                msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
+
+    def _add_to_group(usr, grp):
+        # type: (models.User, models.Group) -> None
+        group_entry = models.UserGroup(group_id=grp.id, user_id=usr.id)  # noqa
+        ax.evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
+                         http_error=HTTPForbidden, msg_on_fail=s.UserGroup_GET_ForbiddenResponseSchema.description)
+
+    # Assign user to group
+    new_user_groups = [group_name]
+    _add_to_group(new_user, group_checked)
+    # Also add user to anonymous group if not already done
+    anonym_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
+    if group_checked.group_name != anonym_grp_name:
+        _add_to_group(new_user, _get_group(anonym_grp_name))
+        new_user_groups.append(anonym_grp_name)
+
+    user_content = uf.format_user(new_user, new_user_groups)
+
+    callback_url = generate_callback_url(models.TokenOperation.WEBHOOK_USER_STATUS_ERROR, db_session, user=new_user)
+    # Force commit before sending the webhook requests, so that the user's status is editable if a webhook error occurs
+    transaction.commit()
+
+    # note: after committed transaction, 'new_user' object becomes detached and cannot be used directly
+    webhook_params = {"user.name": user_name, "user.id": user_content["user_id"],
+                      "user.email": user_content["email"], "callback_url": callback_url}
+    process_webhook_requests(WebhookAction.CREATE_USER, webhook_params, update_user_status_on_error=True)
+
+    return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
+                         content={"user": user_content})

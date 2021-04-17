@@ -19,7 +19,7 @@ from magpie import __meta__
 from magpie.api import schemas as s
 from magpie.api.webhooks import webhook_update_error_status
 from magpie.constants import MAGPIE_ROOT, get_constant
-from magpie.models import RESOURCE_TYPE_DICT, Directory, Route
+from magpie.models import RESOURCE_TYPE_DICT, Directory, Route, UserStatuses
 from magpie.permissions import (
     PERMISSION_REASON_DEFAULT,
     PERMISSION_REASON_MULTIPLE,
@@ -1098,13 +1098,13 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         webhook_update_error_status(test_user1)
         self.login_test_user(override_user_name=test_user1)
 
-        data = {"status": s.UserStatuses.OK.value}
+        data = {"status": UserStatuses.OK.value}
         path = "/users/{}".format(test_user1)  # try update its own status to 'OK' when it was bad
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
 
-        data = {"status": s.UserStatuses.WebhookErrorStatus.value}
+        data = {"status": UserStatuses.WebhookError.value}
         path = "/users/{}".format(test_user2)  # try update other user's status to be considered bad
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
@@ -1139,7 +1139,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         # update status only available after this version
         if TestVersion(self.version) >= TestVersion("3.9"):
             data = {
-                "status": s.UserStatuses.OK.value,       # forbidden by non-admin
+                "status": UserStatuses.OK.value,       # forbidden by non-admin
                 "password": test_user + "-new-password"  # allowed if it was by itself, but not with user name
             }
             resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
@@ -1832,8 +1832,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # test response results
         test_cases = [
-            (test_good_users, s.UserStatuses.OK.value),
-            (test_bad_users, s.UserStatuses.WebhookErrorStatus.value)
+            (test_good_users, UserStatuses.OK.value),
+            (test_bad_users, UserStatuses.WebhookError.value)
         ]
         for user_list, user_status in test_cases:
             query = {"status": user_status}
@@ -1876,7 +1876,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestUser(self, override_user_name=invalid_user)
         webhook_update_error_status(invalid_user)  # simulate a webhook failure that sets the bad status to user
 
-        query = {"detail": "true", "status": s.UserStatuses.OK.value}
+        query = {"detail": "true", "status": UserStatuses.OK.value}
         resp = utils.test_request(self, "GET", "/users", params=query, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
 
@@ -1890,9 +1890,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(len(body["users"]), len(all_valid_users) + 1)
         for usr in body["users"]:
             if usr["user_name"] == invalid_user:
-                utils.check_val_equal(usr["status"], s.UserStatuses.WebhookErrorStatus.value)
+                utils.check_val_equal(usr["status"], UserStatuses.WebhookError.value)
             else:
-                utils.check_val_equal(usr["status"], s.UserStatuses.OK.value)
+                utils.check_val_equal(usr["status"], UserStatuses.OK.value)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
@@ -3937,9 +3937,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/users/{}".format(self.test_user_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["status"], s.UserStatuses.OK.value)
+        utils.check_val_equal(body["user"]["status"], UserStatuses.OK.value)
 
-        data = {"status": s.UserStatuses.OK.value}
+        data = {"status": UserStatuses.OK.value}
         resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 400, expected_method=self.update_method,
@@ -3959,7 +3959,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # getting user information displays the updated status
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["status"], s.UserStatuses.OK.value)
+        utils.check_val_equal(body["user"]["status"], UserStatuses.OK.value)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUser_existing(self):

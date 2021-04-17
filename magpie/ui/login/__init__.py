@@ -7,5 +7,5 @@ def includeme(config):
     LOGGER.info("Adding UI login...")
     config.add_route("login", "/ui/login")
     config.add_route("logout", "/ui/logout")
-    config.add_route("register", "/ui/register")
+    config.add_route("register_user", "/ui/register")
     config.scan()

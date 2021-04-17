@@ -261,7 +261,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.test_request(self, "GET", urlparse(resp.text).path)
 
             # Check if the user's status is set to 0
-            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
+            self.checkTestUserStatus(UserStatuses.WebhookError)
 
     def test_Webhook_CreateUser_NonExistentWebhookUrl(self):
         """
@@ -302,7 +302,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_val_is_in(self.test_user_name, users, msg="Test user should exist.")
 
             # Check if the user's status is set to 0
-            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
+            self.checkTestUserStatus(UserStatuses.WebhookError)
 
     def test_Webhook_DeleteUser(self):
         """
@@ -414,7 +414,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.TestSetup.create_TestGroup(self)
             utils.TestSetup.create_TestUser(self)
             webhook_update_error_status(self.test_user_name)  # modify the status to be invalid
-            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
+            self.checkTestUserStatus(UserStatuses.WebhookError)
 
             # trigger the webhook with update request
             path = "/users/{}".format(self.test_user_name)
@@ -435,7 +435,7 @@ class TestWebhooks(ti.BaseTestCase):
             utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=None)
 
             # now that callback request was accomplished, use should have been reverted to bad status
-            self.checkTestUserStatus(UserStatuses.WebhookErrorStatus)
+            self.checkTestUserStatus(UserStatuses.WebhookError)
 
     def test_Webhook_UpdatePermissions(self):
         """

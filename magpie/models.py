@@ -1,6 +1,7 @@
 import datetime
 import math
 import uuid
+from enum import IntFlag, _decompose  # noqa
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -30,15 +31,17 @@ from ziggurat_foundations.permissions import permission_to_pyramid_acls
 from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.permissions import Permission
-from magpie.utils import ExtendedEnum, get_magpie_url
+from magpie.utils import ExtendedEnum, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, Optional, Type, Union
+    from typing import Dict, Iterable, List, Optional, Type, Union
 
     from sqlalchemy.orm.session import Session
 
     from magpie.typedefs import AccessControlListType, GroupPriority, Str
+
+LOGGER = get_logger(__name__)
 
 Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
@@ -132,14 +135,180 @@ class User(UserMixin, Base):
         return "<User: %s, %s>" % (self.id, self.user_name)
 
 
+class UserPending(Base):
+    """
+    Temporary definition of a :class:`User` pending for approval by an administrator.
+    """
+
+    @declared_attr
+    def __tablename__(self):
+        return "users_pending"
+
+    @declared_attr
+    def user_name(self):
+        """ Unique user name user object"""
+        return sa.Column(sa.Unicode(128), primary_key=True, unique=True)
+
+    @declared_attr
+    def user_password(self):
+        """ Password hash for user object """
+        return sa.Column(sa.Unicode(256))
+
+    @declared_attr
+    def email(self):
+        """ Email for user object """
+        return sa.Column(sa.Unicode(100), nullable=False, unique=True)
+
+    @declared_attr
+    def registered_date(self):
+        """ Date of user's registration """
+        return sa.Column(sa.TIMESTAMP(timezone=False), default=datetime.datetime.utcnow, server_default=sa.func.now())
+
+
+class UserStatuses(IntFlag, ExtendedEnum):
+    """
+    Values applicable to :term:`User` statues.
+
+    Provides allowed values for the ``status`` search query of :class:`User` and :class:`UserPending` entries.
+    Also, defines the possible values of :attr:`User.status` field, omitting :attr:`UserStatuses.Pending` reserved
+    for objects defined by :class:`UserPending`.
+    """
+    # 0: do not use
+    OK = 1  # use 1 for ok since this value is set by default by ziggurat
+    WebhookError = 2
+    Pending = 4
+
+    @classmethod
+    def _get_one(cls, status):
+        as_num = super(UserStatuses, cls).get(int(status) if str.isnumeric(str(status)) else status)
+        if as_num:
+            return as_num
+        # allow lazy string representation using ignoring case sensitivity
+        return super(UserStatuses, cls).get(str(status).title()) or super(UserStatuses, cls).get(str(status).upper())
+
+    @classmethod
+    def get(cls,
+            status,         # type: Union[None, int, Str, UserStatuses, Iterable[None, int, Str, UserStatuses]]
+            default=None,   # type: Optional[UserStatuses]
+            ):              # type: (...) -> Optional[UserStatuses]
+        """
+        Obtains the combined flag :class:`UserStatuses`
+        """
+        if status is None:
+            return default
+        if status == "all":
+            return cls.all()
+        if isinstance(status, str) and "," in status:
+            status = status.split(",")
+        if isinstance(status, str):
+            return cls._get_one(status)
+        combined = None
+        for _status in status:
+            _status = cls._get_one(_status)
+            if combined is not None and _status is not None:
+                combined = (combined | _status)
+            else:
+                combined = combined or _status
+        return combined
+
+    @classmethod
+    def allowed(cls):
+        # type: () -> List[Union[None, int, Str]]
+        """
+        Returns all supported representation values that can be mapped to a valid status for :class:`UserSearchService`.
+        """
+        allowed = cls.values()  # literal int
+        allowed.extend(list(str(status) for status in allowed))  # by str repr of int value
+        allowed.extend(cls.names())  # by literal name of status
+        allowed.extend([None, "all"])  # unspecified (valid users omit pending) or literally 'all' users
+        return allowed
+
+    @classmethod
+    def all(cls):
+        """
+        Representation of all flags combined.
+        """
+        return UserStatuses(sum(cls.values()))
+
+    # nothing to do, only improve typing to avoid complaints about expecting 'int'
+    def __or__(self, other):  # type: (Union[UserStatuses, int]) -> UserStatuses
+        return super(UserStatuses, self).__or__(other)
+
+    # nothing to do, only improve typing to avoid complaints about expecting 'int'
+    def __and__(self, other):  # type: (Union[UserStatuses, int]) -> UserStatuses
+        return super(UserStatuses, self).__and__(other)
+
+    # nothing to do, only improve typing to avoid complaints about expecting 'int'
+    def __xor__(self, other):  # type: (Union[UserStatuses, int]) -> UserStatuses
+        return super(UserStatuses, self).__xor__(other)
+
+    def __iter__(self):
+        values, _ = _decompose(self, self.value)
+        return iter(values)
+
+    def __len__(self):
+        # use literal to avoid recursion
+        count = 0
+        value = self.value
+        while value:
+            value &= (value - 1)
+            count += 1
+        return count
+
+
 class UserSearchService(UserService):
+    """
+    Extends the :mod:`ziggurat_foundations` :class:`UserService` with additional features provided by `Magpie`.
+
+    .. note::
+        For any search result where parameter ``status`` is equal to or contains :attr:`UserStatuses.Pending` combined
+        with any other :class:`UserStatuses` members, or through the *all* representation, the returned iterable could
+        be a mix of both :term:`User` models or only :class:`UserPending`. Therefore, only fields supported by both of
+        those models should be accessed from the result.
+    """
+
     @classmethod
     def search(cls, status=None, db_session=None):
+        # type: (Optional[UserStatuses], Optional[Session]) -> Iterable[Union[User, UserPending]]
+        """
+        Search for appropriate :class:`User` and/or :class:`UserPending` according to specified :class:`UserStatuses`.
+        """
         db_session = get_db_session(db_session)
+        if status is UserStatuses.Pending:
+            return db_session.query(UserPending)
+        if status is None:
+            # original behavior, all approved users returned regardless of statuses, but ignore pending ones
+            return db_session.query(cls.model)
         query = db_session.query(cls.model)
-        if status is not None:
-            query = query.filter(cls.model.status == status)
-        return query
+        users = []  # must combine by list since different models will clash in query
+        if UserStatuses.Pending in status:
+            users = list(db_session.query(UserPending))
+            status = UserStatuses(status - UserStatuses.Pending)
+        status = [int(status) for status in status]
+        query = query.filter(cls.model.status.in_(status))
+        users += list(query)
+        return users
+
+    @classmethod
+    def by_user_name(cls, user_name, status=None, db_session=None):
+        # type: (Str, Optional[UserStatuses], Optional[Session]) -> Optional[Union[User, UserPending]]
+        """
+        Retrieves the user matching the given name.
+
+        Search is always accomplished against :class:`User` table unless :attr:`UserStatuses.Pending` is provided in
+        the :paramref:`status`. If more that one status is provided such that both :class:`UserPending` and
+        :class:`User` could yield results, the :class:`User` is returned first, as there should not be any conflict
+        between those two models.
+        """
+        if status is None:
+            return super(UserSearchService, cls).by_user_name(user_name, db_session=db_session)
+        users = list(cls.search(status=status, db_session=db_session))
+        if not users:
+            return None
+        if len(users) == 1:
+            return users[0]
+        LOGGER.warning("Duplicate registered/pending users named [%s] detected! This should never happen.", user_name)
+        return users[0] if isinstance(users[0], User) else users[1]
 
 
 class ExternalIdentity(ExternalIdentityMixin, Base):
