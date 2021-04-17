@@ -273,7 +273,7 @@ def webhook_update_error_status(user_name):
     #   requests between Magpie and the middleware URL subscribed in webhooks.
     db_session = get_db_session_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
     user = db_session.query(models.User).filter(models.User.user_name == user_name)  # pylint: disable=E1101,no-member
-    user.update({"status": s.UserStatuses.WebhookErrorStatus.value})
+    user.update({"status": models.UserStatuses.WebhookError.value})
     transaction.commit()
 
 

@@ -25,6 +25,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 
 from magpie import __meta__
 from magpie.constants import get_constant
+from magpie.models import UserStatuses
 from magpie.permissions import Access, Permission, PermissionType, Scope
 from magpie.security import get_provider_names
 from magpie.utils import (
@@ -32,8 +33,7 @@ from magpie.utils import (
     CONTENT_TYPE_JSON,
     KNOWN_CONTENT_TYPES,
     SUPPORTED_ACCEPT_TYPES,
-    SUPPORTED_FORMAT_TYPES,
-    ExtendedEnum
+    SUPPORTED_FORMAT_TYPES
 )
 
 if TYPE_CHECKING:
@@ -92,15 +92,6 @@ def service_api_route_info(service_api, **kwargs):
 # Service Routes
 _LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
 LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
-
-
-class UserStatuses(ExtendedEnum):
-    """
-    Values for the 'status' field of Users.
-    """
-    WebhookErrorStatus = 0
-    OK = 1  # use 1 for ok since this value is set by default by ziggurat
-
 
 SwaggerGenerator = Service(
     path="/json",
@@ -220,6 +211,12 @@ RegisterGroupsAPI = Service(
 RegisterGroupAPI = Service(
     path="/register/groups/{group_name}",
     name="RegisterGroup")
+RegisterUsersAPI = Service(
+    path="/register/users",
+    name="RegisterUsers")
+RegisterUserAPI = Service(
+    path="/register/users/{user_name}",
+    name="RegisterUser")
 ResourcesAPI = Service(
     path="/resources",
     name="Resources")
@@ -1599,8 +1596,11 @@ class UsersQuery(QueryRequestSchemaAPI):
     status = colander.SchemaNode(
         colander.Integer(),
         missing=colander.drop,
-        description="Obtain the user name list filtered by their account status. Returns all regardless otherwise.",
-        validator=colander.OneOf(UserStatuses.values())
+        description="Obtain the user name list filtered by their account status. "
+                    "Can be any combination of comma-separated list of known status values. "
+                    "Returns all *registered* users if not provided. "
+                    "Otherwise, 'all' can return every user regardless of registration status.",
+        validator=colander.OneOf(UserStatuses.allowed())
     )
     detail = colander.SchemaNode(
         colander.Boolean(),
@@ -2797,6 +2797,36 @@ RegisterGroup_DELETE_ForbiddenResponseSchema = UserGroup_DELETE_ForbiddenRespons
 RegisterGroup_DELETE_NotFoundResponseSchema = UserGroup_DELETE_NotFoundResponseSchema
 
 
+class RegisterUsers_GET_RequestSchema(BaseRequestSchemaAPI):
+    pass  # no query string in this case (see Users_GET_RequestSchema)
+
+
+class RegisterUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Get users pending registration successful."
+    body = Users_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+RegisterUsers_GET_ForbiddenResponseSchema = Users_GET_ForbiddenResponseSchema
+
+
+class RegisterUsers_POST_RequestSchema():
+    pass
+
+
+class RegisterUsers_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
+    description = "Get users pending registration successful."
+    body = Users_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
+
+
+RegisterUser_Check_BadRequestResponseSchema = User_Check_BadRequestResponseSchema
+RegisterUsers_POST_ForbiddenResponseSchema = Users_POST_ForbiddenResponseSchema
+
+
+class RegisterUser_Check_ConflictResponseSchema(BaseResponseSchemaAPI):
+    description = "User registration is already pending approval."
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
 class TemporaryURL_GET_RequestSchema(BaseRequestSchemaAPI):
     path = TemporaryURL_RequestPathSchema()
 
@@ -3190,7 +3220,7 @@ Users_GET_responses = {
 }
 Users_POST_responses = {
     "201": Users_POST_CreatedResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": Users_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
@@ -3208,7 +3238,7 @@ User_GET_responses = {
 }
 User_PATCH_responses = {
     "200": Users_PATCH_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": UserGroup_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
@@ -3643,6 +3673,22 @@ RegisterGroup_DELETE_responses = {
     "401": UnauthorizedResponseSchema(),
     "403": RegisterGroup_DELETE_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": RegisterGroup_DELETE_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterUsers_GET_responses = {
+    "200": RegisterUsers_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": RegisterUsers_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterUsers_POST_responses = {
+    "201": RegisterUsers_POST_CreatedResponseSchema(),
+    "400": RegisterUser_Check_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": RegisterUsers_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "406": NotAcceptableResponseSchema(),
+    "409": RegisterUser_Check_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 TemporaryURL_GET_responses = {

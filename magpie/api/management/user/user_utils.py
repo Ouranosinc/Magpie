@@ -100,7 +100,6 @@ def create_user(user_name, password, email, group_name, db_session):
     new_user = models.User(user_name=user_name, email=email)  # noqa
     if is_internal:
         UserService.set_password(new_user, password)
-        UserService.regenerate_security_code(new_user)
     ax.evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.Users_POST_ForbiddenResponseSchema.description)
     # Fetch user to update fields
@@ -139,7 +138,7 @@ def create_user(user_name, password, email, group_name, db_session):
 
 
 def update_user(user, request, new_user_name=None, new_password=None, new_email=None, new_status=None):
-    # type: (models.User, Request, Optional[Str], Optional[Str], Optional[Str], Optional[s.UserStatuses]) -> None
+    # type: (models.User, Request, Optional[Str], Optional[Str], Optional[Str], Optional[models.UserStatuses]) -> None
     """
     Applies updates of user details with specified values after validation.
 

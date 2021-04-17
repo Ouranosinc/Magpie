@@ -102,6 +102,7 @@
                 </div>
             </td>
         </tr>
+        %if has_admin_access:
         <tr>
             <td>User group:</td>
             <td class="centered" colspan="2">
@@ -116,6 +117,7 @@
                 </div>
             </td>
         </tr>
+        %endif
         <tr>
             <td class="centered" colspan="2">
                 <input type="submit" value="Add User" name="create" class="button theme">

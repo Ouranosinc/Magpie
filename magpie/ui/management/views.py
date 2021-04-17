@@ -1,11 +1,9 @@
 import json
 from collections import OrderedDict
 from datetime import datetime
-from secrets import compare_digest  # noqa  # python2-secrets employed for Python<=3.5
 from typing import TYPE_CHECKING
 
 import humanize
-import six
 import transaction
 import yaml
 from pyramid.httpexceptions import (
@@ -24,13 +22,14 @@ from magpie.api import schemas
 from magpie.cli import sync_resources
 from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
-from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT  # TODO: remove, implement getters via API
+# TODO: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
+from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserStatuses
 from magpie.permissions import PermissionSet
-from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
+from magpie.ui.utils import AdminViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
-    from typing import Dict, List, Optional, Tuple, Union
+    from typing import Dict, List, Optional, Tuple
 
     from sqlalchemy.orm.session import Session
 
@@ -39,157 +38,7 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-class ManagementViews(BaseViews):
-    @handle_errors
-    def get_all_groups(self, first_default_group=None):
-        resp = request_api(self.request, schemas.GroupsAPI.path, "GET")
-        check_response(resp)
-        groups = list(get_json(resp)["group_names"])
-        if isinstance(first_default_group, six.string_types) and first_default_group in groups:
-            groups.remove(first_default_group)
-            groups.insert(0, first_default_group)
-        return groups
-
-    @handle_errors
-    def get_group_info(self, group_name):
-        path = schemas.GroupAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path, "GET")
-        check_response(resp)
-        return get_json(resp)["group"]
-
-    @handle_errors
-    def get_group_users(self, group_name):
-        path = schemas.GroupUsersAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path, "GET")
-        check_response(resp)
-        return get_json(resp)["user_names"]
-
-    @handle_errors
-    def update_group_info(self, group_name, group_info):
-        path = schemas.GroupAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path, "PATCH", data=group_info)
-        check_response(resp)
-        return self.get_group_info(group_info.get("group_name", group_name))
-
-    @handle_errors
-    def delete_group(self, group_name):
-        path = schemas.GroupAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path, "DELETE")
-        check_response(resp)
-        return get_json(resp)
-
-    @handle_errors
-    def get_user_groups(self, user_name):
-        path = schemas.UserGroupsAPI.path.format(user_name=user_name)
-        resp = request_api(self.request, path, "GET")
-        check_response(resp)
-        return get_json(resp)["group_names"]
-
-    @handle_errors
-    def get_user_names(self):
-        """
-        Obtains all user names.
-        """
-        resp = request_api(self.request, schemas.UsersAPI.path, "GET")
-        check_response(resp)
-        return get_json(resp)["user_names"]
-
-    @handle_errors
-    def get_user_statuses(self, status=0):
-        # type: (Union[str, int]) -> List[str]
-        """
-        Obtains all user names that have the corresponding status value.
-        """
-        resp = request_api(self.request, schemas.UsersAPI.path + "?status={}".format(status), "GET")
-        check_response(resp)
-        return get_json(resp)["user_names"]
-
-    @handle_errors
-    def get_user_emails(self):
-        user_names = self.get_user_names()
-        emails = list()
-        for user in user_names:
-            path = schemas.UserAPI.path.format(user_name=user)
-            resp = request_api(self.request, path, "GET")
-            check_response(resp)
-            user_email = get_json(resp)["user"]["email"]
-            emails.append(user_email)
-        return emails
-
-    @handle_errors
-    def get_user_details(self, status=None):
-        # type: (Optional[Union[str, int]]) -> List[JSON]
-        """
-        Obtains all user details, optionally filtered to by corresponding status value.
-
-        Employ this method to avoid multiple requests fetching individual information.
-
-        .. seealso::
-            - :meth:`get_user_emails`
-            - :meth:`get_user_names`
-            - :meth:`get_user_statuses`
-        """
-        query = "?detail=true"
-        if status is not None:
-            query += "&status={}".format(status)
-        resp = request_api(self.request, schemas.UsersAPI.path + query, "GET")
-        check_response(resp)
-        return get_json(resp)["users"]
-
-    def get_resource_types(self):
-        """
-        :return: dictionary of all resources as {id: 'resource_type'}
-        :rtype: dict
-        """
-        resp = request_api(self.request, schemas.ResourcesAPI.path, "GET")
-        check_response(resp)
-        res_dic = self.default_get(get_json(resp), "resources", dict())
-        res_ids = dict()
-        self.flatten_tree_resource(res_dic, res_ids)
-        return res_ids
-
-    @handle_errors
-    def get_services(self, cur_svc_type):
-        resp = request_api(self.request, schemas.ServicesAPI.path, "GET")
-        check_response(resp)
-        all_services = get_json(resp)["services"]
-        svc_types = list(sorted(all_services))
-        if cur_svc_type not in svc_types:
-            cur_svc_type = svc_types[0]
-        services = all_services[cur_svc_type]
-        return svc_types, cur_svc_type, services
-
-    @handle_errors
-    def get_service_data(self, service_name):
-        path = schemas.ServiceAPI.path.format(service_name=service_name)
-        resp = request_api(self.request, path, "GET")
-        check_response(resp)
-        return get_json(resp)["service"]
-
-    def get_service_types(self):
-        svc_types_resp = request_api(self.request, schemas.ServiceTypesAPI.path, "GET")
-        return get_json(svc_types_resp)["service_types"]
-
-    @handle_errors
-    def update_service_name(self, old_service_name, new_service_name, service_push):
-        svc_data = self.get_service_data(old_service_name)
-        svc_data["service_name"] = new_service_name
-        svc_data["resource_name"] = new_service_name
-        svc_data["service_push"] = service_push
-        svc_id = str(svc_data["resource_id"])
-        path = schemas.ResourceAPI.path.format(resource_id=svc_id)
-        resp = request_api(self.request, path, "PATCH", data=svc_data)
-        check_response(resp)
-
-    @handle_errors
-    def update_service_url(self, service_name, new_service_url, service_push):
-        svc_data = self.get_service_data(service_name)
-        svc_data["service_url"] = new_service_url
-        svc_data["service_push"] = service_push
-        path = schemas.ServiceAPI.path.format(service_name=service_name)
-        resp = request_api(self.request, path, "PATCH", data=svc_data)
-        check_response(resp)
-
+class ManagementViews(AdminViews):
     @handle_errors
     def goto_service(self, resource_id):
         path = schemas.ResourceAPI.path.format(resource_id=resource_id)
@@ -204,23 +53,6 @@ class ManagementViews(BaseViews):
         body = get_json(resp)
         svc_type = body["service"]["service_type"]
         return HTTPFound(self.request.route_url("edit_service", service_name=svc_name, cur_svc_type=svc_type))
-
-    @staticmethod
-    def flatten_tree_resource(resource_node, resource_dict):
-        """
-        :param resource_node: any-level dictionary composing the resources tree
-        :param resource_dict: reference of flattened dictionary across levels
-        :return: flattened dictionary `resource_dict` of all {id: 'resource_type'}
-        :rtype: dict
-        """
-        if not isinstance(resource_node, dict):
-            return
-        if not len(resource_node) > 0:
-            return
-        for res in resource_node.values():
-            ManagementViews.flatten_tree_resource(res, resource_dict)
-        if "resource_id" in resource_node.keys() and "resource_type" in resource_node.keys():
-            resource_dict[resource_node["resource_id"]] = resource_node["resource_type"]
 
     @view_config(route_name="view_users", renderer="templates/view_users.mako")
     def view_users(self):
@@ -240,84 +72,30 @@ class ManagementViews(BaseViews):
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
     def add_user(self):
+        """
+        User creation by a logged administrator.
+
+        .. note::
+            The template employed for this form is reused for user self-registration as the fields and validation
+            of inputs are essentially the same. Their actual processing is different though, as the administrator
+            user is already logged in this case, and nobody is logged in the other.
+
+        .. seealso::
+            :meth:`magpie.ui.login.views.LoginViews.register_user`
+        """
         groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_ANONYMOUS_GROUP", self.request))
-        return_data = {"invalid_user_name": False, "invalid_user_email": False, "invalid_password": False,
-                       # 'Invalid' used as default in case pre-checks did not find anything, but API returned 400
-                       "reason_user_name": "Invalid", "reason_group_name": "Invalid", "reason_user_email": "Invalid",
-                       "reason_password": "Invalid", "form_user_name": "", "form_user_email": "",
-                       "user_groups": groups}
-        check_data = ["invalid_user_name", "invalid_email", "invalid_password"]
+        return_data = {"user_groups": groups, "has_admin_access": True}
+        return_data = self.create_user_default_template_data(return_data)
 
         if "create" in self.request.POST:
-            user_name = self.request.POST.get("user_name")
-            group_name = self.request.POST.get("group_name")
-            user_email = self.request.POST.get("email")
-            password = self.request.POST.get("password")
-            confirm = self.request.POST.get("confirm")
-            return_data["form_user_name"] = user_name
-            return_data["form_user_email"] = user_email
-
-            if group_name not in groups:
-                data = {"group_name": group_name}
-                resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
-                if resp.status_code == HTTPConflict.code:
-                    return_data["invalid_group_name"] = True
-                    return_data["reason_group_name"] = "Conflict"
-            user_details = self.get_user_details()
-            if user_email in [usr["email"] for usr in user_details]:
-                return_data["invalid_user_email"] = True
-                return_data["reason_user_email"] = "Conflict"
-            if user_email == "":
-                return_data["invalid_user_email"] = True
-            if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH", self.request):
-                return_data["invalid_user_name"] = True
-                return_data["reason_user_name"] = "Too Long"
-            if user_name in [usr["user_name"] for usr in user_details]:
-                return_data["invalid_user_name"] = True
-                return_data["reason_user_name"] = "Conflict"
-            if user_name == "":
-                return_data["invalid_user_name"] = True
-            if password is None or isinstance(password, six.string_types) and len(password) < 1:
-                return_data["invalid_password"] = True
-            elif not compare_digest(password, confirm):
-                return_data["invalid_password"] = True
-                return_data["reason_password"] = "Mismatch"  # nosec: B105  # avoid false positive
-
-            for check_fail in check_data:
-                if return_data.get(check_fail, False):
-                    return self.add_template_data(return_data)
-
-            data = {
-                "user_name": user_name,
-                "email": user_email,
-                "password": password,
-                "group_name": group_name
-            }
-            resp = request_api(self.request, schemas.UsersAPI.path, "POST", data=data)
-            if resp.status_code in (HTTPBadRequest.code, HTTPUnprocessableEntity.code):
-                # attempt to retrieve the API more-specific reason why the operation is invalid
-                body = get_json(resp)
-                param_name = body.get("param", {}).get("name")
-                reason = body.get("detail", "Invalid")
-                if param_name == "password":
-                    return_data["invalid_password"] = True
-                    return_data["reason_password"] = reason
-                    return self.add_template_data(return_data)
-                if param_name == "user_name":
-                    return_data["invalid_user_name"] = True
-                    return_data["reason_user_name"] = reason
-                    return self.add_template_data(return_data)
-                if param_name == "user_email":
-                    return_data["invalid_user_email"] = True
-                    return_data["reason_user_email"] = reason
-                    return self.add_template_data(return_data)
-                if param_name == "group_name":
-                    return_data["invalid_group_name"] = True
-                    return_data["reason_group_name"] = reason
-                    return self.add_template_data(return_data)
-            check_response(resp)
+            # delegate form submission to validation and creation
+            return_data = self.create_user(return_data)
+            if return_data["is_error"]:
+                return self.add_template_data(return_data)
+            # successful user creation, redirect to list of users since logged administrator
+            # initiated this process from there by clicking the 'add user' button
             return HTTPFound(self.request.route_url("view_users"))
-
+        # first page load or refresh
         return self.add_template_data(return_data)
 
     @view_config(route_name="edit_user", renderer="templates/edit_user.mako")
@@ -342,7 +120,7 @@ class ManagementViews(BaseViews):
 
         # set default values needed by the page in case of early return due to error
         user_info = get_json(user_resp)["user"]
-        user_info["user_with_error"] = user_info["status"] != schemas.UserStatuses.OK.value
+        user_info["user_with_error"] = user_info["status"] != UserStatuses.OK.value
         user_info["edit_mode"] = "no_edit"
         user_info["own_groups"] = own_groups
         user_info["groups"] = all_groups

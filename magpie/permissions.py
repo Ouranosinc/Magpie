@@ -332,7 +332,7 @@ class PermissionSet(object):
 
         .. seealso::
             - :meth:`magpie.services.ServiceInterface.effective_permissions`
-            - :func:`magpie.api.management.users.user_utils.combine_user_group_permissions`
+            - :func:`magpie.api.management.user.user_utils.combine_user_group_permissions`
             - :meth:`PermissionSet.__lt__`
         """
         if not isinstance(permission1, PermissionSet):

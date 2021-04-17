@@ -58,7 +58,6 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
         uu.check_user_info(user_name=user_name, password=password, group_name=group_name, check_email=False)
         new_user = models.User(user_name=user_name, email=email)  # noqa
         UserService.set_password(new_user, password)
-        UserService.regenerate_security_code(new_user)
         db_session.add(new_user)
         if group_name is not None:
             registered_user = UserService.by_user_name(user_name, db_session=db_session)

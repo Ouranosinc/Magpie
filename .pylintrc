@@ -190,7 +190,7 @@ ignored-classes=optparse.Values,
                 _thread._local,
                 str,
                 int,
-                magpie.api.schemas.UserStatuses,
+                magpie.models.UserStatuses,
                 cornice.Service,
                 cornice.service.Service
 
