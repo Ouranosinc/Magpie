@@ -164,6 +164,24 @@ class UserPending(Base):
         """ Date of user's registration """
         return sa.Column(sa.TIMESTAMP(timezone=False), default=datetime.datetime.utcnow, server_default=sa.func.now())
 
+    @property
+    def status(self):
+        """
+        Pending user status is enforced.
+
+        Avoid error in case the corresponding attribute of :class:`User` was accessed.
+        """
+        return UserStatuses.Pending.value
+
+    @property
+    def groups(self):
+        """
+        Pending user is not a member of any group.
+
+        Avoid error in case this field gets accessed when simultaneously handling :class:`User` and :class`UserPending`.
+        """
+        return []
+
 
 class UserStatuses(IntFlag, ExtendedEnum):
     """
@@ -182,9 +200,12 @@ class UserStatuses(IntFlag, ExtendedEnum):
     def _get_one(cls, status):
         as_num = super(UserStatuses, cls).get(int(status) if str.isnumeric(str(status)) else status)
         if as_num:
-            return as_num
+            return UserStatuses(as_num)
         # allow lazy string representation using ignoring case sensitivity
-        return super(UserStatuses, cls).get(str(status).title()) or super(UserStatuses, cls).get(str(status).upper())
+        status = super(UserStatuses, cls).get(str(status).title()) or super(UserStatuses, cls).get(str(status).upper())
+        if status is None:
+            return None
+        return UserStatuses(status)
 
     @classmethod
     def get(cls,
@@ -200,7 +221,7 @@ class UserStatuses(IntFlag, ExtendedEnum):
             return cls.all()
         if isinstance(status, str) and "," in status:
             status = status.split(",")
-        if isinstance(status, str):
+        if isinstance(status, (str, int)):
             return cls._get_one(status)
         combined = None
         for _status in status:
@@ -209,7 +230,7 @@ class UserStatuses(IntFlag, ExtendedEnum):
                 combined = (combined | _status)
             else:
                 combined = combined or _status
-        return combined
+        return UserStatuses(combined)
 
     @classmethod
     def allowed(cls):
@@ -268,16 +289,20 @@ class UserSearchService(UserService):
     """
 
     @classmethod
-    def search(cls, status=None, db_session=None):
+    def by_status(cls, status=None, db_session=None):
         # type: (Optional[UserStatuses], Optional[Session]) -> Iterable[Union[User, UserPending]]
         """
         Search for appropriate :class:`User` and/or :class:`UserPending` according to specified :class:`UserStatuses`.
+
+        When the :paramref:`status` is ``None``, *normal* retrieval of all non-pending :class:`User` is executed, as if
+        directly using the :class:`UserService` implementation.
+        Otherwise, a combination of appropriate search criterion is executed based on the :paramref:`status` flags.
         """
         db_session = get_db_session(db_session)
         if status is UserStatuses.Pending:
             return db_session.query(UserPending)
         if status is None:
-            # original behavior, all approved users returned regardless of statuses, but ignore pending ones
+            # original behavior, all approved users returned regardless of statuses, ignoring pending ones
             return db_session.query(cls.model)
         query = db_session.query(cls.model)
         users = []  # must combine by list since different models will clash in query
@@ -300,15 +325,48 @@ class UserSearchService(UserService):
         :class:`User` could yield results, the :class:`User` is returned first, as there should not be any conflict
         between those two models.
         """
-        if status is None:
+        if status is None or UserStatuses.Pending not in status:
             return super(UserSearchService, cls).by_user_name(user_name, db_session=db_session)
-        users = list(cls.search(status=status, db_session=db_session))
+        users = list(cls.by_status(status=status, db_session=db_session))
         if not users:
             return None
+        users = [user for user in users if user.user_name == user_name]
         if len(users) == 1:
             return users[0]
         LOGGER.warning("Duplicate registered/pending users named [%s] detected! This should never happen.", user_name)
         return users[0] if isinstance(users[0], User) else users[1]
+
+    @classmethod
+    def by_name_or_email(cls, user_name, email, status=None, db_session=None):
+        # type: (Str, Str, Optional[UserStatuses], Optional[Session]) -> Optional[Union[User, UserPending]]
+        """
+        Retrieves the first matched user by either name or email, whichever comes first.
+
+        If the :paramref:`status` is provided, search is executed against relevant :class:`User` and/or
+        :class`UserPending` definitions. The :paramref:`user_name` is looked for first across both tables (as needed)
+        and then by :paramref:`email` if not previously matched.
+
+        .. seealso::
+            :meth:`by_user_name`
+            :meth:`by_email`
+            :meth:`by_email_and_username`
+        """
+        db_session = get_db_session(db_session)
+        if status is None or UserStatuses.Pending not in status:
+            query = db_session.query(cls.model)
+            if status is not None:
+                status = [int(status) for status in status]
+                query = query.in_(status)
+            return query.filter((User.user_name == user_name) | (User.email == email)).first()
+        user = cls.by_user_name(user_name=user_name, status=status, db_session=db_session)
+        if user is not None:
+            return user
+        if status is UserStatuses.Pending:
+            return db_session.query(UserPending).filter(UserPending.email == email).first()
+        user = super(UserSearchService, cls).by_email(email=email, db_session=db_session)
+        if user is not None and UserStatuses.get(user.status) in status:
+            return user
+        return db_session.query(UserPending).filter(UserPending.email == email).first()
 
 
 class ExternalIdentity(ExternalIdentityMixin, Base):

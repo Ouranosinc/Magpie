@@ -1,10 +1,19 @@
+from typing import TYPE_CHECKING
+
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
 from magpie.constants import get_constant
 
+if TYPE_CHECKING:
+    from typing import List, Union
+
+    from magpie.models import User, UserPending
+    from magpie.typedefs import JSON, Str
+
 
 def format_user(user, group_names=None, basic_info=False, dotted=False):
+    # type: (Union[User, UserPending], List[Str], bool, bool) -> JSON
     """
     Formats a :term:`User` information into JSON.
 

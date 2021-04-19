@@ -38,7 +38,7 @@ def upgrade():
                     )
 
     session = Session(bind=op.get_bind())
-    query = sa.update(User).where(User.c.status == 0).value(status=2)  # use literals to avoid enum value changes
+    query = sa.update(User).where(User.c.status == 0).values(status=2)  # use literals to avoid enum value changes
     session.execute(query)
     session.commit()
 

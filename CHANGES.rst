@@ -14,6 +14,31 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* Changed ``UserStatuses.WebhookErrorStatus = 0`` to ``UserStatuses.WebhookError = 2`` to provide further
+  functionalities. Migration script applies this change to existing ``User``.
+* Add new ``UserStatuses.Pending = 4`` value that can be queried by administrators.
+* Add ``UserPending`` object with corresponding table for pending approval by an administrator for some new
+  self-registered user. Migration script creates the table with expected fields.
+* Improved ``status`` search query of ``GET /users`` path.
+* New requests respectively under ``/register/users`` and ``/ui/register`` for user account self-registration.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* | Explicitly disallow duplicate email entries, both with pre-validation and literal database values.
+    Note that any duplicate email will be raised an migration script will fail. Manual cleanup of the undesired entry
+    will be required, as `Magpie` will not be able to assume which one corresponds to the valid user to preserve.
+  |
+  | **SECURITY**:
+  | Since email can be employed as another mean of login credential instead of the more typically used username, this
+    caused potential theft of identity by retrieved user account against matched email.
+
+.. FIXME: update tag
+
+`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Add explicit typing definitions of configuration files and resolved settings to facilitate discovery of invalid
   handling of formats or parameters during parsing and startup registration.
 * Apply many documentation updates in both configuration sections and the corresponding configuration example headers.
@@ -42,17 +67,9 @@ Bug Fixes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add UI icons for `locked` and `delete` button operations on ``Users``, ``Groups`` and ``Services`` pages.
-<<<<<<< HEAD
 * Add ``detail`` query parameter to obtain user details from ``GET /users`` to avoid individual requests for each
   user when those information are needed (fixes `#202 <https://github.com/Ouranosinc/Magpie/issues/202>`_).
 * Add the missing ``status`` and ``user_id`` fields in API schema of returned ``User`` responses.
-* Changed ``UserStatuses.WebhookErrorStatus = 0`` to ``UserStatuses.WebhookError = 2`` to provide further
-  functionalities. Migration script applies this change to existing ``User``.
-* Add new ``UserStatuses.Pending = 4`` value that can be queried by administrators.
-* Add ``UserPending`` object with corresponding table for pending approval by an administrator for some new
-  self-registered user. Migration script creates the table with expected fields.
-* Improved ``status`` search query of ``GET /users`` path.
-* New requests respectively under ``/register/users`` and ``/ui/register`` for user account self-registration.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

@@ -29,14 +29,13 @@ def get_users_view(request):
     """
     List all registered user names or details.
     """
-    user_status_filter = request.params.get("status")
-    user_status_filter = models.UserStatuses.get(user_status_filter)
-    ax.verify_param(user_status_filter, is_in=True, param_compare=models.UserStatuses, param_name="status",
+    status = request.params.get("status")
+    status = models.UserStatuses.get(status)
+    ax.verify_param(status, is_in=True, param_compare=models.UserStatuses, param_name="status",
                     param_content={"compare": models.UserStatuses.allowed()},  # override by literals in error response
                     http_error=HTTPBadRequest, msg_on_fail=s.Users_GET_BadRequestSchema.description)
-    status = user_status_filter if user_status_filter is None else int(user_status_filter)
     detail = asbool(request.params.get("detail", False))
-    user_list = ax.evaluate_call(lambda: models.UserSearchService.search(status=status, db_session=request.db),
+    user_list = ax.evaluate_call(lambda: models.UserSearchService.by_status(status, db_session=request.db),
                                  fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                  msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
     if detail:
