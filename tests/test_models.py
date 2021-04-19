@@ -19,7 +19,8 @@ def test_user_status_value_getter():
     assert UserStatuses.Pending in UserStatuses.all()
     assert UserStatuses.WebhookError in UserStatuses.all()
     assert UserStatuses.OK | UserStatuses.Pending | UserStatuses.WebhookError == UserStatuses.all()
-    assert UserStatuses.get("ok") == UserStatuses.OK
+    assert UserStatuses.get(1) is UserStatuses.OK
+    assert UserStatuses.get("ok") is UserStatuses.OK
     assert UserStatuses.get("ok,PENDING") == UserStatuses.OK | UserStatuses.Pending
     assert UserStatuses.get(["ok", "PENDING", "OK"]) == UserStatuses.OK | UserStatuses.Pending
     assert UserStatuses.get("all") == UserStatuses.all()

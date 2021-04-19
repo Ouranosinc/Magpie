@@ -3762,13 +3762,42 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_PostUsers_ReservedKeyword_LoggedUser(self):
         data = {
             "user_name": get_constant("MAGPIE_LOGGED_USER"),
-            "password": "pwd",
+            "password": "pwd",  # noqa  # nosec
             "email": "email@mail.com",
             "group_name": self.test_group_name,
         }
         resp = utils.test_request(self, "POST", "/users", data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_Conflict_Name(self):
+        data = {
+            "user_name": self.test_user_name,
+            "password": "pwd",  # noqa  # nosec
+            "email": "email@mail.com",
+        }
+        utils.TestSetup.create_TestUser(self)
+        data["email"] = data["email"].replace("email", "other-email")
+        resp = utils.test_request(self, "POST", "/users", data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 409, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_Conflict_Email(self):
+        utils.warn_version(self, "user creation with duplicate email conflict", "3.11.0", skip=True)
+        data = {
+            "user_name": self.test_user_name,
+            "password": "pwd",  # noqa  # nosec
+            "email": "email@mail.com",
+        }
+        other_name = data["user_name"] + "-other"
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_name)
+        self.extra_user_names.add(other_name)
+        resp = utils.test_request(self, "POST", "/users", data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED

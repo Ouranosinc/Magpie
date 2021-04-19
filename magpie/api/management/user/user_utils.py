@@ -89,8 +89,9 @@ def create_user(user_name, password, email, group_name, db_session):
     check_user_info(user_name, email, password, group_name, check_password=is_internal)
     group_checked = _get_group(group_name)
 
-    # Check if user already exists
-    user_checked = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
+    # check if user already exists
+    user_checked = ax.evaluate_call(lambda: models.UserSearchService.by_name_or_email(user_name=user_name, email=email,
+                                                                                      db_session=db_session),
                                     http_error=HTTPForbidden,
                                     msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
     ax.verify_param(user_checked, is_none=True, with_param=False, http_error=HTTPConflict,

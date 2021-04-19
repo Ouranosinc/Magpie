@@ -2801,21 +2801,54 @@ class RegisterUsers_GET_RequestSchema(BaseRequestSchemaAPI):
     pass  # no query string in this case (see Users_GET_RequestSchema)
 
 
+class RegisterUsers_GET_ResponseBodySchema(BaseResponseBodySchema):
+    registrations = UserNamesListSchema()
+
+
 class RegisterUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Get users pending registration successful."
-    body = Users_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+    body = RegisterUsers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 RegisterUsers_GET_ForbiddenResponseSchema = Users_GET_ForbiddenResponseSchema
 
 
-class RegisterUsers_POST_RequestSchema():
-    pass
+class RegisterUsers_POST_RequestSchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name to employ for new user registration.",
+        example="john",
+    )
+    email = colander.SchemaNode(
+        colander.String(),
+        description="Email to employ for new user registration.",
+        example="john@mail.com",
+    )
+    password = colander.SchemaNode(
+        colander.String(),
+        description="Password to employ for new user registration.",
+        example="itzaseekit",
+    )
+
+
+class RegisterUserBodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Pending user registration name.",
+        example="toto")
+    email = colander.SchemaNode(
+        colander.String(),
+        description="Pending user registration email.",
+        example="toto@mail.com")
+
+
+class RegisterUsers_POST_ResponseBodySchema(BaseResponseBodySchema):
+    registration = RegisterUserBodySchema()
 
 
 class RegisterUsers_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     description = "Get users pending registration successful."
-    body = Users_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
+    body = RegisterUsers_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
 RegisterUser_Check_BadRequestResponseSchema = User_Check_BadRequestResponseSchema

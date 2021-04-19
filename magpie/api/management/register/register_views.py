@@ -25,26 +25,26 @@ if TYPE_CHECKING:
     from pyramid.request import Request
 
 
+# note: optional view config added in includeme according to setting
 @s.RegisterUsersAPI.get(schema=s.RegisterUsers_GET_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
                         response_schemas=s.RegisterUsers_GET_responses)
-@view_config(route_name=s.UsersAPI.name, request_method="GET")
-def get_users_view(request):
+def get_pending_users_view(request):
     """
     List all user names pending registration.
     """
     user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
-                                               models.UserSearchService.search(status=models.UserStatuses.Pending,
-                                                                               db_session=request.db)],
+                                               models.UserSearchService.by_status(models.UserStatuses.Pending,
+                                                                                  db_session=request.db)],
                                       fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                       msg_on_fail=s.RegisterUsers_GET_ForbiddenResponseSchema.description)
-    return ax.valid_http(http_success=HTTPOk, content={"user_names": sorted(user_name_list)},
+    return ax.valid_http(http_success=HTTPOk, content={"registrations": sorted(user_name_list)},
                          detail=s.RegisterUsers_GET_OkResponseSchema.description)
 
 
+# note: optional view config added in includeme according to setting
 @s.RegisterUsersAPI.post(schema=s.RegisterUsers_POST_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
                          response_schemas=s.RegisterUsers_POST_responses)
-@view_config(route_name=s.UsersAPI.name, request_method="POST")
-def create_user_view(request):
+def create_pending_user_view(request):
     """
     Create a new pending user registration.
     """
