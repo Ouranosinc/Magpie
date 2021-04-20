@@ -21,6 +21,11 @@ Features / Changes
   self-registered user. Migration script creates the table with expected fields.
 * Improved ``status`` search query of ``GET /users`` path.
 * New requests respectively under ``/register/users`` and ``/ui/register`` for user account self-registration.
+* Add configuration setting ``MAGPIE_USER_REGISTRATION_ENABLED`` to control whether user account self-registration
+  feature should be employed.
+* Add configuration setting ``MAGPIE_ADMIN_APPROVAL_ENABLED`` to control whether user account must be approved prior
+  to allowing self-registration.
+* Add multiple configuration settings to control behavior of notification email server.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

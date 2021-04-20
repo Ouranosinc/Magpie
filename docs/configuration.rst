@@ -331,6 +331,9 @@ These settings can be used to specify where to find other settings through custo
         This variable ignores the setting/env-var resolution order since settings cannot be defined without
         firstly loading the file referenced by its value.
 
+    .. seealso::
+        `config_magpie_ini`_
+
 .. envvar:: MAGPIE_ENV_DIR
 
     (Default: ``"${MAGPIE_ROOT}/env"``)
@@ -452,6 +455,133 @@ at the start of the :ref:`Configuration` section.
     (Default: ``True``)
 
     Specifies whether `Magpie` should log a raised exception during a process execution.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_ENABLED
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.11
+
+    Specifies whether `Magpie` should provide :term:`User` self-registration endpoints on ``/register/users`` for
+    the API and ``/ui/register`` for the UI. See section :ref:`user_registration` for further details about thr process.
+
+    When enabled, all other configuration regarding SMTP and EMAIL settings must also be defined to properly provide
+    notification and validation email during registration.
+
+    The default value of this configuration setting is to preserve the original behavior of `Magpie` where no such
+    :term:`User` self-registration is possible. Therefore, the option must be explicitly defined to activate it.
+
+    .. warning::
+        **Security Notice**
+
+        Under normal operation (when disabled), `Magpie` can take advantage of stronger security by obfuscation
+        as the ``user_name`` component is not accessible by any means other than administrator-level users.
+        It is therefore hidden away from public view and acts as stronger credentials.
+
+        When this option is enabled, both the ``user_name`` and ``email`` of existing users become *indirectly*
+        accessible for validation purposes, to avoid account conflicts during user registration. When enabling
+        this option, the developer or server maintainer must be aware of these consideration.
+
+        For best security result, the setting should be activated only when the feature is required, and that
+        ``user_name``/``email`` information is deemed adequate for potential public visibility, hence why the
+        option is disabled by default. This is a design choice for respective servers and platforms.
+
+
+.. envvar:: MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE
+
+    (Default: |email_user_registration_mako|_)
+
+    .. versionadded:: 3.11
+
+    Path to a `Mako Template`_ file providing custom email format to send notification email following submission of
+    a new :ref:`user_registration`. A custom body must contain all relevant details defined in the default template
+    to ensure basic functionalities of the :ref:`user_registration` workflow can be accomplished.
+
+
+.. envvar:: MAGPIE_ADMIN_APPROVAL_ENABLED
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.11
+
+    Specifies whether administrator approval is required to complete user registration.
+
+    This setting is relevant only if :envvar:`MAGPIE_USER_REGISTRATION_ENABLED` was also activated. When enabled,
+    an email using following configuration options will be sent to notify the administrator authority that
+    :term:`Pending User` approval is awaiting its validation. Approval process is bypassed if the setting is disabled.
+
+
+.. envvar:: MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE
+
+    (Default: |email_admin_approval_mako|_)
+
+    .. versionadded:: 3.11
+
+
+.. envvar:: MAGPIE_SMTP_FROM
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.11
+
+
+
+.. envvar:: MAGPIE_SMTP_HOST
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.11
+
+
+
+.. envvar:: MAGPIE_SMTP_PORT
+
+    [:class:`int`]
+    (Default: ``465``)
+
+    .. versionadded:: 3.11
+
+
+SMTP Server (Outgoing Messages) 	Non-Encrypted 	AUTH 	25 (or 587)
+  	Secure (TLS) 	StartTLS 	587
+  	Secure (SSL) 	SSL 	465
+POP3 Server (Incoming Messages) 	Non-Encrypted 	AUTH 	110
+  	Secure (SSL) 	SSL 	995
+
+
+.. envvar:: MAGPIE_SMTP_SSL
+
+    [:class:`bool`]
+    (Default: ``True``)
+
+    .. versionadded:: 3.11
+
+    Specifies if SSL should be employed for sending email.
+
+
+.. envvar:: MAGPIE_SMTP_PASSWORD
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.11
+
+
+.. envvar:: MAGPIE_EMAIL_ENCRYPT_ROUNDS
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.11
+
+
+
+.. envvar:: MAGPIE_EMAIL_ENCRYPT_SALT
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.11
+
 
 .. envvar:: MAGPIE_TOKEN_EXPIRE
 
@@ -999,6 +1129,31 @@ parameters), please refer to |WSO2_doc|_.
 
 .. seealso::
     Refer to :ref:`authn_requests` and :ref:`authn_providers` for details.
+
+
+.. _config_user_approval:
+
+User Approval Configuration
+-----------------------------
+
+.. versionadded:: 3.11
+
+This configuration is relevant only when both settings :envvar:`MAGPIE_USER_REGISTRATION_ENABLED` and
+:envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` are activated.
+
+
+    Once enabled, new :term:`User` accounts can be created by anyone instead of needing administrative access
+    to create them. The new accounts will require a valid email in order to confirm and complete registration.
+    Furthermore, if :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` is activated, an email will be sent to the configured
+    administrator email location waiting for approval. Any new account will be in a :term:`Pending User` approval
+    state until either email validation and administrator approval if enabled is completed. Pending users can be
+    queried and managed only by administrator-level :term:`User`, using the relevant API user registration endpoint,
+    or using the querystring ``status`` on normal user endpoint.
+
+    This kind of *user* is treated
+    differently than normal :term:`User` since its validation is incomplete, and will therefore not be returned by
+    normal API and UI endpoints. Once validated, the corresponding :term:`User`
+
 
 
 .. _config_webhook:

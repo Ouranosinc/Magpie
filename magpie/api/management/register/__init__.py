@@ -3,7 +3,8 @@ from pyramid.settings import asbool
 
 from magpie.api import schemas as s
 from magpie.api.management.register import register_views as rv
-from magpie.utils import get_constant, get_logger
+from magpie.constants import get_constant
+from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -14,9 +15,10 @@ def includeme(config):
     config.add_route(**s.service_api_route_info(s.RegisterGroupAPI))
     config.add_route(**s.service_api_route_info(s.TemporaryUrlAPI))
 
-    enable_register_user = get_constant("MAGPIE_USER_REGISTRATION", settings_container=config, default_value=False,
-                                        raise_missing=False, raise_not_set=False, print_missing=True)
-    if asbool(enable_register_user):
+    register_user_enabled = asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", settings_container=config,
+                                                default_value=False, print_missing=True,
+                                                raise_missing=False, raise_not_set=False))
+    if register_user_enabled:
         LOGGER.info("Adding user registration route.")
         config.add_route(**s.service_api_route_info(s.RegisterUsersAPI))
         # only admins can list pending users, but anyone can self-register for pending user approval
