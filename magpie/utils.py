@@ -434,6 +434,7 @@ def get_magpie_url(container=None):
             return url_parsed.geturl()
         magpie_url = "http://{}".format(url_parsed.geturl())
         print_log("Missing scheme from settings URL, new value: '{}'".format(magpie_url), LOGGER, logging.WARNING)
+        settings.setdefault("magpie.url", magpie_url)  # simplify the process for direct retrieval next time
         return magpie_url
     except AttributeError:
         # If magpie.url does not exist, calling strip fct over None will raise this issue

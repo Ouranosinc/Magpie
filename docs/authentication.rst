@@ -17,6 +17,11 @@ could be added later on.
     chapter must not be confused with ``providers`` employed in :ref:`config_providers`. In this chapter, providers
     refer to user-identity resolvers, in contrast to :term:`Service` definitions from the configuration files.
 
+All :term:`Authentication` request can be accomplished in order to login using *existing* :term:`User` accounts.
+To create new accounts, either another :term:`User` with :envvar:`MAGPIE_ANONYMOUS_GROUP` membership must create it,
+or using the :ref:`user_registration` operation when enabled.
+
+
 .. _authn_requests:
 
 Authentication Requests
@@ -46,6 +51,9 @@ accomplishing a login from a web browser using the ``{MAGPIE_URL}/signin`` endpo
     Whenever possible, prefer ``POST`` request with :ref:`authn_login_body` or the UI endpoint.
     See also warning in :ref:`authn_login_query` for details.
 
+For each of the following request variants, the ``user_name`` field can refer to either the literal name representing
+the :term:`User`, or its ``email`` employed during registration. The submitted value will be tested against both to
+retrieve a potential matches to accomplish :term:`Authentication`.
 
 .. _authn_login_query:
 
@@ -280,3 +288,41 @@ to :term:`User` identification against local accounts in `Magpie` using :envvar:
 .. todo::
 
     Support ``Authorization: Basic <base64-user-pass>`` (see `#255 <https://github.com/Ouranosinc/Magpie/issues/255>`_)
+
+
+.. _user_registration:
+
+User Registration
+------------------------
+
+.. versionadded:: 3.11
+
+Using this feature, new :term:`User` accounts can be created by anyone (self-registration) instead of previously needing
+administrative access to create them. The new accounts will require an unique ``user_name`` and valid ``email`` in order
+to confirm and complete registration. The provided ``email`` is employed to send a notification and validation endpoint
+of the specified registration information.
+
+This operation must be enabled in the corresponding `Magpie` instance using :envvar:`MAGPIE_USER_REGISTRATION_ENABLED`
+definition in :ref:`Configuration` settings for this feature to be available. Otherwise, the only method to create new
+:term:`User` entries will remain through a member of :envvar:`MAGPIE_ADMIN_GROUP` (see also :ref:`perm_route_access`).
+Administrators can always employ this direct :term:`User` creation mean regardless of the enabled state of this feature.
+
+Furthermore, upon registration submission, and if the application configuration defined the relevant settings
+(see :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED`, with other similar entries, and :ref:`config_user_approval` section),
+an email will be sent to the configured administrator email location to request its approval. Any new account will be
+in a :term:`Pending User` approval state (defined by status :attr:`magpie.models.UserStatuses.Pending`) until either
+email validation and/or administrator approval is completed. When :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` is not
+activated, only email validation will be required from the notification email. Doing so will immediately complete
+the :term:`User` registration.
+
+All :term:`Pending User` details can be queried and managed only by administrator-level :term:`User`, using the
+relevant API user registration endpoint, or the query string ``status`` on normal API ``/users`` endpoint. Note that
+user registration endpoints will return an ``HTTP Not Found [404]`` error if :envvar:`MAGPIE_USER_REGISTRATION_ENABLED`
+was not set accordingly.
+
+The :term:`Pending User` is treated differently than normal :term:`User` internally since its validation is incomplete,
+and will therefore not be returned by typical API and UI endpoints, unless explicitly requested using the appropriate
+path or ``status`` flags. Once the registration email was validated and approval from an administrator was obtained,
+the corresponding :term:`User` is generated from the :term:`Pending User` to complete its registration process. The
+:term:`User` account will then operate normally as any other existing ones. That :term:`User` will then be able to
+proceed with typical :ref:`authn_requests` procedures to login with `Magpie`.

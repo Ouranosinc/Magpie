@@ -1,6 +1,7 @@
 from secrets import compare_digest
 
 import requests
+import six
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPException,
