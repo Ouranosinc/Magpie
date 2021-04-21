@@ -297,6 +297,10 @@ User Registration
 
 .. versionadded:: 3.11
 
+.. warning::
+    Please refer to the **Security Notice** under :envvar:`MAGPIE_USER_REGISTRATION_ENABLED` regarding the impact
+    of this change.
+
 Using this feature, new :term:`User` accounts can be created by anyone (self-registration) instead of previously needing
 administrative access to create them. The new accounts will require an unique ``user_name`` and valid ``email`` in order
 to confirm and complete registration. The provided ``email`` is employed to send a notification and validation endpoint
@@ -308,12 +312,12 @@ definition in :ref:`Configuration` settings for this feature to be available. Ot
 Administrators can always employ this direct :term:`User` creation mean regardless of the enabled state of this feature.
 
 Furthermore, upon registration submission, and if the application configuration defined the relevant settings
-(see :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED`, with other similar entries, and :ref:`config_user_approval` section),
+(see :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` and other similar items in :ref:`config_user_register_approval` section),
 an email will be sent to the configured administrator email location to request its approval. Any new account will be
-in a :term:`Pending User` approval state (defined by status :attr:`magpie.models.UserStatuses.Pending`) until either
-email validation and/or administrator approval is completed. When :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` is not
-activated, only email validation will be required from the notification email. Doing so will immediately complete
-the :term:`User` registration.
+in a :term:`Pending User` state (defined by status :attr:`magpie.models.UserStatuses.Pending`) until either email
+validation and/or administrator approval is completed. When :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` is not activated,
+only email validation will be required from the notification email. Doing so will immediately complete the :term:`User`
+registration.
 
 All :term:`Pending User` details can be queried and managed only by administrator-level :term:`User`, using the
 relevant API user registration endpoint, or the query string ``status`` on normal API ``/users`` endpoint. Note that

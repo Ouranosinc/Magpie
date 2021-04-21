@@ -17,6 +17,7 @@
 .. _Pyramid: https://docs.pylonsproject.org/projects/pyramid/
 .. _ReadTheDocs: https://pavics-magpie.readthedocs.io/
 .. _SQLAlchemy: https://www.sqlalchemy.org/
+.. _SQLAlchemy Engine: https://docs.sqlalchemy.org/en/13/core/engines.html
 .. _THREDDS: https://www.unidata.ucar.edu/software/tds/
 .. _Twitcher: https://github.com/bird-house/twitcher
 .. _Waitress: https://github.com/Pylons/waitress
@@ -45,6 +46,8 @@
 .. _docker-compose.yml.example: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
 .. |email_user_registration_mako| replace:: ``magpie/api/template/email_user_registration.mako``
 .. _email_user_registration_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_user_registration.mako
+.. |email_admin_approved_mako| replace:: ``magpie/api/template/email_admin_approved.mako``
+.. _email_admin_approved_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_admin_approved.mako
 .. |email_admin_approval_mako| replace:: ``magpie/api/template/email_admin_approval.mako``
 .. _email_admin_approval_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_admin_approval.mako
 .. _magpie-cron: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
