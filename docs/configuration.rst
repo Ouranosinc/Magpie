@@ -510,22 +510,6 @@ at the start of the :ref:`Configuration` section.
 
     Specifies if SSL should be employed for sending email.
 
-
-.. envvar:: MAGPIE_EMAIL_ENCRYPT_ROUNDS
-
-    (Default: ``None``)
-
-    .. versionadded:: 3.11
-
-
-
-.. envvar:: MAGPIE_EMAIL_ENCRYPT_SALT
-
-    (Default: ``None``)
-
-    .. versionadded:: 3.11
-
-
 .. envvar:: MAGPIE_TOKEN_EXPIRE
 
     [:class:`int`]
@@ -1078,26 +1062,20 @@ User Registration and Approval Configuration
 
 .. versionadded:: 3.11
 
-This configuration describe the relevant details regarding the activation of settings
-:envvar:`MAGPIE_USER_REGISTRATION_ENABLED` and :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED`. If those settings are not
-defined, or are explicitly set to ``False``, all other options can be safely ignored.
+This section describes the relevant details regarding the activation of settings
+:envvar:`MAGPIE_USER_REGISTRATION_ENABLED` and :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED`.
+If those settings are not defined, or are explicitly set to ``False``, all other options can be safely ignored.
 
 .. note::
     When any of the above parameters are enabled, the :ref:`config_app_settings` regarding ``SMTP`` server
-    and ``EMAIL`` options must be defined.
+    and ``EMAIL`` options must also be defined.
 
+All details regarding the procedures of registration and approval of user accounts are defined
+in section :ref:`user_registration`.
 
-    Once enabled, new :term:`User` accounts can be created by anyone instead of needing administrative access
-    to create them. The new accounts will require a valid email in order to confirm and complete registration.
-    Furthermore, if :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` is activated, an email will be sent to the configured
-    administrator email location waiting for approval. Any new account will be in a :term:`Pending User` approval
-    state until either email validation and administrator approval if enabled is completed. Pending users can be
-    queried and managed only by administrator-level :term:`User`, using the relevant API user registration endpoint,
-    or using the querystring ``status`` on normal user endpoint.
+Following are the full description of all configuration parameters employed by the :term:`User` registration and
+approval procedures.
 
-    This kind of *user* is treated
-    differently than normal :term:`User` since its validation is incomplete, and will therefore not be returned by
-    normal API and UI endpoints. Once validated, the corresponding :term:`User`
 
 .. envvar:: MAGPIE_USER_REGISTRATION_ENABLED
 
@@ -1131,8 +1109,41 @@ defined, or are explicitly set to ``False``, all other options can be safely ign
         ``user_name``/``email`` information is deemed adequate for potential public visibility, hence why the
         option is disabled by default. This is a design choice for respective servers and platforms.
 
-
 .. envvar:: MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE
+
+    (Default: |email_user_registration_mako|_)
+
+    .. versionadded:: 3.11
+
+    Path to a `Mako Template`_ file providing custom email format to send notification email following submission of
+    a new :ref:`user_registration`. The default template provides details about available template arguments.
+
+
+.. envvar:: MAGPIE_USER_REGISTERED_ENABLED
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.11
+
+    Controls whether a notification email should be sent to :envvar:`MAGPIE_USER_REGISTERED_EMAIL_RECIPIENT` once a
+    :term:`Pending User` successfully completed the registration process.
+
+    This can be used for example when no administrator validation is required
+    (i.e.: ``MAGPIE_ADMIN_APPROVAL_ENABLED = false``), but that some platform manager still want to receive notices of
+    any users that registered to its service.
+
+    .. note::
+        Enabling this option at the same time as :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` and using the same email
+        for both :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT` and :envvar:`MAGPIE_USER_REGISTERED_EMAIL_RECIPIENT`
+        could lead to noisy notification emails as approving administrators will be immediately notified of their own
+        accepted user registration approval. Different emails can be set to communicate relevant notifications to
+        intended parties. It is up to the developer to properly configure how verbose those emails should be.
+
+.. envvar:: MAGPIE_USER_REGISTERED_EMAIL_RECIPIENT
+
+
+.. envvar:: MAGPIE_USER_REGISTERED_EMAIL_TEMPLATE
 
     (Default: |email_user_registration_mako|_)
 
@@ -1156,10 +1167,22 @@ defined, or are explicitly set to ``False``, all other options can be safely ign
 
     This setting is relevant only if :envvar:`MAGPIE_USER_REGISTRATION_ENABLED` was also activated. When enabled,
     an email using following configuration options will be sent to notify the administrator authority that
-    :term:`Pending User` approval is awaiting its validation. Approval process is bypassed if the setting is disabled.
+    :term:`Pending User` approval is awaiting their validation.
+
+    Approval process is bypassed if this setting is disabled, meaning that :term:`Pending User` account will be
+    immediately and automatically approved as soon as their email was validated, without any administrator intervention.
 
 .. envvar:: MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT
 
+    .. versionadded:: 3.11
+
+    Email of the *administrator* to which a notification is sent using the body defined by
+    :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE`, when a new user registration was requested.
+
+    The email employed for this parameter can be toward any target, including an email that does not correspond to any
+    :term:`User` in the `Magpie` database. For example, that email could be for a shared user support team that replies
+    to those requests. Note that to validate the user registration though, valid administrative-level :term:`User` with
+    matching credentials will be required to complete the process.
 
 .. envvar:: MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE
 
@@ -1167,11 +1190,19 @@ defined, or are explicitly set to ``False``, all other options can be safely ign
 
     .. versionadded:: 3.11
 
+    Path to a `Mako Template`_ file providing custom email format to send notification email to
+    :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT` following a user registration demand.
+    The default template provides details about available template arguments.
+
 .. envvar:: MAGPIE_ADMIN_APPROVED_EMAIL_TEMPLATE
 
     (Default: |email_admin_approved_mako|_)
 
     .. versionadded:: 3.11
+
+    Path to a `Mako Template`_ file providing custom email format to send an email to the
+    :term:`Pending User` that initially requested the user registration to notify them of the completed registration
+    process and that their account is active starting from that moment.
 
 
 .. _config_webhook:
