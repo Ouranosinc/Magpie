@@ -330,3 +330,34 @@ path or ``status`` flags. Once the registration email was validated and approval
 the corresponding :term:`User` is generated from the :term:`Pending User` to complete its registration process. The
 :term:`User` account will then operate normally as any other existing ones. That :term:`User` will then be able to
 proceed with typical :ref:`authn_requests` procedures to login with `Magpie`.
+
+
+
+
+======================
+
+.. todo: merge info with above
+
+Once :envvar:`MAGPIE_USER_REGISTRATION_ENABLED` is active, new :term:`User` accounts can be requested by anyone instead
+of needing administrative access to create them. The new accounts will require a valid email in order to confirm and
+complete registration. Furthermore, if :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` is activated, an email will be sent to
+the configured administrator email location with :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT` waiting for approval.
+Once an administrator approves a :term:`Pending User` account, an email will be sent to that person to notify them that
+their account is ready to be employed. Optionally, :envvar:`MAGPIE_USER_REGISTERED_ENABLED` can also be set to notify
+the relevant administrator that this account was validated and :term:`User` registration was completed.
+
+Any new account will be in a :term:`Pending User` approval state until either email validation and administrator
+approval if enabled is completed. Pending users can be queried and managed only by administrator-level :term:`User`,
+using the relevant API user registration endpoint, or using the querystring ``status`` on the usual user endpoint.
+
+The :term:`Pending User` is a special kind of *user* that is treated differently than typical :term:`User` since their
+account validation is incomplete, and will therefore not be returned by normal API and UI endpoints. Only explicit
+queries or requests will return those entries. Regarding relationships with other `Magpie` concepts, such as
+:term:`Service`, :term:`Resource`, :term:`Group` or :term:`Permission` definitions, those :term:`Pending User` do not
+exist and cannot be associated until user registration was processed completely. When account validation and approval
+is completed, the :term:`Pending User` is upgraded to a full fledged :term:`User`, with all applicable operations on it.
+
+All notification emails sent by `Magpie` can be customized to match your specific requirements or format using a
+`Mako Template`_ file. Custom email contents must contain all relevant details defined in their corresponding default
+templates to ensure basic functionalities of the :ref:`user_registration` and :term:`admin_approval` workflow can be accomplished. The logic of the message content is left at the
+discretion of the developer if customized.

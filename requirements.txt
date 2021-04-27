@@ -13,6 +13,7 @@ gunicorn<20; python_version < "3.5"  # pyup: ignore
 gunicorn>=20; python_version >= "3"
 humanize
 lxml>=3.7
+mako  # controlled by pyramid_mako
 paste
 pastedeploy
 pluggy
