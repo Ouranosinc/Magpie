@@ -1,30 +1,30 @@
 <%doc>
     This is the default notification message sent by email for administrator approval.
+    (see option: MAGPIE_ADMIN_APPROVAL_ENABLED)
+
     It is formatted using the Mako template library (https://www.makotemplates.org/).
     The email header MUST be provided (from, to, subject, content-type).
 
     Additional variables available to build the content are:
 
-        user:           Pending user from registration submission, with associated details.
-        email_user:     Value defined by MAGPIE_SMTP_USER to identify the sender of this email.
-        email_from:     Value defined by MAGPIE_SMTP_FROM to identify the sender of this email.
-        admin_email:    Administrator email as defined by MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT.
-        magpie_url:     Application endpoint defined by MAGPIE_URL or derived configuration settings.
-        approve_url:    Endpoint where the pending user registration will be approved when visited.
-        refuse_url:     Endpoint where the pending user registration will be refused when visited.
-        pending_url:    Endpoint where the pending user registration details can be viewed (Magpie UI).
-        settings:       Application settings.
+        user:               Pending user from registration submission, with associated details.
+        email_user:         Value defined by MAGPIE_SMTP_USER to identify the sender of this email.
+        email_from:         Value defined by MAGPIE_SMTP_FROM to identify the sender of this email.
+        email_sender:       Resolved value between MAGPIE_SMTP_FROM or MAGPIE_SMTP_USER sending this email.
+        email_recipient:    Resolved email of the identity where to send the notification email.
+        magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration settings.
+        approve_url:        Endpoint where the pending user registration will be approved when visited.
+        refuse_url:         Endpoint where the pending user registration will be refused when visited.
+        pending_url:        Endpoint where the pending user registration details can be viewed (Magpie UI).
 
 </%doc>
 
-%if email_from:
-From: ${email_from}
-%else:
-From: ${email_user}
-%endif
-To: ${admin_email}
-Subject: Magpie User Registration requests Admin Approval
+From: ${email_sender}
+To: ${email_recipient}
+Subject: Magpie User Registration requires Admin Approval
 Content-Type: text/plain; charset=UTF-8
+
+<%doc> === end of header === </%doc>
 
 Dear administrator,
 
