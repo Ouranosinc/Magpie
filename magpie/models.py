@@ -9,6 +9,7 @@ from pyramid.httpexceptions import HTTPInternalServerError
 from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated, Everyone
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from ziggurat_foundations import ziggurat_model_init
 from ziggurat_foundations.models.base import BaseModel, get_db_session
@@ -40,6 +41,9 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
     from magpie.typedefs import AccessControlListType, GroupPriority, Str
+
+    # for convenience of methods using both, using strings because of future definition
+    AnyUser = Union["User", "UserPending"]
 
 LOGGER = get_logger(__name__)
 
@@ -290,7 +294,7 @@ class UserSearchService(UserService):
 
     @classmethod
     def by_status(cls, status=None, db_session=None):
-        # type: (Optional[UserStatuses], Optional[Session]) -> Iterable[Union[User, UserPending]]
+        # type: (Optional[UserStatuses], Optional[Session]) -> Iterable[AnyUser]
         """
         Search for appropriate :class:`User` and/or :class:`UserPending` according to specified :class:`UserStatuses`.
 
@@ -316,7 +320,7 @@ class UserSearchService(UserService):
 
     @classmethod
     def by_user_name(cls, user_name, status=None, db_session=None):
-        # type: (Str, Optional[UserStatuses], Optional[Session]) -> Optional[Union[User, UserPending]]
+        # type: (Str, Optional[UserStatuses], Optional[Session]) -> Optional[AnyUser]
         """
         Retrieves the user matching the given name.
 
@@ -338,7 +342,7 @@ class UserSearchService(UserService):
 
     @classmethod
     def by_name_or_email(cls, user_name, email, status=None, db_session=None):
-        # type: (Str, Str, Optional[UserStatuses], Optional[Session]) -> Optional[Union[User, UserPending]]
+        # type: (Str, Str, Optional[UserStatuses], Optional[Session]) -> Optional[AnyUser]
         """
         Retrieves the first matched user by either name or email, whichever comes first.
 
@@ -701,6 +705,16 @@ class TokenOperation(ExtendedEnum):
     Temporary token associated to an URL endpoint to request a user password reset.
     """
 
+    USER_REGISTRATION_CONFIRM_EMAIL = "user-registration-confirm-email"
+    """
+    Temporary token associated to a pending user registration that requires email validation by visiting the link.
+    """
+
+    USER_REGISTRATION_APPROVE_ADMIN = "user-registration-approve-admin"
+    """
+    Temporary token associated to a pending user registration that requires approval from an administration.
+    """
+
     WEBHOOK_USER_STATUS_ERROR = "webhook-user-status-error"
     """
     Temporary token employed to provide a callback URL that a registered webhook can call following the triggered
@@ -719,11 +733,30 @@ class TemporaryToken(BaseModel, Base):
     created = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
 
     user_id = sa.Column(sa.Integer,
-                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
-    user = relationship("User", foreign_keys=[user_id])
+                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"),
+                        nullable=True)
+    _user = relationship("User", foreign_keys=[user_id])
+    user_pending_id = sa.Column(sa.Integer,
+                                sa.ForeignKey("users_pending.id", onupdate="CASCADE", ondelete="CASCADE"),
+                                nullable=True)
+    _pending_user = relationship("UserPending", foreign_keys=[user_pending_id])
+
     group_id = sa.Column(sa.Integer(),
                          sa.ForeignKey("groups.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
     group = relationship("Group", foreign_keys=[group_id])
+
+    @hybrid_property
+    def user(self):
+        # type: () -> AnyUser
+        return self._user or self._pending_user
+
+    @user.setter
+    def user(self, user):
+        # type: (AnyUser) -> None
+        if isinstance(user, User):
+            self._user = user
+        elif isinstance(user, UserPending):
+            self._pending_user = user
 
     def url(self, settings=None):
         from magpie.api import schemas as s

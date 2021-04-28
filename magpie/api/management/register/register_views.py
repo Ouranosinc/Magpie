@@ -51,7 +51,7 @@ def create_pending_user_view(request):
     user_name = ar.get_multiformat_body(request, "user_name")
     email = ar.get_multiformat_body(request, "email")
     password = ar.get_multiformat_body(request, "password")
-    return ru.register_pending_user(user_name, email, password, request.db)
+    return ru.register_pending_user(user_name, email, password, request)
 
 
 @s.RegisterGroupsAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
@@ -123,7 +123,7 @@ def leave_discoverable_group_view(request):
 
 
 @s.TemporaryUrlAPI.get(schema=s.TemporaryURL_GET_RequestSchema, tags=[s.RegisterTag],
-                       response_schemas=s.TemporaryURL_GET_responses)
+                       response_schemas=s.TemporaryURL_GET_responses)  # note: endpoint public, sub-task can have auth
 @view_config(route_name=s.TemporaryUrlAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
 def handle_temporary_url(request):
     """
@@ -131,10 +131,9 @@ def handle_temporary_url(request):
     """
     str_token = ar.get_value_matchdict_checked(request, key="token", pattern=ax.UUID_REGEX)
     str_token = str_token.split(":")[-1]  # remove optional prefix if any (e.g.: 'urn:uuid:')
-    db_session = request.db
-    tmp_token = models.TemporaryToken.by_token(str_token, db_session=db_session)
+    tmp_token = models.TemporaryToken.by_token(str_token, db_session=request.db)
     ax.verify_param(tmp_token, not_none=True,
                     http_error=HTTPNotFound, content={"token": str(str_token)},
                     msg_on_fail=s.TemporaryURL_GET_NotFoundResponseSchema.description)
-    ru.handle_temporary_token(tmp_token, db_session=db_session)
+    ru.handle_temporary_token(tmp_token, request)
     return ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)
