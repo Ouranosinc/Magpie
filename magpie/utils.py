@@ -17,7 +17,7 @@ from pyramid.httpexceptions import HTTPClientError, HTTPException, HTTPOk
 from pyramid.registry import Registry
 from pyramid.request import Request
 from pyramid.response import Response
-from pyramid.settings import truthy
+from pyramid.settings import asbool, truthy
 from pyramid.threadlocal import get_current_registry
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
@@ -519,7 +519,7 @@ def is_magpie_ui_path(request):
     magpie_path = str(urlparse(magpie_url).path)
     magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
     magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
-    magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")
+    magpie_ui_home = asbool(get_constant("MAGPIE_UI_ENABLED", request)) and magpie_path in ("", "/")
     # ignore types defined under UI or static routes to allow rendering
     return magpie_ui_home or any(magpie_path.startswith(p) for p in ("/api", "/ui", "/static"))
 

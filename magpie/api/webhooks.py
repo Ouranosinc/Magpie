@@ -1,5 +1,4 @@
 import multiprocessing
-import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm.session import Session
 
+    from magpie.models import AnyUser
     from magpie.permissions import PermissionSet
     from magpie.typedefs import (
         AnySettingsContainer,
@@ -177,7 +177,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
 
 
 def generate_callback_url(operation, db_session, user=None, group=None):
-    # type: (models.TokenOperation, Session, Optional[models.User], Optional[models.Group]) -> Str
+    # type: (models.TokenOperation, Session, Optional[AnyUser], Optional[models.Group]) -> Str
     """
     Generates a callback URL using `Magpie` temporary tokens for use by the webhook implementation.
 
@@ -189,11 +189,11 @@ def generate_callback_url(operation, db_session, user=None, group=None):
     """
     ax.verify_param(operation, is_type=True, param_compare=models.TokenOperation,
                     param_name="token", http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
-    webhook_token = models.TemporaryToken(
-        token=uuid.uuid4(),
-        operation=operation,
-        user_id=user.id if user is not None else None,
-        group_id=group.id if group is not None else None)
+    webhook_token = models.TemporaryToken(operation=operation)
+    if user:
+        webhook_token.user = user
+    if group:
+        webhook_token.group = group
     ax.evaluate_call(lambda: db_session.add(webhook_token), fallback=lambda: db_session.rollback(),
                      http_error=HTTPInternalServerError, msg_on_fail=s.InternalServerErrorResponseSchema.description)
     callback_url = webhook_token.url()

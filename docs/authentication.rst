@@ -318,21 +318,23 @@ Procedure
 Following is the summarized notification workflow to complete registration:
 
 .. cannot use the 'term' in replace, or it breaks the reference link creation
-.. _steps_user_registration:
-.. |steps_user_registration| replace:: User Registration Procedure
+.. _proc_user_registration:
+.. |proc_user_registration| replace:: User Registration Procedure
 
 .. container:: bordered-caption
 
-    |steps_user_registration|
+    |proc_user_registration|
 
 .. container:: bordered-content
-    :name: steps_user_registration_block
+    :name: proc_user_registration_block
 
 
     1. The procedure always start at reception of a new user account as requested from the `Magpie` UI frontpage
        (see the ``Register`` button to retrieve the submission form), or through the corresponding API request.
+       Minimal validations of submitted fields and to avoid conflicts with existing :term:`User` is accomplished
+       before moving on to the next step.
 
-    2. Upon reception of a new registration, an email will be sent to the submitted email such that the
+    2. Upon reception of a valid new registration, an email will be sent to the submitted email such that the
        :term:`Pending User` can validate its address with the provided confirmation link. This step is
        always required.
 
