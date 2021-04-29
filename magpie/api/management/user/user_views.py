@@ -40,9 +40,10 @@ def get_users_view(request):
                                  fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                  msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
     if detail:
-        data = {"users": [uf.format_user(user, basic_info=True) for user in user_list]}
+        data = {"users": list(sorted([uf.format_user(user, basic_info=True) for user in user_list],
+                                     key=lambda user: user["user_name"]))}
     else:
-        data = {"user_names": sorted(user_list)}
+        data = {"user_names": list(sorted(user.user_name for user in user_list))}
     return ax.valid_http(http_success=HTTPOk, content=data, detail=s.Users_GET_OkResponseSchema.description)
 
 
