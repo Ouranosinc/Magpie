@@ -1862,6 +1862,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             all_users.append(usr["user_name"])
 
         invalid_user = "invalid-user-status"
+        utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.delete_TestUser(self, override_user_name=invalid_user)
         utils.TestSetup.create_TestUser(self, override_user_name=invalid_user)
         webhook_update_error_status(invalid_user)  # simulate a webhook failure that sets the bad status to user
