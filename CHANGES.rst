@@ -10,6 +10,9 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add UI icons for `locked` and `delete` button operations on ``Users``, ``Groups`` and ``Services`` pages.
+* Add ``detail`` query parameter to obtain user details from ``GET /users`` to avoid individual requests for each
+  user when those information are needed (fixes `#202 <https://github.com/Ouranosinc/Magpie/issues/202>`_).
+* Add the missing ``status`` field in API schema of returned ``User`` responses.
 
 `3.10.0 <https://github.com/Ouranosinc/Magpie/tree/3.10.0>`_ (2021-04-12)
 ------------------------------------------------------------------------------------
