@@ -773,6 +773,11 @@ class UserInfoSchema(colander.MappingSchema):
         example=UserStatuses.OK.value,
         validator=colander.OneOf(UserStatuses.values())
     )
+    user_id = colander.SchemaNode(
+        colander.Integer(),
+        missing=colander.drop,  # if not registered or anonymous
+        description="Registered user identifier."
+    )
 
 
 class UserBodySchema(UserInfoSchema):
