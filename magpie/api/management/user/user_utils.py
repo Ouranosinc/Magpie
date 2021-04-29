@@ -38,7 +38,7 @@ LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Iterable, List, Optional
+    from typing import Iterable, List, Optional, Union
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
@@ -54,20 +54,32 @@ if TYPE_CHECKING:
     )
 
 
-def create_user(user_name, password, email, group_name, db_session):
-    # type: (Str, Optional[Str], Str, Optional[Str], Session) -> HTTPException
+def create_user(user_name, password, email, group_name, db_session, return_user=False):
+    # type: (Str, Optional[Str], Str, Optional[Str], Session, bool) -> Union[HTTPException, models.User]
     """
-    Creates a user if it is permitted and not conflicting. Password must be set to ``None`` if using external identity.
+    Creates a user if it is permitted and not conflicting.
 
-    Created user will immediately assigned membership to the group matching :paramref:`group_name`
+    Password must be set to ``None`` if using an external identity or skip its encrypted value generation.
+
+    Created :term:`User` will immediately be assigned membership to the group matching :paramref:`group_name`
     (can be :py:data:`MAGPIE_ANONYMOUS_GROUP` for minimal access). If no group is provided, this anonymous group will
-    be applied by default, creating a user effectively without any permissions other than ones set directly for him.
+    be applied by default, creating a user effectively without any permissions other than ones set directly for him and
+    inherited from :ref:`perm_public_access`.
 
-    Furthermore, the user will also *always* be associated with :py:data:`MAGPIE_ANONYMOUS_GROUP` (if not already
+    Furthermore, the :term:`User` *always* gets associated with :py:data:`MAGPIE_ANONYMOUS_GROUP` (if not already
     explicitly or implicitly requested with :paramref:`group_name`) to allow access to resources with public permission.
+    This means that when :paramref:`group_name` is provided with another name than :py:data:`MAGPIE_ANONYMOUS_GROUP`,
+    the :term:`User` will have two memberships initially.
+
     Argument :paramref:`group_name` **MUST** be an existing group if provided.
 
-    :returns: valid HTTP response on successful operation.
+    :param user_name: Unique name of the user to validate and employ for creation.
+    :param password: Raw password of the user to validate and employ for creation. Skipped if ``None``.
+    :param email: User email to be validated and employed for creation.
+    :param group_name: Group name to associate the user with at creation time.
+    :param db_session: database connection.
+    :param return_user: request to return the :class:`User` instance directly instead of the generated HTTP response.
+    :returns: valid HTTP response on successful operation, or the :class:`User` when requested.
     """
 
     def _get_group(grp_name):

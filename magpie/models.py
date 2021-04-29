@@ -150,22 +150,30 @@ class UserPending(Base):
 
     @declared_attr
     def user_name(self):
-        """ Unique user name user object"""
+        """
+        Unique user name.
+        """
         return sa.Column(sa.Unicode(128), primary_key=True, unique=True)
 
     @declared_attr
     def user_password(self):
-        """ Password hash for user object """
+        """
+        Password hash of the user.
+        """
         return sa.Column(sa.Unicode(256))
 
     @declared_attr
     def email(self):
-        """ Email for user object """
+        """
+        Email of the user.
+        """
         return sa.Column(sa.Unicode(100), nullable=False, unique=True)
 
     @declared_attr
     def registered_date(self):
-        """ Date of user's registration """
+        """
+        Date of user's registration.
+        """
         return sa.Column(sa.TIMESTAMP(timezone=False), default=datetime.datetime.utcnow, server_default=sa.func.now())
 
     @property
@@ -185,6 +193,30 @@ class UserPending(Base):
         Avoid error in case this field gets accessed when simultaneously handling :class:`User` and :class`UserPending`.
         """
         return []
+
+    def upgrade(self, db_session=None):
+        # type: (Optional[Session]) -> User
+        """
+        Upgrades this :class`UserPending` instance to a complete and corresponding :class:`User` definition.
+
+        Automatically handles instance updates in the database. All relevant :class:`User` metadata is transferred from
+        available :class:`UserPending` details, and this :class:`UserPending` is finally removed.
+
+        :param db_session: Database connection to use, otherwise retrieved from the user pending object.
+        :returns: created user instance
+        """
+        # employ the typical user creation utility to ensure that all webhooks and validations do occur as usual
+        from magpie.api.management.user.user_utils import create_user  # avoid circular import
+
+        db = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
+        user = create_user(self.user_name, email=self.email, db_session=db, return_user=True,
+                           group_name=None, password=None)  # don't generate password (cannot decrypt provided one)
+        # transfer over information gathered during registration
+        user.user_password = self.user_password
+        user.registered_date = self.registered_date
+        UserService.regenerate_security_code(user)
+        db_session.delete(self)
+        return user
 
 
 class UserStatuses(IntFlag, ExtendedEnum):
