@@ -4,6 +4,7 @@ from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
 from magpie.constants import get_constant
+from magpie.models import UserStatuses
 
 if TYPE_CHECKING:
     from typing import List
@@ -40,7 +41,8 @@ def format_user(user, group_names=None, basic_info=False, dotted=False):
         if not basic_info:
             grp_names = group_names if group_names else [grp.group_name for grp in user.groups]
             user_info["group_names"] = list(sorted(grp_names))
-        if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER"):
+        # special users not meant to be used as valid "accounts" marked as without an ID
+        if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER") or user.status == UserStatuses.Pending.value:
             user_info["user{}id".format(sep)] = int(user.id)
         return user_info
 

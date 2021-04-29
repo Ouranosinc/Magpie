@@ -773,7 +773,8 @@ class UserInfoSchema(colander.MappingSchema):
     user_id = colander.SchemaNode(
         colander.Integer(),
         missing=colander.drop,  # if not registered or anonymous
-        description="Registered user identifier."
+        description="Registered user identifier. "
+                    "User entries that do not correspond to a registered account will not have this field."
     )
 
 
