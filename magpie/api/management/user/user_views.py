@@ -27,21 +27,23 @@ LOGGER = get_logger(__name__)
 @view_config(route_name=s.UsersAPI.name, request_method="GET")
 def get_users_view(request):
     """
-    List all registered user names.
+    List all registered user names or details.
     """
     user_status_filter = request.params.get("status")
     user_status_valid = list(str(status) for status in s.UserStatuses.values())
     user_status_valid.append(None)  # allow unspecified as 'all'
     ax.verify_param(user_status_filter, is_in=True, param_compare=user_status_valid, param_name="status",
                     http_error=HTTPBadRequest, msg_on_fail=s.Users_GET_BadRequestSchema.description)
-    user_status_filter = user_status_filter if user_status_filter is None else int(user_status_filter)
-    user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
-                                               models.UserSearchService.search(status=user_status_filter,
-                                                                               db_session=request.db)],
-                                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                                      msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
-    return ax.valid_http(http_success=HTTPOk, content={"user_names": sorted(user_name_list)},
-                         detail=s.Users_GET_OkResponseSchema.description)
+    status = user_status_filter if user_status_filter is None else int(user_status_filter)
+    detail = asbool(request.params.get("detail", False))
+    user_list = ax.evaluate_call(lambda: models.UserSearchService.search(status=status, db_session=request.db),
+                                 fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                 msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
+    if detail:
+        data = {"users": [uf.format_user(user, basic_info=True) for user in user_list]}
+    else:
+        data = {"user_names": sorted(user_list)}
+    return ax.valid_http(http_success=HTTPOk, content=data, detail=s.Users_GET_OkResponseSchema.description)
 
 
 @s.UsersAPI.post(schema=s.Users_POST_RequestSchema, tags=[s.UsersTag], response_schemas=s.Users_POST_responses)

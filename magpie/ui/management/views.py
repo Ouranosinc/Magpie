@@ -30,8 +30,7 @@ from magpie.ui.utils import BaseViews, check_response, handle_errors, request_ap
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Optional, Tuple
+    from typing import Dict, List, Optional, Tuple, Union
 
     from sqlalchemy.orm.session import Session
 
@@ -97,6 +96,7 @@ class ManagementViews(BaseViews):
 
     @handle_errors
     def get_user_statuses(self, status=0):
+        # type: (Union[str, int]) -> List[str]
         """
         Obtains all user names that have the corresponding status value.
         """
@@ -115,6 +115,26 @@ class ManagementViews(BaseViews):
             user_email = get_json(resp)["user"]["email"]
             emails.append(user_email)
         return emails
+
+    @handle_errors
+    def get_user_details(self, status=None):
+        # type: (Optional[Union[str, int]]) -> List[JSON]
+        """
+        Obtains all user details, optionally filtered to by corresponding status value.
+
+        Employ this method to avoid multiple requests fetching individual information.
+
+        .. seealso::
+            - :meth:`get_user_emails`
+            - :meth:`get_user_names`
+            - :meth:`get_user_statuses`
+        """
+        query = "?detail=true"
+        if status is not None:
+            query += "&status={}".format(status)
+        resp = request_api(self.request, schemas.UsersAPI.path + query, "GET")
+        check_response(resp)
+        return get_json(resp)["users"]
 
     def get_resource_types(self):
         """
@@ -243,7 +263,8 @@ class ManagementViews(BaseViews):
                 if resp.status_code == HTTPConflict.code:
                     return_data["invalid_group_name"] = True
                     return_data["reason_group_name"] = "Conflict"
-            if user_email in self.get_user_emails():
+            user_details = self.get_user_details()
+            if user_email in [usr["email"] for usr in user_details]:
                 return_data["invalid_user_email"] = True
                 return_data["reason_user_email"] = "Conflict"
             if user_email == "":
@@ -251,7 +272,7 @@ class ManagementViews(BaseViews):
             if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH", self.request):
                 return_data["invalid_user_name"] = True
                 return_data["reason_user_name"] = "Too Long"
-            if user_name in self.get_user_names():
+            if user_name in [usr["user_name"] for usr in user_details]:
                 return_data["invalid_user_name"] = True
                 return_data["reason_user_name"] = "Conflict"
             if user_name == "":
