@@ -83,7 +83,7 @@ def get_smtp_server_connection(settings):
     return server, sender, from_user, from_addr
 
 
-def notify_email(recipient, template, container, parameters=None):
+def send_email(recipient, template, container, parameters=None):
     # type: (Str, Template, AnySettingsContainer, Optional[Dict[Str, Any]]) -> None
     """
     Send email notification using provided template and parameters.
