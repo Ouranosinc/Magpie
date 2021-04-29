@@ -149,11 +149,18 @@ class UserPending(Base):
         return "users_pending"
 
     @declared_attr
+    def id(self):
+        """
+        Unique identifier of user.
+        """
+        return sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+
+    @declared_attr
     def user_name(self):
         """
         Unique user name.
         """
-        return sa.Column(sa.Unicode(128), primary_key=True, unique=True)
+        return sa.Column(sa.Unicode(128), unique=True)
 
     @declared_attr
     def user_password(self):

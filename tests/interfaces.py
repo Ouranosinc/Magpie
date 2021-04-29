@@ -1852,7 +1852,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # cleanup any possible user that is marked as invalid
         invalid_user = "invalid-user-status"
         utils.TestSetup.delete_TestUser(self, override_user_name=invalid_user)
-        query = {"status": s.UserStatuses.WebhookErrorStatus.value}
+        query = {"status": UserStatuses.WebhookError.value}
         resp = utils.test_request(self, "GET", "/users", params=query, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         for user in body["user_names"]:

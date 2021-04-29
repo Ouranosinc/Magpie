@@ -30,7 +30,8 @@ User = sa.table(
 
 def upgrade():
     op.create_table("users_pending",
-                    sa.Column("user_name", sa.Unicode(128), primary_key=True, unique=True),
+                    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+                    sa.Column("user_name", sa.Unicode(128), unique=True),
                     sa.Column("user_password", sa.Unicode(256)),
                     sa.Column("email", sa.Unicode(100), nullable=False, unique=True),
                     sa.Column("registered_date", sa.TIMESTAMP(timezone=False),
