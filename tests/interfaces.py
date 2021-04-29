@@ -1847,6 +1847,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_GetUsers_WithDetail(self):
         utils.warn_version(self, "users listing with more details", "3.11.0", skip=True)
 
+        # cleanup any possible user that is marked as invalid
+        invalid_user = "invalid-user-status"
+        utils.TestSetup.delete_TestUser(self, override_user_name=invalid_user)
+        query = {"status": s.UserStatuses.WebhookErrorStatus.value}
+        resp = utils.test_request(self, "GET", "/users", params=query, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        for user in body["user_names"]:
+            utils.TestSetup.delete_TestUser(self, override_user_name=user)
+
         query = {"detail": "true"}
         resp = utils.test_request(self, "GET", "/users", params=query, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
@@ -1854,16 +1863,14 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("users", body)
         utils.check_val_type(body["users"], list)
 
-        all_users = []  # users to ignore (could have any status)
+        all_valid_users = []
         for usr in body["users"]:  # type: JSON
             utils.check_val_is_in("user_name", usr)
             utils.check_val_is_in("email", usr)
             utils.check_val_is_in("status", usr)
-            all_users.append(usr["user_name"])
+            all_valid_users.append(usr["user_name"])
 
-        invalid_user = "invalid-user-status"
         utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.delete_TestUser(self, override_user_name=invalid_user)
         utils.TestSetup.create_TestUser(self, override_user_name=invalid_user)
         webhook_update_error_status(invalid_user)  # simulate a webhook failure that sets the bad status to user
 
@@ -1871,14 +1878,14 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", "/users", params=query, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
 
-        utils.check_val_equal(len(body["users"]), len(all_users),
+        utils.check_val_equal(len(body["users"]), len(all_valid_users),
                               msg="User detail query combined with status should still work.")
         utils.check_val_not_in(invalid_user, [usr["user_name"] for usr in body["users"]])
 
         query = {"detail": "true"}
         resp = utils.test_request(self, "GET", "/users", params=query, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(len(body["users"]), len(all_users) + 1)
+        utils.check_val_equal(len(body["users"]), len(all_valid_users) + 1)
         for usr in body["users"]:
             if usr["user_name"] == invalid_user:
                 utils.check_val_equal(usr["status"], s.UserStatuses.WebhookErrorStatus.value)
