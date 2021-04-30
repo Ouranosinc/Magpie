@@ -119,7 +119,7 @@ def get_discoverable_group_by_name(group_name, db_session):
     return found_group[0]
 
 
-def register_pending_user(user_name, password, email, request):
+def register_pending_user(user_name, email, password, request):
     # type: (Str, Str, Str, Request) -> HTTPException
     """
     Registers a temporary user pending approval.
@@ -141,8 +141,7 @@ def register_pending_user(user_name, password, email, request):
     :raises HTTPException: HTTP error with relevant details upon any failing condition.
     """
 
-    # User Registration Procedure - Step (1): reception and validation of received registration details
-    LOGGER.debug("[User Registration - Step 1]")
+    LOGGER.debug("[User Registration - Step 1] inputs validation of submitted registration details")
     uu.check_user_info(user_name, email, password, check_group=False)
 
     # check if user already exists, must not be a conflict with pending or already existing ones
@@ -164,9 +163,9 @@ def register_pending_user(user_name, password, email, request):
                                 http_error=HTTPForbidden,
                                 msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
 
-    # User Registration Procedure - Step (2): validation of registration email with confirmation URL
-    validation_url = generate_callback_url(TokenOperation.USER_REGISTRATION_CONFIRM_EMAIL, request.db, user=tmp_user)
-    params = {"valid_url": validation_url, "user": tmp_user}
+    LOGGER.debug("[User Registration - Step 2] sending confirmation email for its validation")
+    confirmation_url = generate_callback_url(TokenOperation.USER_REGISTRATION_CONFIRM_EMAIL, request.db, user=tmp_user)
+    params = {"confirm_url": confirmation_url, "user": tmp_user}
     template = get_email_template("MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE", request)
     ax.evaluate_call(lambda: send_email(tmp_user.email, template, request, params),
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,

@@ -225,6 +225,16 @@ class UserPending(Base):
         db_session.delete(self)
         return user
 
+    @property
+    def passwordmanager(self):
+        """
+        Employ the same password manager attached to :class:`User` instances from :class:`UserService`.
+
+        This allows all functionalities of password generation, encryption and comparison to be directly transferable
+        between this pending user until it eventually gets upgraded to a full :class:`User` once validated.
+        """
+        return UserService.model.passwordmanager
+
 
 class UserStatuses(IntFlag, ExtendedEnum):
     """
@@ -239,15 +249,33 @@ class UserStatuses(IntFlag, ExtendedEnum):
     WebhookError = 2
     Pending = 4
 
+    __str_map__ = {}
+
+    def __new__(cls, *_, **__):
+        """
+        Generates mapping to allow case insensitive retrieval of enum key names.
+
+        Definitions match literal values returned by :meth:`allowed`.
+        """
+        enum = super().__new__(cls, *_, **__)
+        for name, item in cls.__members__.items():
+            enum.__str_map__[name] = item
+            enum.__str_map__[name.lower()] = item
+            enum.__str_map__[name.title()] = item
+            enum.__str_map__[name.upper()] = item
+        return enum
+
     @classmethod
     def _get_one(cls, status):
+        # matches the literal number, the direct enum object or exact name
         as_num = super(UserStatuses, cls).get(int(status) if str.isnumeric(str(status)) else status)
         if as_num:
             return UserStatuses(as_num)
-        # allow lazy string representation using ignoring case sensitivity
-        status = super(UserStatuses, cls).get(str(status).title()) or super(UserStatuses, cls).get(str(status).upper())
+        # otherwise, attempt with case insensitive items
+        status = cls.__str_map__.get(status)
         if status is None:
             return None
+        # always convert as enum instance to allow flag combinations (|) and membership compare (in)
         return UserStatuses(status)
 
     @classmethod
@@ -260,7 +288,7 @@ class UserStatuses(IntFlag, ExtendedEnum):
         """
         if status is None:
             return default
-        if status == "all":
+        if status in ["all", "All", "ALL"]:
             return cls.all()
         if isinstance(status, str) and "," in status:
             status = status.split(",")
@@ -283,8 +311,11 @@ class UserStatuses(IntFlag, ExtendedEnum):
         """
         allowed = cls.values()  # literal int
         allowed.extend(list(str(status) for status in allowed))  # by str repr of int value
-        allowed.extend(cls.names())  # by literal name of status
-        allowed.extend([None, "all"])  # unspecified (valid users omit pending) or literally 'all' users
+        names = cls.names()
+        allowed.extend(names)  # by literal name of status
+        allowed.extend([name.upper() for name in names])
+        allowed.extend([name.lower() for name in names])
+        allowed.extend([None, "all", "All", "ALL"])  # unspecified (valid users omit pending) or literally 'all' users
         return allowed
 
     @classmethod
@@ -374,6 +405,8 @@ class UserSearchService(UserService):
         if not users:
             return None
         users = [user for user in users if user.user_name == user_name]
+        if not users:
+            return None
         if len(users) == 1:
             return users[0]
         LOGGER.warning("Duplicate registered/pending users named [%s] detected! This should never happen.", user_name)

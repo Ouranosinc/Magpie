@@ -12,6 +12,7 @@ from pyramid.httpexceptions import (
     exception_response
 )
 from pyramid.request import Request
+from pyramid.settings import asbool
 from pyramid.view import view_defaults
 
 from magpie import __meta__
@@ -95,10 +96,13 @@ def request_api(request,            # type: Request
         cookies = request.cookies
     # cookies must be added to kw only if populated, iterable error otherwise
     if cookies:
-        extra_kwargs["cookies"] = cookies
+        # cookies passed as kw are expected to provide only the token value without any additional details
+        # must trim extra options such as Path, Domain, Max-age, etc. for Authentication to succeed
+        extra_kwargs["cookies"] = [(name, value.split(";")[0]) for name, value in cookies]
 
     subreq = Request.blank(path, base_url=request.application_url, headers=headers, POST=data, **extra_kwargs)
-    return request.invoke_subrequest(subreq, use_tweens=True)
+    resp = request.invoke_subrequest(subreq, use_tweens=True)
+    return resp
 
 
 def redirect_error(request, code=None, content=None):
@@ -186,6 +190,10 @@ class BaseViews(object):
         self.__class__.MAGPIE_FIXED_USERS = [admin_usr, anonym_usr]
         self.__class__.MAGPIE_USER_PWD_LOCKED = [admin_usr]
         self.__class__.MAGPIE_USER_PWD_DISABLED = [anonym_usr, admin_usr]
+        self.__class__.MAGPIE_USER_REGISTRATION_ENABLED = asbool(
+            get_constant("MAGPIE_USER_REGISTRATION_ENABLED", self.request,
+                         default_value=False, print_missing=True, raise_missing=False, raise_not_set=False)
+        )
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
@@ -208,12 +216,13 @@ class BaseViews(object):
         all_data.setdefault("MAGPIE_FIXED_USERS", self.MAGPIE_FIXED_USERS)
         all_data.setdefault("MAGPIE_USER_PWD_LOCKED", self.MAGPIE_USER_PWD_LOCKED)
         all_data.setdefault("MAGPIE_USER_PWD_DISABLED", self.MAGPIE_USER_PWD_DISABLED)
+        all_data.setdefault("MAGPIE_USER_REGISTRATION_ENABLED", self.MAGPIE_USER_REGISTRATION_ENABLED)
         if self.logged_user:
             all_data.update({"MAGPIE_LOGGED_USER": self.logged_user.user_name})
         return all_data
 
 
-class AdminViews(BaseViews):
+class AdminRequests(BaseViews):
     """
     Regroups multiple administration-level operations to be dispatched to the API requests.
     """
@@ -240,7 +249,7 @@ class AdminViews(BaseViews):
             "form_user_name": "",
             "form_user_email": "",
             "user_groups": [],          # group selector for auto-assign on creation
-            "has_admin_access": False   # disable non-admin items on template page
+            "is_registration": True     # switch between registration/admin creation items on template page
         }
         template_data.update(data)
         return template_data
@@ -265,7 +274,8 @@ class AdminViews(BaseViews):
         }
         resp = request_api(self.request, schemas.SigninAPI.path, "POST", data=data, cookies={})
         check_response(resp)
-        return resp.cookies
+        cookies = [tuple(value.split("=", 1)) for name, value in resp.headers.items() if "Set-Cookie" in name]
+        return cookies
 
     @handle_errors
     def get_all_groups(self, first_default_group=None):
@@ -388,7 +398,7 @@ class AdminViews(BaseViews):
         if not len(resource_node) > 0:
             return
         for res in resource_node.values():
-            AdminViews.flatten_tree_resource(res, resource_dict)
+            AdminRequests.flatten_tree_resource(res, resource_dict)
         if "resource_id" in resource_node.keys() and "resource_type" in resource_node.keys():
             resource_dict[resource_node["resource_id"]] = resource_node["resource_type"]
 
@@ -467,7 +477,10 @@ class AdminViews(BaseViews):
         data["is_error"] = True  # until proven otherwise
 
         group_name = None  # explicitly no group name to default with anonymous unless admin can override
-        if data["has_admin_access"]:
+        if data["is_registration"]:
+            # when not admin, retrieve a temporary login to retrieve required information
+            admin_cookies = self.get_admin_session()
+        else:
             # admin-only operation, assign to new group inplace
             group_name = self.request.POST.get("group_name")
             # if group somehow doesn't exist, attempt to create it and transparently avoid the error
@@ -478,12 +491,9 @@ class AdminViews(BaseViews):
                     data["invalid_group_name"] = True
                     data["reason_group_name"] = "Conflict"
             admin_cookies = self.request.cookies
-        # when not admin, retrieve a temporary login to retrieve required information
-        else:
-            admin_cookies = self.get_admin_session()
 
         # soft pre-checks
-        user_details = self.get_user_details(cookies=admin_cookies)
+        user_details = self.get_user_details(status="all", cookies=admin_cookies)
         if user_email in [usr["email"] for usr in user_details]:
             data["invalid_user_email"] = True
             data["reason_user_email"] = "Conflict"
@@ -517,7 +527,7 @@ class AdminViews(BaseViews):
         }
         # create as admin immediately creates the user
         # create by self-registration creates the pending user for approval
-        path = schemas.UserAPI.path if data["has_admin_access"] else schemas.RegisterUsersAPI.path
+        path = schemas.RegisterUsersAPI.path if data["is_registration"] else schemas.UserAPI.path
         resp = request_api(self.request, path, "POST", data=payload)
 
         # hard post checks, retrieve known errors related to fields to display messages instead of raising

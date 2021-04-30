@@ -14,7 +14,7 @@
         email_recipient:    Resolved email of the identity where to send the notification email.
         magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration.
         login_url:          Endpoint where login can be accomplished.
-        valid_url:          Endpoint where email validation can be performed.
+        confirm_url:        Endpoint where email confirmation can be performed to validate the email recipient.
         approval:           Boolean indicating if administrator approval will be required following validation.
 
 </%doc>
@@ -29,7 +29,7 @@ Content-Type: text/plain; charset=UTF-8
 Dear ${user.user_name},
 
 Your new account request submitted at ${magpie_url} has been received.
-Please validate your registration email by visiting ${valid_url}.
+Please confirm your registration email by visiting: ${confirm_url}.
 
 %if approval:
 Following email validation, an administrator will review your profile for approval.

@@ -6,14 +6,27 @@ from mako.template import Template
 from pyramid.settings import asbool
 
 from magpie.constants import get_constant
-from magpie.utils import get_logger, get_magpie_url, get_settings
+from magpie.utils import get_logger, get_magpie_url, get_settings, raise_log
 
 if TYPE_CHECKING:
-    from typing import Any, Dict, Optional, Tuple, Union
+    from typing import Any, Dict, Optional, Union
 
-    from magpie.typedefs import AnySettingsContainer, SettingsType, Str
+    from magpie.typedefs import AnySettingsContainer, SettingsType, Str, TypedDict
+
+    SMTPServerConfiguration = TypedDict("SMTPServerConfiguration", {
+        "addr": Str, "host": Str, "port": Str, "user": Str, "password": Optional[Str], "sender": Str, "ssl": bool,
+    })
+    TemplateParameters = Dict[Str, Any]
 
 LOGGER = get_logger(__name__)
+
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+DEFAULT_TEMPLATE_MAPPING = {
+    "MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE": os.path.join(TEMPLATE_DIR, "email_user_registration.mako"),
+    "MAGPIE_USER_REGISTERED_EMAIL_TEMPLATE": os.path.join(TEMPLATE_DIR, "email_user_registered.mako"),
+    "MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE": os.path.join(TEMPLATE_DIR, "email_admin_approval.mako"),
+    "MAGPIE_ADMIN_APPROVED_EMAIL_TEMPLATE": os.path.join(TEMPLATE_DIR, "email_admin_approved.mako"),
+}
 
 
 def get_email_template(template_constant, settings=None):
@@ -28,63 +41,92 @@ def get_email_template(template_constant, settings=None):
         - :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_ADMIN_APPROVED_EMAIL_TEMPLATE`
     """
-    allowed_templates = {
-        "MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE": "email_user_registration.mako",
-        "MAGPIE_USER_REGISTERED_EMAIL_TEMPLATE": "email_user_registered.mako",
-        "MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE": "email_admin_approval.mako",
-        "MAGPIE_ADMIN_APPROVED_EMAIL_TEMPLATE": "email_admin_approved.mako",
-    }
-    if template_constant not in allowed_templates:
-        raise ValueError("Specified template is not one of {}".format(allowed_templates))
-    template_file = get_constant(template_constant, settings,
+    if template_constant not in DEFAULT_TEMPLATE_MAPPING:
+        raise_log("Specified template is not one of {}".format(list(DEFAULT_TEMPLATE_MAPPING)), ValueError, LOGGER)
+    template_file = get_constant(template_constant, settings, default_value=DEFAULT_TEMPLATE_MAPPING[template_constant],
                                  print_missing=False, raise_missing=False, raise_not_set=False)
-    if not template_file:
-        template_file = allowed_templates[template_file]
-        template_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), template_file)
     if not isinstance(template_file, str) or not os.path.isfile(template_file) or not template_file.endswith(".mako"):
-        raise IOError("Email template [{}] missing or invalid from [{!s}]".format(template_constant, template_file))
+        raise_log("Email template [{}] missing or invalid from [{!s}]".format(template_constant, template_file),
+                  IOError, logger=LOGGER)
     template = Template(filename=template_file)
     return template
 
 
-def get_smtp_server_connection(settings):
-    # type: (SettingsType) -> Tuple[Union[smtplib.SMTP, smtplib.SMTP_SSL], Str, Str, Optional[Str]]
+def get_smtp_server_configuration(settings):
+    # type: (SettingsType) -> SMTPServerConfiguration
     """
-    Obtains an opened connection to a SMTP server from application settings.
-
-    If the connection is correctly instantiated, the returned SMTP server will be ready for sending emails.
+    Obtains and validates all required configuration parameters for SMTP server in order to send an email.
     """
     # from/password can be empty for no-auth SMTP server
     from_user = get_constant("MAGPIE_SMTP_USER", settings, default_value="Magpie",
-                             print_missing=False, raise_missing=False, raise_not_set=False),
+                             print_missing=False, raise_missing=False, raise_not_set=False)
     from_addr = get_constant("MAGPIE_SMTP_FROM", settings,
                              print_missing=True, raise_missing=False, raise_not_set=False)
     password = get_constant("MAGPIE_SMTP_PASSWORD", settings,
                             print_missing=True, raise_missing=False, raise_not_set=False)
     smtp_host = get_constant("MAGPIE_SMTP_HOST", settings)
     smtp_port = int(get_constant("MAGPIE_SMTP_PORT", settings))
-    ssl = asbool(get_constant("MAGPIE_SMTP_SSL", settings, default_value=True,
-                              print_missing=True, raise_missing=False, raise_not_set=False))
+    smtp_ssl = asbool(get_constant("MAGPIE_SMTP_SSL", settings, default_value=True,
+                                   print_missing=True, raise_missing=False, raise_not_set=False))
+    sender = from_addr or from_user
     if not smtp_host or not smtp_port:
         raise ValueError("SMTP email server configuration is missing.")
-    if ssl:
-        server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+    config = {
+        "addr": from_addr,
+        "host": smtp_host,
+        "port": smtp_port,
+        "user": from_user,
+        "password": password,
+        "sender": sender,
+        "ssl": smtp_ssl,
+    }
+    return config
+
+
+def get_smtp_server_connection(config):
+    # type: (SMTPServerConfiguration) -> Union[smtplib.SMTP, smtplib.SMTP_SSL]
+    """
+    Obtains an opened connection to a SMTP server from application settings.
+
+    If the connection is correctly instantiated, the returned SMTP server will be ready for sending emails.
+    """
+    if config["ssl"]:
+        server = smtplib.SMTP_SSL(config["host"], config["port"])
     else:
-        server = smtplib.SMTP(smtp_host, smtp_port)
+        server = smtplib.SMTP(config["host"], config["port"])
         server.ehlo()
         try:
             server.starttls()
             server.ehlo()
         except smtplib.SMTPException:
             pass
-    if password:
-        server.login(from_addr, password)
-    sender = from_addr or from_user
-    return server, sender, from_user, from_addr
+    if config["password"]:
+        server.login(config["from"], config["password"])
+    return server
+
+
+def make_email_contents(config, template, parameters, settings):
+    # type: (SMTPServerConfiguration, Template, TemplateParameters, SettingsType) -> Str
+    """
+    Generates the email contents using the template, substitution parameters, and the target email server configuration.
+    """
+    # add defaults parameters always offered to all templates
+    magpie_url = get_magpie_url(settings)
+    params = {
+        "magpie_url": magpie_url,
+        "login_url": "{}/ui/login".format(magpie_url),
+        "email_sender": config["sender"],
+        "email_user": config["user"],
+        "email_from": config["addr"],
+    }
+    params.update(parameters or {})
+    contents = template.render(**params)
+    message = u"{}".format(contents).strip(u"\n")
+    return message.encode("utf8")
 
 
 def send_email(recipient, template, container, parameters=None):
-    # type: (Str, Template, AnySettingsContainer, Optional[Dict[Str, Any]]) -> None
+    # type: (Str, Template, AnySettingsContainer, Optional[TemplateParameters]) -> None
     """
     Send email notification using provided template and parameters.
 
@@ -95,32 +137,21 @@ def send_email(recipient, template, container, parameters=None):
         Parameters to provide for templating email contents.
         They are applied on top of various defaults values provided to all emails.
     """
+    LOGGER.debug("Preparing email to: [%s] using template [%s]", recipient, template.filename)
     settings = get_settings(container)
-
-    # add defaults parameters always offered to all templates
-    magpie_url = get_magpie_url(settings)
-    params = {
-        "email_recipient": recipient,
-        "magpie_url": magpie_url,
-        "login_url": "{}/ui/login".format(magpie_url),
-    }
-    params.update(parameters or {})
-    contents = template.render(**params)
-    message = u"{}".format(contents).strip(u"\n")
+    params = parameters or {}
+    params["email_recipient"] = recipient
+    config = get_smtp_server_configuration(settings)
+    message = make_email_contents(config, template, params, settings)
 
     server = None
     try:
-        server, sender, from_user, from_addr = get_smtp_server_connection(settings)
-        params.update({
-            "email_sender": sender,
-            "email_user": from_user,
-            "email_from": from_addr,
-        })
         LOGGER.debug("Sending email to: [%s] using template [%s]", recipient, template.filename)
-        result = server.sendmail(sender, recipient, message.encode("utf8"))
+        server = get_smtp_server_connection(config)
+        result = server.sendmail(config["sender"], recipient, message)
     except Exception as exc:
         LOGGER.error("Failure during notification email.", exc_info=exc)
-        LOGGER.debug("Email contents:\n\n%s\n", contents)
+        LOGGER.debug("Email contents:\n\n%s\n", message)
         raise
     finally:
         if server:

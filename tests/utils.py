@@ -608,7 +608,7 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
         instance = MyObjectRef()
         mock = wrapped_call(MyObjectRef, "target_method", instance)
         # ...
-        # do operations that lead to 'MyObjectRef.target_method' call
+        # do operations that leads to 'MyObjectRef.target_method' call
         # ...
         assert mock.called
 
@@ -618,7 +618,7 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
 
         mock = wrapped_call("package.module.target_function")
         # ...
-        # do operations that lead to 'target.module.function' call
+        # do operations that leads to 'target.module.function' call
         # ...
         assert mock.called
 
