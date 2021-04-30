@@ -99,8 +99,6 @@ class LoginViews(AdminRequests, BaseViews):
         check_response(resp)
         return get_json(resp)["group"]
 
-    @view_config(route_name="register_user", renderer="magpie.ui.management:templates/add_user.mako",  # reuse template
-                 permission=NO_PERMISSION_REQUIRED)
     def register_user(self):
         """
         User self-registration form results.

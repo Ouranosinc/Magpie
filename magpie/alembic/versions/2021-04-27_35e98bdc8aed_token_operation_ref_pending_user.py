@@ -19,7 +19,7 @@ depends_on = None
 
 def upgrade():
     op.add_column(
-        "users_pending",
+        "tmp_tokens",
         sa.Column("user_pending_id", sa.Integer,
                   sa.ForeignKey("users_pending.id", onupdate="CASCADE", ondelete="CASCADE"),
                   nullable=True)
@@ -27,4 +27,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_column("users_pending", "user_pending_id")
+    op.drop_column("tmp_tokens", "user_pending_id")
