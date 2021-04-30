@@ -25,7 +25,7 @@ from magpie.constants import get_constant
 # TODO: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserStatuses
 from magpie.permissions import PermissionSet
-from magpie.ui.utils import AdminViews, check_response, handle_errors, request_api
+from magpie.ui.utils import AdminRequests, BaseViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-class ManagementViews(AdminViews):
+class ManagementViews(AdminRequests, BaseViews):
     @handle_errors
     def goto_service(self, resource_id):
         path = schemas.ResourceAPI.path.format(resource_id=resource_id)
@@ -66,9 +66,12 @@ class ManagementViews(AdminViews):
             user_name = self.request.POST.get("user_name")
             return HTTPFound(self.request.route_url("edit_user", user_name=user_name, cur_svc_type="default"))
 
-        user_names = self.get_user_names()
-        user_error = self.get_user_statuses(status=0)
-        return self.add_template_data({"users": user_names, "users_with_error": user_error})
+        users = self.get_user_details(status="all")
+        non_error = UserStatuses.OK | UserStatuses.Pending  # use combine in case more error types gets added later on
+        user_names = [user["user_name"] for user in users]
+        user_error = [user["user_name"] for user in users if UserStatuses.get(user["status"]) not in non_error]
+        pending = [user["user_names"] for user in users if UserStatuses.get(user["status"]) == UserStatuses.Pending]
+        return self.add_template_data({"users": user_names, "users_with_error": user_error, "users_pending": pending})
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
     def add_user(self):
@@ -84,7 +87,7 @@ class ManagementViews(AdminViews):
             :meth:`magpie.ui.login.views.LoginViews.register_user`
         """
         groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_ANONYMOUS_GROUP", self.request))
-        return_data = {"user_groups": groups, "has_admin_access": True}
+        return_data = {"user_groups": groups, "is_registration": False}
         return_data = self.create_user_default_template_data(return_data)
 
         if "create" in self.request.POST:

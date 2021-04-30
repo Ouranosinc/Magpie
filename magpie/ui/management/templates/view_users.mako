@@ -35,6 +35,11 @@
                     %if user_name in users_with_error:
                         <img title="User account status has an issue." class="icon-warning" alt="WARNING"
                              src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"/>
+                    %elif user_name in users_pending:
+                        <img title="User account pending approval or validation." class="icon-pending" alt="PENDING"
+                             src="${request.static_url('magpie.ui.home:static/pending.png')}"/>
+                        <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                        <meta name="source" content="https://www.flaticon.com/free-icon/history_2089770">
                     %else:
                         <img title="User account status is valid." class="icon-check" alt="OK"
                              src="${request.static_url('magpie.ui.home:static/checkmark-circle.png')}"/>

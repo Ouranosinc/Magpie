@@ -2,11 +2,21 @@
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
-<li><a href="${request.route_url('view_users')}">Users</a></li>
-<li><a href="${request.route_url('add_user')}">Add User</a></li>
+%if is_registration:
+    <li><a href="${request.route_url('add_user')}">Register</a></li>
+%else:
+    <li><a href="${request.route_url('view_users')}">Users</a></li>
+    <li><a href="${request.route_url('add_user')}">Add User</a></li>
+%endif
 </%block>
 
-<h1>Add User</h1>
+<h1>
+    %if is_registration:
+    Register
+    %else:
+    Add User
+    %endif
+</h1>
 
 <form class="new-item-form" id="add_user_form" action="${request.path}" method="post">
     <table class="fields-table">
@@ -102,7 +112,7 @@
                 </div>
             </td>
         </tr>
-        %if has_admin_access:
+        %if not is_registration:
         <tr>
             <td>User group:</td>
             <td class="centered" colspan="2">
@@ -120,7 +130,13 @@
         %endif
         <tr>
             <td class="centered" colspan="2">
-                <input type="submit" value="Add User" name="create" class="button theme">
+                <input type="submit" name="create" class="button theme"
+                %if is_registration:
+                    value="Register"
+                %else:
+                    value="Add User"
+                %endif
+                >
             </td>
         </tr>
     </table>
