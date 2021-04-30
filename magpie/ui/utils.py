@@ -96,9 +96,14 @@ def request_api(request,            # type: Request
         cookies = request.cookies
     # cookies must be added to kw only if populated, iterable error otherwise
     if cookies:
-        # cookies passed as kw are expected to provide only the token value without any additional details
-        # must trim extra options such as Path, Domain, Max-age, etc. for Authentication to succeed
-        extra_kwargs["cookies"] = [(name, value.split(";")[0]) for name, value in cookies]
+        # at this point, can be either the internal RequestCookies object (from request), that we can pass directly
+        # otherwise we have a list (or dict pre-converted to list items), that we must clean up
+        # dict/list format happens only when explicitly overriding the input cookies to ignore request ones
+        if isinstance(cookies, list):
+            # cookies passed as dict/list are expected to provide only the token value without any additional details
+            # must trim extra options such as Path, Domain, Max-age, etc. for Authentication to succeed
+            cookies = [(name, value.split(";")[0]) for name, value in cookies]
+        extra_kwargs["cookies"] = cookies
 
     subreq = Request.blank(path, base_url=request.application_url, headers=headers, POST=data, **extra_kwargs)
     resp = request.invoke_subrequest(subreq, use_tweens=True)

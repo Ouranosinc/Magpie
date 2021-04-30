@@ -800,6 +800,13 @@ class TemporaryToken(BaseModel, Base):
     """
     __tablename__ = "tmp_tokens"
 
+    def __init__(self, *_, **__):
+        super(TemporaryToken, self).__init__(*_, **__)
+        # auto generate token to avoid manually specifying it when creating instance and directly
+        # requesting the temporary URL, while the instance it not yet saved in the database
+        if not self.token:
+            self.token = self.token = uuid.uuid4()
+
     token = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
     operation = sa.Column(sa.Enum(TokenOperation, name=TokenOperation.__name__, length=32), nullable=False)
     created = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
