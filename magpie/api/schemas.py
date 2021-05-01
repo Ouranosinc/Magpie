@@ -760,15 +760,34 @@ class PermissionNameListSchema(colander.SequenceSchema):
     )
 
 
-class UserBodySchema(colander.MappingSchema):
+class UserInfoSchema(colander.MappingSchema):
     user_name = UserNameParameter
     email = colander.SchemaNode(
         colander.String(),
         description="Email of the user.",
         example="toto@mail.com")
+    status = colander.SchemaNode(
+        colander.Integer(),
+        missing=colander.drop,
+        description="Current status of the user account.",
+        example=UserStatuses.OK.value,
+        validator=colander.OneOf(UserStatuses.values())
+    )
+    user_id = colander.SchemaNode(
+        colander.Integer(),
+        missing=colander.drop,  # if not registered or anonymous
+        description="Registered user identifier."
+    )
+
+
+class UserBodySchema(UserInfoSchema):
     group_names = GroupNamesListSchema(
         example=["administrators", "users"]
     )
+
+
+class UserDetailListSchema(colander.SequenceSchema):
+    user = UserInfoSchema()
 
 
 class GroupBaseBodySchema(colander.MappingSchema):
@@ -1576,21 +1595,29 @@ class ServiceTypeResourceTypes_GET_NotFoundResponseSchema(BaseResponseSchemaAPI)
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
-class UsersStatusQuery(QueryRequestSchemaAPI):
+class UsersQuery(QueryRequestSchemaAPI):
     status = colander.SchemaNode(
         colander.Integer(),
         missing=colander.drop,
         description="Obtain the user name list filtered by their account status. Returns all regardless otherwise.",
         validator=colander.OneOf(UserStatuses.values())
     )
+    detail = colander.SchemaNode(
+        colander.Boolean(),
+        default=False,
+        desiption="Request that more user details be returned in the response. "
+                  "Each item in the list will be a user detail JSON object instead of the list of string names. "
+                  "Only user names are returned by default for backward compatibility."
+    )
 
 
 class Users_GET_RequestSchema(BaseRequestSchemaAPI):
-    querystring = UsersStatusQuery()
+    querystring = UsersQuery()
 
 
 class Users_GET_ResponseBodySchema(BaseResponseBodySchema):
-    user_names = UserNamesListSchema()
+    user_names = UserNamesListSchema(missing=colander.drop, description="User names when no detail is requested.")
+    users = UserDetailListSchema(missing=colander.drop, description="List of user details when it is requested.")
 
 
 class Users_GET_OkResponseSchema(BaseResponseSchemaAPI):

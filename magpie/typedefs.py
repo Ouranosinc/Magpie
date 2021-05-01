@@ -56,8 +56,8 @@ if TYPE_CHECKING:
 
     AnyKey = Union[Str, int]
     AnyValue = Union[Str, Number, bool, None]
-    BaseJSON = Union[AnyValue, List["BaseJSON"], Dict[AnyKey, "BaseJSON"]]
-    JSON = Union[Dict[AnyKey, Union[BaseJSON, "JSON"]], List[BaseJSON]]
+    BaseJSON = Union[AnyValue, List["JSON"], Dict[AnyKey, "JSON"]]
+    JSON = Union[Dict[Str, Union[BaseJSON, "JSON"]], List[BaseJSON]]
 
     # recursive nodes structure employed by functions for listing children resources hierarchy
     # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
