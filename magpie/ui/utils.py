@@ -532,7 +532,7 @@ class AdminRequests(BaseViews):
         }
         # create as admin immediately creates the user
         # create by self-registration creates the pending user for approval
-        path = schemas.RegisterUsersAPI.path if data["is_registration"] else schemas.UserAPI.path
+        path = schemas.RegisterUsersAPI.path if data["is_registration"] else schemas.UsersAPI.path
         resp = request_api(self.request, path, "POST", data=payload)
 
         # hard post checks, retrieve known errors related to fields to display messages instead of raising
