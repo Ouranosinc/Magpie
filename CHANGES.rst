@@ -14,6 +14,12 @@ Features / Changes
   user when those information are needed (fixes `#202 <https://github.com/Ouranosinc/Magpie/issues/202>`_).
 * Add the missing ``status`` and ``user_id`` fields in API schema of returned ``User`` responses.
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix issue related to parsing cookies identified while submitting user creation from UI
+  (fixes `#427 <https://github.com/Ouranosinc/Magpie/issues/427>`_).
+  Added corresponding test (relates to `#193 <https://github.com/Ouranosinc/Magpie/issues/193>`_).
+
 `3.10.0 <https://github.com/Ouranosinc/Magpie/tree/3.10.0>`_ (2021-04-12)
 ------------------------------------------------------------------------------------
 

@@ -73,7 +73,7 @@ def request_api(request,            # type: Request
     if isinstance(data, dict) and get_header("Content-Type", headers, split=[",", ";"]) == CONTENT_TYPE_JSON:
         data = json.dumps(data)
 
-    if isinstance(cookies, dict):
+    if hasattr(cookies, "items"):  # any dict-like implementation
         cookies = list(cookies.items())
     if cookies and isinstance(headers, dict):
         headers = list(headers.items())

@@ -5693,19 +5693,19 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         raise NotImplementedError
 
     @runner.MAGPIE_TEST_STATUS
-    def test_Home(self):
+    def test_Home_PageStatus(self):
         utils.TestSetup.check_UpStatus(self, method="GET", path="/")
 
     @runner.MAGPIE_TEST_STATUS
-    def test_Login(self):
+    def test_Login_PageStatus(self):
         utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/login")
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewUsers(self):
+    def test_ViewUsers_PageStatus(self):
         utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/users")
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewUsers_Goto_EditUser(self):
+    def test_ViewUsers_Goto_EditUser_PageStatus(self):
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         form = {"edit": None, "user_name": self.test_user_name}
@@ -5717,11 +5717,11 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in(test, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewGroups(self):
+    def test_ViewGroups_PageStatus(self):
         utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/groups")
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewGroups_Goto_EditGroup(self):
+    def test_ViewGroups_Goto_EditGroup_PageStatus(self):
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.delete_TestUser(self)
         form = {"edit": None, "group_name": self.test_group_name}
@@ -5733,16 +5733,16 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in(test, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewServicesDefault(self):
+    def test_ViewServicesDefault_PageStatus(self):
         utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/services/default")
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewServicesOfType(self):
+    def test_ViewServicesOfType_PageStatus(self):
         path = "/ui/services/{}".format(self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_ViewServices_Goto_EditService(self):
+    def test_ViewServices_Goto_EditService_PageStatus(self):
         utils.TestSetup.create_TestService(self)
         form = {"edit": None, "service_name": self.test_service_name}
         path = "/ui/services/{}".format(self.test_service_type)
@@ -5751,14 +5751,14 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in(find, resp.text, msg=utils.null)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_EditUser(self):
+    def test_EditUser_PageStatus(self):
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         path = "/ui/users/{}/default".format(self.test_user_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_EditUserService(self):
+    def test_EditUserService_PageStatus(self):
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestUser(self)
         utils.TestSetup.create_TestService(self)
@@ -5766,40 +5766,58 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_EditGroup(self):
+    def test_EditGroup_PageStatus(self):
         utils.TestSetup.create_TestGroup(self)
         path = "/ui/groups/{}/default".format(self.test_group_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_EditGroupService(self):
+    def test_EditGroupService_PageStatus(self):
         utils.TestSetup.create_TestGroup(self)
         utils.TestSetup.create_TestService(self)
         path = "/ui/groups/{grp}/{type}".format(grp=self.test_group_name, type=self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_EditService(self):
+    def test_EditService_PageStatus(self):
         utils.TestSetup.create_TestService(self)
         path = "/ui/services/{type}/{name}".format(type=self.test_service_type, name=self.test_service_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_AddUser(self):
+    def test_AddUser_PageStatus(self):
         path = "/ui/users/add"
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         # empty fields, same page but with 'incorrect' indicator due to invalid form inputs
         utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
+    @runner.MAGPIE_TEST_USERS
+    def test_AddUser_FormSubmit(self):
+        """
+        Check that form submission to create a user from UI works, and then redirects to user lists on success.
+        """
+        data = {"user_name": self.test_user_name, "group_name": get_constant("MAGPIE_USERS_GROUP"),
+                "email": "{}@mail.com".format(self.test_user_name),
+                "password": self.test_user_name, "confirm": self.test_user_name}
+        path = "/ui/users/add"
+        form = "add_user_form"
+        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="create", form_data=data, path=path)
+        body = utils.check_ui_response_basic_info(resp)
+
+        # redirected response should be directly the list of users with the new one added
+        utils.check_val_is_in("<h1>Users</h1>", body)
+        utils.check_val_is_in("id=\"view_users_list\"", body)
+        utils.check_val_is_in(self.test_user_name, body)
+
     @runner.MAGPIE_TEST_STATUS
-    def test_AddGroup(self):
+    def test_AddGroup_PageStatus(self):
         path = "/ui/groups/add"
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         # empty fields, same page but with 'incorrect' indicator due to invalid form inputs
         utils.TestSetup.check_UpStatus(self, method="POST", path=path, expected_type=CONTENT_TYPE_HTML)
 
     @runner.MAGPIE_TEST_STATUS
-    def test_AddService(self):
+    def test_AddService_PageStatus(self):
         path = "/ui/services/{}/add".format(self.test_service_type)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         # empty fields, same page but with 'incorrect' indicator due to invalid form inputs

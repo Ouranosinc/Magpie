@@ -13,7 +13,7 @@
 </button>
 
 
-<table class="simple-list">
+<table class="simple-list" id="view_users_list">
 <thead class="theme">
 <tr>
     <th>User</th>

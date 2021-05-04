@@ -208,7 +208,7 @@
 
 <form id="edit_membership" action="${request.path}" method="post">
     <input type="hidden" value="True" name="edit_group_membership"/>
-    <table class="simple-list">
+    <table class="simple-list" id="current_user_groups_list">
         %for group in groups:
             <tr>
                 <td>
