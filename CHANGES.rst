@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`3.10.1 <https://github.com/Ouranosinc/Magpie/tree/3.10.1>`_ (2021-05-04)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add UI icons for `locked` and `delete` button operations on ``Users``, ``Groups`` and ``Services`` pages.
