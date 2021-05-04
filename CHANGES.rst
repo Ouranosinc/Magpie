@@ -36,6 +36,8 @@ Bug Fixes
   | **SECURITY**:
   | Since email can be employed as another mean of login credential instead of the more typically used username, this
     caused potential theft of identity by retrieved user account against matched email.
+* Fix issue related to parsing cookies identified while submitting user creation from UI.
+  (resolves `#427 <https://github.com/Ouranosinc/Magpie/issues/427>`_).
 
 .. FIXME: update tag
 
