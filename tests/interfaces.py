@@ -118,37 +118,55 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """
-        Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to sets prefixed by
-        ``extra_``, in case some test failed to do so (e.g.: because it raised midway or was simply forgotten).
+        Run cleanup and tear down any testing references to the application.
         """
+        # reset app, just in case some test messed with it that would break cleanup
         cls.usr = get_constant("MAGPIE_ADMIN_USER")
         cls.pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
         cls.app = cls.app or cls.url or utils.get_test_magpie_app(settings=getattr(cls, "settings", None))
-        utils.check_or_try_logout_user(cls)
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
+        cls.cleanup()
+        pyramid.testing.tearDown()
+
+    @classmethod
+    def cleanup(cls):
+        """
+        Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to sets prefixed by
+        ``extra_``, in case tests did not do manual cleanup (e.g.: because it raised midway or was simply omitted).
+
+        .. note::
+            This cleanup procedure assumes that all ``TestSetup.create_<TestItem>`` operations add
+            their respective ``<TestItem>`` instance to the corresponding ``TestCase.extra_<test_items>`` sets.
+        """
+        # avoid removal of reserved keyword user/group, since it will fail with magpie '>=2.x'
+        cls.reserved_users = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
+        cls.reserved_groups = [get_constant("MAGPIE_ADMIN_GROUP"), get_constant("MAGPIE_ANONYMOUS_GROUP")]
+        cls.test_admin = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.usr = get_constant("MAGPIE_ADMIN_USER")
+        cls.pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
+
+        cls.login_admin()  # re-login as needed in case test logged out the user with needed admin permissions
         # remove test service/resource if overridden by test-case class implementers
         if cls.test_resource_name:
             utils.TestSetup.delete_TestServiceResource(cls)
         if cls.test_service_name:
             utils.TestSetup.delete_TestService(cls)
-        # avoid attempt cleanup of reserved keyword user/group, since it will fail with magpie '>=2.x'
-        reserved_users = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
-        reserved_groups = [get_constant("MAGPIE_ADMIN_GROUP"), get_constant("MAGPIE_ANONYMOUS_GROUP")]
-        test_admin = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
-        cls.extra_user_names.add(test_admin)
+        cls.extra_user_names.add(cls.test_admin)
         cls.extra_user_names.add(cls.test_user_name)
         cls.extra_group_names.add(cls.test_group_name)
-        for usr in cls.extra_user_names:
-            if usr not in reserved_users:
+        for usr in list(cls.extra_user_names):  # copy to update removed ones
+            if usr not in cls.reserved_users:
                 utils.TestSetup.delete_TestUser(cls, override_user_name=usr)
-        for grp in cls.extra_group_names:
-            if grp not in reserved_groups:
+                cls.extra_user_names.discard(usr)
+        for grp in list(cls.extra_group_names):  # copy to update removed ones
+            if grp not in cls.reserved_groups:
                 utils.TestSetup.delete_TestGroup(cls, override_group_name=grp)
-        for svc in cls.extra_service_names:
+                cls.extra_user_names.discard(grp)
+        for svc in list(cls.extra_service_names):  # copy to update removed ones
             utils.TestSetup.delete_TestService(cls, override_service_name=svc)
-        for res in cls.extra_resource_ids:
+            cls.extra_service_names.discard(svc)
+        for res in list(cls.extra_resource_ids):  # copy to update removed ones
             utils.TestSetup.delete_TestResource(cls, res)
-        pyramid.testing.tearDown()
+            cls.extra_resource_ids.discard(res)
 
     @property
     def update_method(self):
@@ -237,22 +255,6 @@ class BaseAdminTestCase(BaseTestCase):
     @classmethod
     def tearDownClass(cls):
         super(BaseAdminTestCase, cls).tearDownClass()
-
-    def cleanup(self):
-        """
-        Removes test attributes from database to avoid conflict and unwanted behaviour due to previous definitions.
-
-        Each employed test attribute must be overridden by the :attr:`setUpClass` of the `Test Case`.
-        """
-        self.login_admin()  # re-login as needed in case test logged out the user with permissions
-        if self.test_resource_name:
-            utils.TestSetup.delete_TestServiceResource(self)
-        if self.test_service_name:
-            utils.TestSetup.delete_TestService(self)
-        if self.test_user_name:
-            utils.TestSetup.delete_TestUser(self)
-        if self.test_group_name:
-            utils.TestSetup.delete_TestGroup(self)
 
     def setUp(self):
         super(BaseAdminTestCase, self).setUp()
@@ -3772,13 +3774,14 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers_Conflict_Name(self):
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestUser(self)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
         data = {
             "user_name": self.test_user_name,
-            "password": "pwd",  # noqa  # nosec
-            "email": "email@mail.com",
+            "password": self.test_user_name,
+            "email": info["email"].replace("email", "other-email"),
         }
-        utils.TestSetup.create_TestUser(self)
-        data["email"] = data["email"].replace("email", "other-email")
         resp = utils.test_request(self, "POST", "/users", data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 409, expected_method="POST")
@@ -3786,15 +3789,17 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers_Conflict_Email(self):
         utils.warn_version(self, "user creation with duplicate email conflict", "3.11.0", skip=True)
-        data = {
-            "user_name": self.test_user_name,
-            "password": "pwd",  # noqa  # nosec
-            "email": "email@mail.com",
-        }
-        other_name = data["user_name"] + "-other"
-        utils.TestSetup.create_TestUser(self)
+
+        other_name = self.test_user_name + "-other"
         utils.TestSetup.delete_TestUser(self, override_user_name=other_name)
-        self.extra_user_names.add(other_name)
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestUser(self)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        data = {
+            "email": info["email"],
+            "user_name": other_name,
+            "password": self.test_user_name,
+        }
         resp = utils.test_request(self, "POST", "/users", data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 409, expected_method="POST")
