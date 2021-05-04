@@ -131,7 +131,7 @@
     ])}
 
     <div class="current-tab-panel">
-        <table class="simple-list">
+        <table class="simple-list" id="view_services_list">
             <thead class="theme">
             <tr>
                 <th>Services</th>

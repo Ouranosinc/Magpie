@@ -13,7 +13,7 @@
     Add Group
 </button>
 
-<table class="simple-list">
+<table class="simple-list" id="view_group_members_list">
 <thead class="theme">
 <tr>
     <th>Group</th>

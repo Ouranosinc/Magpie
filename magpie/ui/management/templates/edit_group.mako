@@ -150,7 +150,7 @@
 <h3>Members</h3>
 
 <form id="edit_members" action="${request.path}" method="post">
-<table class="simple-list">
+<table class="simple-list" id="edit_group_members_list">
 %for user in users:
 <tr>
     <td>
