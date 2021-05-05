@@ -62,7 +62,6 @@ def get_smtp_server_configuration(settings):
     """
     Obtains and validates all required configuration parameters for SMTP server in order to send an email.
     """
-    # from/password can be empty for no-auth SMTP server
     from_user = get_constant("MAGPIE_SMTP_USER", settings, default_value="Magpie",
                              print_missing=False, raise_missing=False, raise_not_set=False)
     from_addr = get_constant("MAGPIE_SMTP_FROM", settings,
@@ -74,18 +73,29 @@ def get_smtp_server_configuration(settings):
                              raise_not_set=False, raise_missing=False, default_value=465)
     smtp_ssl = get_constant("MAGPIE_SMTP_SSL", settings, default_value=True,
                             print_missing=True, raise_missing=False, raise_not_set=False)
+    # one of [from-user/from-addr] must be provided to define the 'sender' (FROM email field)
+    # - addr has priority over user as it is unique compared to display name, but both are acceptable
+    # - user takes value of addr to display that instead of blank user name explicitly overridden as empty string
+    # - addr can then take the value of user name if addr was omitted
+    #   (valid only when no auth with password required, or "user" was defined as email directly instead of "from")
     sender = from_addr or from_user
-    if not smtp_host or not str.isnumeric(str(smtp_port)):
-        raise ValueError("SMTP email server configuration is missing required parameters.")
+    from_user = from_user or from_addr
+    from_addr = from_addr or from_user
     config = {
         "from": from_addr,
         "host": smtp_host,
-        "port": int(smtp_port),
+        "port": smtp_port,
         "user": from_user,
         "password": password,
         "sender": sender,
         "ssl": asbool(smtp_ssl),
     }
+    # host, port and resolved sender must always be defined regardless of direct, resolved or default values
+    if not smtp_host or not str.isnumeric(str(smtp_port)) or not sender:
+        config["password"] = "[REDACTED]"  # nosec
+        LOGGER.debug("SMTP invalid config: %s", config)
+        raise ValueError("SMTP email server configuration is missing required parameters.")
+    config["port"] = int(config["port"])  # update only after validated
     return config
 
 

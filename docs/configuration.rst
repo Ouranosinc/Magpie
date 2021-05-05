@@ -462,7 +462,9 @@ at the start of the :ref:`Configuration` section.
 
     .. versionadded:: 3.11
 
-    Name to display as sending user of notification emails.
+    Display name employed as sending user of notification emails.
+
+    If explicitly overridden by an empty string, the :envvar:`MAGPIE_SMTP_FROM` is used as replacement.
 
 .. envvar:: MAGPIE_SMTP_FROM
 
@@ -472,6 +474,10 @@ at the start of the :ref:`Configuration` section.
 
     Email that identifies the sender of notification emails by the application.
 
+    This value is also employed to run the authentication step to the SMTP server in combination with
+    :envvar:`MAGPIE_SMTP_PASSWORD` if it is also provided. Furthermore, if the value is provided while
+    :envvar:`MAGPIE_SMTP_USER` is empty, the default email sender (display name) will revert to this value.
+
 .. envvar:: MAGPIE_SMTP_PASSWORD
 
     (Default: ``None``)
@@ -479,16 +485,15 @@ at the start of the :ref:`Configuration` section.
     .. versionadded:: 3.11
 
     Authentication password to use in combination with :envvar:`MAGPIE_SMTP_FROM` to connect the server
-    specified by :envvar:`MAGPIE_SMTP_HOST` as required. Leave blank if SMTP server does not require authentication.
+    specified by :envvar:`MAGPIE_SMTP_HOST` as required.
+
+    Leave blank if SMTP server does not require or should not execute authentication step.
 
 .. envvar:: MAGPIE_SMTP_HOST
 
-    (Default: ``None``)
-
     .. versionadded:: 3.11
 
-    Host of the SMTP server to employ for sending notification emails. If not provided, configuration values from
-    :envvar:`MAGPIE_URL`, :envvar:`MAGPIE_HOST` and :envvar:`HOSTNAME` will be employed to resolve it.
+    Host of the SMTP server to employ for sending notification emails.
 
 .. envvar:: MAGPIE_SMTP_PORT
 
@@ -501,9 +506,9 @@ at the start of the :ref:`Configuration` section.
 
     In case of doubt, port value ``25`` (an sometimes ``587``) is employed for non-encrypted emails.
     For secure TLS, ``587`` is the usual choice, and ``465`` when using SSL.
-    Note that :envvar:`MAGPIE_SMTP_SSL` should be set accordingly when using those standard values, but other ports
-    based on the :envvar:`MAGPIE_SMTP_HOST` functionalities that offers it can be selected.
+    Other ports based on the functionalities offered by targeted :envvar:`MAGPIE_SMTP_HOST` could be available.
 
+    Note that :envvar:`MAGPIE_SMTP_SSL` should be set accordingly when using those standard values.
     It is strongly recommended to employ an encrypted email since transferred details by `Magpie` can potentially
     contain some sensible details.
 
@@ -517,8 +522,8 @@ at the start of the :ref:`Configuration` section.
     Specifies if SSL should be employed for sending email.
 
     If not enabled, `Magpie` will first attempt to establish a TLS connection if the targeted SMTP server
-    supports it to ensure encrypted emails. If it is not supported by that server, it falls back to unencrypted
-    emails (not recommended) since no other alternatives exist.
+    supports it to use encrypted emails. If it is not supported by that server, it falls back to unencrypted
+    emails since no other alternatives exist.
 
 .. envvar:: MAGPIE_TOKEN_EXPIRE
 
