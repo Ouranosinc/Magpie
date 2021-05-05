@@ -12,6 +12,7 @@
         email_from:         Value defined by MAGPIE_SMTP_FROM to identify the sender of this email.
         email_sender:       Resolved value between MAGPIE_SMTP_FROM or MAGPIE_SMTP_USER sending this email.
         email_recipient:    Resolved email of the identity where to send the notification email.
+        email_datetime:     Date and time (ISO-8601 UTC) when that email was generated.
         magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration.
         login_url:          Endpoint where login can be accomplished.
 
@@ -29,10 +30,11 @@ Dear administrator,
 This notification email is to inform you that the following user as completed registration and email validation.
 
     Username: ${user.user_name}
-    Email:    ${user.user_name}
+    Email:    ${user.email}
 
-Their account can be viewed at the following location: ${magpie_url}/ui/users/${user.user_name}/default
-(Note: Login is required: ${login_url})
+Use this link to view their <a href="${magpie_url}/ui/users/${user.user_name}/default">User Account</a>.
+
+<b>Note:</b> <a href="${login_url}">Administrator Login</a> is required in the same browser to view user accounts.
 
 Regards,
 ${email_user}

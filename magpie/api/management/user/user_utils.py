@@ -102,10 +102,9 @@ def create_user(user_name, password, email, group_name, db_session, return_user=
     group_checked = _get_group(group_name)
 
     # check if user already exists
-    user_checked = ax.evaluate_call(lambda: models.UserSearchService.by_name_or_email(user_name=user_name, email=email,
-                                                                                      db_session=db_session),
-                                    http_error=HTTPForbidden,
-                                    msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
+    user_checked = ax.evaluate_call(
+        lambda: models.UserSearchService.by_name_or_email(user_name=user_name, email=email, db_session=db_session),
+        http_error=HTTPForbidden, msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
     ax.verify_param(user_checked, is_none=True, with_param=False, http_error=HTTPConflict,
                     msg_on_fail=s.User_Check_ConflictResponseSchema.description)
 
@@ -115,7 +114,7 @@ def create_user(user_name, password, email, group_name, db_session, return_user=
         UserService.set_password(new_user, password)
     ax.evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.Users_POST_ForbiddenResponseSchema.description)
-    # Fetch user to update fields
+    # Fetch user to update auto-generated fields (i.e.: id)
     new_user = ax.evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db_session),
                                 http_error=HTTPForbidden,
                                 msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)

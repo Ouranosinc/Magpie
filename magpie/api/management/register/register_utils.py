@@ -145,23 +145,22 @@ def register_pending_user(user_name, email, password, request):
     uu.check_user_info(user_name, email, password, check_group=False)
 
     # check if user already exists, must not be a conflict with pending or already existing ones
-    user_checked = ax.evaluate_call(lambda: UserSearchService.by_user_name(user_name=user_name,
-                                                                           status=UserStatuses.all(),
-                                                                           db_session=request.db),
-                                    http_error=HTTPForbidden,
-                                    msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
+    user_checked = ax.evaluate_call(
+        lambda: UserSearchService.by_name_or_email(user_name=user_name, email=email,
+                                                   status=UserStatuses.all(), db_session=request.db),
+        http_error=HTTPForbidden, msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
     ax.verify_param(user_checked, is_none=True, with_param=False, http_error=HTTPConflict,
                     msg_on_fail=s.RegisterUser_Check_ConflictResponseSchema.description)
 
     # create pending user with specified credentials
-    tmp_user = UserPending(user_name=user_name, email=email)  # noqa
+    tmp_user = UserPending(user_name=user_name, email=email)  # noqa  # https://youtrack.jetbrains.com/issue/PY-28744
     UserSearchService.set_password(tmp_user, password)
     ax.evaluate_call(lambda: request.db.add(tmp_user), fallback=lambda: request.db.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.Users_POST_ForbiddenResponseSchema.description)
-    # Fetch user to update fields
-    tmp_user = ax.evaluate_call(lambda: UserSearchService.by_user_name(user_name, db_session=request.db),
-                                http_error=HTTPForbidden,
-                                msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
+    # fetch user to retrieve auto-generated fields (i.e.: id)
+    tmp_user = ax.evaluate_call(
+        lambda: UserSearchService.by_user_name(user_name, status=UserStatuses.Pending, db_session=request.db),
+        http_error=HTTPForbidden, msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
 
     LOGGER.debug("[User Registration - Step 2] sending confirmation email for its validation")
     confirmation_url = generate_callback_url(TokenOperation.USER_REGISTRATION_CONFIRM_EMAIL, request.db, user=tmp_user)
@@ -224,8 +223,10 @@ def complete_user_registration(tmp_token, request):
         recipient = get_constant("MAGPIE_USER_REGISTERED_EMAIL_RECIPIENT", request)
         template = get_email_template("MAGPIE_USER_REGISTERED_EMAIL_TEMPLATE", request)
         params = {"user": user}
-        ax.evaluate_call(lambda: send_email(recipient, template, request, params),
-                         fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
-                         msg_on_fail="Error occurred during user registration when attempting to "
-                                     "send notification email of completed operation.")
+        sent = ax.evaluate_call(lambda: send_email(recipient, template, request, params),
+                                fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                                msg_on_fail="Error occurred during user registration when attempting to "
+                                            "send notification email of completed operation.")
+        if not sent:
+            LOGGER.error("[User Registration - Step 6] error sending email notification (complete registration)")
     LOGGER.debug("[User Registration] completed registration: [%s]", user.user_name)

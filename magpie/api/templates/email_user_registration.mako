@@ -12,10 +12,12 @@
         email_from:         Value defined by MAGPIE_SMTP_FROM to identify the sender of this email.
         email_sender:       Resolved value between MAGPIE_SMTP_FROM or MAGPIE_SMTP_USER sending this email.
         email_recipient:    Resolved email of the identity where to send the notification email.
+        email_datetime:     Date and time (ISO-8601 UTC) when that email was generated.
         magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration.
         login_url:          Endpoint where login can be accomplished.
         confirm_url:        Endpoint where email confirmation can be performed to validate the email recipient.
-        approval:           Boolean indicating if administrator approval will be required following validation.
+        approval:           Boolean indicating if administrator approval will be required following validation
+                            (based on application settings with MAGPIE_ADMIN_APPROVAL_ENABLED).
 
 </%doc>
 
@@ -28,14 +30,14 @@ Content-Type: text/plain; charset=UTF-8
 
 Dear ${user.user_name},
 
-Your new account request submitted at ${magpie_url} has been received.
-Please confirm your registration email by visiting: ${confirm_url}.
+Your new account request submitted to ${magpie_url} has been received.
+Please confirm your registration email by <a href="${confirm_url}">clicking this link</a>.
 
 %if approval:
 Following email validation, an administrator will review your profile for approval.
-Once approved, a confirmation email will be sent to notify you that your profile is ready to be used.
+Another confirmation email will be sent to notify you when your profile is approved and ready to be used.
 %else:
-Following email validation, you will be able to login using your credentials at ${login_url}.
+Following email validation, you will be able to <a href="${login_url}">Login</a> using your credentials.
 %endif
 
 Regards,
