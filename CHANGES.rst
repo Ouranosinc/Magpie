@@ -25,7 +25,9 @@ Features / Changes
   feature should be employed.
 * Add configuration setting ``MAGPIE_ADMIN_APPROVAL_ENABLED`` to control whether user account must be approved prior
   to allowing self-registration.
-* Add multiple configuration settings to control behavior of notification email server.
+* Add multiple ``MAGPIE_SMTP_<...>`` configuration settings to control behavior of notification email SMTP server.
+* Add ``empty_missing`` flag to ``get_constant`` utility to allow validation against existing environment variables or
+  settings that should be considered as invalid when resolved value is an empty string.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

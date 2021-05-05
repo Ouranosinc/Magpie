@@ -497,9 +497,15 @@ at the start of the :ref:`Configuration` section.
 
     .. versionadded:: 3.11
 
-    Port of the outgoing notification emails from the SMTP server. Note that  usually ``25`` (an sometimes ``587``) is
-    employed for non-encrypted emails. It is recommended to employ encrypted email. For secure TLS, ``587`` is often
-    employed, and ``465`` when using SSL. Note that :envvar:`MAGPIE_SMTP_SSL` must be set accordingly.
+    Port of the outgoing notification emails from the SMTP server.
+
+    In case of doubt, port value ``25`` (an sometimes ``587``) is employed for non-encrypted emails.
+    For secure TLS, ``587`` is the usual choice, and ``465`` when using SSL.
+    Note that :envvar:`MAGPIE_SMTP_SSL` should be set accordingly when using those standard values, but other ports
+    based on the :envvar:`MAGPIE_SMTP_HOST` functionalities that offers it can be selected.
+
+    It is strongly recommended to employ an encrypted email since transferred details by `Magpie` can potentially
+    contain some sensible details.
 
 .. envvar:: MAGPIE_SMTP_SSL
 
@@ -509,6 +515,10 @@ at the start of the :ref:`Configuration` section.
     .. versionadded:: 3.11
 
     Specifies if SSL should be employed for sending email.
+
+    If not enabled, `Magpie` will first attempt to establish a TLS connection if the targeted SMTP server
+    supports it to ensure encrypted emails. If it is not supported by that server, it falls back to unencrypted
+    emails (not recommended) since no other alternatives exist.
 
 .. envvar:: MAGPIE_TOKEN_EXPIRE
 
