@@ -8,22 +8,30 @@ test_webhooks
 Tests for the webhooks implementation
 """
 import inspect
+import json
+import os
 import tempfile
 import unittest
 from time import sleep
 
 import requests
+import six
 import yaml
 from six.moves.urllib.parse import urlparse
 
 from magpie.api.schemas import UserStatuses
-from magpie.api.webhooks import WebhookAction, replace_template, webhook_update_error_status
+from magpie.api.webhooks import WebhookAction, replace_template, setup_webhooks, webhook_update_error_status
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAPI
 from magpie.utils import CONTENT_TYPE_HTML
 from tests import interfaces as ti
 from tests import runner, utils
+
+if six.PY2:
+    from backports import tempfile as tempfile2  # noqa  # Python 2
+else:
+    tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 
 WEBHOOK_TEST_DELAY = 0.25  # small delay to let webhook being processed before resuming tests
 
@@ -651,8 +659,9 @@ def test_webhook_template_literal():
     utils.check_val_equal(data, expect)
 
 
-@runner.MAGPIE_TEST_WEBHOOKS
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTER
+@runner.MAGPIE_TEST_WEBHOOKS
 class TestFailingWebhooks(unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """
@@ -686,3 +695,68 @@ class TestFailingWebhooks(unittest.TestCase):
             # create the magpie app with the test webhook config
             utils.check_raises(lambda: utils.get_test_magpie_app({"magpie.config_path": webhook_tmp_config.name}),
                                ValueError, msg="Invalid URL in webhook configuration should be raised.")
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTER
+@runner.MAGPIE_TEST_WEBHOOKS
+def test_webhook_multiple_files():
+    """
+    Validate that webhooks also support multiple config file loading.
+    """
+    cfg1 = {
+        "users": [{"username": "random"}],  # make sure they are not affected by other sections
+        "webhooks": [
+            {
+                "name": "test_webhook_1",
+                "action": WebhookAction.DELETE_USER_PERMISSION.value,
+                "method": "GET",
+                "url": "http://some-location.com",
+                "payload": {}  # must not be affected by other sections, remains literal string
+            },
+            {
+                "name": "test_webhook_2",
+                "action": WebhookAction.DELETE_USER_PERMISSION.value,
+                "method": "GET",
+                "url": "http://some-location.com",
+                "payload": {"name": "{{user.name}}"}  # must not be affected by other sections, remains literal string
+            },
+        ]
+    }
+    cfg2 = {
+        "webhooks": [
+            {
+                "name": "test_webhook_3",
+                "action": WebhookAction.UPDATE_USER_STATUS.value,
+                "method": "POST",
+                "url": "http://another-location.com",
+                "payload": "",
+            },
+            {
+                "name": "test_webhook_1",  # should override other config file
+                "action": WebhookAction.CREATE_USER.value,
+                "method": "POST",
+                "url": "http://override-location.com",
+                "payload": {"name": "{{user.name}}"}
+            }
+        ]
+    }
+
+    settings = {}  # inplace edited by 'setup_webhooks'
+    with tempfile2.TemporaryDirectory() as tmpdir:
+        with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
+            json.dump(cfg1, cfg1_file)
+        with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
+            json.dump(cfg2, cfg2_file)
+        setup_webhooks(tmpdir, settings)
+
+    assert len(settings["webhooks"]) == 3, "overridden webhook should have been dropped"
+
+    assert "test_webhook_1" in settings
+    assert settings["test_webhook_1"] == cfg2["webhooks"][1], "second webhook duplicate entry should remain"
+
+    assert "test_webhook_2" in settings
+    assert settings["test_webhook_2"] == cfg1["webhooks"][1]
+
+    assert "test_webhook_3" in settings
+    assert settings["test_webhook_3"] == cfg2["webhooks"][0]
