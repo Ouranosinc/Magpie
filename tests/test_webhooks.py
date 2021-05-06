@@ -7,8 +7,8 @@ test_webhooks
 
 Tests for the webhooks implementation
 """
+import copy
 import inspect
-import json
 import os
 import tempfile
 import unittest
@@ -20,7 +20,13 @@ import yaml
 from six.moves.urllib.parse import urlparse
 
 from magpie.api.schemas import UserStatuses
-from magpie.api.webhooks import WebhookAction, replace_template, setup_webhooks, webhook_update_error_status
+from magpie.api.webhooks import (
+    WEBHOOK_KEYS,
+    WebhookAction,
+    replace_template,
+    setup_webhooks,
+    webhook_update_error_status
+)
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAPI
@@ -662,44 +668,6 @@ def test_webhook_template_literal():
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_REGISTER
 @runner.MAGPIE_TEST_WEBHOOKS
-class TestFailingWebhooks(unittest.TestCase):
-    # pylint: disable=C0103,invalid-name
-    """
-    Test any operation that uses an incorrect webhook config.
-    """
-
-    __test__ = True
-
-    def test_Webhook_IncorrectConfig(self):
-        """
-        Test using a config with a badly formatted url.
-        """
-        # Write temporary config for testing webhooks
-        create_webhook_url = "failing_url"
-        data = {
-            "webhooks": [
-                {
-                    "name": "test_webhook_app",
-                    "action": WebhookAction.CREATE_USER.value,
-                    "method": "POST",
-                    "url": create_webhook_url,
-                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
-                }
-            ],
-            "providers": "",
-            "permissions": ""
-        }
-
-        with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
-            yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
-            # create the magpie app with the test webhook config
-            utils.check_raises(lambda: utils.get_test_magpie_app({"magpie.config_path": webhook_tmp_config.name}),
-                               ValueError, msg="Invalid URL in webhook configuration should be raised.")
-
-
-@runner.MAGPIE_TEST_LOCAL
-@runner.MAGPIE_TEST_REGISTER
-@runner.MAGPIE_TEST_WEBHOOKS
 def test_webhook_multiple_files():
     """
     Validate that webhooks also support multiple config file loading.
@@ -745,9 +713,9 @@ def test_webhook_multiple_files():
     settings = {}  # inplace edited by 'setup_webhooks'
     with tempfile2.TemporaryDirectory() as tmpdir:
         with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
-            json.dump(cfg1, cfg1_file)
+            yaml.safe_dump(cfg1, cfg1_file, default_flow_style=False)
         with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
-            json.dump(cfg2, cfg2_file)
+            yaml.safe_dump(cfg2, cfg2_file, default_flow_style=False)
         setup_webhooks(tmpdir, settings)
 
     assert len(settings["webhooks"]) == 3, "overridden webhook should have been dropped"
@@ -760,3 +728,81 @@ def test_webhook_multiple_files():
 
     assert "test_webhook_3" in settings
     assert settings["test_webhook_3"] == cfg2["webhooks"][0]
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTER
+@runner.MAGPIE_TEST_WEBHOOKS
+class TestFailingWebhooks(unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
+    """
+    Test any operation that uses an incorrect webhook config.
+    """
+
+    __test__ = True
+
+    def test_Webhook_IncorrectConfig_BadURL(self):
+        """
+        Test using a config with a badly formatted url.
+        """
+        # Write temporary config for testing webhooks
+        create_webhook_url = "failing_url"
+        data = {
+            "webhooks": [
+                {
+                    "name": "test_webhook_app",
+                    "action": WebhookAction.CREATE_USER.value,
+                    "method": "POST",
+                    "url": create_webhook_url,
+                    "payload": {"user_name": "{{user.name}}", "callback_url": "{{callback_url}}"}
+                }
+            ],
+            "providers": "",
+            "permissions": ""
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
+            yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
+            # create the magpie app with the test webhook config
+            utils.check_raises(lambda: utils.get_test_magpie_app({"magpie.config_path": webhook_tmp_config.name}),
+                               ValueError, msg="Invalid URL in webhook configuration should be raised.")
+
+    def test_Webhook_ValidConfig_CheckNotRaised(self):
+        """
+        Test false positive 'invalid' errors that where incorrectly raised previously.
+        """
+        action = WebhookAction.CREATE_USER
+        base = {
+            "name": "test_webhook_app",
+            "action": action.value,
+            "url": "http://is-ok.com",  # was raised because path = '', but valid URL
+            # "method": to fill
+            # "payload": to fill
+        }
+        # payload that where raised, but valid
+        tests = [
+            (None, "GET"),
+            ("", "HEAD"),
+            ({}, "POST"),
+            (utils.null, "GET"),
+            (None, "POST"),
+            ("", "PUT"),
+            (None, "DELETE"),
+        ]
+
+        for payload, method in tests:
+            cfg = copy.deepcopy(base)
+            cfg["method"] = method
+            if payload is not utils.null:
+                cfg["payload"] = payload
+            data = {
+                "webhooks": [cfg],
+                "providers": "",
+                "permissions": ""
+            }
+            with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
+                yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
+                settings = {}
+                utils.check_no_raise(lambda: setup_webhooks(webhook_tmp_config.name, settings))
+                for key in WEBHOOK_KEYS:
+                    utils.check_val_is_in(key, settings["webhooks"][action][0])

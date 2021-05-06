@@ -37,6 +37,7 @@ MAGPIE_PROVIDERS_CONFIG_PATH = os.getenv(
     "MAGPIE_PROVIDERS_CONFIG_PATH", "{}/providers.cfg".format(MAGPIE_CONFIG_DIR))
 MAGPIE_PERMISSIONS_CONFIG_PATH = os.getenv(
     "MAGPIE_PERMISSIONS_CONFIG_PATH", "{}/permissions.cfg".format(MAGPIE_CONFIG_DIR))
+MAGPIE_WEBHOOKS_CONFIG_PATH = os.getenv("MAGPIE_WEBHOOKS_CONFIG_PATH")
 MAGPIE_CONFIG_PATH = os.getenv("MAGPIE_CONFIG_PATH")  # default None, require explicit specification
 MAGPIE_INI_FILE_PATH = os.getenv(
     "MAGPIE_INI_FILE_PATH", "{}/magpie.ini".format(MAGPIE_CONFIG_DIR))
