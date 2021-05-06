@@ -288,7 +288,7 @@ def setup_webhooks(config_path, settings):
     if not config_path:
         LOGGER.info("No configuration file provided to load webhook definitions.")
     else:
-        LOGGER.info("Loading provided configuration file to setup webhook definitions.")
+        LOGGER.info("Loading provided configuration files to setup webhook definitions.")
         webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
 
         for cfg in webhook_configs:

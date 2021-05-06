@@ -540,3 +540,31 @@ def test_register_process_permissions_from_multiple_files():
     assert perms == cfg2["permissions"]
     assert users == expect_users
     assert groups == expect_groups
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTER
+def test_multiple_webhook_files():
+    cfg1 = {
+        "webhooks": [
+            {
+                "name": "test_webhook_1",
+                "action": WebhookAction.DELETE_GROUP_PERMISSION.value,
+                "method": "POST",
+                "url": update_webhook_url,
+                "payload": {"data": group_payload, "action": WebhookAction.DELETE_GROUP_PERMISSION.value}
+            }
+        ]
+    }
+
+    with utils.wrapped_call("magpie.register._process_permissions") as mock_process_perms:
+
+
+
+        with tempfile2.TemporaryDirectory() as tmpdir:
+            with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
+                json.dump(cfg1, cfg1_file)
+            with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
+                json.dump(cfg2, cfg2_file)
+            with utils.wrapped_call("magpie.register.get_admin_cookies", side_effect=lambda *_, **__: {}):
+                register.magpie_register_permissions_from_config(tmpdir, "http://dontcare.com")

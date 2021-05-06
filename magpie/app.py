@@ -75,7 +75,9 @@ def main(global_config=None, **settings):  # noqa: F811
     magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
 
     print_log("Register webhook configurations...", LOGGER)
-    setup_webhooks(combined_config, settings)
+    webhook_cfg = combined_config or get_constant("MAGPIE_WEBHOOKS_CONFIG_PATH", settings, default_value="",
+                                                  raise_missing=False, raise_not_set=False, print_missing=True)
+    setup_webhooks(webhook_cfg, settings)
 
     print_log("Running configurations setup...", LOGGER)
     patch_magpie_url(settings)
