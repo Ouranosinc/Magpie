@@ -284,7 +284,7 @@ def setup_webhooks(config_path, settings):
     """
 
     settings["webhooks"] = defaultdict(lambda: [])
-    webhooks_conf = settings["webhooks"]  # type: WebhookSettings
+    webhooks_settings = settings["webhooks"]  # type: WebhookSettings
     if not config_path:
         LOGGER.info("No configuration file provided to load webhook definitions.")
     else:
@@ -325,4 +325,4 @@ def setup_webhooks(config_path, settings):
                 # Regroup webhooks by action key
                 webhook_cfg = {k: webhook[k] for k in WEBHOOK_KEYS if k in webhook}  # noqa # ignore optional fields
                 webhook_action = WebhookAction.get(webhook["action"])
-                webhooks_conf[webhook_action].append(webhook_cfg)
+                webhooks_settings[webhook_action].append(webhook_cfg)
