@@ -38,3 +38,7 @@ tests:
 
 ui:
   - magpie/ui/**/*
+
+webhook:
+  - magpie/api/webhooks/**/*
+  - tests/test_webhooks.py
