@@ -21,7 +21,7 @@ from magpie.register import get_all_configs
 from magpie.utils import CONTENT_TYPE_JSON, FORMAT_TYPE_MAPPING, ExtendedEnum, get_logger, get_settings, raise_log
 
 if TYPE_CHECKING:
-    from typing import List, Optional, Union
+    from typing import Optional, Union
 
     from sqlalchemy.orm.session import Session
 

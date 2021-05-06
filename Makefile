@@ -466,7 +466,7 @@ check-security-only: mkdir-reports	## run security code checks
 		1> >(tee "$(REPORTS_DIR)/check-security.txt")'
 
 .PHONY: check-docs-only
-check-docs-only: check-doc8 check-docf	## run every code documentation checks
+check-docs-only: check-doc8-only check-docf-only	## run every code documentation checks
 
 .PHONY: check-doc8-only
 check-doc8-only: mkdir-reports		## run PEP8 documentation style checks

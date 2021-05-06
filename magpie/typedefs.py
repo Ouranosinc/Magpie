@@ -118,7 +118,7 @@ if TYPE_CHECKING:
         "group": Optional[Str],
     })
     # generic 'configuration' field under a service that supports it
-    ServiceConfigurationParam = Dict[Str, Union[Str, List[JSON], JSON]]
+    ServiceConfiguration = Dict[Str, Union[Str, List[JSON], JSON]]
     ServiceConfigItem = TypedDict("ServiceConfigItem", {
         "url": Str,
         "title": Str,
@@ -127,7 +127,7 @@ if TYPE_CHECKING:
         # must use 'asbool' since technically a bool-like string from config
         "public": bool,
         "c4i": bool,
-        "configuration": Optional[ServiceConfigurationParam],
+        "configuration": Optional[ServiceConfiguration],
     })
 
     # individual sections directly loaded from config files (BEFORE resolution)

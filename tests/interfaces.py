@@ -1084,6 +1084,8 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUsers_status_Forbidden_AnyNonAdmin(self):
         """
+        Test that user status updates can only be executed by an administrator.
+
         .. seealso::
             - :meth:`Interface_MagpieAPI_AdminAuth.test_UpdateUser_status`
         """

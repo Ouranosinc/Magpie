@@ -491,39 +491,39 @@ def test_register_process_permissions_from_multiple_files():
     Use the *raw* format expected from loaded configuration files to validate their parsing at the same time.
     """
 
-    with utils.wrapped_call("magpie.register._process_permissions") as mock_process_perms:
-        cfg1 = {
-            "users": [
-                {"username": "usr1"},
-                {"username": "usr2", "group": "grp2"},
-                {"username": "usr3"}  # will be overridden
-            ],
-            "groups": [
-                {"name": "grp1", "discoverable": True},
-                {"name": "grp2"}
-            ],
-            "permissions": [
-                {"permission": "perm1", "action": "remove", "service": "svc", "user": "y"},
-                # applied to both user/group, default 'create' operation, group created with only string (no entry)
-                {"permission": "perm2", "user": "x", "group": "grp3", "service": "svc"},
-                # referenced group is a definition
-                {"permission": "perm3", "action": "create", "service": "svc", "group": "grp1"}
-            ]
-        }
-        cfg2 = {
-            "permissions": [
-                {"permission": "perm4", "group": "grp2"}  # referred from other file
-            ],
-            "users": [
-                {"username": "usr3", "group": "grp3"}  # should override one in first config
-            ]
-        }
+    cfg1 = {
+        "users": [
+            {"username": "usr1"},
+            {"username": "usr2", "group": "grp2"},
+            {"username": "usr3"}  # will be overridden
+        ],
+        "groups": [
+            {"name": "grp1", "discoverable": True},
+            {"name": "grp2"}
+        ],
+        "permissions": [
+            {"permission": "perm1", "action": "remove", "service": "svc", "user": "y"},
+            # applied to both user/group, default 'create' operation, group created with only string (no entry)
+            {"permission": "perm2", "user": "x", "group": "grp3", "service": "svc"},
+            # referenced group is a definition
+            {"permission": "perm3", "action": "create", "service": "svc", "group": "grp1"}
+        ]
+    }
+    cfg2 = {
+        "permissions": [
+            {"permission": "perm4", "group": "grp2"}  # referred from other file
+        ],
+        "users": [
+            {"username": "usr3", "group": "grp3"}  # should override one in first config
+        ]
+    }
 
-        with tempfile2.TemporaryDirectory() as tmpdir:
-            with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
-                json.dump(cfg1, cfg1_file)
-            with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
-                json.dump(cfg2, cfg2_file)
+    with tempfile2.TemporaryDirectory() as tmpdir:
+        with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
+            json.dump(cfg1, cfg1_file)
+        with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
+            json.dump(cfg2, cfg2_file)
+        with utils.wrapped_call("magpie.register._process_permissions") as mock_process_perms:
             with utils.wrapped_call("magpie.register.get_admin_cookies", side_effect=lambda *_, **__: {}):
                 register.magpie_register_permissions_from_config(tmpdir, "http://dontcare.com")
 

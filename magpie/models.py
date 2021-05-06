@@ -436,8 +436,7 @@ class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
     @classmethod
     def build_subtree_strut(cls, result, *args, **kwargs):
         """
-        Returns a dictionary in form of
-        {node:Resource, children:{node_id: Resource}}
+        Returns a dictionary in form of ``{node:Resource, children:{node_id: Resource}}``.
 
         :param result:
         :return:
