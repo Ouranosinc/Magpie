@@ -52,21 +52,21 @@ if TYPE_CHECKING:
     from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
     from magpie.typedefs import (
+        JSON,
         AnyCookiesType,
         AnyResolvedSettings,
         CombinedConfig,
         CookiesOrSessionType,
         GroupsConfig,
         GroupsSettings,
-        JSON,
         MultiConfigs,
         PermissionConfigItem,
         PermissionsConfig,
         ServicesConfig,
         ServicesSettings,
+        Str,
         UsersConfig,
-        UsersSettings,
-        Str
+        UsersSettings
     )
 
 
