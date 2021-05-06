@@ -7,7 +7,18 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add explicit typing definitions of configuration files and resolved settings to facilitate discovery of invalid
+  handling of formats or parameters during parsing and startup registration.
+* Apply many documentation updates in both configuration sections and the corresponding configuration example headers.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix ``users`` and ``groups`` registration configurations not respecting update method when conflicting
+  definitions occur. They will respect alphabetical file name order and later ones remain.
+* Fix ``users`` and ``groups`` registration configurations not correctly parsed when multiple files where employed
+  (fixes `#429 <https://github.com/Ouranosinc/Magpie/issues/429>`_).
 
 `3.11.0 <https://github.com/Ouranosinc/Magpie/tree/3.11.0>`_ (2021-05-06)
 ------------------------------------------------------------------------------------

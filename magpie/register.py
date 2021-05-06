@@ -51,7 +51,23 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
-    from magpie.typedefs import JSON, AnyCookiesType, ConfigDict, ConfigItem, ConfigList, CookiesOrSessionType, Str
+    from magpie.typedefs import (
+        AnyCookiesType,
+        AnyResolvedSettings,
+        CombinedConfig,
+        CookiesOrSessionType,
+        GroupsConfig,
+        GroupsSettings,
+        JSON,
+        MultiConfigs,
+        PermissionConfigItem,
+        PermissionsConfig,
+        ServicesConfig,
+        ServicesSettings,
+        UsersConfig,
+        UsersSettings,
+        Str
+    )
 
 
 LOGGER = get_logger(__name__)
@@ -361,7 +377,7 @@ def _magpie_add_register_services_perms(services, statuses, curl_cookies, reques
 
 
 def _magpie_update_services_conflict(conflict_services, services_dict, request_cookies):
-    # type: (List[Str], ConfigDict, AnyCookiesType) -> Dict[Str, int]
+    # type: (List[Str], ServicesSettings, AnyCookiesType) -> Dict[Str, int]
     """
     Resolve conflicting services by name during registration by updating them only if pointing to different URL.
     """
@@ -386,9 +402,12 @@ def _magpie_update_services_conflict(conflict_services, services_dict, request_c
 
 def _magpie_register_services_with_requests(services_dict, push_to_phoenix, username, password, provider,
                                             force_update=False, disable_getcapabilities=False):
-    # type: (ConfigDict, bool, Str, Str, Str, bool, bool) -> bool
+    # type: (ServicesSettings, bool, Str, Str, Str, bool, bool) -> bool
     """
-    Registers magpie services using the provided services configuration.
+    Registers :term:`Services` of loaded ``providers`` configuration using API requests.
+
+    .. seealso::
+        :func:`magpie_register_services_from_config`
 
     :param services_dict: services configuration definition.
     :param push_to_phoenix: push registered Magpie services to Phoenix for synced configurations.
@@ -442,6 +461,13 @@ def _magpie_register_services_with_requests(services_dict, push_to_phoenix, user
 
 def _magpie_register_services_with_db_session(services_dict, db_session, push_to_phoenix=False,
                                               force_update=False, update_getcapabilities_permissions=False):
+    # type: (ServicesSettings, Session, bool, bool, bool) -> bool
+    """
+    Registration procedure of :term:`Services` from ``providers`` section using pre-established database session.
+
+    .. seealso::
+        :func:`magpie_register_services_from_config`
+    """
     db_session.begin(subtransactions=True)
     existing_services_names = [n[0] for n in db_session.query(models.Service.resource_name)]
     magpie_anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER")
@@ -472,7 +498,7 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
                                  url=svc_new_url,
                                  type=svc_type,
                                  configuration=svc_config,
-                                 sync_type=svc_sync_type)  # noqa
+                                 sync_type=svc_sync_type)
             db_session.add(svc)
 
         getcap_perm = Permission.GET_CAPABILITIES
@@ -493,7 +519,7 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
                     user_id=anonymous_user.id,
                     perm_name=getcap_perm.value,
                     resource_id=svc.resource_id
-                )  # noqa
+                )
                 db_session.add(svc_perm_getcapabilities)
 
     transaction.commit()
@@ -504,9 +530,9 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
 
 
 def _load_config(path_or_dict, section, allow_missing=False):
-    # type: (Union[Str, ConfigDict], Str, bool) -> ConfigDict
+    # type: (Union[Str, CombinedConfig], Str, bool) -> Union
     """
-    Loads a file path or dictionary as YAML/JSON configuration.
+    Loads a YAML/JSON file path or pre-loaded dictionary configuration.
     """
     try:
         if isinstance(path_or_dict, six.string_types):
@@ -528,7 +554,7 @@ CONFIG_KNOWN_EXTENSIONS = frozenset([".cfg", ".json", ".yml", ".yaml"])
 
 
 def get_all_configs(path_or_dict, section, allow_missing=False):
-    # type: (Union[Str, ConfigDict], Str, bool) -> List[ConfigDict]
+    # type: (Union[Str, CombinedConfig], Str, bool) -> MultiConfigs
     """
     Loads all matched configurations.
 
@@ -566,7 +592,7 @@ def get_all_configs(path_or_dict, section, allow_missing=False):
 
 
 def _expand_all(config):
-    # type: (ConfigDict) -> ConfigDict
+    # type: (JSON) -> JSON
     """
     Applies environment variable expansion recursively to all applicable fields of a configuration definition.
     """
@@ -590,7 +616,7 @@ def _expand_all(config):
 
 def magpie_register_services_from_config(service_config_path, push_to_phoenix=False,
                                          force_update=False, disable_getcapabilities=False, db_session=None):
-    # type: (Str, bool, bool, bool, Optional[Session]) -> ConfigDict
+    # type: (Str, bool, bool, bool, Optional[Session]) -> ServicesSettings
     """
     Registers Magpie services from one or many `providers.cfg` file.
 
@@ -610,7 +636,7 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
     :returns: loaded service configurations.
     """
     LOGGER.info("Starting services processing.")
-    services_configs = get_all_configs(service_config_path, "providers")
+    services_configs = get_all_configs(service_config_path, "providers")  # type: List[ServicesConfig]
     services_config_count = len(services_configs)
     LOGGER.log(logging.INFO if services_config_count else logging.WARNING,
                "Found %s service configurations to process", services_config_count)
@@ -679,9 +705,9 @@ def _use_request(cookies_or_session):
     return not isinstance(cookies_or_session, Session)
 
 
-def _parse_resource_path(permission_config_entry,   # type: ConfigItem
+def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                          entry_index,               # type: int
-                         service_info,              # type: ConfigItem
+                         service_info,              # type: JSON
                          cookies_or_session=None,   # type: CookiesOrSessionType
                          magpie_url=None,           # type: Optional[Str]
                          ):                         # type: (...) -> Tuple[Optional[int], bool]
@@ -776,13 +802,13 @@ def _parse_resource_path(permission_config_entry,   # type: ConfigItem
     return resource, True
 
 
-def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
+def _apply_permission_entry(permission_config_entry,    # type: PermissionConfigItem
                             entry_index,                # type: int
                             resource_id,                # type: int
                             cookies_or_session,         # type: CookiesOrSessionType
                             magpie_url,                 # type: Str
-                            users,                      # type: ConfigDict
-                            groups,                     # type: ConfigDict
+                            users,                      # type: UsersSettings
+                            groups,                     # type: GroupsSettings
                             ):                          # type: (...) -> None
     """
     Applies the single permission entry retrieved from the permission configuration.
@@ -919,7 +945,7 @@ def _apply_permission_entry(permission_config_entry,    # type: ConfigItem
 
 
 def magpie_register_permissions_from_config(permissions_config, magpie_url=None, db_session=None):
-    # type: (Union[Str, ConfigDict], Optional[Str], Optional[Session]) -> None
+    # type: (Union[Str, PermissionsConfig], Optional[Str], Optional[Session]) -> None
     """
     Applies `permissions` specified in configuration(s) defined as file, directory with files or literal configuration.
 
@@ -943,48 +969,55 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
         cookies_or_session = db_session
 
     LOGGER.debug("Loading configurations.")
-    permissions = get_all_configs(permissions_config, "permissions")
+    permissions = get_all_configs(permissions_config, "permissions")  # type: List[PermissionsConfig]
     perms_cfg_count = len(permissions)
     LOGGER.log(logging.INFO if perms_cfg_count else logging.WARNING,
                "Found %s permissions configurations.", perms_cfg_count)
-    users = groups = None
+    users_settings = groups_settings = None
     if perms_cfg_count:
-        users = get_all_configs(permissions_config, "users", allow_missing=True)
-        groups = get_all_configs(permissions_config, "groups", allow_missing=True)
+        users = get_all_configs(permissions_config, "users", allow_missing=True)    # type: List[UsersConfig]
+        groups = get_all_configs(permissions_config, "groups", allow_missing=True)  # type: List[GroupsConfig]
+        users_settings = _resolve_config_registry(users, "username") or {}
+        groups_settings = _resolve_config_registry(groups, "name") or {}
     for i, perms in enumerate(permissions):
         LOGGER.info("Processing permissions from configuration (%s/%s).", i + 1, perms_cfg_count)
-        _process_permissions(perms, magpie_url, cookies_or_session, users, groups)
+        _process_permissions(perms, magpie_url, cookies_or_session, users_settings, groups_settings)
     LOGGER.info("All permissions processed.")
 
 
-def _make_config_registry(config_entries, key):
-    # type: (Optional[ConfigList], Str) -> ConfigDict
+def _resolve_config_registry(config_files, key):
+    # type: (Optional[MultiConfigs], Str) -> AnyResolvedSettings
     """
-    Converts a list of configurations entries into a single mapping of configurations based on :paramref:`key`.
+    Converts a list of configurations entries from multiple files into a single resolved mapping.
 
+    Resolution is accomplished against :paramref:`key` to generate the mapping of unique items.
     First configuration entries have priority over later ones if keys are duplicated.
     """
     config_map = {}
-    for cfg in config_entries or []:
+    config_files = config_files or []
+    for cfg in config_files:
         if not cfg:
             continue
-        cfg_key = cfg.get(key, None)
-        if cfg_key:
-            config_map.setdefault(cfg_key, cfg)
+        if isinstance(cfg, dict):
+            cfg_key = cfg.get(key, None)
+            if cfg_key:
+                config_map[cfg_key] = cfg
+        else:
+            for cfg_item in cfg:
+                cfg_key = cfg_item.get(key, None)
+                if cfg_key:
+                    config_map[cfg_key] = cfg_item
     return config_map
 
 
 def _process_permissions(permissions, magpie_url, cookies_or_session, users=None, groups=None):
-    # type: (ConfigDict, Str, Session, Optional[ConfigList], Optional[ConfigList]) -> None
+    # type: (PermissionsConfig, Str, Session, Optional[UsersSettings], Optional[GroupsSettings]) -> None
     """
     Processes a single `permissions` configuration.
     """
     if not permissions:
         LOGGER.warning("Permissions configuration are empty.")
         return
-
-    users_conf = _make_config_registry(users, "username")
-    groups_conf = _make_config_registry(groups, "name")
 
     perm_count = len(permissions)
     LOGGER.log(logging.INFO if perm_count else logging.WARNING,
@@ -1036,7 +1069,7 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
         if found:
             if not resource_id:
                 resource_id = service_info["resource_id"]
-            _apply_permission_entry(perm_cfg, i, resource_id, cookies_or_session, magpie_url, users_conf, groups_conf)
+            _apply_permission_entry(perm_cfg, i, resource_id, cookies_or_session, magpie_url, users, groups)
 
     if not _use_request(cookies_or_session):
         transaction.commit()

@@ -31,9 +31,9 @@ if TYPE_CHECKING:
         ServiceOrResourceType,
         SettingsType,
         Str,
-        WebhookConfig,
-        WebhookConfigSettings,
+        WebhookConfigItem,
         WebhookPayload,
+        WebhookSettings,
         WebhookTemplateParameters
     )
 
@@ -165,7 +165,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     # ignore if triggered during application startup, settings not yet loaded
     if not settings:
         return
-    webhooks = settings.get("webhooks", {})  # type: WebhookConfig
+    webhooks = settings.get("webhooks", {})  # type: WebhookSettings
     if not webhooks:
         return
     action_webhooks = webhooks[action]
@@ -237,7 +237,7 @@ def replace_template(params, payload, force_str=False):
 
 
 def send_webhook_request(webhook_config, params, update_user_status_on_error=False):
-    # type: (WebhookConfigSettings, WebhookTemplateParameters, bool) -> None
+    # type: (WebhookConfigItem, WebhookTemplateParameters, bool) -> None
     """
     Sends a single webhook request using the input config.
 
@@ -284,14 +284,14 @@ def setup_webhooks(config_path, settings):
     """
 
     settings["webhooks"] = defaultdict(lambda: [])
-    webhooks_conf = settings["webhooks"]  # type: WebhookConfig
+    webhooks_conf = settings["webhooks"]  # type: WebhookSettings
     if not config_path:
         LOGGER.info("No configuration file provided to load webhook definitions.")
     else:
         LOGGER.info("Loading provided configuration file to setup webhook definitions.")
         webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
 
-        for cfg in webhook_configs:  # type: List[WebhookConfigSettings]
+        for cfg in webhook_configs:
             for webhook in cfg:
                 # Validate the webhook config
                 if not isinstance(webhook, dict):
