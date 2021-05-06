@@ -27,7 +27,8 @@ users:
   - username: username  # required if entry provided
     password:           # optional (default: random password of size MAGPIE_PASSWORD_MIN_LENGTH)
     email:              # optional (default: <username>@mail.com)
-    group: <groupname>  # optional (one of 'groups' entry, or plain string to generate it with defaults, else anonymous)
+    group: <group.name> # optional (default: anonymous, otherwise one of 'groups' matched by 'name')
+                        #          (if group name doesn't exist in 'groups', other parameters use defaults)
 
 # extended definitions for groups to create
 # default values will be used for missing optional fields
