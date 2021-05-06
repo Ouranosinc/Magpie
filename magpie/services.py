@@ -32,9 +32,8 @@ if TYPE_CHECKING:
     from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
 
     from pyramid.request import Request
-    from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
-    from magpie.typedefs import AccessControlListType, ConfigDict, ServiceOrResourceType, Str
+    from magpie.typedefs import AccessControlListType, ServiceConfiguration, ServiceOrResourceType, Str
 
 
 class ServiceMeta(type):
@@ -225,7 +224,7 @@ class ServiceInterface(object):
         return path_parts[svc_idx + 1:]
 
     def get_config(self):
-        # type: () -> ConfigDict
+        # type: () -> ServiceConfiguration
         """
         Obtains the custom configuration of the registered service.
         """
@@ -738,7 +737,7 @@ class ServiceTHREDDS(ServiceInterface):
         self._config = None
 
     def get_config(self):
-        # type: () -> ConfigDict
+        # type: () -> ServiceConfiguration
         if self._config is not None:
             return self._config
 

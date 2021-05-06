@@ -83,16 +83,83 @@ if TYPE_CHECKING:
     AccessControlEntryType = Union[Tuple[Str, Str, Str], Str]
     AccessControlListType = List[AccessControlEntryType]
 
-    # registered configurations
-    ConfigItem = Dict[Str, JSON]
-    ConfigList = List[ConfigItem]
-    ConfigDict = Dict[Str, Union[Str, ConfigItem, ConfigList, JSON]]
+    # note:
+    #   For all following items 'Settings' suffix refer to loaded definitions AFTER resolution.
+    #   When 'Config' suffix is used, it instead refers to raw definitions BEFORE resolution.
 
     WebhookPayload = Union[JSON, Str]
+    # items that are substituted dynamically in the payload during webhook handling (eg: {{user.name}})
     WebhookTemplateParameters = TypedDict("WebhookTemplateParameters", {
         param: AnyValue for param in WEBHOOK_TEMPLATE_PARAMS
     })
-    WebhookConfigSettings = TypedDict("WebhookConfigSettings", {
+    WebhookConfigItem = TypedDict("WebhookConfigItem", {
         "name": Str, "action": Str, "method": Str, "url": Str, "format": Str, "payload": WebhookPayload
     })
-    WebhookConfig = Dict[WebhookAction, List[WebhookConfigSettings]]
+
+    # registered configurations
+    PermissionConfigItem = TypedDict("PermissionConfigItem", {
+        "service": Str,
+        "resource": Optional[Str],
+        "type": Optional[Str],
+        "user": Optional[Str],
+        "group": Optional[Str],
+        "permission": Union[Str, PermissionDict],
+        "action": Optional[Str],  # create/remove
+    })
+    GroupConfigItem = TypedDict("GroupConfigItem", {
+        "name": Str,
+        "description": Optional[Str],
+        "discoverable": bool,  # must use 'asbool' since technically a bool-like string from config
+    })
+    UserConfigItem = TypedDict("UserConfigItem", {
+        "username": Str,
+        "password": Optional[Str],
+        "email": Optional[Str],
+        "group": Optional[Str],
+    })
+    # generic 'configuration' field under a service that supports it
+    ServiceConfiguration = Dict[Str, Union[Str, List[JSON], JSON]]
+    ServiceConfigItem = TypedDict("ServiceConfigItem", {
+        "url": Str,
+        "title": Str,
+        "type": Str,
+        "sync_type": Optional[Str],
+        # must use 'asbool' since technically a bool-like string from config
+        "public": bool,
+        "c4i": bool,
+        "configuration": Optional[ServiceConfiguration],
+    })
+
+    # individual sections directly loaded from config files (BEFORE resolution)
+    ServicesConfig = Dict[Str, ServiceConfigItem]  # only section already formatted the same way as resolved settings
+    PermissionsConfig = List[PermissionConfigItem]
+    GroupsConfig = List[GroupConfigItem]
+    UsersConfig = List[UserConfigItem]
+    WebhooksConfig = List[WebhookConfigItem]
+
+    # when loaded from multiple distinct configuration files, but fetching only a specific section
+    # they are never mixed together in this case, so use distinct list per section
+    MultiConfigs = Union[  # see as 'OneOf' below list
+        List[ServicesConfig],
+        List[PermissionsConfig],
+        List[UsersConfig],
+        List[GroupsConfig],
+        List[WebhooksConfig],
+    ]
+
+    # combined configuration of respective sections above all within the same file (config.yml)
+    CombinedConfig = TypedDict("CombinedConfig", {
+        "providers": Optional[ServicesConfig],
+        "permissions": Optional[PermissionsConfig],
+        "users": Optional[UsersConfig],
+        "groups": Optional[GroupsConfig],
+        "webhooks": Optional[WebhooksConfig],
+    })
+
+    # mappings after loading of multiple files for relevant sections (AFTER resolution)
+    PermissionsSettings = Dict[Str, PermissionConfigItem]
+    ServicesSettings = Dict[Str, ServiceConfigItem]
+    GroupsSettings = Dict[Str, GroupConfigItem]
+    UsersSettings = Dict[Str, UserConfigItem]
+    WebhookSettings = Dict[WebhookAction, List[WebhookConfigItem]]  # many webhooks aggregated by action
+    AnyResolvedSettings = Union[PermissionsSettings, ServicesSettings, GroupsSettings, UsersSettings, WebhookSettings]

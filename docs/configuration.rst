@@ -5,7 +5,7 @@ Configuration
 =============
 
 At startup, `Magpie` application will load multiple configuration files to define various behaviours or setup
-operations. These are defined though the configuration settings presented in below sections.
+operations. These are defined through the configuration settings presented in below sections.
 
 All generic `Magpie` configuration settings can be defined through either the `magpie.ini`_ file or environment
 variables. Values defined in `magpie.ini`_ are expected to follow the ``magpie.[variable_name]`` format, and
@@ -60,7 +60,7 @@ File: postgres.env
 ~~~~~~~~~~~~~~~~~~~
 
 This file behaves exactly in the same manner as for ``magpie.env`` above, but for specific variables definition
-employed to setup the `postgres` database connection (see :envvar:`MAGPIE_POSTGRES_ENV_FILE` setting below).
+employed to setup the `PostgreSQL`_ database connection (see :envvar:`MAGPIE_POSTGRES_ENV_FILE` setting below).
 File `postgres.env.example`_ and auto-resolution of missing ``postgres.env`` is identical to ``magpie.env``
 case.
 
@@ -86,11 +86,12 @@ File: permissions.cfg
 ~~~~~~~~~~~~~~~~~~~~~~
 
 This configuration file allows automatically registering or cleaning :term:`Permission` definitions in `Magpie` at
-startup. Each specified update operation is applied for the corresponding :term:`User` or :term:`Group` onto the
+startup. Each specified update operation is applied for the corresponding :term:`User` and/or :term:`Group` onto the
 specific :term:`Service` or :term:`Resource`. This file is processed after `providers.cfg`_ in order to allow
 permissions to be applied on freshly registered services. Furthermore, sub-resources are automatically created if they
-can be iteratively resolved with provided parameters of the corresponding permission entry (resources should be defined
-using tree-path in this case, see format in :func:`magpie.api.management.resources.resources_utils.get_resource_path`).
+can be iteratively resolved with provided parameters of the corresponding permission entry. Resources should be defined
+using tree-path in this case, as described by format in
+:func:`magpie.api.management.resources.resources_utils.get_resource_path` or in example `permissions.cfg`_.
 
 See :envvar:`MAGPIE_PERMISSIONS_CONFIG_PATH` setting below to setup alternate references to this type of configuration.
 Please refer to the comment header of sample file `permissions.cfg`_ for specific format details as well as specific
@@ -107,7 +108,7 @@ Any file represented in the :ref:`Configuration` chapter using any of the extens
 ``.yml`` will be accepted interchangeably if provided. Both parsing as JSON and YAML will be attempted for backward
 compatibility of each resolved file path.
 
-It is not mandatory for the the name of each file to also match the employed name in the documentation, provided
+It is not mandatory for the name of each file to also match the employed name in the documentation, provided
 the paths can be resolved to valid files, though there is special handling of default ``.example`` extensions with
 matching file names when no other alternative configurations can be found. Again, this is mostly for backward
 compatibility.
@@ -169,10 +170,11 @@ a combined configuration as follows.
 
 
 For backward compatibility reasons, `Magpie` will first look for separate files to load each section individually.
-To enforce using a combined file as above, either provide ``MAGPIE_CONFIG_PATH = <path>/config.yml`` or ensure that each
-specific environment variable :envvar:`MAGPIE_PROVIDERS_CONFIG_PATH` and :envvar:`MAGPIE_PERMISSIONS_CONFIG_PATH` point
-to the same actual file. For all of these variables, ``magpie.[variable_name]`` formatted settings are also supported
-through definitions within ``magpie.ini``.
+To enforce using a combined file as above *instead of the separate files*, either provide
+``MAGPIE_CONFIG_PATH = <path>/config.yml``, or ensure that both environment variable
+:envvar:`MAGPIE_PROVIDERS_CONFIG_PATH` and :envvar:`MAGPIE_PERMISSIONS_CONFIG_PATH` specifically
+refer to this same YAML file. For all of these variables, ``magpie.[variable_name]`` formatted settings are also
+supported through definitions within ``magpie.ini``.
 
 When loading configurations from a combined file, the order of resolution of each section is the same as when loading
 definitions from multiple files, meaning that ``providers`` are first registered, followed by individual
@@ -184,7 +186,7 @@ field.
 
 .. versionadded:: 3.6
     The ``webhook`` section allows to define external connectors to which `Magpie` should send requests following
-    certain events. These are described in further details in :ref:`config_webhooks` section.
+    certain events. These are described in further details in :ref:`config_webhook` section.
 
 
 .. _config_constants:
@@ -229,6 +231,11 @@ These settings can be used to specify where to find other settings through custo
 
     Configuration directory where to look for ``providers.cfg`` and ``permissions.cfg`` files.
 
+    If more than one file for any of those individual type of configuration needs to be loaded from a directory, the
+    :envvar:`MAGPIE_PROVIDERS_CONFIG_PATH` and :envvar:`MAGPIE_PERMISSIONS_CONFIG_PATH` must be employed instead.
+    Setting this variable will only look for files named *exactly* as above, unless the more explicit definitions
+    of ``MAGPIE_<type>_CONFIG_PATH`` variables are also provided.
+
 .. envvar:: MAGPIE_PROVIDERS_CONFIG_PATH
 
     (Default: ``${MAGPIE_CONFIG_DIR}/providers.cfg``)
@@ -236,10 +243,17 @@ These settings can be used to specify where to find other settings through custo
     Path where to find a `providers.cfg`_ file. Can also be a directory path, where all contained configuration files
     will be parsed for ``providers`` section and will be loaded sequentially.
 
+    Please refer to `providers.cfg`_ for specific format details and parameters.
+
     .. note::
-        If a directory path is specified, the order of loaded configuration files is not guaranteed
-        (depending on OS implementation). Duplicate entries could therefore be loaded in inconsistent order.
-        Please refer to `providers.cfg`_ for specific format details and loading methodology according to arguments.
+        If a directory path is specified, the order of loaded configuration files is alphabetical.
+        Matching :term:`Services` will be overridden by files loaded last.
+
+    .. versionchanged:: 1.7.4
+
+        Loading order of multiple files was **NOT** guaranteed prior to this version.
+
+        This could lead to some entries to be loaded in inconsistent order.
 
 .. envvar:: MAGPIE_PERMISSIONS_CONFIG_PATH
 
@@ -248,31 +262,45 @@ These settings can be used to specify where to find other settings through custo
     Path where to find `permissions.cfg`_ file. Can also be a directory path, where all contained configuration files
     will be parsed for ``permissions`` section and will be loaded sequentially.
 
+    Please refer to `permissions.cfg`_ for specific format details of the various parameters.
+
     .. note::
-        If a directory path is specified, the order of loaded configuration files is not guaranteed
-        (depending on OS implementation). Therefore, cross-file references to services or resources should be avoided
-        to ensure that, for example, any parent resource dependency won't be missing because it was specified in a
-        second file loaded after the first. Corresponding references can be duplicated across files and these conflicts
-        will be correctly handled according to configuration loading methodology.
-        Please refer to `permissions.cfg`_ for specific format details and loading methodology according to arguments.
+        If a directory path is specified, the order of loaded configuration files is alphabetical.
+
+    .. versionchanged:: 1.7.4
+
+        Loading order of multiple files was **NOT** guaranteed prior to this version.
+
+        With older versions, cross-file references to services or resources should be avoided to ensure that,
+        for example, any parent resource dependency won't be missing because it was specified in a
+        second file loaded after the first. Corresponding references can be duplicated across files
+        and these conflicts will be correctly handled according to configuration loading methodology.
+        Later versions are safe to assume alphabetical loading order.
 
 .. envvar:: MAGPIE_CONFIG_PATH
 
     Path where to find a combined YAML configuration file which can include ``providers``, ``permissions``, ``users``
     and ``groups`` sections to sequentially process registration or removal of items at `Magpie` startup.
 
-    .. note::
-        When provided, all other combinations of :envvar:`MAGPIE_CONFIG_DIR`, :envvar:`MAGPIE_PERMISSIONS_CONFIG_PATH`
-        and :envvar:`MAGPIE_PROVIDERS_CONFIG_PATH` are effectively ignored in favour of definitions in this file.
-        See :ref:`config_file` for further details and example.
+    See :ref:`config_file` for further details and an example of its structure.
+
+    .. versionchanged:: 3.6
+        The configuration can also contain a ``webhooks`` section, as described in :ref:`config_webhook` and
+        presented in the sample :ref:`config_file`.
+
+    .. warning::
+        When this setting is defined, all other combinations of :envvar:`MAGPIE_CONFIG_DIR`,
+        :envvar:`MAGPIE_PERMISSIONS_CONFIG_PATH` and :envvar:`MAGPIE_PROVIDERS_CONFIG_PATH` are effectively
+        ignored in favour of definitions in this file. It is not possible to employ the :ref:`config_file` at
+        the same time as multi-configuration loading from a directory.
 
 .. envvar:: MAGPIE_INI_FILE_PATH
 
-  Specifies where to find the initialization file to run `Magpie` application.
+    Specifies where to find the initialization file to run `Magpie` application.
 
-  .. note::
-    This variable ignores the setting/env-var resolution order since settings cannot be defined without
-    firstly loading the file referenced by its value.
+    .. note::
+        This variable ignores the setting/env-var resolution order since settings cannot be defined without
+        firstly loading the file referenced by its value.
 
 .. envvar:: MAGPIE_ENV_DIR
 

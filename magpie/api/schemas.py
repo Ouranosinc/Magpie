@@ -96,7 +96,7 @@ LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
 
 class UserStatuses(ExtendedEnum):
     """
-    Values for the 'status' field of Users
+    Values for the 'status' field of Users.
     """
     WebhookErrorStatus = 0
     OK = 1  # use 1 for ok since this value is set by default by ziggurat

@@ -1,5 +1,8 @@
-## Combined configuration definition to setup objects at Magpie startup
-## See documentation 'Configuration'
+## Combined Configuration
+## ------------------------
+## Prepare or suppress known entity definitions at Magpie startup.
+## See documentation 'Configuration' for detail about loading method, order and other relevant information.
+## ------------------------
 
 # All following sections are optional.
 # All parameters must fulfill data validation rules as per corresponding API requests.
@@ -13,8 +16,8 @@ providers:
 permissions:
   # see full format details in 'permissions.cfg'
   # for each definition:
-  #   can refer to users and groups that will be created dynamically as needed with corresponding information
-  #   plain user or group name not matched against below entry will create it with defaults for other fields
+  #   can refer to below 'users' and 'groups' that will be created dynamically as needed with corresponding information
+  #   user or group name not matched against any extended definition will be created with defaults for other fields
 
 # extended definitions for users to create
 # default values will be used for missing optional fields
@@ -22,9 +25,10 @@ permissions:
 #   will default to only using the user name and defaults for every other field
 users:
   - username: username  # required if entry provided
-    password:           # optional
-    email:              # optional
-    group: <groupname>  # optional (either one of the groups, or plain string to generate it with defaults)
+    password:           # optional (default: random password of size MAGPIE_PASSWORD_MIN_LENGTH)
+    email:              # optional (default: <username>@mail.com)
+    group: <group.name> # optional (default: anonymous, otherwise one of 'groups' matched by 'name')
+                        #          (if group name doesn't exist in 'groups', other parameters use defaults)
 
 # extended definitions for groups to create
 # default values will be used for missing optional fields
@@ -32,8 +36,8 @@ users:
 #   will default to only using the group name and defaults for every other field
 groups:
   - name: <groupname>                 # required if entry provided
-    description: <some description>   # optional
-    discoverable: True                # optional
+    description: <some description>   # optional (default: empty)
+    discoverable: True                # optional (default: False)
 
 # Definitions of all the webhooks urls that will be called when creating or deleting a users.
 webhooks:

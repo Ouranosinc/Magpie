@@ -9,12 +9,14 @@ Tests for `magpie.register` operations.
 """
 import copy
 import json
+import os
 import shutil
 import tempfile
 import unittest
 from typing import TYPE_CHECKING
 
 import mock
+import six
 
 from magpie import register
 from magpie.constants import get_constant
@@ -24,6 +26,11 @@ from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAPI, ServiceTHREDDS
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import interfaces, runner, utils
+
+if six.PY2:
+    from backports import tempfile as tempfile2  # noqa  # Python 2
+else:
+    tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -464,12 +471,72 @@ class TestRegister(interfaces.BaseAdminTestCase, unittest.TestCase):
 
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_REGISTER
-def test_register_make_config_registry():
+def test_register_resolve_config_registry():
     # pylint: disable=W0212
-    assert register._make_config_registry(None, "whatever") == {}
-    assert register._make_config_registry([], "whatever") == {}
-    assert register._make_config_registry([{}], "whatever") == {}
-    assert register._make_config_registry([None], "whatever") == {}  # noqa
+    assert register._resolve_config_registry(None, "whatever") == {}
+    assert register._resolve_config_registry([], "whatever") == {}
+    assert register._resolve_config_registry([{}], "whatever") == {}
+    assert register._resolve_config_registry([None], "whatever") == {}  # noqa
     config = [{"key": "val1", "name": "name1"}, {"key": "val2"}]
     mapped = {"val1": {"key": "val1", "name": "name1"}, "val2": {"key": "val2"}}
-    assert register._make_config_registry(config, "key") == mapped
+    assert register._resolve_config_registry(config, "key") == mapped
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTER
+def test_register_process_permissions_from_multiple_files():
+    """
+    Validate that resolution using multiple configuration files retrieves definition across all of them.
+
+    Use the *raw* format expected from loaded configuration files to validate their parsing at the same time.
+    """
+
+    cfg1 = {
+        "users": [
+            {"username": "usr1"},
+            {"username": "usr2", "group": "grp2"},
+            {"username": "usr3"}  # will be overridden
+        ],
+        "groups": [
+            {"name": "grp1", "discoverable": True},
+            {"name": "grp2"}
+        ],
+        "permissions": [
+            {"permission": "perm1", "action": "remove", "service": "svc", "user": "y"},
+            # applied to both user/group, default 'create' operation, group created with only string (no entry)
+            {"permission": "perm2", "user": "x", "group": "grp3", "service": "svc"},
+            # referenced group is a definition
+            {"permission": "perm3", "action": "create", "service": "svc", "group": "grp1"}
+        ]
+    }
+    cfg2 = {
+        "permissions": [
+            {"permission": "perm4", "group": "grp2"}  # referred from other file
+        ],
+        "users": [
+            {"username": "usr3", "group": "grp3"}  # should override one in first config
+        ]
+    }
+
+    with tempfile2.TemporaryDirectory() as tmpdir:
+        with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
+            json.dump(cfg1, cfg1_file)
+        with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
+            json.dump(cfg2, cfg2_file)
+        with utils.wrapped_call("magpie.register._process_permissions") as mock_process_perms:
+            with utils.wrapped_call("magpie.register.get_admin_cookies", side_effect=lambda *_, **__: {}):
+                register.magpie_register_permissions_from_config(tmpdir, "http://dontcare.com")
+
+    assert mock_process_perms.call_count == 2
+    expect_users = {"usr1": cfg1["users"][0], "usr2": cfg1["users"][1], "usr3": cfg2["users"][0]}
+    expect_groups = {"grp1": cfg1["groups"][0], "grp2": cfg1["groups"][1]}
+
+    perms, _, _, users, groups = mock_process_perms.call_args_list[0].args
+    assert perms == cfg1["permissions"]
+    assert users == expect_users
+    assert groups == expect_groups
+
+    perms, _, _, users, groups = mock_process_perms.call_args_list[1].args
+    assert perms == cfg2["permissions"]
+    assert users == expect_users
+    assert groups == expect_groups
