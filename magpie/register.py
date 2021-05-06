@@ -524,12 +524,25 @@ def _load_config(path_or_dict, section, allow_missing=False):
         raise_log("Invalid config file [{!r}]".format(exc), exception=RegistrationError, logger=LOGGER)
 
 
+CONFIG_KNOWN_EXTENSIONS = frozenset([".cfg", ".json", ".yml", ".yaml"])
+
+
 def get_all_configs(path_or_dict, section, allow_missing=False):
     # type: (Union[Str, ConfigDict], Str, bool) -> List[ConfigDict]
     """
-    Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or directly
-    returns the specified dictionary section (if a configuration dictionary).
+    Loads all matched configurations.
 
+    Configurations are considered a valid match if they have one of the :py:data:`CONFIG_KNOWN_EXTENSIONS` (if path)
+    and that loaded (or passed) configurations contain the specified :paramref:`section` name.
+
+    If the input is a directory path, loads any number of files contained in it that fulfill matching conditions.
+    If it is a path pointing to a single valid configuration file, loads it by itself.
+    If a dictionary is passed, returns it directly if it fulfills validation.
+
+    :param path_or_dict: directory path, file path or literal dictionary.
+    :param section: section name that must be inside every matched configuration file to be loaded.
+    :param allow_missing: allow to have no valid configuration after all are resolved, otherwise raises.
+    :raises RegistrationError: when no valid configuration can be found and empty one is not allowed.
     :returns:
         - list of configurations loaded if input was a directory path
         - list of single configuration if input was a file path
@@ -542,9 +555,8 @@ def get_all_configs(path_or_dict, section, allow_missing=False):
     if isinstance(path_or_dict, six.string_types):
         if os.path.isdir(path_or_dict):
             dir_path = os.path.abspath(path_or_dict)
-            known_extensions = [".cfg", ".yml", ".yaml", ".json"]
             cfg_names = list(sorted({fn for fn in os.listdir(dir_path)
-                                     if any([fn.endswith(ext) for ext in known_extensions])}))
+                                     if any([fn.endswith(ext) for ext in CONFIG_KNOWN_EXTENSIONS])}))
             return [_load_config(os.path.join(dir_path, fn), section, allow_missing) for fn in cfg_names]
         if os.path.isfile(path_or_dict):
             return [_load_config(path_or_dict, section, allow_missing)]

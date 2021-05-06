@@ -84,6 +84,7 @@ if TYPE_CHECKING:
     AccessControlListType = List[AccessControlEntryType]
 
     # registered configurations
+    ConfigPerm = TypedDict("ConfigPerm", {""})
     ConfigItem = Dict[Str, JSON]
     ConfigList = List[ConfigItem]
     ConfigDict = Dict[Str, Union[Str, ConfigItem, ConfigList, JSON]]
