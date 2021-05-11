@@ -1034,7 +1034,10 @@ Configuration parameters are all required unless explicitly indicated to have a 
 
 - | |webhook_param_name|_
 
-  The name of the :term:`Webhook` for reference. Must be unique.
+  The name of the :term:`Webhook` for reference.
+
+  It is not required for this name to be unique, but it is recommended for reporting and reference purposes.
+  If duplicates are found, a warning will be emitted, but all entries will still be registered.
 
 .. _webhook_param_action:
 .. |webhook_param_action| replace:: ``action``

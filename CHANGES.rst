@@ -28,6 +28,8 @@ Bug Fixes
   Empty ``{}``, ``""``, ``null`` payloads, or even omitting the parameter itself, will now be allowed since this
   can be valid use cases when sending requests without any body.
 * Fix ``url`` parameter of `Webhooks` not allowing empty string for path portion of the URL.
+* Fix incorrect documentation of ``name`` parameter handling for `Webhooks` in configurations files (single or multiple)
+  with respect to the code. Duplicate entries are not enforced, but will be warned in logs.
 
 `3.11.0 <https://github.com/Ouranosinc/Magpie/tree/3.11.0>`_ (2021-05-06)
 ------------------------------------------------------------------------------------

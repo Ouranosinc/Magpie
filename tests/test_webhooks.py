@@ -701,7 +701,14 @@ def test_webhook_multiple_files():
                 "payload": "",
             },
             {
-                "name": "test_webhook_1",  # should override other config file
+                "name": "test_webhook_1",  # should not override other config file entry, items are appended
+                "action": WebhookAction.CREATE_USER.value,
+                "method": "POST",
+                "url": "http://override-location.com",
+                "payload": {"name": "{{user.name}}"}
+            },
+            {
+                "name": "test_webhook_1",  # should not override other items, because different action
                 "action": WebhookAction.CREATE_USER.value,
                 "method": "POST",
                 "url": "http://override-location.com",
@@ -718,16 +725,28 @@ def test_webhook_multiple_files():
             yaml.safe_dump(cfg2, cfg2_file, default_flow_style=False)
         setup_webhooks(tmpdir, settings)
 
-    assert len(settings["webhooks"]) == 3, "overridden webhook should have been dropped"
+    webhooks = settings["webhooks"]
+    assert len(webhooks) == 3, "overridden webhook should have been dropped"
+    expect_actions = [WebhookAction.CREATE_USER, WebhookAction.DELETE_USER_PERMISSION, WebhookAction.UPDATE_USER_STATUS]
+    assert all(action in webhooks for action in expect_actions)
 
-    assert "test_webhook_1" in settings
-    assert settings["test_webhook_1"] == cfg2["webhooks"][1], "second webhook duplicate entry should remain"
+    expect_cfg1 = copy.deepcopy(cfg1)
+    for cfg in expect_cfg1["webhooks"]:  # type: dict
+        cfg.setdefault("format", None)
+    expect_cfg2 = copy.deepcopy(cfg2)
+    for cfg in expect_cfg2["webhooks"]:  # type: dict
+        cfg.setdefault("format", None)
 
-    assert "test_webhook_2" in settings
-    assert settings["test_webhook_2"] == cfg1["webhooks"][1]
+    assert len(webhooks[WebhookAction.CREATE_USER]) == 2
+    utils.check_val_equal(webhooks[WebhookAction.CREATE_USER][0], expect_cfg2["webhooks"][1], diff=True)
+    utils.check_val_equal(webhooks[WebhookAction.CREATE_USER][1], expect_cfg2["webhooks"][2], diff=True)
 
-    assert "test_webhook_3" in settings
-    assert settings["test_webhook_3"] == cfg2["webhooks"][0]
+    assert len(webhooks[WebhookAction.DELETE_USER_PERMISSION]) == 2
+    utils.check_val_equal(webhooks[WebhookAction.DELETE_USER_PERMISSION][0], expect_cfg1["webhooks"][0], diff=True)
+    utils.check_val_equal(webhooks[WebhookAction.DELETE_USER_PERMISSION][1], expect_cfg1["webhooks"][1], diff=True)
+
+    assert len(webhooks[WebhookAction.UPDATE_USER_STATUS]) == 1
+    utils.check_val_equal(webhooks[WebhookAction.UPDATE_USER_STATUS][0], expect_cfg2["webhooks"][0], diff=True)
 
 
 @runner.MAGPIE_TEST_LOCAL

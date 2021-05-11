@@ -305,7 +305,7 @@ def setup_webhooks(config_path, settings):
     else:
         LOGGER.info("Loading provided configuration files to setup webhook definitions.")
         webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
-
+        webhook_names = set()  # allow duplicate names, but warn about them because of ambiguity
         for cfg in webhook_configs:
             for webhook in cfg:
                 # Validate the webhook config
@@ -340,6 +340,12 @@ def setup_webhooks(config_path, settings):
                     )
                 for option in WEBHOOK_KEYS_OPTIONAL:
                     webhook.setdefault(option, None)
+
+                if webhook["name"] in webhook_names:
+                    LOGGER.warning("Detected duplicate names in webhooks configurations [%s]. "
+                                   "All will still be registered, but references by name could lead to confusion.",
+                                   webhook["name"])
+                webhook_names.add(webhook["name"])
 
                 # Regroup webhooks by action key
                 webhook_cfg = {k: webhook[k] for k in WEBHOOK_KEYS if k in webhook}  # noqa # ignore optional fields
