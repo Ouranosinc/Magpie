@@ -188,6 +188,10 @@ field.
     The ``webhook`` section allows to define external connectors to which `Magpie` should send requests following
     certain events. These are described in further details in :ref:`config_webhook` section.
 
+.. versionadded:: 3.12
+    Variable :envvar:`MAGPIE_WEBHOOKS_CONFIG_PATH` was added and will act in a similar fashion as their providers and
+    permissions counterparts, to load definitions from multiple configuration files.
+
 
 .. _config_constants:
 
@@ -236,6 +240,9 @@ These settings can be used to specify where to find other settings through custo
     Setting this variable will only look for files named *exactly* as above, unless the more explicit definitions
     of ``MAGPIE_<type>_CONFIG_PATH`` variables are also provided.
 
+    .. warning::
+        This setting is ignored if :envvar:`MAGPIE_CONFIG_PATH` is specified.
+
 .. envvar:: MAGPIE_PROVIDERS_CONFIG_PATH
 
     (Default: ``${MAGPIE_CONFIG_DIR}/providers.cfg``)
@@ -254,6 +261,9 @@ These settings can be used to specify where to find other settings through custo
         Loading order of multiple files was **NOT** guaranteed prior to this version.
 
         This could lead to some entries to be loaded in inconsistent order.
+
+    .. warning::
+        This setting is ignored if :envvar:`MAGPIE_CONFIG_PATH` is specified.
 
 .. envvar:: MAGPIE_PERMISSIONS_CONFIG_PATH
 
@@ -277,6 +287,24 @@ These settings can be used to specify where to find other settings through custo
         and these conflicts will be correctly handled according to configuration loading methodology.
         Later versions are safe to assume alphabetical loading order.
 
+    .. warning::
+        This setting is ignored if :envvar:`MAGPIE_CONFIG_PATH` is specified.
+
+.. envvar:: MAGPIE_WEBHOOKS_CONFIG_PATH
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.12
+
+    Path where to find a file or a directory of multiple configuration files where ``webhooks`` section(s) that
+    provide definitions for :ref:`config_webhook` can be loaded from.
+
+    Examples of such configuration section is presented in the example :ref:`config_file`.
+    When multiple files are available from a directory path, they are loaded by name alphabetically.
+
+    .. warning::
+        This setting is ignored if :envvar:`MAGPIE_CONFIG_PATH` is specified.
+
 .. envvar:: MAGPIE_CONFIG_PATH
 
     Path where to find a combined YAML configuration file which can include ``providers``, ``permissions``, ``users``
@@ -290,9 +318,10 @@ These settings can be used to specify where to find other settings through custo
 
     .. warning::
         When this setting is defined, all other combinations of :envvar:`MAGPIE_CONFIG_DIR`,
-        :envvar:`MAGPIE_PERMISSIONS_CONFIG_PATH` and :envvar:`MAGPIE_PROVIDERS_CONFIG_PATH` are effectively
-        ignored in favour of definitions in this file. It is not possible to employ the :ref:`config_file` at
-        the same time as multi-configuration loading from a directory.
+        :envvar:`MAGPIE_PERMISSIONS_CONFIG_PATH`, :envvar:`MAGPIE_PROVIDERS_CONFIG_PATH` and
+        :envvar:`MAGPIE_WEBHOOKS_CONFIG_PATH` are effectively ignored in favour of definitions in this file.
+        It is not possible to employ the single :ref:`config_file` at the same time as multi-configuration file
+        loading strategy from a directory.
 
 .. envvar:: MAGPIE_INI_FILE_PATH
 
@@ -950,7 +979,7 @@ instance URL. For this reason, the values of :envvar:`MAGPIE_URL`, :envvar:`MAGP
 be considered.
 
 .. seealso::
-    Refer to :ref:`auth_requests` and :ref:`auth_providers` for details.
+    Refer to :ref:`authn_requests` and :ref:`authn_providers` for details.
 
 .. _config_auth_wso2:
 
@@ -966,10 +995,10 @@ To use `WSO2`_ authentication provider, following variables must be set:
 - :envvar:`WSO2_SSL_VERIFY`
 
 To configure your `Magpie` instance as a trusted application for ``WSO2`` (and therefore retrieve values of above
-parameters), please refer to `WSO2_doc`_.
+parameters), please refer to |WSO2_doc|_.
 
 .. seealso::
-    Refer to :ref:`auth_requests` and :ref:`auth_providers` for details.
+    Refer to :ref:`authn_requests` and :ref:`authn_providers` for details.
 
 
 .. _config_webhook:
@@ -1005,7 +1034,10 @@ Configuration parameters are all required unless explicitly indicated to have a 
 
 - | |webhook_param_name|_
 
-  The name of the :term:`Webhook` for reference. Must be unique.
+  The name of the :term:`Webhook` for reference.
+
+  It is not required for this name to be unique, but it is recommended for reporting and reference purposes.
+  If duplicates are found, a warning will be emitted, but all entries will still be registered.
 
 .. _webhook_param_action:
 .. |webhook_param_action| replace:: ``action``
@@ -1045,9 +1077,13 @@ Configuration parameters are all required unless explicitly indicated to have a 
 .. |webhook_param_payload| replace:: ``payload``
 
 - | |webhook_param_payload|_
+  | (Default: ``None``)
 
-  Format of the payload that will be sent in the request body of the triggered :term:`Webhook`.
+  Structure of the payload that will be sent in the request body of the triggered :term:`Webhook`.
   The payload can be anything between a literal string or a JSON/YAML formatted structure.
+
+  .. versionchanged:: 3.12
+    If the field is undefined or resolved as ``None``, it will be accepted for request with an empty body.
 
   .. note::
     The payload can employ parameters that contain template variables using brace characters ``{{<variable>}}``.

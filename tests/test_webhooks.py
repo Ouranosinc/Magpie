@@ -7,23 +7,37 @@ test_webhooks
 
 Tests for the webhooks implementation
 """
+import copy
 import inspect
+import os
 import tempfile
 import unittest
 from time import sleep
 
 import requests
+import six
 import yaml
 from six.moves.urllib.parse import urlparse
 
 from magpie.api.schemas import UserStatuses
-from magpie.api.webhooks import WebhookAction, replace_template, webhook_update_error_status
+from magpie.api.webhooks import (
+    WEBHOOK_KEYS,
+    WebhookAction,
+    replace_template,
+    setup_webhooks,
+    webhook_update_error_status
+)
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAPI
 from magpie.utils import CONTENT_TYPE_HTML
 from tests import interfaces as ti
 from tests import runner, utils
+
+if six.PY2:
+    from backports import tempfile as tempfile2  # noqa  # Python 2
+else:
+    tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 
 WEBHOOK_TEST_DELAY = 0.25  # small delay to let webhook being processed before resuming tests
 
@@ -651,8 +665,93 @@ def test_webhook_template_literal():
     utils.check_val_equal(data, expect)
 
 
-@runner.MAGPIE_TEST_WEBHOOKS
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTER
+@runner.MAGPIE_TEST_WEBHOOKS
+def test_webhook_multiple_files():
+    """
+    Validate that webhooks also support multiple config file loading.
+    """
+    cfg1 = {
+        "users": [{"username": "random"}],  # make sure they are not affected by other sections
+        "webhooks": [
+            {
+                "name": "test_webhook_1",
+                "action": WebhookAction.DELETE_USER_PERMISSION.value,
+                "method": "GET",
+                "url": "http://some-location.com",
+                "payload": {}  # must not be affected by other sections, remains literal string
+            },
+            {
+                "name": "test_webhook_2",
+                "action": WebhookAction.DELETE_USER_PERMISSION.value,
+                "method": "GET",
+                "url": "http://some-location.com",
+                "payload": {"name": "{{user.name}}"}  # must not be affected by other sections, remains literal string
+            },
+        ]
+    }
+    cfg2 = {
+        "webhooks": [
+            {
+                "name": "test_webhook_3",
+                "action": WebhookAction.UPDATE_USER_STATUS.value,
+                "method": "POST",
+                "url": "http://another-location.com",
+                "payload": "",
+            },
+            {
+                "name": "test_webhook_1",  # should not override other config file entry, items are appended
+                "action": WebhookAction.CREATE_USER.value,
+                "method": "POST",
+                "url": "http://override-location.com",
+                "payload": {"name": "{{user.name}}"}
+            },
+            {
+                "name": "test_webhook_1",  # should not override other items, because different action
+                "action": WebhookAction.CREATE_USER.value,
+                "method": "POST",
+                "url": "http://override-location.com",
+                "payload": {"name": "{{user.name}}"}
+            }
+        ]
+    }
+
+    settings = {}  # inplace edited by 'setup_webhooks'
+    with tempfile2.TemporaryDirectory() as tmpdir:
+        with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
+            yaml.safe_dump(cfg1, cfg1_file, default_flow_style=False)
+        with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
+            yaml.safe_dump(cfg2, cfg2_file, default_flow_style=False)
+        setup_webhooks(tmpdir, settings)
+
+    webhooks = settings["webhooks"]
+    assert len(webhooks) == 3, "overridden webhook should have been dropped"
+    expect_actions = [WebhookAction.CREATE_USER, WebhookAction.DELETE_USER_PERMISSION, WebhookAction.UPDATE_USER_STATUS]
+    assert all(action in webhooks for action in expect_actions)
+
+    expect_cfg1 = copy.deepcopy(cfg1)
+    for cfg in expect_cfg1["webhooks"]:  # type: dict
+        cfg.setdefault("format", None)
+    expect_cfg2 = copy.deepcopy(cfg2)
+    for cfg in expect_cfg2["webhooks"]:  # type: dict
+        cfg.setdefault("format", None)
+
+    assert len(webhooks[WebhookAction.CREATE_USER]) == 2
+    utils.check_val_equal(webhooks[WebhookAction.CREATE_USER][0], expect_cfg2["webhooks"][1], diff=True)
+    utils.check_val_equal(webhooks[WebhookAction.CREATE_USER][1], expect_cfg2["webhooks"][2], diff=True)
+
+    assert len(webhooks[WebhookAction.DELETE_USER_PERMISSION]) == 2
+    utils.check_val_equal(webhooks[WebhookAction.DELETE_USER_PERMISSION][0], expect_cfg1["webhooks"][0], diff=True)
+    utils.check_val_equal(webhooks[WebhookAction.DELETE_USER_PERMISSION][1], expect_cfg1["webhooks"][1], diff=True)
+
+    assert len(webhooks[WebhookAction.UPDATE_USER_STATUS]) == 1
+    utils.check_val_equal(webhooks[WebhookAction.UPDATE_USER_STATUS][0], expect_cfg2["webhooks"][0], diff=True)
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTER
+@runner.MAGPIE_TEST_WEBHOOKS
 class TestFailingWebhooks(unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """
@@ -661,7 +760,7 @@ class TestFailingWebhooks(unittest.TestCase):
 
     __test__ = True
 
-    def test_Webhook_IncorrectConfig(self):
+    def test_Webhook_IncorrectConfig_BadURL(self):
         """
         Test using a config with a badly formatted url.
         """
@@ -686,3 +785,43 @@ class TestFailingWebhooks(unittest.TestCase):
             # create the magpie app with the test webhook config
             utils.check_raises(lambda: utils.get_test_magpie_app({"magpie.config_path": webhook_tmp_config.name}),
                                ValueError, msg="Invalid URL in webhook configuration should be raised.")
+
+    def test_Webhook_ValidConfig_CheckNotRaised(self):
+        """
+        Test false positive 'invalid' errors that where incorrectly raised previously.
+        """
+        action = WebhookAction.CREATE_USER
+        base = {
+            "name": "test_webhook_app",
+            "action": action.value,
+            "url": "http://is-ok.com",  # was raised because path = '', but valid URL
+            # "method": to fill
+            # "payload": to fill
+        }
+        # payload that where raised, but valid
+        tests = [
+            (None, "GET"),
+            ("", "HEAD"),
+            ({}, "POST"),
+            (utils.null, "GET"),
+            (None, "POST"),
+            ("", "PUT"),
+            (None, "DELETE"),
+        ]
+
+        for payload, method in tests:
+            cfg = copy.deepcopy(base)
+            cfg["method"] = method
+            if payload is not utils.null:
+                cfg["payload"] = payload
+            data = {
+                "webhooks": [cfg],
+                "providers": "",
+                "permissions": ""
+            }
+            with tempfile.NamedTemporaryFile(mode="w") as webhook_tmp_config:
+                yaml.safe_dump(data, webhook_tmp_config, default_flow_style=False)
+                settings = {}
+                utils.check_no_raise(lambda: setup_webhooks(webhook_tmp_config.name, settings))
+                for key in WEBHOOK_KEYS:
+                    utils.check_val_is_in(key, settings["webhooks"][action][0])

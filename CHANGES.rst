@@ -12,6 +12,11 @@ Features / Changes
 * Add explicit typing definitions of configuration files and resolved settings to facilitate discovery of invalid
   handling of formats or parameters during parsing and startup registration.
 * Apply many documentation updates in both configuration sections and the corresponding configuration example headers.
+* Add ``MAGPIE_WEBHOOKS_CONFIG_PATH`` configuration setting / environment variable that allows potentially using
+  multiple configuration files for `Webhooks`. This parameter is notably important for developers that where using the
+  ``MAGPIE_PROVIDERS_CONFIG_PATH`` or ``MAGPIE_PERMISSIONS_CONFIG_PATH`` settings to load multiple files, as they
+  cannot be combined with single configuration provided by ``MAGPIE_CONFIG_PATH``, which was the only supported way to
+  provide `Webhooks` definitions.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -19,6 +24,12 @@ Bug Fixes
   definitions occur. They will respect alphabetical file name order and later ones remain.
 * Fix ``users`` and ``groups`` registration configurations not correctly parsed when multiple files where employed
   (fixes `#429 <https://github.com/Ouranosinc/Magpie/issues/429>`_).
+* Fix inappropriate validation of ``payload`` field when loading `Webhooks`.
+  Empty ``{}``, ``""``, ``null`` payloads, or even omitting the parameter itself, will now be allowed since this
+  can be valid use cases when sending requests without any body.
+* Fix ``url`` parameter of `Webhooks` not allowing empty string for path portion of the URL.
+* Fix incorrect documentation of ``name`` parameter handling for `Webhooks` in configurations files (single or multiple)
+  with respect to the code. Duplicate entries are not enforced, but will be warned in logs.
 
 `3.11.0 <https://github.com/Ouranosinc/Magpie/tree/3.11.0>`_ (2021-05-06)
 ------------------------------------------------------------------------------------
