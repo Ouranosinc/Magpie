@@ -42,11 +42,11 @@ WEBHOOK_KEYS_REQUIRED = {
     "name",
     "action",
     "method",
-    "url",
-    "payload"
+    "url"
 }
 WEBHOOK_KEYS_OPTIONAL = {
-    "format"
+    "format",
+    "payload"
 }
 WEBHOOK_KEYS = WEBHOOK_KEYS_REQUIRED | WEBHOOK_KEYS_OPTIONAL
 
@@ -280,7 +280,22 @@ def webhook_update_error_status(user_name):
 def setup_webhooks(config_path, settings):
     # type: (Optional[Str], SettingsType) -> None
     """
-    Prepares the webhook settings for the application based on definitions retrieved from the configuration file.
+    Prepares and validates :term:`Webhook` settings for the application based on definitions in configuration file(s).
+
+    Following execution, all validated :term:`Webhook` configurations will have every parameters defined in
+    :py:data:`WEBHOOK_KEYS`, whether optional or mandatory. Required parameters in :py:data:`WEBHOOK_KEYS_REQUIRED`
+    are explicitly validated for defined value and raise if missing. Parameters from :py:data:`WEBHOOK_KEYS_OPTIONAL`
+    are defaulted to ``None`` if missing.
+
+    Any :term:`Webhook` failing validation will raise the whole configuration and not apply any changes to
+    the :paramref:`settings`. Format validation is applied to some specific parameters to anticipate and raise
+    definitions guaranteed to be erroneous to avoid waiting until runtime for them to fail upon their trigger event.
+
+    .. seealso::
+        Documentation in :ref:`config_webhook`.
+
+    :param config_path: a single file or directory path where configuration file(s) with ``webhook`` section.
+    :param settings: modified settings in-place with added valid webhooks.
     """
 
     settings["webhooks"] = defaultdict(lambda: [])
@@ -288,9 +303,9 @@ def setup_webhooks(config_path, settings):
     if not config_path:
         LOGGER.info("No configuration file provided to load webhook definitions.")
     else:
-        LOGGER.info("Loading provided configuration file to setup webhook definitions.")
+        LOGGER.info("Loading provided configuration files to setup webhook definitions.")
         webhook_configs = get_all_configs(config_path, "webhooks", allow_missing=True)
-
+        webhook_names = set()  # allow duplicate names, but warn about them because of ambiguity
         for cfg in webhook_configs:
             for webhook in cfg:
                 # Validate the webhook config
@@ -300,7 +315,9 @@ def setup_webhooks(config_path, settings):
                         exception=ValueError, logger=LOGGER
                     )
                 LOGGER.debug("Validating webhook: %s", webhook.get("name", "<undefined-name>"))
-                if set(webhook) != WEBHOOK_KEYS_REQUIRED or not all(value for value in webhook.values()):
+                param_missing = any(not value for key, value in webhook.items() if key in WEBHOOK_KEYS_REQUIRED)
+                param_required = set(webhook) - WEBHOOK_KEYS_OPTIONAL
+                if param_required != WEBHOOK_KEYS_REQUIRED or param_missing:
                     raise_log(
                         "Missing or invalid key/value in webhook config from the config file {}".format(config_path),
                         exception=ValueError, logger=LOGGER
@@ -316,11 +333,19 @@ def setup_webhooks(config_path, settings):
                         exception=ValueError, logger=LOGGER
                     )
                 url_parsed = urlparse(webhook["url"])
-                if not all([url_parsed.scheme, url_parsed.netloc, url_parsed.path]):
+                if not all([url_parsed.scheme, url_parsed.netloc, url_parsed.path or url_parsed.path == ""]):
                     raise_log(
                         "Invalid URL {} found in webhook from config file {}".format(webhook["url"], config_path),
                         exception=ValueError, logger=LOGGER
                     )
+                for option in WEBHOOK_KEYS_OPTIONAL:
+                    webhook.setdefault(option, None)
+
+                if webhook["name"] in webhook_names:
+                    LOGGER.warning("Detected duplicate names in webhooks configurations [%s]. "
+                                   "All will still be registered, but references by name could lead to confusion.",
+                                   webhook["name"])
+                webhook_names.add(webhook["name"])
 
                 # Regroup webhooks by action key
                 webhook_cfg = {k: webhook[k] for k in WEBHOOK_KEYS if k in webhook}  # noqa # ignore optional fields

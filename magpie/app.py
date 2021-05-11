@@ -4,6 +4,8 @@
 """
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
+import logging
+
 from pyramid.settings import asbool
 from pyramid_beaker import set_cache_regions_from_settings
 
@@ -62,6 +64,12 @@ def main(global_config=None, **settings):  # noqa: F811
     print_log("Register service providers...", logger=LOGGER)
     combined_config = get_constant("MAGPIE_CONFIG_PATH", settings, default_value=None,
                                    raise_missing=False, raise_not_set=False, print_missing=True)
+    if combined_config:
+        print_log("Setting 'MAGPIE_CONFIG_PATH' detected for single file configuration, "
+                  "following settings for multi-file configuration will be ignored: "
+                  "[MAGPIE_PROVIDERS_CONFIG_PATH, MAGPIE_PERMISSIONS_CONFIG_PATH, MAGPIE_WEBHOOKS_CONFIG_PATH]",
+                  logger=LOGGER, level=logging.WARNING)
+
     push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="phoenix.push", default_value=False,
                                        raise_missing=False, raise_not_set=False, print_missing=True))
     prov_cfg = combined_config or get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", settings, default_value="",
@@ -75,7 +83,9 @@ def main(global_config=None, **settings):  # noqa: F811
     magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
 
     print_log("Register webhook configurations...", LOGGER)
-    setup_webhooks(combined_config, settings)
+    webhook_cfg = combined_config or get_constant("MAGPIE_WEBHOOKS_CONFIG_PATH", settings, default_value="",
+                                                  raise_missing=False, raise_not_set=False, print_missing=True)
+    setup_webhooks(webhook_cfg, settings)
 
     print_log("Running configurations setup...", LOGGER)
     patch_magpie_url(settings)
