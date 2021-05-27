@@ -12,6 +12,8 @@ import re
 import unittest
 from typing import TYPE_CHECKING
 
+from six.moves.urllib.parse import urlparse
+
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
 from magpie.constants import get_constant
@@ -295,9 +297,51 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         check_ui_resource_permissions(res_perm_form, sub_id, [to_ui_permission(perm) for perm in sub_perms_mod])
         check_api_resource_permissions([(svc_id, svc_perms_mod), (res_id, res_perms_mod), (sub_id, sub_perms_mod)])
 
+
+@runner.MAGPIE_TEST_UI
+@runner.MAGPIE_TEST_LOCAL
+class TestCase_MagpieUI_AdminAuth_Local_UserRegistration(ti.AdminTestCase, unittest.TestCase):
+    # pylint: disable=C0103,invalid-name
+    """
+    Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
+
+    Use a local Magpie test application. Enables the User self-registration feature.
+    """
+
+    __test__ = True
+
+    @classmethod
+    def setUpClass(cls):
+        # configuration employed for user registration tests
+        cls.settings = {
+            "magpie.user_registration_enabled": True,
+            "magpie.user_registered_enabled": True,
+            "magpie.admin_approval_enabled": True,
+            "magpie.admin_approved_enabled": True,
+            "magpie.admin_approval_email_recipient": "fake-admin@test.com",
+            "magpie.smtp_host": "example.com",  # must exist when getting configs, but not used because email mocked
+        }
+
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_missing=False, raise_not_set=False)
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_missing=False, raise_not_set=False)
+        cls.app = utils.get_test_magpie_app(cls.settings)
+        cls.url = cls.app  # to simplify calls of TestSetup (all use .url)
+        cls.cookies = None
+        cls.version = utils.TestSetup.get_Version(cls)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd, use_ui_form_submit=True)
+        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
+        cls.setup_admin()
+        cls.login_admin()
+
+        cls.test_user_name = get_constant("MAGPIE_TEST_USER", default_value="unittest-admin-auth_ui-user-local",
+                                          raise_missing=False, raise_not_set=False)
+        cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-admin-auth_ui-group-local",
+                                           raise_missing=False, raise_not_set=False)
+
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_FUNCTIONAL
-    def test_end2end_user_registration_from_ui(self):
+    def test_end2end_user_registration_workflow(self):
         """
         Validates the whole workflow defined by :ref:`proc_user_registration`.
 
@@ -314,7 +358,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 
         # press 'Register' button to be redirected to form submission for new user registration
         # no form on the homepage for that button, so only send the corresponding request directly
-        resp = utils.test_request(self, "GET", "/ui/register")
+        resp = utils.test_request(self, "GET", "/ui/register/users")
         data = {
             "user_name": test_register_user,
             "password": test_register_user,
@@ -327,19 +371,38 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         from magpie.api.notifications import make_email_contents as real_contents
         from magpie.api.notifications import send_email as real_send_email
 
-        class TestFakeError(NotImplementedError):
+        class TestFakeConnectError(NotImplementedError):
             pass
 
         def fake_connect(*_, **__):
-            raise TestFakeError
+            raise TestFakeConnectError
 
-        def fake_email(*_, **__):
+        def fake_email(*args, **kwargs):
             try:
-                real_send_email(*_,
-                                **__)  # should end up calling 'fake_connect' after validation of body generation
-            except TestFakeError:  # only catch known mocked error to
+                params = kwargs.pop("parameters", {})
+                # parameters are last arguments in signature
+                if "user" not in params and isinstance(args[-1], dict) and "user" in args[-1]:
+                    params = args[-1]
+                    args = args[:-1]
+                if "user" in params:
+                    # Because 'user' is a database object that will be submitted at the end of the request transaction,
+                    # the reference becomes detached (error). Replace by equivalent mock object to bypass and
+                    # transparently call the corresponding methods after the session transaction was completed.
+                    class MockUser(object):
+                        user_name = params["user"].user_name
+                        status = params["user"].status
+                        email = params["user"].email
+                        id = params["user"].id
+
+                    params["user"] = MockUser()
+                    kwargs["parameters"] = params
+                real_send_email(*args, **kwargs)  # should end up calling 'fake_connect' after template body generation
+            except TestFakeConnectError:  # only catch known mocked error to
                 return True  # silently catch, Magpie will believe email was sent correctly without error
-            raise AssertionError("Was expecting mocked email sending.")
+            except Exception as exc:
+                raise AssertionError("Expected 'TestFakeConnectError' from mocked 'send_email' during connection, "
+                                     "but other exception was raised: {!r}".format(exc))
+            raise AssertionError("Expected 'send_email' mock but it was not captured as intended.")
 
         with utils.wrapped_call("magpie.api.notifications.get_smtp_server_connection", side_effect=fake_connect):
             with utils.wrapped_call("magpie.api.notifications.make_email_contents") as wrapped_contents:
@@ -348,21 +411,30 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                     # submit the registration form to trigger the confirmation email
                     resp = utils.TestSetup.check_FormSubmit(self, previous_response=resp, form_data=data,
                                                             form_match="add_user_form", form_submit="create")
-                    utils.check_ui_response_basic_info(resp, expected_title="Magpie User Management")
+                    body = utils.check_ui_response_basic_info(resp, expected_title="Magpie User Registration")
                     utils.check_val_equal(mocked_email.call_count, 1,
                                           msg="Expected sent notification to user for its email validation.")
-                    message = real_contents(*wrapped_contents.calls[-1])
-                    confirm_url = wrapped_contents.calls[-1][2].get("confirm_email")
-                    utils.check_val_is_in("To: {}".format(test_register_email), message)
-                    utils.check_val_is_in("From: {}".format(self.admin_approval_email), message)
-                    utils.check_val_is_in(confirm_url, message)
-                    utils.check_val_true(confirm_url.startswith("http://localhost") and "/tmp/" in confirm_url)
+                    utils.check_val_is_in("User registration successfully submitted", body)
+                    utils.check_val_is_in("confirm your email address", body)
 
-                    # simulate user clicking the confirmation link in 'sent' email
+                    # validate the content of the email that would have been sent if not mocked
+                    message = real_contents(*wrapped_contents.call_args.args, **wrapped_contents.call_args.kwargs)
+                    msg_str = message.decode()
+                    confirm_url = wrapped_contents.call_args.args[2].get("confirm_url")
+                    utils.check_val_is_in("To: {}".format(test_register_email), msg_str)
+                    utils.check_val_is_in("From: Magpie", msg_str)
+                    utils.check_val_is_in(confirm_url, msg_str)
+                    utils.check_val_true(confirm_url.startswith("http://localhost") and "/tmp/" in confirm_url,
+                                         msg="Expected confirmation URL in email to be a temporary token URL.")
+
+                    # simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
                     confirm_path = urlparse(confirm_url).path
                     resp = utils.test_request(self, "GET", confirm_path)
-                    body = utils.check_response_basic_info(resp, 200)  # FIXME: expect HTML with message?
+                    body = utils.check_response_basic_info(resp, 200)
+
+                    # FIXME: expect HTML with message?
                     # FIXME: check message content in UI page
+                    approval_email = self.settings["magpie.admin_approval_email_recipient"]
 
                     # because of email confirmation was validated, admin notification should have been sent
                     utils.check_val_equal(mocked_email.call_count, 2,

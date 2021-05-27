@@ -56,21 +56,29 @@ class ManagementViews(AdminRequests, BaseViews):
 
     @view_config(route_name="view_users", renderer="templates/view_users.mako")
     def view_users(self):
+        user_name = self.request.POST.get("user_name")
+
         if "delete" in self.request.POST:
-            user_name = self.request.POST.get("user_name")
             path = schemas.UserAPI.path.format(user_name=user_name)
             resp = request_api(self.request, path, "DELETE")
             check_response(resp)
 
         if "edit" in self.request.POST:
-            user_name = self.request.POST.get("user_name")
             return HTTPFound(self.request.route_url("edit_user", user_name=user_name, cur_svc_type="default"))
+
+        if "delete-pending" in self.request.POST:
+            path = schemas.RegisterUserAPI.path.format(user_name=user_name)
+            resp = request_api(self.request, path, "DELETE")
+            check_response(resp)
+
+        if "view-pending" in self.request.POST:
+            return HTTPFound(self.request.route_url("view_pending_user", user_name=user_name))
 
         users = self.get_user_details(status="all")
         non_error = UserStatuses.OK | UserStatuses.Pending  # use combine in case more error types gets added later on
         user_names = [user["user_name"] for user in users]
         user_error = [user["user_name"] for user in users if UserStatuses.get(user["status"]) not in non_error]
-        pending = [user["user_names"] for user in users if UserStatuses.get(user["status"]) == UserStatuses.Pending]
+        pending = [user["user_name"] for user in users if UserStatuses.get(user["status"]) == UserStatuses.Pending]
         return self.add_template_data({"users": user_names, "users_with_error": user_error, "users_pending": pending})
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
@@ -271,6 +279,21 @@ class ManagementViews(AdminRequests, BaseViews):
         user_info["resources"] = res_perms
         user_info["permissions"] = res_perm_names
         return self.add_template_data(data=user_info)
+
+    def view_pending_user(self):
+        """
+        Displays a pending user registration profile details.
+
+        .. note::
+            View configuration is added dynamically because this page it should be available only when the
+            corresponding feature is activated with configuration settings.
+        """
+        user_name = self.request.matchdict["user_name"]
+        path = schemas.RegisterUserAPI.path.format(user_name=user_name)
+        resp = request_api(self.request, path)
+        check_response(resp)
+        data = get_json(resp)["registration"]
+        return self.add_template_data(data=data)
 
     @view_config(route_name="view_groups", renderer="templates/view_groups.mako")
     def view_groups(self):

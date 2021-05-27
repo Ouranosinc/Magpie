@@ -757,19 +757,21 @@ class PermissionNameListSchema(colander.SequenceSchema):
     )
 
 
-class UserInfoSchema(colander.MappingSchema):
+class PendingUserInfoSchema(colander.MappingSchema):
     user_name = UserNameParameter
     email = colander.SchemaNode(
         colander.String(),
         description="Email of the user.",
         example="toto@mail.com")
     status = colander.SchemaNode(
-        colander.Integer(),
-        missing=colander.drop,
+        colander.String(),
         description="Current status of the user account.",
-        example=UserStatuses.OK.value,
-        validator=colander.OneOf(UserStatuses.values())
+        example=UserStatuses.OK.name,
+        validator=colander.OneOf(UserStatuses.names())
     )
+
+
+class RegisteredUserInfoSchema(PendingUserInfoSchema):
     user_id = colander.SchemaNode(
         colander.Integer(),
         missing=colander.drop,  # if not registered or anonymous
@@ -778,14 +780,14 @@ class UserInfoSchema(colander.MappingSchema):
     )
 
 
-class UserBodySchema(UserInfoSchema):
+class UserBodySchema(RegisteredUserInfoSchema):
     group_names = GroupNamesListSchema(
         example=["administrators", "users"]
     )
 
 
 class UserDetailListSchema(colander.SequenceSchema):
-    user = UserInfoSchema()
+    user = RegisteredUserInfoSchema()
 
 
 class GroupBaseBodySchema(colander.MappingSchema):
@@ -2856,6 +2858,10 @@ RegisterUser_Check_BadRequestResponseSchema = User_Check_BadRequestResponseSchem
 RegisterUsers_POST_ForbiddenResponseSchema = Users_POST_ForbiddenResponseSchema
 
 
+class RegisterUser_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
+
+
 class RegisterUser_Check_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Pending user registration could not be found."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
@@ -2864,6 +2870,15 @@ class RegisterUser_Check_NotFoundResponseSchema(BaseResponseSchemaAPI):
 class RegisterUser_Check_ConflictResponseSchema(BaseResponseSchemaAPI):
     description = "User registration is already pending approval."
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class RegisterUser_GET_ResponseBodySchema(BaseResponseBodySchema):
+    registration = PendingUserInfoSchema()
+
+
+class RegisterUser_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Get pending user registration details successful."
+    body = RegisterUser_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class RegisterUser_DELETE_RequestSchema(BaseRequestSchemaAPI):
@@ -3740,8 +3755,17 @@ RegisterUsers_POST_responses = {
     "409": RegisterUser_Check_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
+RegisterUser_GET_responses = {
+    "200": RegisterUser_GET_OkResponseSchema(),
+    "400": RegisterUser_Check_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": HTTPForbiddenResponseSchema(),
+    "404": RegisterUser_Check_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
 RegisterUser_DELETE_responses = {
     "200": RegisterUser_DELETE_OkResponseSchema(),
+    "400": RegisterUser_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": HTTPForbiddenResponseSchema(),
     "404": RegisterUser_Check_NotFoundResponseSchema(),

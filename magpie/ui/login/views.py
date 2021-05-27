@@ -114,7 +114,7 @@ class LoginViews(AdminRequests, BaseViews):
 
         return_data = {
             "is_registration": True,  # require login as admin for registration, dispatch operation checks
-            "MAGPIE_SUB_TITLE": "User Management",  # avoid default referring to administration operations
+            "MAGPIE_SUB_TITLE": "User Registration",  # avoid default referring to administration operations
         }
         return_data = self.create_user_default_template_data(return_data)
 
@@ -126,11 +126,12 @@ class LoginViews(AdminRequests, BaseViews):
                 return self.add_template_data(return_data)
             # successful submission of user registration
             # regardless of the combination of registration steps enabled, first is to validate email
-            data = {
+            return_data.update({
                 "message":
-                    "User registration successfully received. "
+                    "User registration successfully submitted. "
                     "Please confirm your email address by visiting the link that was sent to the submitted email."
-            }
-            return render_to_response("magpie.ui.home/templates/message.mako", data, request=self.request)
+            })
+            data = self.add_template_data(return_data)
+            return render_to_response("magpie.ui.home:templates/message.mako", data, request=self.request)
         # first page load or refresh
         return self.add_template_data(return_data)

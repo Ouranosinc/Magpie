@@ -33,16 +33,17 @@ def format_user(user, group_names=None, basic_info=False, dotted=False):
     def fmt_usr():
         sep = "." if dotted else "_"
         prefix = "user." if dotted else ""
+        status = UserStatuses.get(user.status)
         user_info = {
             "user{}name".format(sep): str(user.user_name),
             "{}email".format(prefix): str(user.email),
-            "{}status".format(prefix): int(user.status)
+            "{}status".format(prefix): status.name,
         }
         if not basic_info:
             grp_names = group_names if group_names else [grp.group_name for grp in user.groups]
             user_info["group_names"] = list(sorted(grp_names))
         # special users not meant to be used as valid "accounts" marked as without an ID
-        if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER") or user.status == UserStatuses.Pending.value:
+        if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER") and status != UserStatuses.Pending:
             user_info["user{}id".format(sep)] = int(user.id)
         return user_info
 

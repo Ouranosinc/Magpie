@@ -17,8 +17,8 @@ def includeme(config):
                                                 default_value=False, print_missing=True,
                                                 raise_missing=False, raise_not_set=False))
     if register_user_enabled:
-        LOGGER.info("Adding UI user registration.")
-        config.add_route("register_user", "/ui/register")
+        LOGGER.info("Adding UI user registration submission page.")
+        config.add_route("register_user", "/ui/register/users")
         config.add_view(LoginViews, attr="register_user", route_name="register_user",
                         renderer="magpie.ui.management:templates/add_user.mako", permission=NO_PERMISSION_REQUIRED)
 

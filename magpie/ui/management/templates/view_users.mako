@@ -47,12 +47,18 @@
                 </div>
             </td>
             <td style="white-space: nowrap">
-                <input type="submit" value="Edit" name="edit" class="button theme">
-                <input value="Delete" name="delete"
+                %if user_name in users_pending:
+                    <input type="submit" value="View" name="view-pending" class="list-button button theme">
+                %else:
+                    <input type="submit" value="Edit" name="edit" class="list-button button theme">
+                %endif
+                <input value="Delete"
                     %if user_name in MAGPIE_FIXED_USERS:
-                       type="button" class="button delete disabled" disabled
+                       type="button" name="delete" class="list-button button delete disabled" disabled
+                    %elif user_name in users_pending:
+                       type="submit" name="delete-pending" class="list-button button delete"
                     %else:
-                       type="submit" class="button delete"
+                       type="submit" name="delete" class="list-button button delete"
                     %endif
                 >
             </td>

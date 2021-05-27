@@ -1100,7 +1100,7 @@ approval procedures.
     .. versionadded:: 3.13
 
     Specifies whether `Magpie` should provide :term:`User` self-registration endpoints on ``/register/users`` for
-    the API and ``/ui/register`` for the UI.
+    the API and ``/ui/register/users`` for the UI.
     See section :ref:`user_registration` for further details about this process.
 
     When enabled, all other configuration regarding SMTP and EMAIL :ref:`config_app_settings` must also be defined
@@ -1336,7 +1336,7 @@ User Creation
     * - Action
       - :attr:`WebhookAction.CREATE_USER`
     * - Parameters
-      - ``user_name``, ``user_id``, ``user_email``, ``callback_url``
+      - ``{{user.name}}``, ``{{user.id}}``, ``{{user.email}}``, ``{{callback_url}}``
 
 Triggered whenever a :term:`User` gets successfully created, using a ``POST /users`` request.
 
@@ -1361,7 +1361,7 @@ User Deletion
     * - Action
       - :attr:`WebhookAction.DELETE_USER`
     * - Parameters
-      - ``user_name``, ``user_id``, ``user_email``
+      - ``{{user.name}}``, ``{{user.id}}``, ``{{user.email}}``
 
 Triggered whenever a :term:`User` gets successfully deleted, using a ``DELETE /users/{user_name}`` request.
 
@@ -1377,7 +1377,7 @@ User Status Update
     * - Action
       - :attr:`WebhookAction.UPDATE_USER_STATUS`
     * - Parameters
-      - ``user_name``, ``user_id``, ``user_status``, ``callback_url``
+      - ``{{user.name}}``, ``{{user.id}}``, ``{{user.status}}``, ``{{callback_url}}``
 
 Triggered whenever a :term:`User` status gets successfully updated, using a ``PATCH /users/{user_name}`` request.
 

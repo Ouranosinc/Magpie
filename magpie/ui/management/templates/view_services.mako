@@ -141,20 +141,20 @@
             <tbody>
                 %for i, service in enumerate(service_names):
                     <form action="${request.path}" method="post">
-                    %if i % 2:
-                    <tr class="list-row-even">
-                    %else:
-                    <tr class="list-row-odd">
-                    %endif
-                        <td>
-                            <input type="hidden" value=${service} name="service_name">${service}
-                        </td>
-                        <td style="white-space: nowrap">
-                            <input type="submit" value="Edit" name="edit" class="button theme">
-                            <input type="button" value="Delete" class="button delete"
-                                   onclick="display_DeleteAlert_Service_${i}()" >
-                        </td>
-                    </tr>
+                        %if i % 2:
+                        <tr class="list-row-even">
+                        %else:
+                        <tr class="list-row-odd">
+                        %endif
+                            <td>
+                                <input type="hidden" value="${service}" name="service_name">${service}
+                            </td>
+                            <td style="white-space: nowrap">
+                                <input type="submit" value="Edit" name="edit" class="list-button button theme">
+                                <input type="button" value="Delete" class="list-button button delete"
+                                       onclick="display_DeleteAlert_Service_${i}()" >
+                            </td>
+                        </tr>
                     </form>
                 %endfor
             </tbody>

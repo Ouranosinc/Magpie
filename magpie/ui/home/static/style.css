@@ -550,8 +550,12 @@ table.panel-line td {
 }
 
 .icon-pending {
-    width: 1.25em;
-    height: 1.25em;
+    width: 1.5em;
+    height: 1.5em;
+    padding-right: 0.2em;
+    margin-top: 0.1em;
+    margin-bottom: -0.1em;
+    filter: contrast(0);
 }
 
 .icon-check {
@@ -1087,6 +1091,10 @@ ul.breadcrumb li a:hover {
     width: 24px;
     height: 24px;
     vertical-align: middle;
+}
+
+.list-button {
+    width: 5em;
 }
 
 .error div {

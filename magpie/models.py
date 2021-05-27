@@ -784,7 +784,12 @@ class TokenOperation(ExtendedEnum):
 
     USER_REGISTRATION_APPROVE_ADMIN = "user-registration-approve-admin"
     """
-    Temporary token associated to a pending user registration that requires approval from an administration.
+    Temporary token associated to a pending user registration that will be approved by an administrator when visited.
+    """
+
+    USER_REGISTRATION_DECLINE_ADMIN = "user-registration-decline-admin"
+    """
+    Temporary token associated to a pending user registration that will be declined by an administrator when visited.
     """
 
     WEBHOOK_USER_STATUS_ERROR = "webhook-user-status-error"

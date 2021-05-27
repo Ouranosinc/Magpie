@@ -21,7 +21,7 @@ from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import generate_callback_url, webhook_update_error_status
 from magpie.constants import get_constant
 from magpie.models import Group, UserPending, UserSearchService, UserStatuses, TemporaryToken, TokenOperation
-from magpie.utils import CONTENT_TYPE_JSON, get_logger
+from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     from typing import List
@@ -56,7 +56,7 @@ def handle_temporary_token(tmp_token, request):
     elif tmp_token.operation == TokenOperation.USER_PASSWORD_RESET:
         ax.verify_param(tmp_token.user, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
-        # TODO: reset procedure
+        # TODO: password reset procedure
         ax.raise_http(HTTPNotImplemented, detail="Not Implemented")
 
     elif tmp_token.operation == TokenOperation.WEBHOOK_USER_STATUS_ERROR:
@@ -185,10 +185,12 @@ def request_admin_approval(tmp_token, request):
     """
     tmp_user = tmp_token.user
     LOGGER.debug("[User Registration - Step 3B] request admin approval for pending user: [%s]", tmp_user.user_name)
-    validation_url = generate_callback_url(TokenOperation.USER_REGISTRATION_APPROVE_ADMIN, request.db, user=tmp_user)
-    params = {"approve_url": validation_url,
-              "refuse_url": "",  # FIXME: add utility endpoint - immediately invalidate pending user
-              "pending_url": "",  # FIXME: ui view to display pending user - same as account, but less sections
+    approve_url = generate_callback_url(TokenOperation.USER_REGISTRATION_APPROVE_ADMIN, request.db, user=tmp_user)
+    decline_url = generate_callback_url(TokenOperation.USER_REGISTRATION_DECLINE_ADMIN, request.db, user=tmp_user)
+    pending_user_url = get_magpie_url(request) + s.RegisterUserAPI.path.foramt(user_name=tmp_user.user_name)
+    params = {"approve_url": approve_url,
+              "decline_url": decline_url,  # FIXME: add utility endpoint - immediately invalidate pending user
+              "pending_url": pending_user_url,  # FIXME: ui view to display pending user - same as account, but less sections
               "user": tmp_user}
     admin_email = get_constant("MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT", request)
     template = get_email_template("MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE", request)

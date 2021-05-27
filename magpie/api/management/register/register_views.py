@@ -18,6 +18,7 @@ from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
 from magpie.api.management.register import register_utils as ru
+from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 
 if TYPE_CHECKING:
@@ -52,6 +53,18 @@ def create_pending_user_view(request):
     email = ar.get_multiformat_body(request, "email")
     password = ar.get_multiformat_body(request, "password")
     return ru.register_pending_user(user_name, email, password, request)
+
+
+# note: optional view config added in includeme according to setting
+@s.RegisterUserAPI.get(schema=s.RegisterUser_GET_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
+                       response_schemas=s.RegisterUser_GET_responses)
+def get_pending_user_view(request):
+    """
+    Retrieve a pending user registration details.
+    """
+    pending_user = ar.get_user_matchdict_checked(request, user_status=models.UserStatuses.Pending)
+    data = {"registration": uf.format_user(pending_user, basic_info=True)}
+    return ax.valid_http(http_success=HTTPOk, content=data, detail=s.RegisterUser_GET_OkResponseSchema.description)
 
 
 # note: optional view config added in includeme according to setting

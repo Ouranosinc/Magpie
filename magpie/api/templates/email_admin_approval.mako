@@ -14,8 +14,8 @@
         email_recipient:    Resolved email of the identity where to send the notification email.
         email_datetime:     Date and time (ISO-8601 UTC) when that email was generated.
         magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration settings.
-        approve_url:        Endpoint where the pending user registration will be approved when visited.
-        refuse_url:         Endpoint where the pending user registration will be refused when visited.
+        approve_url:        Endpoint where the pending user registration request will be approved when visited.
+        decline_url:        Endpoint where the pending user registration request will be declined when visited.
         pending_url:        Endpoint where the pending user registration details can be viewed (Magpie UI).
 
 </%doc>
@@ -38,13 +38,14 @@ Following are the details submitted by the user:
 This registration was submitted to ${magpie_url} on ${email_datetime}.
 Please select the link with desired result regarding this request:
 
-    <a href="${approve_url}">Approve</a>  |  <a href="${refuse_url}">Refuse</a>
+    <a href="${approve_url}">Approve</a>  |  <a href="${decline_url}">Decline</a>
 
 Approving will complete the registration process by notifying the user that its account was approved and created.
 Refusing will dismiss the pending user registration completely.
 Omitting to select any result will leave the registration pending for approval.
 
-You can also visit ${pending_url} to complete this process using Magpie interface at a later time.
+You can also visit the <a href="${pending_url}">Pending User Details</a> page to complete
+this process using Magpie interface at a later time.
 
 Regards,
 ${email_user}
