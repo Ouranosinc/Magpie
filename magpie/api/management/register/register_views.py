@@ -54,13 +54,17 @@ def create_pending_user_view(request):
     return ru.register_pending_user(user_name, email, password, request)
 
 
+# note: optional view config added in includeme according to setting
 @s.RegisterUserAPI.delete(schema=s.RegisterUser_DELETE_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
                           response_schemas=s.RegisterUser_DELETE_responses)
 def delete_pending_user_view(request):
     """
     Remove a pending user registration (disapprove account creation).
     """
-    user_name = ar.get_user_matchdict_checked()
+    pending_user = ar.get_user_matchdict_checked(request, user_status=models.UserStatuses.Pending)
+    ax.evaluate_call(lambda: request.db.delete(pending_user), fallback=lambda: request.db.rollback(),
+                     http_error=HTTPInternalServerError, msg_on_fail=s.InternalServerErrorResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.RegisterUser_DELETE_OkResponseSchema.description)
 
 
 @s.RegisterGroupsAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],

@@ -1835,7 +1835,7 @@ class User_DELETE_RequestSchema(BaseRequestSchemaAPI):
 
 class User_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Delete user successful."
-    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class User_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -2856,9 +2856,24 @@ RegisterUser_Check_BadRequestResponseSchema = User_Check_BadRequestResponseSchem
 RegisterUsers_POST_ForbiddenResponseSchema = Users_POST_ForbiddenResponseSchema
 
 
+class RegisterUser_Check_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Pending user registration could not be found."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
 class RegisterUser_Check_ConflictResponseSchema(BaseResponseSchemaAPI):
     description = "User registration is already pending approval."
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class RegisterUser_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
+    body = colander.MappingSchema(default={})
+
+
+class RegisterUser_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Delete pending user registration successful."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class TemporaryURL_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -3723,6 +3738,13 @@ RegisterUsers_POST_responses = {
     "403": RegisterUsers_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
     "409": RegisterUser_Check_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterUser_DELETE_responses = {
+    "200": RegisterUser_DELETE_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": HTTPForbiddenResponseSchema(),
+    "404": RegisterUser_Check_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 TemporaryURL_GET_responses = {

@@ -162,13 +162,14 @@ def get_logged_user(request):
     return None
 
 
-def get_user(request, user_name_or_token=None):
-    # type: (Request, Optional[Str]) -> models.User
+def get_user(request, user_name_or_token=None, user_status=None):
+    # type: (Request, Optional[Str], Optional[models.UserStatuses]) -> models.AnyUser
     """
     Obtains the user corresponding to the provided user-name, token or via lookup of the logged user request session.
 
     :param request: request from which to obtain application settings and session user as applicable.
     :param user_name_or_token: reference value to employ for lookup of the user.
+    :param user_status: filter search based on a user status. Ignored if no user name or token is provided.
     :returns: found user.
     :raises HTTPForbidden: if the requesting user does not have sufficient permission to execute this request.
     :raises HTTPNotFound: if the specified user name or token does not correspond to any existing user.
@@ -191,17 +192,20 @@ def get_user(request, user_name_or_token=None):
     ax.verify_param(user_name_or_token, not_none=True, not_empty=True, matches=True,
                     param_compare=ax.PARAM_REGEX, param_name="user_name",
                     http_error=HTTPBadRequest, msg_on_fail=s.User_Check_BadRequestResponseSchema.description)
-    user = ax.evaluate_call(lambda: UserService.by_user_name(user_name_or_token, db_session=request.db),
+    user = ax.evaluate_call(lambda: models.UserSearchService.by_user_name(user_name_or_token,
+                                                                          status=user_status, db_session=request.db),
                             fallback=lambda: request.db.rollback(),
                             http_error=HTTPInternalServerError,
                             msg_on_fail=s.User_GET_InternalServerErrorResponseSchema.description)
-    ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
-                    msg_on_fail=s.User_GET_NotFoundResponseSchema.description)
+    msg = s.User_GET_NotFoundResponseSchema.description
+    if user_status == models.UserStatuses.Pending:
+        msg = s.RegisterUser_Check_NotFoundResponseSchema.description
+    ax.verify_param(user, not_none=True, http_error=HTTPNotFound, msg_on_fail=msg)
     return user
 
 
-def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
-    # type: (Request, Str) -> models.User
+def get_user_matchdict_checked_or_logged(request, user_name_key="user_name", user_status=None):
+    # type: (Request, Str, Optional[models.UserStatuses]) -> models.AnyUser
     """
     Obtains either the explicit or logged user specified in the request path variable.
 
@@ -214,12 +218,12 @@ def get_user_matchdict_checked_or_logged(request, user_name_key="user_name"):
     logged_user_path = s.UserAPI.path.replace("{" + user_name_key + "}", logged_user_name + "/")
     request_path = request.path_info if request.path_info.endswith("/") else request.path_info + "/"
     if user_name_key not in request.matchdict or request_path.startswith(logged_user_path):
-        return get_user(request, logged_user_name)
-    return get_user_matchdict_checked(request, user_name_key)
+        return get_user(request, logged_user_name, user_status=user_status)
+    return get_user_matchdict_checked(request, user_name_key, user_status=user_status)
 
 
-def get_user_matchdict_checked(request, user_name_key="user_name"):
-    # type: (Request, Str) -> models.User
+def get_user_matchdict_checked(request, user_name_key="user_name", user_status=None):
+    # type: (Request, Str, Optional[models.UserStatuses]) -> models.AnyUser
     """
     Obtains the user matched against the specified request path variable.
 
@@ -232,7 +236,7 @@ def get_user_matchdict_checked(request, user_name_key="user_name"):
         - :func:`get_user`
     """
     user_name = get_value_matchdict_checked(request, user_name_key)
-    return get_user(request, user_name)
+    return get_user(request, user_name, user_status=user_status)
 
 
 def get_group_matchdict_checked(request, group_name_key="group_name"):
