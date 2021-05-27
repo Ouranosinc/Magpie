@@ -460,7 +460,7 @@ at the start of the :ref:`Configuration` section.
 
     (Default: ``"Magpie"``)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Display name employed as sending user of notification emails.
 
@@ -470,7 +470,7 @@ at the start of the :ref:`Configuration` section.
 
     (Default: ``None``)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Email that identifies the sender of notification emails by the application.
 
@@ -482,7 +482,7 @@ at the start of the :ref:`Configuration` section.
 
     (Default: ``None``)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Authentication password to use in combination with :envvar:`MAGPIE_SMTP_FROM` to connect the server
     specified by :envvar:`MAGPIE_SMTP_HOST` as required.
@@ -491,7 +491,7 @@ at the start of the :ref:`Configuration` section.
 
 .. envvar:: MAGPIE_SMTP_HOST
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Host of the SMTP server to employ for sending notification emails.
 
@@ -500,7 +500,7 @@ at the start of the :ref:`Configuration` section.
     [:class:`int`]
     (Default: ``465``)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Port of the outgoing notification emails from the SMTP server.
 
@@ -517,7 +517,7 @@ at the start of the :ref:`Configuration` section.
     [:class:`bool`]
     (Default: ``True``)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Specifies if SSL should be employed for sending email.
 
@@ -1075,7 +1075,7 @@ parameters), please refer to |WSO2_doc|_.
 User Registration and Approval Configuration
 -----------------------------------------------
 
-.. versionadded:: 3.11
+.. versionadded:: 3.13
 
 This section describes the relevant details regarding the activation of settings
 :envvar:`MAGPIE_USER_REGISTRATION_ENABLED` and :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED`.
@@ -1097,7 +1097,7 @@ approval procedures.
     [:class:`bool`]
     (Default: ``False``)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Specifies whether `Magpie` should provide :term:`User` self-registration endpoints on ``/register/users`` for
     the API and ``/ui/register`` for the UI.
@@ -1128,7 +1128,7 @@ approval procedures.
 
     (Default: |email_user_registration_mako|_)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Path to a `Mako Template`_ file providing custom email format to send notification email following submission of
     a new :ref:`user_registration`. The default template provides details about available template arguments.
@@ -1139,7 +1139,7 @@ approval procedures.
     [:class:`bool`]
     (Default: ``False``)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Controls whether a notification email should be sent to :envvar:`MAGPIE_USER_REGISTERED_EMAIL_RECIPIENT` once a
     :term:`Pending User` successfully completed the registration process.
@@ -1162,7 +1162,7 @@ approval procedures.
 
     (Default: |email_user_registration_mako|_)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Path to a `Mako Template`_ file providing custom email format to send notification email following submission of
     a new :ref:`user_registration`. The default template provides details about available template arguments.
@@ -1176,7 +1176,7 @@ approval procedures.
     [:class:`bool`]
     (Default: ``False``)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Specifies whether administrator approval is required to complete user registration.
 
@@ -1189,7 +1189,7 @@ approval procedures.
 
 .. envvar:: MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Email of the *administrator* to which a notification is sent using the body defined by
     :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE`, when a new user registration was requested.
@@ -1203,7 +1203,7 @@ approval procedures.
 
     (Default: |email_admin_approval_mako|_)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Path to a `Mako Template`_ file providing custom email format to send notification email to
     :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT` following a user registration demand.
@@ -1213,7 +1213,7 @@ approval procedures.
 
     (Default: |email_admin_approved_mako|_)
 
-    .. versionadded:: 3.11
+    .. versionadded:: 3.13
 
     Path to a `Mako Template`_ file providing custom email format to send an email to the
     :term:`Pending User` that initially requested the user registration to notify them of the completed registration

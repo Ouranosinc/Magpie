@@ -92,7 +92,6 @@ def get_smtp_server_configuration(settings):
     }
     # host, port and resolved sender must always be defined regardless of direct, resolved or default values
     if not smtp_host or not str.isnumeric(str(smtp_port)) or not sender:
-        config["password"] = "[REDACTED]"  # nosec
         LOGGER.debug("SMTP invalid config: %s", config)
         raise ValueError("SMTP email server configuration is missing required parameters.")
     config["port"] = int(config["port"])  # update only after validated
@@ -148,10 +147,11 @@ def send_email(recipient, template, container, parameters=None):
     """
     Send email notification using provided template and parameters.
 
-    The preparation steps of the email (retrieve SMTP configuration, define parameters and attempt template generation)
-    will directly raise if invalid as they correspond to incorrect application code or configuration settings.
+    The preparation steps of the email (retrieve SMTP configuration, setup the SMTP connection, define email content
+    parameters and attempt template generation) will directly raise if invalid as they correspond to incorrect
+    application code or configuration settings.
 
-    Following steps to establish SMTP connection and send the email are caught and logged if raising an exception.
+    Following step to send the email with the established SMTP connection is caught and logged if raising an exception.
     This is to allow the calling operation to ignore failing email notification and act accordingly using the resulting
     email status.
 
@@ -173,11 +173,12 @@ def send_email(recipient, template, container, parameters=None):
     params["email_datetime"] = datetime.utcnow().isoformat(" ", "seconds") + " UTC"  # "YYYY-MM-DD HH:mm:ss UTC"
     message = make_email_contents(config, template, params, settings)
 
-    server = None
+    LOGGER.debug("Creating SMTP connection to send email using config: %s.", config)
+    server = get_smtp_server_connection(config)
+
     result = None
     try:
         LOGGER.debug("Sending email to: [%s] using template [%s]", recipient, template.filename)
-        server = get_smtp_server_connection(config)
         # result of sendmail is returned only if at least one of many recipients succeeds,
         # but here we use just one, so it should either succeed completely or raise
         result = server.sendmail(config["sender"], [recipient], message)
@@ -187,8 +188,7 @@ def send_email(recipient, template, container, parameters=None):
         LOGGER.debug("Email contents:\n\n%s\n", message, exc_info=exc)
         # don't re-raise here (see docstring)
     finally:
-        if server:
-            server.quit()
+        server.quit()
     if result:
         LOGGER.debug("Unexpected error result from SMTP server during email notification:\n%s", result)
         return False

@@ -21,10 +21,11 @@ def includeme(config):
     if register_user_enabled:
         LOGGER.info("Adding user registration route.")
         config.add_route(**s.service_api_route_info(s.RegisterUsersAPI))
-        # only admins can list pending users, but anyone can self-register for pending user approval
+        # only admins can list/remove pending users, but anyone can self-register with pending user approval
         config.add_view(rv.get_pending_users_view, route_name=s.RegisterUsersAPI.name, request_method="GET")
         config.add_view(rv.create_pending_user_view, route_name=s.RegisterUsersAPI.name, request_method="POST",
                         permission=NO_PERMISSION_REQUIRED)
+        config.add_view(rv.delete_pending_user_view, route_name=s.RegisterUserAPI.name, request_method="DELETE")
     else:
         LOGGER.info("User registration disabled [setting MAGPIE_USER_REGISTRATION].")
 

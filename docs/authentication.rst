@@ -295,7 +295,7 @@ to :term:`User` identification against local accounts in `Magpie` using :envvar:
 User Registration
 ------------------------
 
-.. versionadded:: 3.11
+.. versionadded:: 3.13
 
 .. warning::
     Please refer to the **Security Notice** under :envvar:`MAGPIE_USER_REGISTRATION_ENABLED` regarding the impact

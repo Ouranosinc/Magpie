@@ -156,6 +156,8 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         for usr in list(cls.extra_user_names):  # copy to update removed ones
             if usr not in cls.reserved_users:
                 utils.TestSetup.delete_TestUser(cls, override_user_name=usr)
+                if TestVersion(cls.version) >= TestVersion("3.13.0"):
+                    utils.TestSetup.delete_TestUser(cls, override_user_name=usr, pending=True)
                 cls.extra_user_names.discard(usr)
         for grp in list(cls.extra_group_names):  # copy to update removed ones
             if grp not in cls.reserved_groups:

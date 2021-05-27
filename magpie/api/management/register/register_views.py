@@ -54,6 +54,15 @@ def create_pending_user_view(request):
     return ru.register_pending_user(user_name, email, password, request)
 
 
+@s.RegisterUserAPI.delete(schema=s.RegisterUser_DELETE_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
+                          response_schemas=s.RegisterUser_DELETE_responses)
+def delete_pending_user_view(request):
+    """
+    Remove a pending user registration (disapprove account creation).
+    """
+    user_name = ar.get_user_matchdict_checked()
+
+
 @s.RegisterGroupsAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
                          response_schemas=s.RegisterGroups_GET_responses)
 @view_config(route_name=s.RegisterGroupsAPI.name, request_method="GET", permission=Authenticated)

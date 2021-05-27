@@ -7,25 +7,22 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
-
-`3.12.0 <https://github.com/Ouranosinc/Magpie/tree/3.12.0>`_ (2021-05-11)
-------------------------------------------------------------------------------------
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Changed ``UserStatuses.WebhookErrorStatus = 0`` to ``UserStatuses.WebhookError = 2`` to provide further
   functionalities. Migration script applies this change to existing ``User``.
+* Changed ``status`` search query handling of ``GET /users`` path for improved search and filtering capabilities.
 * Add new ``UserStatuses.Pending = 4`` value that can be queried by administrators.
 * Add ``UserPending`` object with corresponding table for pending approval by an administrator for some new
   self-registered user. Migration script creates the table with expected fields.
-* Improved ``status`` search query of ``GET /users`` path.
-* New requests respectively under ``/register/users`` and ``/ui/register`` for user account self-registration.
+* Add new requests respectively under ``/register/users`` and ``/ui/register`` for user account self-registration.
 * Add configuration setting ``MAGPIE_USER_REGISTRATION_ENABLED`` to control whether user account self-registration
   feature should be employed.
+  With it comes multiple other ``MAGPIE_USER_REGISTRATION_<...>`` settings to customize notification emails.
 * Add configuration setting ``MAGPIE_ADMIN_APPROVAL_ENABLED`` to control whether user account must be approved prior
   to allowing self-registration.
-* Add multiple ``MAGPIE_SMTP_<...>`` configuration settings to control behavior of notification email SMTP server.
+  With it comes multiple other ``MAGPIE_ADMIN_APPROVAL_<...>`` settings to customize notification emails.
+* Add multiple ``MAGPIE_SMTP_<...>`` configuration settings to control connections to notification email SMTP server.
 * Add ``empty_missing`` flag to ``get_constant`` utility to allow validation against existing environment variables or
   settings that should be considered as invalid when resolved value is an empty string.
 
@@ -36,14 +33,11 @@ Bug Fixes
     will be required, as `Magpie` will not be able to assume which one corresponds to the valid user to preserve.
   |
   | **SECURITY**:
-  | Since email can be employed as another mean of login credential instead of the more typically used username, this
-    caused potential theft of identity by retrieved user account against matched email.
-* Fix issue related to parsing cookies identified while submitting user creation from UI.
-  (resolves `#427 <https://github.com/Ouranosinc/Magpie/issues/427>`_).
+  | Since email can be employed as another mean of login credential instead of the more typically used username,
+    this caused potential denial of authentication for some user accounts where email was matched against another
+    account with duplicate email.
 
-.. FIXME: update tag
-
-`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
+`3.12.0 <https://github.com/Ouranosinc/Magpie/tree/3.12.0>`_ (2021-05-11)
 ------------------------------------------------------------------------------------
 
 Features / Changes

@@ -590,6 +590,27 @@ def mock_request(request_path_query="",     # type: Str
     return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
 
 
+def mock_send_email(func):
+    """
+    Decorator that mocks :func:`magpie.api.notifications.send_email`.
+
+    When decorated, functions can run user registration operations without any email notifications being sent.
+    Email and SMTP related configuration can also be omitted as its configuration is completely skipped.
+    """
+
+    def no_email(*_, **__):
+        return True  # "success" email
+
+    @functools.wraps(func)
+    def wrapped(*_, **__):
+        # mock both direct reference if imported and places that use it to globally mock email notifications
+        with wrapped_call("magpie.api.management.register.register_utils.send_email", side_effect=no_email):
+            with wrapped_call("magpie.api.notifications.send_email", side_effect=no_email):
+                return func(*_, **__)
+
+    return wrapped
+
+
 __WRAPPED_INSTANCES__ = {}
 
 
@@ -2233,29 +2254,33 @@ class TestSetup(object):
             check_val_is_in(resp.status_code, 404)
 
     @staticmethod
-    def get_RegisteredUsersList(test_case, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> List[Str]
+    def get_RegisteredUsersList(test_case, override_headers=null, override_cookies=null, pending=False):
+        # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType], bool) -> List[Str]
         """
         Obtains the list of registered users.
 
         :raises AssertionError: if the response does not correspond to successful retrieval of user names.
         """
         app_or_url = get_app_or_url(test_case)
-        resp = test_request(app_or_url, "GET", "/users",
+        resp = test_request(app_or_url, "GET", "/register/users" if pending else "/users",
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         json_body = check_response_basic_info(resp, 200, expected_method="GET")
-        return json_body["user_names"]
+        return json_body["registrations"] if pending else json_body["user_names"]
 
     @staticmethod
-    def check_NonExistingTestUser(test_case, override_user_name=null, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
+    def check_NonExistingTestUser(test_case,                # type: AnyMagpieTestCaseType
+                                  override_user_name=null,  # type: Optional[Str]
+                                  override_headers=null,    # type: Optional[HeadersType]
+                                  override_cookies=null,    # type: Optional[CookiesType]
+                                  pending=False,            # type: bool
+                                  ):                        # type: (...) -> None
         """
         Ensures that the test user does not exist.
 
         :raises AssertionError: if the test user exists.
         """
-        users = TestSetup.get_RegisteredUsersList(test_case,
+        users = TestSetup.get_RegisteredUsersList(test_case, pending=pending,
                                                   override_headers=override_headers, override_cookies=override_cookies)
         user_name = override_user_name if override_user_name is not null else test_case.test_user_name
         check_val_not_in(user_name, users)
@@ -2269,6 +2294,7 @@ class TestSetup(object):
                         override_group_name=null,   # type: Optional[Str]
                         override_headers=null,      # type: Optional[HeadersType]
                         override_cookies=null,      # type: Optional[CookiesType]
+                        pending=False,              # type: bool
                         ):                          # type: (...) -> JSON
         """
         Creates the test user.
@@ -2289,14 +2315,18 @@ class TestSetup(object):
         usr_name = (data or {}).get("user_name")
         if usr_name:
             test_case.extra_user_names.add(usr_name)  # indicate potential removal at a later point
-        resp = test_request(app_or_url, "POST", "/users", json=data,
+        resp = test_request(app_or_url, "POST", "/register/users" if pending else "/users", json=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
-    def delete_TestUser(test_case, override_user_name=null, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
+    def delete_TestUser(test_case,                  # type: AnyMagpieTestCaseType
+                        override_user_name=null,    # type: Optional[Str]
+                        override_headers=null,      # type: Optional[HeadersType]
+                        override_cookies=null,      # type: Optional[CookiesType]
+                        pending=False,              # type: bool
+                        ):                          # type: (...) -> None
         """
         Ensures that the test user does not exist.
 
@@ -2307,15 +2337,35 @@ class TestSetup(object):
         app_or_url = get_app_or_url(test_case)
         headers = override_headers if override_headers is not null else test_case.json_headers
         cookies = override_cookies if override_cookies is not null else test_case.cookies
-        users = TestSetup.get_RegisteredUsersList(test_case, override_headers=headers, override_cookies=cookies)
+        users = TestSetup.get_RegisteredUsersList(test_case, pending=pending,
+                                                  override_headers=headers, override_cookies=cookies)
         user_name = override_user_name if override_user_name is not null else test_case.test_user_name
         # delete as required, skip if non-existing
         if user_name in users:
-            path = "/users/{usr}".format(usr=user_name)
+            path = "{}/users/{}".format("/register" if pending else "", user_name)
             resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies)
             check_response_basic_info(resp, 200, expected_method="DELETE")
         TestSetup.check_NonExistingTestUser(test_case, override_user_name=user_name,
                                             override_headers=headers, override_cookies=cookies)
+
+    @staticmethod
+    def clear_PendingUsers(test_case,               # type: AnyMagpieTestCaseType
+                           override_headers=null,   # type: Optional[HeadersType]
+                           override_cookies=null,   # type: Optional[CookiesType]
+                           ):                       # type: (...) -> None
+        """
+        Removes all existing pending user registrations.
+        """
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        users = TestSetup.get_RegisteredUsersList(test_case, pending=True,
+                                                  override_headers=headers, override_cookies=cookies)
+        for user in users:
+            TestSetup.delete_TestUser(test_case, pending=True, override_user_name=user,
+                                      override_headers=headers, override_cookies=cookies)
+        users = TestSetup.get_RegisteredUsersList(test_case, pending=True,
+                                                  override_headers=headers, override_cookies=cookies)
+        check_val_equal(len(users), 0)
 
     @staticmethod
     def get_UserInfo(test_case,                 # type: AnyMagpieTestCaseType
