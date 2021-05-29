@@ -256,6 +256,10 @@ table thead {
     text-align: left;
 }
 
+.panel-message-text > span {
+    white-space: pre-wrap;
+}
+
 .subsection {
     background-color: #CCCCCC;
 }

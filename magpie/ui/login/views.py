@@ -1,3 +1,5 @@
+from inspect import cleandoc
+
 import requests
 from pyramid.httpexceptions import (
     HTTPException,
@@ -127,9 +129,11 @@ class LoginViews(AdminRequests, BaseViews):
             # successful submission of user registration
             # regardless of the combination of registration steps enabled, first is to validate email
             return_data.update({
-                "message":
-                    "User registration successfully submitted. "
-                    "Please confirm your email address by visiting the link that was sent to the submitted email."
+                "message": cleandoc("""
+                    User registration successfully submitted.
+                    
+                    Please confirm your email address by visiting the link that was sent to the submitted email.
+                """)
             })
             data = self.add_template_data(return_data)
             return render_to_response("magpie.ui.home:templates/message.mako", data, request=self.request)

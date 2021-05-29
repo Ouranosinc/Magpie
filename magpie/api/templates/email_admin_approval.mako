@@ -16,7 +16,8 @@
         magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration settings.
         approve_url:        Endpoint where the pending user registration request will be approved when visited.
         decline_url:        Endpoint where the pending user registration request will be declined when visited.
-        pending_url:        Endpoint where the pending user registration details can be viewed (Magpie UI).
+        pending_url:        Endpoint where the pending user registration details can be retrieved (Magpie API).
+        display_url:        Endpoint where the pending user registration details can be viewed (Magpie UI).
 
 </%doc>
 
@@ -44,7 +45,7 @@ Approving will complete the registration process by notifying the user that its 
 Refusing will dismiss the pending user registration completely.
 Omitting to select any result will leave the registration pending for approval.
 
-You can also visit the <a href="${pending_url}">Pending User Details</a> page to complete
+You can also visit the <a href="${display_url}">Pending User Details</a> page to complete
 this process using Magpie interface at a later time.
 
 Regards,

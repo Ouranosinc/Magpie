@@ -343,15 +343,18 @@ Following is the summarized notification workflow to complete registration:
 
         A) When :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` is **NOT** activated, only email validation is
            required from the confirmation email. Receiving the confirmation in that case immediately completes
-           the :term:`User` registration process. The procedure moves directly to step (5).
+           the :term:`User` registration process. The procedure moves directly to step (5) skipping (4).
 
         B) If :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` was instead activated, approval must first occur.
            This will be possible as reception of the validated email from the :term:`Pending User` will trigger
            another notification email toward :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT`.
-           That email should then be employed to *accept* or *deny* that subscription request with corresponding links.
+           That email should then be employed to *approve* or *decline* the subscription request with corresponding
+           temporary token links.
 
-    4. When an administrator approves the :term:`Pending User` account, the procedure resumes normally with step (5).
-       Otherwise, the account remains in pending state until invalidated.
+    4. (Only if 3B) This step is the administrator review of the :term:`Pending User` registration request.
+       When an administrator *approves* the :term:`Pending User` account, the procedure resumes normally with step (5).
+       Otherwise, the account remains in pending state until invalidated. Invalidation occurs if the administrator
+       *declines* the request or explicitly deletes the :term:`Pending User` using the corresponding API or UI methods.
 
     5. An email is sent back to the original submitter to notify them that their account is validated and ready to be
        employed. The now created :term:`User` will be able to login using the available :ref:`authn_requests` methods.
@@ -361,6 +364,10 @@ Following is the summarized notification workflow to complete registration:
        generated :term:`User` from completed registration.
        This email can be the same as the approving administrator email, or a completely different
        authority, whichever is desired to be notified of completed new :term:`User` accounts.
+
+.. note::
+    Once a :term:`Pending User` is validated with the above procedure, the completed :term:`User` account will trigger
+    any registered :term:`Webhook` in the same manner as if the :term:`User` was directly created by the administrator.
 
 Management
 ~~~~~~~~~~

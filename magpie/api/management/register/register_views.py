@@ -161,5 +161,4 @@ def handle_temporary_url(request):
     ax.verify_param(tmp_token, not_none=True,
                     http_error=HTTPNotFound, content={"token": str(str_token)},
                     msg_on_fail=s.TemporaryURL_GET_NotFoundResponseSchema.description)
-    ru.handle_temporary_token(tmp_token, request)
-    return ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)
+    return ru.handle_temporary_token(tmp_token, request)

@@ -17,6 +17,8 @@ Features / Changes
 * Add ``UserPending`` object with corresponding table for pending approval by an administrator for some new
   self-registered user. Migration script creates the table with expected fields.
 * Add new requests under ``/register/users`` and ``/ui/register/users`` endpoints for user account self-registration.
+* Add UI view to display pending user registration details.
+* Add UI icon to indicate when a listed user is pending registration approval or email validation.
 * Add configuration setting ``MAGPIE_USER_REGISTRATION_ENABLED`` to control whether user account self-registration
   feature should be employed.
   With it comes multiple other ``MAGPIE_USER_REGISTRATION_<...>`` settings to customize notification emails.

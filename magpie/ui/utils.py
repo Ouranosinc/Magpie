@@ -11,6 +11,7 @@ from pyramid.httpexceptions import (
     HTTPUnprocessableEntity,
     exception_response
 )
+from pyramid.renderers import render_to_response
 from pyramid.request import Request
 from pyramid.settings import asbool
 from pyramid.view import view_defaults
@@ -26,6 +27,8 @@ from magpie.utils import CONTENT_TYPE_JSON, get_header, get_json, get_logger, ge
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Dict, List, Optional, Union
+
+    from pyramid.response import Response
 
     from magpie.typedefs import JSON, AnyResponseType, CookiesType, HeadersType, Str
 
@@ -225,6 +228,18 @@ class BaseViews(object):
         if self.logged_user:
             all_data.update({"MAGPIE_LOGGED_USER": self.logged_user.user_name})
         return all_data
+
+    def render(self, template, data=None):
+        # type: (Str, Optional[Dict[Str, Any]]) -> Response
+        """
+        Render the response with an explicit Mako template reference.
+
+        Views that are decorated by :func:`pyramid.view.view_config` or registered by
+        :meth:`pyramid.config.Configurator.add_view` with a ``renderer`` parameter do not require to call this function
+        as it is auto-resolved with the submitted :paramref:`data`.
+        """
+        data = self.add_template_data(data)
+        return render_to_response(template, data, request=self.request)
 
 
 class AdminRequests(BaseViews):

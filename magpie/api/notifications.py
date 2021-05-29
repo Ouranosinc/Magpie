@@ -53,7 +53,7 @@ def get_email_template(template_constant, container=None):
     if not isinstance(template_file, str) or not os.path.isfile(template_file) or not template_file.endswith(".mako"):
         raise_log("Email template [{}] missing or invalid from [{!s}]".format(template_constant, template_file),
                   IOError, logger=LOGGER)
-    template = Template(filename=template_file)
+    template = Template(filename=template_file, strict_undefined=True)  # report name of any missing variable reference
     return template
 
 
@@ -122,8 +122,8 @@ def get_smtp_server_connection(config):
     return server
 
 
-def make_email_contents(config, template, parameters, settings):
-    # type: (SMTPServerConfiguration, Template, TemplateParameters, SettingsType) -> Str
+def make_email_contents(config, settings, template, parameters=None):
+    # type: (SMTPServerConfiguration, SettingsType, Template, Optional[TemplateParameters]) -> Str
     """
     Generates the email contents using the template, substitution parameters, and the target email server configuration.
     """
@@ -135,6 +135,7 @@ def make_email_contents(config, template, parameters, settings):
         "email_sender": config["sender"],
         "email_user": config["user"],
         "email_from": config["from"],
+        "email_datetime": datetime.utcnow().isoformat(" ", "seconds") + " UTC"  # "YYYY-MM-DD HH:mm:ss UTC"
     }
     params.update(parameters or {})
     contents = template.render(**params)
@@ -142,8 +143,8 @@ def make_email_contents(config, template, parameters, settings):
     return message.encode("utf8")
 
 
-def send_email(recipient, template, container, parameters=None):
-    # type: (Str, Template, AnySettingsContainer, Optional[TemplateParameters]) -> bool
+def send_email(recipient, container, template, parameters=None):
+    # type: (Str, AnySettingsContainer, Template, Optional[TemplateParameters]) -> bool
     """
     Send email notification using provided template and parameters.
 
@@ -155,7 +156,7 @@ def send_email(recipient, template, container, parameters=None):
     This is to allow the calling operation to ignore failing email notification and act accordingly using the resulting
     email status.
 
-    :param recipient: email of the intended recipient of the email.
+    :param recipient: Email address of the intended recipient to which the email must be sent.
     :param template: Mako template used for the email contents.
     :param container: Any container to retrieve application settings.
     :param parameters:
@@ -170,8 +171,7 @@ def send_email(recipient, template, container, parameters=None):
 
     params = parameters or {}
     params["email_recipient"] = recipient
-    params["email_datetime"] = datetime.utcnow().isoformat(" ", "seconds") + " UTC"  # "YYYY-MM-DD HH:mm:ss UTC"
-    message = make_email_contents(config, template, params, settings)
+    message = make_email_contents(config, settings, template, params)
 
     LOGGER.debug("Creating SMTP connection to send email using config: %s.", config)
     server = get_smtp_server_connection(config)

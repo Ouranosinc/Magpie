@@ -38,7 +38,7 @@ LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Iterable, List, Optional, Union
+    from typing import Any, Iterable, List, Optional
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
@@ -54,10 +54,15 @@ if TYPE_CHECKING:
     )
 
 
-def create_user(user_name, password, email, group_name, db_session, return_user=False):
-    # type: (Str, Optional[Str], Str, Optional[Str], Session, bool) -> Union[HTTPException, models.User]
+def create_user(user_name,              # type: Str
+                password,               # type: Optional[Str]
+                email,                  # type: Str
+                group_name,             # type: Optional[Str]
+                db_session,             # type: Session
+                **extra_fields,         # type: Any
+                ):                      # type: (...) -> HTTPException
     """
-    Creates a user if it is permitted and not conflicting.
+    Creates a :term:`User` if it is permitted and not conflicting with existing ones.
 
     Password must be set to ``None`` if using an external identity or skip its encrypted value generation.
 
@@ -73,12 +78,21 @@ def create_user(user_name, password, email, group_name, db_session, return_user=
 
     Argument :paramref:`group_name` **MUST** be an existing group if provided.
 
+    .. note::
+        In order to properly handle subscribed :term:`Webhook` that could request to change the user status to an
+        error following a failing external operation, the created user is immediately committed. This way, following
+        requests will have access to the instance from the database. Because of this requirement, any operation that
+        desire an handle to the created :class:`User` instance should retrieve it again from the database session.
+
     :param user_name: Unique name of the user to validate and employ for creation.
-    :param password: Raw password of the user to validate and employ for creation. Skipped if ``None``.
+    :param password:
+        Raw password of the user to validate and employ for creation.
+        If Skipped if ``None``. Otherwise, apply hash encryption on the value.
     :param email: User email to be validated and employed for creation.
     :param group_name: Group name to associate the user with at creation time.
     :param db_session: database connection.
-    :param return_user: request to return the :class:`User` instance directly instead of the generated HTTP response.
+    :param extra_fields:
+        Additional fields that should be set for the user. Must be known properties of the instance.
     :returns: valid HTTP response on successful operation, or the :class:`User` when requested.
     """
 
@@ -111,7 +125,12 @@ def create_user(user_name, password, email, group_name, db_session, return_user=
     # Create user with specified name and group to assign
     new_user = models.User(user_name=user_name, email=email)  # noqa
     if is_internal:
-        UserService.set_password(new_user, password)
+        UserService.set_password(new_user, password)  # already regenerates security code
+    for field, value in extra_fields.items():
+        if hasattr(new_user, field):
+            setattr(new_user, field, value)
+    if "user_password" in extra_fields:
+        UserService.regenerate_security_code(new_user)  # force if reset with explicit hash
     ax.evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.Users_POST_ForbiddenResponseSchema.description)
     # Fetch user to update auto-generated fields (i.e.: id)

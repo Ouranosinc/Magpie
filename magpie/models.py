@@ -29,6 +29,7 @@ from ziggurat_foundations.models.user_permission import UserPermissionMixin
 from ziggurat_foundations.models.user_resource_permission import UserResourcePermissionMixin
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
+from magpie import db
 from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.permissions import Permission
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import AccessControlListType, GroupPriority, Str
+    from magpie.typedefs import AccessControlListType, GroupPriority, JSON, Str
 
     # for convenience of methods using both, using strings because of future definition
     AnyUser = Union["User", "UserPending"]
@@ -206,23 +207,34 @@ class UserPending(Base):
         """
         Upgrades this :class`UserPending` instance to a complete and corresponding :class:`User` definition.
 
-        Automatically handles instance updates in the database. All relevant :class:`User` metadata is transferred from
-        available :class:`UserPending` details, and this :class:`UserPending` is finally removed.
+        Automatically handles instance updates in the database.
+        All relevant :class:`User` metadata is transferred from available :class:`UserPending` details.
+
+        All operations that should take place during normal :class:`User` creation will take effect, including minimal
+        :class:`Group` membership creation and :term:`Webhook` triggers.
+
+        This current :class:`UserPending` instance is finally removed and should not be accessed following upgrade.
 
         :param db_session: Database connection to use, otherwise retrieved from the user pending object.
         :returns: created user instance
         """
-        # employ the typical user creation utility to ensure that all webhooks and validations do occur as usual
+        # employ the typical user creation utility to ensure that all webhooks and validations occur as usual
         from magpie.api.management.user.user_utils import create_user  # avoid circular import
 
-        db = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
-        user = create_user(self.user_name, email=self.email, db_session=db, return_user=True,
-                           group_name=None, password=None)  # don't generate password (cannot decrypt provided one)
-        # transfer over information gathered during registration
-        user.user_password = self.user_password
-        user.registered_date = self.registered_date
-        UserService.regenerate_security_code(user)
-        db_session.delete(self)
+        # Because create user operation closes session to allow webhook handling,
+        # retrieve session to complete upgrade and remove the pending user in advance.
+        # This way, anything that fails until all the way to user creation will be rolled back.
+        cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
+        tmp_session = db.get_session_from_other(cur_session)
+        cur_session.expunge(self)   # detach from active session to allow delete on commit of new user
+        tmp_session.delete(self)    # no yet committed, user transaction must complete
+        create_user(self.user_name, email=self.email, db_session=tmp_session,
+                    group_name=None, registered_date=self.registered_date,
+                    # Since password was already hashed during pending user creation,
+                    # and that we cannot decrypt the raw one, transfer the hash directly.
+                    user_password=self.user_password, password=None)
+        cur_session.flush()
+        user = UserService.by_user_name(self.user_name, db_session=cur_session)  # re-fetch from new session
         return user
 
     @property
@@ -478,8 +490,9 @@ class RootFactory(object):
         """
         user = self.request.user
         # allow if role MAGPIE_ADMIN_PERMISSION is somehow directly set instead of inferred via members of admin-group
-        acl = [(Allow, get_constant("MAGPIE_ADMIN_PERMISSION"), ALL_PERMISSIONS)]
-        admins = GroupService.by_group_name(get_constant("MAGPIE_ADMIN_GROUP"), db_session=self.request.db)
+        acl = [(Allow, get_constant("MAGPIE_ADMIN_PERMISSION", self.request), ALL_PERMISSIONS)]
+        admin_group_name = get_constant("MAGPIE_ADMIN_GROUP", self.request)
+        admins = GroupService.by_group_name(admin_group_name, db_session=self.request.db)
         if admins:
             # need to add explicit admin-group ALL_PERMISSIONS otherwise views with other permissions than the
             # default MAGPIE_ADMIN_PERMISSION will be refused access (e.g.: views with MAGPIE_LOGGED_PERMISSION)
@@ -782,12 +795,12 @@ class TokenOperation(ExtendedEnum):
     Temporary token associated to a pending user registration that requires email validation by visiting the link.
     """
 
-    USER_REGISTRATION_APPROVE_ADMIN = "user-registration-approve-admin"
+    USER_REGISTRATION_ADMIN_APPROVE = "user-registration-admin-approve"
     """
     Temporary token associated to a pending user registration that will be approved by an administrator when visited.
     """
 
-    USER_REGISTRATION_DECLINE_ADMIN = "user-registration-decline-admin"
+    USER_REGISTRATION_ADMIN_DECLINE = "user-registration-admin-decline"
     """
     Temporary token associated to a pending user registration that will be declined by an administrator when visited.
     """
@@ -855,6 +868,10 @@ class TemporaryToken(BaseModel, Base):
         # type: (Union[Str, UUID], Optional[Session]) -> Optional[TemporaryToken]
         db_session = get_db_session(db_session)
         return db_session.query(TemporaryToken).filter(TemporaryToken.token == token).first()
+
+    def json(self):
+        # type: () -> JSON
+        return {"token": self.token, "operation": self.operation.value}
 
 
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,

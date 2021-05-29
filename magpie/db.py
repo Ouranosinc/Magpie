@@ -122,6 +122,11 @@ def get_tm_session(session_factory, transaction_manager):
     return db_session
 
 
+def get_session_from_other(db_session):
+    session_factory = get_session_factory(db_session.bind)
+    return get_tm_session(session_factory, transaction.manager)
+
+
 def get_db_session_from_settings(settings=None, **kwargs):
     # type: (Optional[AnySettingsContainer], Any) -> Session
     session_factory = get_session_factory(get_engine(settings, **kwargs))

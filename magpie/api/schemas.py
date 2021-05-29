@@ -2901,7 +2901,7 @@ class TemporaryURL_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class TemporaryURL_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Could not find any operation matching temporary URL token."
+    description = "Operation matching temporary URL token could not be found or was already processed."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 

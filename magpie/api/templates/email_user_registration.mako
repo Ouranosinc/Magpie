@@ -16,7 +16,7 @@
         magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration.
         login_url:          Endpoint where login can be accomplished.
         confirm_url:        Endpoint where email confirmation can be performed to validate the email recipient.
-        approval:           Boolean indicating if administrator approval will be required following validation
+        approval_required:  Boolean indicating if administrator approval will be required following email confirmation
                             (based on application settings with MAGPIE_ADMIN_APPROVAL_ENABLED).
 
 </%doc>
@@ -33,7 +33,7 @@ Dear ${user.user_name},
 Your new account request submitted to ${magpie_url} has been received.
 Please confirm your registration email by <a href="${confirm_url}">clicking this link</a>.
 
-%if approval:
+%if approval_required:
 Following email validation, an administrator will review your profile for approval.
 Another confirmation email will be sent to notify you when your profile is approved and ready to be used.
 %else:

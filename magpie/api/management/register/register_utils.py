@@ -1,3 +1,4 @@
+from inspect import cleandoc
 from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import (
@@ -8,12 +9,14 @@ from pyramid.httpexceptions import (
     HTTPGone,
     HTTPInternalServerError,
     HTTPNotFound,
-    HTTPNotImplemented
+    HTTPNotImplemented,
+    HTTPOk
 )
 from pyramid.settings import asbool
 from ziggurat_foundations.models.services.group import GroupService
 
 from magpie.api import exception as ax
+from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.notifications import get_email_template, send_email
 from magpie.api.management.user import user_formats as uf
@@ -22,11 +25,13 @@ from magpie.api.webhooks import generate_callback_url, webhook_update_error_stat
 from magpie.constants import get_constant
 from magpie.models import Group, UserPending, UserSearchService, UserStatuses, TemporaryToken, TokenOperation
 from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url
+from magpie.ui.utils import BaseViews
 
 if TYPE_CHECKING:
-    from typing import List
+    from typing import List, Union
 
     from pyramid.request import Request
+    from pyramid.response import Response
     from sqlalchemy.orm.session import Session
 
     from magpie.typedefs import Str
@@ -35,9 +40,13 @@ LOGGER = get_logger(__name__)
 
 
 def handle_temporary_token(tmp_token, request):
-    # type: (TemporaryToken, Request) -> None
+    # type: (TemporaryToken, Request) -> Union[HTTPException, Response]
     """
     Handles the operation according to the provided temporary token.
+
+    :returns:
+        Basic JSON response with successful indicate of correct handling of the token by default.
+        If overridden, can be any HTML rendered response.
     """
     if tmp_token.expired():
         str_token = str(tmp_token.token)
@@ -46,6 +55,7 @@ def handle_temporary_token(tmp_token, request):
     ax.verify_param(tmp_token.operation, is_type=True, param_compare=TokenOperation,
                     param_name="token", http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
 
+    response = None
     if tmp_token.operation == TokenOperation.GROUP_ACCEPT_TERMS:
         ax.verify_param(tmp_token.group, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
@@ -64,25 +74,26 @@ def handle_temporary_token(tmp_token, request):
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         webhook_update_error_status(tmp_token.user.user_name)
 
-    # User Registration Procedure - Step (3): reception of the registration email confirmation URL
+    # User Registration Procedure - Step (3): reception of the registration email confirmation URL from the user
     elif tmp_token.operation == TokenOperation.USER_REGISTRATION_CONFIRM_EMAIL:
         LOGGER.debug("[User Registration - Step 3] received email validation for user: [%s]", tmp_token.user.user_name)
-        admin_approve = asbool(get_constant("MAGPIE_ADMIN_APPROVAL_ENABLED", request, default_value=False,
-                                            print_missing=True, raise_missing=False, raise_not_set=False))
-        if admin_approve:
-            LOGGER.debug("[User Registration - Step 3B] moving on to request admin approval")
-            request_admin_approval(tmp_token, request)
-        else:
-            LOGGER.debug("[User Registration - Step 3A] moving on to complete registration")
-            complete_user_registration(tmp_token, request)
+        response = handle_user_registration_confirmation(tmp_token, request)
 
-    # User Registration Procedure - Step (4): reception of the administrator approval URL
-    elif tmp_token.operation == TokenOperation.USER_REGISTRATION_APPROVE_ADMIN:
-        # FIXME: add auth requirement/check here - only admin should be allowed to confirm
-        LOGGER.debug("[User Registration - Step 4] admin approved user: [%s]", tmp_token.user.user_name)
-        complete_user_registration(tmp_token, request)
+    # User Registration Procedure - Step (4): reception of the administrator approve/decline URL
+    elif tmp_token.operation in [TokenOperation.USER_REGISTRATION_ADMIN_APPROVE,
+                                 TokenOperation.USER_REGISTRATION_ADMIN_DECLINE]:
+        ax.verify_param(ar.has_admin_access(request), is_true=True, with_param=False,
+                        http_error=HTTPForbidden, msg_on_fail=s.HTTPForbiddenResponseSchema.description)
+        LOGGER.debug("[User Registration - Step 4] admin reviewed pending user: [%s]", tmp_token.user.user_name)
+        response = handle_user_registration_admin_decision(tmp_token, request)
+
+    else:
+        ax.raise_http(HTTPInternalServerError, detail="Unhandled token operation.", content=tmp_token.json())
 
     request.db.delete(tmp_token)
+    if not response:
+        response = ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)
+    return response
 
 
 def get_discoverable_groups(db_session):
@@ -132,10 +143,12 @@ def register_pending_user(user_name, email, password, request):
         See :func:`magpie.api.management.user.user_utils.create_user` for similarities and distinctions of
         operations between a *normal* :term:`User` and a :term:`Pending User`.
 
-    Implements steps (1) and (2) of the :ref:`proc_user_registration`.
+    Implements steps (1) and (2) of the user registration procedure.
 
     .. seealso::
-        - see :func:`` for following steps of the procedure following reception of the confirmation email.
+        - See :ref:`proc_user_registration` for the procedure step details.
+        - See :func:`request_admin_approval` and :func:`complete_user_registration` for following steps of
+          the procedure following reception of the confirmation email.
 
     :return: HTTP created with relevant details if successful.
     :raises HTTPException: HTTP error with relevant details upon any failing condition.
@@ -164,9 +177,15 @@ def register_pending_user(user_name, email, password, request):
 
     LOGGER.debug("[User Registration - Step 2] sending confirmation email for its validation")
     confirmation_url = generate_callback_url(TokenOperation.USER_REGISTRATION_CONFIRM_EMAIL, request.db, user=tmp_user)
-    params = {"confirm_url": confirmation_url, "user": tmp_user}
+    admin_approve = asbool(get_constant("MAGPIE_ADMIN_APPROVAL_ENABLED", request, default_value=False,
+                                        print_missing=True, raise_missing=False, raise_not_set=False))
+    params = {
+        "user": tmp_user,
+        "confirm_url": confirmation_url,
+        "approval_required": admin_approve,
+    }
     template = get_email_template("MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE", request)
-    ax.evaluate_call(lambda: send_email(tmp_user.email, template, request, params),
+    ax.evaluate_call(lambda: send_email(tmp_user.email, request, template, params),
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                      msg_on_fail="Error occurred during user registration when trying to send "
                                  "email to pending user for confirmation of its submitted email.")
@@ -176,28 +195,106 @@ def register_pending_user(user_name, email, password, request):
                          content={"registration": user_content})
 
 
+def handle_user_registration_confirmation(tmp_token, request):
+    # type: (TemporaryToken, Request) -> Response
+    """
+    Applies the appropriate step of the user registration workflow following reception of the confirmation URL visit.
+
+    Implements steps (3A) and (3B) redirection of the user registration procedure.
+    Generates the appropriate response that will be displayed to the :term:`Pending User` that confirmed its email.
+
+    .. seealso::
+        - See :ref:`proc_user_registration` for the procedure step details.
+        - See :ref:`request_admin_approval` for step 3B.
+        - See :ref:`complete_user_registration` for step 5 (from 3A).
+    """
+    require_approve = asbool(get_constant("MAGPIE_ADMIN_APPROVAL_ENABLED", request, default_value=False,
+                                          print_missing=True, raise_missing=False, raise_not_set=False))
+    if not require_approve:
+        LOGGER.debug("[User Registration - Step 3A] moving on to complete registration (no approval required)")
+        complete_user_registration(tmp_token, request)
+        data = {
+            # from the message UI page template, it is possible to see the 'Login' button in the Magpie header
+            # user should be able to find its way there to use its registered account
+            "message": cleandoc("""
+                Your email has been confirmed.
+
+                You can now proceed to the login page to obtain access to resources.
+                Please note that you could still need to request further access for some protected content.
+                """)
+        }
+    else:
+        LOGGER.debug("[User Registration - Step 3B] moving on to request admin approval")
+        request_admin_approval(tmp_token, request)
+        data = {
+            "message": cleandoc("""
+                Your email has been confirmed.
+
+                You will be notified with another email once an administrator reviews and approves your request.
+                """)
+        }
+    data["MAGPIE_SUB_TITLE"] = "User Registration"
+    return BaseViews(request).render("magpie.ui.home:templates/message.mako", data)
+
+
 def request_admin_approval(tmp_token, request):
     # type: (TemporaryToken, Request) -> None
     """
     Sends the email to the administrator to approve or refuse the :term:`Pending User` registration.
 
-    Implements steps (3B) of the :ref:`proc_user_registration`.
+    Implements step (3B) of the user registration procedure.
+
+    .. seealso::
+        - See :ref:`proc_user_registration` for the procedure step details.
     """
     tmp_user = tmp_token.user
     LOGGER.debug("[User Registration - Step 3B] request admin approval for pending user: [%s]", tmp_user.user_name)
-    approve_url = generate_callback_url(TokenOperation.USER_REGISTRATION_APPROVE_ADMIN, request.db, user=tmp_user)
-    decline_url = generate_callback_url(TokenOperation.USER_REGISTRATION_DECLINE_ADMIN, request.db, user=tmp_user)
-    pending_user_url = get_magpie_url(request) + s.RegisterUserAPI.path.foramt(user_name=tmp_user.user_name)
-    params = {"approve_url": approve_url,
-              "decline_url": decline_url,  # FIXME: add utility endpoint - immediately invalidate pending user
-              "pending_url": pending_user_url,  # FIXME: ui view to display pending user - same as account, but less sections
-              "user": tmp_user}
+    approve_url = generate_callback_url(TokenOperation.USER_REGISTRATION_ADMIN_APPROVE, request.db, user=tmp_user)
+    decline_url = generate_callback_url(TokenOperation.USER_REGISTRATION_ADMIN_DECLINE, request.db, user=tmp_user)
+    magpie_url = get_magpie_url(request)
+    params = {
+        "user": tmp_user,
+        "approve_url": approve_url,
+        "decline_url": decline_url,
+        "pending_url": magpie_url + s.RegisterUserAPI.path.format(user_name=tmp_user.user_name),
+        "display_url": magpie_url + "/ui/register/users/" + tmp_user.user_name,
+    }
     admin_email = get_constant("MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT", request)
-    template = get_email_template("MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE", request)
-    ax.evaluate_call(lambda: send_email(admin_email, template, request, params),
+    template = get_email_template("MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE", request)
+    ax.evaluate_call(lambda: send_email(admin_email, request, template, params),
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                      msg_on_fail="Error occurred during user registration when trying to send "
                                  "notification email to administrator for pending user approval.")
+
+
+def handle_user_registration_admin_decision(tmp_token, request):
+    # type: (TemporaryToken, Request) -> Response
+    """
+    Applies the appropriate operation according to the decision the administrator took for the pending registration.
+
+    - *approved*: Moves to step (5)
+    - *declined*: Removes the pending user request.
+
+    Generates the appropriate response that will be displayed to the administrator.
+
+    Implements step (4) of the user registration procedure.
+
+    .. seealso::
+        - See :ref:`proc_user_registration` for the procedure step details.
+        - :func:`complete_user_registration` for step 5 following approval.
+    """
+    if tmp_token.operation == TokenOperation.USER_REGISTRATION_ADMIN_APPROVE:
+        msg = "Pending user registration was successfully approved."
+        complete_user_registration(tmp_token, request)
+    elif tmp_token.token == TokenOperation.USER_REGISTRATION_ADMIN_DECLINE:
+        # flush the pending user, this should cascade remove any associated temporary tokens
+        ax.evaluate_call(lambda: request.db.delete(tmp_token.user), fallback=lambda: request.db.rollback(),
+                         http_error=HTTPInternalServerError, msg_on_fail="Failed deletion of pending user.")
+        msg = "Pending user registration was successfully declined. Pending user has been deleted."
+    else:
+        msg = "Unknown operation received during pending user registration approval by administrator."
+        ax.raise_http(HTTPInternalServerError, detail=msg, content=tmp_token.json())
+    return BaseViews(request).render("magpie.ui.home:templates/message.mako", {"message": msg})
 
 
 def complete_user_registration(tmp_token, request):
@@ -208,14 +305,15 @@ def complete_user_registration(tmp_token, request):
     Generates the :term:`User` from the :term:`Pending User`.
     Then, sends any requested notification emails about successful :term:`User` creation.
 
-    Implements steps (5) and (6) of the :ref:`proc_user_registration`.
+    Implements steps (5) and (6) of the user registration procedure.
 
     .. seealso::
+        - See :ref:`proc_user_registration` for the procedure step details.
         - :func:`register_pending_user` for initial steps that started the process.
         - :func:`request_admin_approval` for intermediate steps if approval feature was enabled.
     """
     LOGGER.debug("[User Registration - Step 5] pending user: [%s]", tmp_token.user.user_name)
-    user = tmp_token.user.upgrade()
+    user = tmp_token.user.upgrade(db_session=request.db)
     LOGGER.debug("Pending user upgraded to full user: [%s (%s)]", user.user_name, user.id)
 
     notify = asbool(get_constant("MAGPIE_USER_REGISTERED_ENABLED", request, default_value=False,
@@ -224,8 +322,10 @@ def complete_user_registration(tmp_token, request):
         LOGGER.debug("[User Registration - Step 6] notify completed registration: [%s]", user.user_name)
         recipient = get_constant("MAGPIE_USER_REGISTERED_EMAIL_RECIPIENT", request)
         template = get_email_template("MAGPIE_USER_REGISTERED_EMAIL_TEMPLATE", request)
-        params = {"user": user}
-        sent = ax.evaluate_call(lambda: send_email(recipient, template, request, params),
+        params = {
+            "user": user
+        }
+        sent = ax.evaluate_call(lambda: send_email(recipient, request, template, params),
                                 fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                                 msg_on_fail="Error occurred during user registration when attempting to "
                                             "send notification email of completed operation.")

@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 import six
 from pyramid.authentication import Authenticated, IAuthenticationPolicy
+from pyramid.authorization import ACLAllowed, IAuthorizationPolicy
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPForbidden,
@@ -9,6 +10,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPUnprocessableEntity
 )
+from pyramid.security import ALL_PERMISSIONS, Allow
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -148,6 +150,28 @@ def get_principals(request):
     authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
     principals = authn_policy.effective_principals(request)
     return principals
+
+
+def has_admin_access(request):
+    # type: (Request) -> bool
+    """
+    Verifies if the authenticated user doing the request has administrative access.
+
+    .. note::
+        Any request view that does not explicitly override ``permission`` by another value than the default
+        :envvar:`MAGPIE_ADMIN_PERMISSION` will already automatically guarantee that the request user is an
+        administrator since HTTP [403] Forbidden would have been otherwise replied. This method is indented
+        for operations that are more permissive and require conditional validation of administrator access.
+
+    .. seealso::
+        Definitions in :class:`magpie.models.RootFactory` and :class:`magpie.models.UserFactory` define
+        conditional principals and :term:`ACL` based on the request.
+    """
+    admin_perm = get_constant("MAGPIE_ADMIN_PERMISSION", request)
+    authz_policy = request.registry.queryUtility(IAuthorizationPolicy)
+    principals = get_principals(request)
+    result = authz_policy.permits(models.RootFactory(request), principals, admin_perm)
+    return isinstance(result, ACLAllowed)
 
 
 def get_logged_user(request):
