@@ -166,6 +166,10 @@ def send_email(recipient, container, template, parameters=None):
     :returns: success status of the notification email (sent without error, no guarantee of reception).
     """
     LOGGER.debug("Preparing email to: [%s] using template [%s]", recipient, template.filename)
+    if not recipient:
+        LOGGER.warning("Skipping send email request without a valid recipient: [%s]", template.filename)
+        return False
+
     settings = get_settings(container)
     config = get_smtp_server_configuration(settings)
 

@@ -317,8 +317,8 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
             "magpie.user_registration_enabled": True,
             "magpie.user_registered_enabled": True,
             "magpie.admin_approval_enabled": True,
-            "magpie.admin_approved_enabled": True,
             "magpie.admin_approval_email_recipient": "fake-admin@test.com",
+            "magpie.user_registered_email_recipient": "notify@user-registration.com",
             "magpie.smtp_host": "example.com",  # must exist when getting configs, but not used because email mocked
         }
 
@@ -349,7 +349,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
             :ref:`proc_user_registration`
 
         Mocks email notifications to allow simulation of the back-and-forth operations between Magpie, the
-        pending user requesting a new registration, and the administrator validating it.
+        pending user requesting a new registration, and the administrator validating it via email links.
         """
         utils.warn_version(self, "User self-registration.", "3.13.0", skip=True)
 
@@ -465,16 +465,49 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
                     utils.check_response_basic_info(resp, 403)
                     self.login_admin()  # authenticate for actually approving next
 
-                    # simulate the administrator clicking the confirmation link in 'sent' approval email
+                    # simulate the administrator clicking the confirmation link in 'sent' approval request email
+                    # temporary token URL that this administrator clicked should respond with successful approval
                     resp = utils.test_request(self, "GET", approve_path)
                     body = utils.check_ui_response_basic_info(resp, 200)
-                    utils.check_val_is_in("confirm your email address", body)
-                    utils.check_or_try_logout_user(self)  # return to pending user not logged in
+                    utils.check_val_is_in("Pending user registration was successfully approved", body)
 
-                    # because of email confirmation was validated, admin notification should have been sent
-                    utils.check_val_equal(mocked_email.call_count, 2,
-                                          msg="Expected sent notification to user for its email validation.")
-                    message = real_contents(*mocked_email.calls[-1])
+                    # since the full process was completed with admin registration approval,
+                    # the pending user should have been converted to a complete user account
+                    info = utils.TestSetup.get_UserInfo(self, override_username=test_register_user)
+                    utils.check_val_equal(info["user_name"], test_register_user)
+                    utils.check_val_equal(info["email"], test_register_email)
+
+                    # completed registration process should have triggered notifications to configured email and user
+                    utils.check_val_equal(mocked_email.call_count, 4,  # both emails triggered one after another
+                                          msg="Expected emails sent to user and notify from registration approved.")
+
+                    # verify the notification email
+                    email_notify = wrapped_contents.call_args_list[3]
+                    message = real_contents(*email_notify.args, **email_notify.kwargs)
+                    msg_str = message.decode()
+                    notify_addr = self.settings["magpie.user_registered_email_recipient"]
+                    utils.check_val_is_in("To: {}".format(notify_addr), msg_str)
+                    utils.check_val_is_in("From: Magpie", msg_str)
+                    utils.check_val_is_in("following user as completed registration", message)
+                    utils.check_val_is_in(test_register_user, message)
+                    utils.check_val_is_in(test_register_email, message)
+
+                    # furthermore, the user should have received a notification email to indicate
+                    # to tell it its registration was accepted and completed successfully
+                    email_user = wrapped_contents.call_args_list[2]
+                    message = real_contents(*email_user.args, **email_user.kwargs)
+                    msg_str = message.decode()
+                    utils.check_val_is_in("To: {}".format(test_register_email), msg_str)
+                    utils.check_val_is_in("From: Magpie", msg_str)
+
+                    # validate that the new user can login in its account
+                    utils.check_or_try_logout_user(self)  # return to pending user not logged in
+                    utils.check_or_try_login_user(self, username=test_register_user, password=test_register_user,
+                                                  use_ui_form_submit=True)
+                    resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=self.cookies)
+                    body = utils.check_response_basic_info(resp, 200)
+                    utils.check_val_true(body["authenticated"])
+                    utils.check_val_equal(body["user"]["user_name"], test_register_user)
 
 
 @runner.MAGPIE_TEST_UI

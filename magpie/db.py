@@ -15,7 +15,7 @@ from pyramid.settings import asbool
 from sqlalchemy import engine_from_config
 from sqlalchemy import exc as sa_exc
 from sqlalchemy.engine.reflection import Inspector
-from sqlalchemy.orm import configure_mappers
+from sqlalchemy.orm import configure_mappers, scoped_session
 from sqlalchemy.orm.session import Session, sessionmaker
 from zope.sqlalchemy import register
 
@@ -124,7 +124,7 @@ def get_tm_session(session_factory, transaction_manager):
 
 def get_session_from_other(db_session):
     session_factory = get_session_factory(db_session.bind)
-    return get_tm_session(session_factory, transaction.manager)
+    return scoped_session(session_factory)
 
 
 def get_db_session_from_settings(settings=None, **kwargs):

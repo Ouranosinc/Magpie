@@ -21,20 +21,49 @@
 From: ${email_sender}
 To: ${email_recipient}
 Subject: Magpie User Registration Completed
-Content-Type: text/plain; charset=UTF-8
+Content-Type: text/html; charset=UTF-8
 
 <%doc> === end of header === </%doc>
 
-Dear administrator,
+<html lang="en">
+    <head><title>Magpie User Registration Completed</title></head>
+    <body>
+        <p>
+        Dear administrator,
+        </p>
+        <p>
+        This notification email is to inform you that the following user as completed registration and email validation.
+        </p>
 
-This notification email is to inform you that the following user as completed registration and email validation.
+        <div style="margin-left: 1em">
+            <table style="border: 1px solid; border-collapse: collapse;">
+                <thead>
+                <tr>
+                    <th colspan="2" style="font-weight: bold">User Details</th>
+                </tr>
+                </thead>
+                <tbody style="border: 1px solid; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 0.25em; font-weight: bold;">Username</td>
+                    <td style="padding: 0.25em;">${user.user_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.25em; font-weight: bold;">Email</td>
+                    <td style="padding: 0.25em;">${user.email}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
 
-    Username: ${user.user_name}
-    Email:    ${user.email}
+        <p>
+        Use this link to view their <a href="${magpie_url}/ui/users/${user.user_name}/default">User Account</a>.
+        </p>
+        <p>
+        <b>Note:</b><br>
+        <a href="${login_url}">Administrator Login</a> is required in the same browser to view user accounts.
+        </p>
 
-Use this link to view their <a href="${magpie_url}/ui/users/${user.user_name}/default">User Account</a>.
-
-<b>Note:</b> <a href="${login_url}">Administrator Login</a> is required in the same browser to view user accounts.
-
-Regards,
-${email_user}
+        Regards,<br>
+        ${email_user}
+    </body>
+</html>

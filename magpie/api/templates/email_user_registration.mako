@@ -24,21 +24,32 @@
 From: ${email_sender}
 To: ${email_recipient}
 Subject: User Registration to Magpie
-Content-Type: text/plain; charset=UTF-8
+Content-Type: text/html; charset=UTF-8
 
 <%doc> === end of header === </%doc>
 
-Dear ${user.user_name},
+<html lang="en">
+    <head><title>User Registration to Magpie</title></head>
+    <body>
+        <p>
+        Dear ${user.user_name},
+        </p>
 
-Your new account request submitted to ${magpie_url} has been received.
-Please confirm your registration email by <a href="${confirm_url}">clicking this link</a>.
+        <p>
+        Your new account request submitted to ${magpie_url} has been received.
+        Please confirm your registration email by <a href="${confirm_url}">clicking this link</a>.
+        </p>
 
-%if approval_required:
-Following email validation, an administrator will review your profile for approval.
-Another confirmation email will be sent to notify you when your profile is approved and ready to be used.
-%else:
-Following email validation, you will be able to <a href="${login_url}">Login</a> using your credentials.
-%endif
+        <p>
+        %if approval_required:
+        Following email validation, an administrator will review your profile for approval.<br>
+        Another confirmation email will be sent to notify you when your profile is approved and ready to be used.<br>
+        %else:
+        Following email validation, you will be able to <a href="${login_url}">Login</a> using your credentials.<br>
+        %endif
+        </p>
 
-Regards,
-${email_user}
+        Regards,<br>
+        ${email_user}
+    </body>
+</html>

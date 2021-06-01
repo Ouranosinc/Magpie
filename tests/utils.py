@@ -40,7 +40,9 @@ from magpie.utils import (
     fully_qualified_name,
     get_header,
     get_magpie_url,
-    get_settings_from_config_ini
+    get_settings_from_config_ini,
+    setup_cache_settings,
+    setup_ziggurat_config
 )
 
 if TYPE_CHECKING:
@@ -257,23 +259,6 @@ def config_setup_from_ini(config_ini_file_path):
     return config
 
 
-def setup_cache_settings(settings, enabled=False, expire=10):
-    # type: (SettingsType, bool, int) -> None
-    """
-    Enforces caching settings for tests execution, disabled by default.
-    """
-    regions = ["acl", "service"]
-    settings["cache.regions"] = ", ".join(regions)
-    settings["cache.type"] = "memory"
-    for region in regions:
-        settings["cache.{}.enabled".format(region)] = str(enabled).lower()
-        region_expire = "cache.{}.expire".format(region)
-        if enabled:
-            settings[region_expire] = str(expire)
-        else:
-            settings.pop(region_expire, None)
-
-
 def get_test_magpie_app(settings=None, setup_cache=True):
     # type: (Optional[SettingsType], bool) -> TestApp
     """
@@ -281,13 +266,11 @@ def get_test_magpie_app(settings=None, setup_cache=True):
     """
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant("MAGPIE_INI_FILE_PATH"))
-    config.include("ziggurat_foundations.ext.pyramid.sign_in")
-    config.include("ziggurat_foundations.ext.pyramid.get_user")
     config.registry.settings["magpie.url"] = "http://localhost:80"
     if settings:
         config.registry.settings.update(settings)
     if setup_cache:
-        setup_cache_settings(config.registry.settings)
+        setup_cache_settings(config.registry.settings, force=True)
     # create the test application
     magpie_app = TestApp(app.main({}, **config.registry.settings))
     return magpie_app

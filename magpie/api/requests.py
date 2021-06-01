@@ -10,7 +10,6 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPUnprocessableEntity
 )
-from pyramid.security import ALL_PERMISSIONS, Allow
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -168,7 +167,7 @@ def has_admin_access(request):
         conditional principals and :term:`ACL` based on the request.
     """
     admin_perm = get_constant("MAGPIE_ADMIN_PERMISSION", request)
-    authz_policy = request.registry.queryUtility(IAuthorizationPolicy)
+    authz_policy = request.registry.queryUtility(IAuthorizationPolicy)  # noqa
     principals = get_principals(request)
     result = authz_policy.permits(models.RootFactory(request), principals, admin_perm)
     return isinstance(result, ACLAllowed)

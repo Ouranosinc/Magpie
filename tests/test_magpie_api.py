@@ -99,7 +99,6 @@ class TestCase_MagpieAPI_UsersAuth_Local_UserRegistration(ti.UserTestCase):
             "magpie.user_registration_enabled": True,
             "magpie.user_registered_enabled": True,
             "magpie.admin_approval_enabled": True,
-            "magpie.admin_approved_enabled": True,
             "magpie.admin_approval_email_recipient": "fake-admin@test.com",
         }
         cls.app = utils.get_test_magpie_app(settings)
@@ -186,7 +185,6 @@ class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
             "magpie.user_registration_enabled": True,
             "magpie.user_registered_enabled": True,
             "magpie.admin_approval_enabled": True,
-            "magpie.admin_approved_enabled": True,
             "magpie.admin_approval_email_recipient": "fake-admin@test.com",
         }
 

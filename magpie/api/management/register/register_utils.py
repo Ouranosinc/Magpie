@@ -1,6 +1,7 @@
 from inspect import cleandoc
 from typing import TYPE_CHECKING
 
+import transaction
 from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPConflict,
@@ -13,6 +14,7 @@ from pyramid.httpexceptions import (
     HTTPOk
 )
 from pyramid.settings import asbool
+from sqlalchemy import inspect as sa_inspect
 from ziggurat_foundations.models.services.group import GroupService
 
 from magpie.api import exception as ax
@@ -55,7 +57,9 @@ def handle_temporary_token(tmp_token, request):
     ax.verify_param(tmp_token.operation, is_type=True, param_compare=TokenOperation,
                     param_name="token", http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
 
+    # if any token handler needs to return a custom response (eg: UI message page), it should override this variable
     response = None
+
     if tmp_token.operation == TokenOperation.GROUP_ACCEPT_TERMS:
         ax.verify_param(tmp_token.group, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
@@ -90,7 +94,14 @@ def handle_temporary_token(tmp_token, request):
     else:
         ax.raise_http(HTTPInternalServerError, detail="Unhandled token operation.", content=tmp_token.json())
 
+    # sync updated token as needed if handling operation modified it, then delete it because it was processed
+    if sa_inspect(tmp_token).detached:
+        tmp_token = request.db.merge(tmp_token)
+    if sa_inspect(tmp_token).pending:
+        tmp_token = TemporaryToken.by_token(tmp_token.token, db_session=request.db)
     request.db.delete(tmp_token)
+
+    # generate default API success response if not overridden by specific case to indicate token was correctly handled
     if not response:
         response = ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)
     return response
@@ -289,6 +300,7 @@ def handle_user_registration_admin_decision(tmp_token, request):
     elif tmp_token.token == TokenOperation.USER_REGISTRATION_ADMIN_DECLINE:
         # flush the pending user, this should cascade remove any associated temporary tokens
         ax.evaluate_call(lambda: request.db.delete(tmp_token.user), fallback=lambda: request.db.rollback(),
+                         content={"user": uf.format_user(tmp_token.user)},
                          http_error=HTTPInternalServerError, msg_on_fail="Failed deletion of pending user.")
         msg = "Pending user registration was successfully declined. Pending user has been deleted."
     else:
@@ -313,7 +325,11 @@ def complete_user_registration(tmp_token, request):
         - :func:`request_admin_approval` for intermediate steps if approval feature was enabled.
     """
     LOGGER.debug("[User Registration - Step 5] pending user: [%s]", tmp_token.user.user_name)
-    user = tmp_token.user.upgrade(db_session=request.db)
+
+    # detach pending user from temporary token to avoid db integrity error since it will become invalid after upgrade
+    pending_user = tmp_token.user
+    tmp_token.user_pending_id = None
+    user = pending_user.upgrade(db_session=request.db)
     LOGGER.debug("Pending user upgraded to full user: [%s (%s)]", user.user_name, user.id)
 
     notify = asbool(get_constant("MAGPIE_USER_REGISTERED_ENABLED", request, default_value=False,

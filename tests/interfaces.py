@@ -5949,7 +5949,7 @@ class SetupMagpieAdapter(ConfigTestCase):
     def setup_adapter(cls):
         test_app = utils.get_app_or_url(cls)
         settings = test_app.app.registry.settings
-        utils.setup_cache_settings(settings, enabled=cls.cache_enabled, expire=cls.cache_expire)
+        utils.setup_cache_settings(settings, force=True, enabled=cls.cache_enabled, expire=cls.cache_expire)
         adapter = MagpieAdapter(settings)
         config = adapter.configurator_factory(settings)
         # making the app triggers creation of class instances from registry (eg: AuthN/AuthZ Policies)

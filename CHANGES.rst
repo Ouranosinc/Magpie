@@ -39,6 +39,8 @@ Bug Fixes
   | Since email can be employed as another mean of login credential instead of the more typically used username,
     this caused potential denial of authentication for some user accounts where email was matched against another
     account with duplicate email.
+* Add ``ziggurat_foundations`` extensions for Pyramid directly in the code during application setup such that an INI
+  configuration file that omits them from ``pyramid.include`` won't cause `Magpie` to break.
 
 `3.12.0 <https://github.com/Ouranosinc/Magpie/tree/3.12.0>`_ (2021-05-11)
 ------------------------------------------------------------------------------------

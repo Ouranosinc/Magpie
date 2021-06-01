@@ -24,29 +24,68 @@
 From: ${email_sender}
 To: ${email_recipient}
 Subject: Magpie User Registration requires Admin Approval
-Content-Type: text/plain; charset=UTF-8
+Content-Type: text/html; charset=UTF-8
 
 <%doc> === end of header === </%doc>
 
-Dear administrator,
+<html lang="en">
+    <head><title>Magpie User Registration requires Admin Approval</title></head>
+    <body>
+        <p>
+        Dear administrator,
+        </p>
+        <p>
+        A new user account registration requires your attention.<br>
+        Following details were submitted by the user:<br>
+        </p>
 
-A new user account registration requires your attention.
-Following are the details submitted by the user:
+        <div style="margin-left: 1em">
+            <table style="border: 1px solid; border-collapse: collapse;">
+                <thead>
+                <tr>
+                    <th colspan="2" style="font-weight: bold">User Details</th>
+                </tr>
+                </thead>
+                <tbody style="border: 1px solid; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 0.25em; font-weight: bold;">Username</td>
+                    <td style="padding: 0.25em;">${user.user_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.25em; font-weight: bold;">Email</td>
+                    <td style="padding: 0.25em;">${user.email}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
 
-    Username:  ${user.user_name}
-    Email:     ${user.email}
+        <p>
+        This registration was submitted to <a href="${magpie_url}">${magpie_url}</a> on ${email_datetime}.<br>
+        Please select the link with desired result regarding this request:
+        </p>
 
-This registration was submitted to ${magpie_url} on ${email_datetime}.
-Please select the link with desired result regarding this request:
+        <div style="margin-left: 1em">
+            <table style="border: 1px solid; border-collapse: collapse;">
+                <tbody style="border: 1px solid; border-collapse: collapse;">
+                <tr>
+                    <td style="border: 1px solid; padding: 0.25em;"><a href="${approve_url}">Approve</a></td>
+                    <td style="border: 1px solid; padding: 0.25em;"><a href="${decline_url}">Decline</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <a href="${approve_url}">Approve</a>  |  <a href="${decline_url}">Decline</a>
+        <p>
+        Approving will complete the registration process by notifying the user that its account was created.<br>
+        Declining will dismiss the pending user registration completely.<br>
+        Omitting to select any result will leave the registration pending for approval.<br>
+        </p>
+        <p>
+        You can also visit the <a href="${display_url}">Pending User Details</a> page to complete
+        this process using Magpie interface at a later time.
+        </p>
 
-Approving will complete the registration process by notifying the user that its account was approved and created.
-Refusing will dismiss the pending user registration completely.
-Omitting to select any result will leave the registration pending for approval.
-
-You can also visit the <a href="${display_url}">Pending User Details</a> page to complete
-this process using Magpie interface at a later time.
-
-Regards,
-${email_user}
+        Regards,<br>
+        ${email_user}
+    </body>
+</html>

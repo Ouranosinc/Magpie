@@ -21,9 +21,11 @@ from pyramid.settings import asbool, truthy
 from pyramid.threadlocal import get_current_registry
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
+from sqlalchemy import inspect as sa_inspect
 from six.moves import configparser
 from six.moves.urllib.parse import urlparse
 from webob.headers import EnvironHeaders, ResponseHeaders
+from ziggurat_foundations.models.services.user import UserService
 
 from magpie import __meta__
 from magpie.constants import get_constant
@@ -210,6 +212,83 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name="app:mag
         raise ValueError(message)
     settings = dict(parser.items(ini_main_section_name))
     return settings
+
+
+def setup_cache_settings(settings, force=False, enabled=False, expire=10):
+    # type: (SettingsType, bool, bool, int) -> None
+    """
+    Setup caching settings if not defined in configuration and enforce values if requested.
+
+    Required caching regions that were missing from configuration are initiated with disabled caching by default.
+    This ensures that any decorators or region references will not cause unknown key or region errors.
+
+    :param settings: reference to application settings that will be updated in place.
+    :param force: enforce following parameters, otherwise only ensure that caching regions exist.
+    :param enabled: enable caching when enforced settings is requested.
+    :param expire: cache expiration delay if setting values are enforced and enabled.
+    """
+    regions = ["acl", "service"]
+    settings["cache.regions"] = ", ".join(regions)
+    settings["cache.type"] = "memory"
+    if force:
+        for region in regions:
+            settings["cache.{}.enabled".format(region)] = str(enabled).lower()
+            region_expire = "cache.{}.expire".format(region)
+            if enabled:
+                settings[region_expire] = str(expire)
+            else:
+                settings.pop(region_expire, None)
+
+
+def setup_ziggurat_config(config):
+    # type: (Configurator) -> None
+    """
+    Setup :mod:`ziggurat_foundations` configuration settings and extensions that are required by `Magpie`.
+
+    Ensures that all needed extensions and parameter configuration values are defined as intended.
+    Resolves any erroneous configuration or conflicts from the INI (backward compatible to when it was required to
+    provide them explicitly) to guarantee that references are defined as needed for the application to behave correctly.
+
+    :param config: configurator reference when loading the web application.
+    """
+    settings = config.registry.settings
+    pyr_incl = "pyramid.includes"
+    zig_user = "ziggurat_foundations.ext.pyramid.get_user"
+    if pyr_incl in settings and zig_user in settings[pyr_incl]:
+        settings[pyr_incl] = settings[pyr_incl].replace("\n" + zig_user, "").replace(zig_user, "")
+
+    settings["ziggurat_foundations.model_locations.User"] = "magpie.models:User"
+    settings["ziggurat_foundations.session_provider_callable"] = "magpie.models:get_session_callable"
+    settings["ziggurat_foundations.sign_in.username_key"] = "user_name"
+    settings["ziggurat_foundations.sign_in.password_key"] = "password"
+    settings["ziggurat_foundations.sign_in.came_from_key"] = "came_from"
+    settings["ziggurat_foundations.sign_in.sign_in_pattern"] = "/signin_internal"
+    settings["ziggurat_foundations.sign_in.sign_out_pattern"] = "/signout"
+    config.include("ziggurat_foundations.ext.pyramid.sign_in")
+
+    # register an improved 'request.user' that reattaches the detached session if a transaction commit occurred
+    #   This can happen for example when creating a user from a pending-user where the user must be committed to
+    #   allow webhooks to refer to it. The operations using the 'user' reference following that user creation
+    #   have a detached object from the session.
+    # following is the original config that was used to setup 'request.user' similarly to below methodology
+    #   config.include("ziggurat_foundations.ext.pyramid.get_user")
+
+    def get_user(request):
+        user = getattr(request, "_user_prefetched", None)
+        if user is not None and not sa_inspect(user).detached:
+            return user
+        user_id = request.unauthenticated_userid
+        if user_id is not None:
+            user = UserService.by_id(user_id, db_session=request.db)
+            if sa_inspect(user).detached:
+                request.db.merge(user)
+            setattr(request, "_user_prefetched", user)
+            return user
+        return None
+
+    # don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
+    # replicate the value substitution optimization offered by 'reify' with an explicit attribute
+    config.add_request_method(get_user, "user", property=True, reify=False)
 
 
 def get_json(response):

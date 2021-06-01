@@ -156,7 +156,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
     def setUpClass(cls):
         cls.version = __meta__.__version__
         cls.settings = {}
-        utils.setup_cache_settings(cls.settings, enabled=cls.cache_enabled, expire=cls.cache_expire)
+        utils.setup_cache_settings(cls.settings, force=True, enabled=cls.cache_enabled, expire=cls.cache_expire)
         cls.app = utils.get_test_magpie_app(settings=cls.settings, setup_cache=False)
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")

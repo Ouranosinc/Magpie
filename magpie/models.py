@@ -221,20 +221,24 @@ class UserPending(Base):
         # employ the typical user creation utility to ensure that all webhooks and validations occur as usual
         from magpie.api.management.user.user_utils import create_user  # avoid circular import
 
-        # Because create user operation closes session to allow webhook handling,
-        # retrieve session to complete upgrade and remove the pending user in advance.
-        # This way, anything that fails until all the way to user creation will be rolled back.
+        # Because create user operation closes session to commit the user and allow webhook updating it,
+        # retrieve another session to complete upgrade and remove the pending user in advance.
         cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
         tmp_session = db.get_session_from_other(cur_session)
-        cur_session.expunge(self)   # detach from active session to allow delete on commit of new user
-        tmp_session.delete(self)    # no yet committed, user transaction must complete
         create_user(self.user_name, email=self.email, db_session=tmp_session,
                     group_name=None, registered_date=self.registered_date,
                     # Since password was already hashed during pending user creation,
                     # and that we cannot decrypt the raw one, transfer the hash directly.
                     user_password=self.user_password, password=None)
-        cur_session.flush()
-        user = UserService.by_user_name(self.user_name, db_session=cur_session)  # re-fetch from new session
+
+        # if nothing was raised, user should have been created (possibly with webhook error, but not an issue to resume)
+        # retrieve the detached pending user from session caused by other transaction closed and delete it
+        pending_user = cur_session.merge(self) if sa.inspect(self).detached else self
+        cur_session.delete(pending_user)
+        # make sure all changes were committed so that the current session can retrieve the new user
+        tmp_session.commit()
+        tmp_session.close()
+        user = UserService.by_user_name(pending_user.user_name, db_session=cur_session)
         return user
 
     @property

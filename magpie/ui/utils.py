@@ -229,6 +229,7 @@ class BaseViews(object):
             all_data.update({"MAGPIE_LOGGED_USER": self.logged_user.user_name})
         return all_data
 
+    @handle_errors
     def render(self, template, data=None):
         # type: (Str, Optional[Dict[Str, Any]]) -> Response
         """
