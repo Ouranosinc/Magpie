@@ -327,6 +327,11 @@ table.panel-line td {
     min-width: 4em;  /* for save/edit buttons alignment when editing one field and others are still in non-edit mode */
 }
 
+.panel-line-entry input[type="button"],
+.panel-line-entry input[type="submit"] {
+    margin-top: -0.15em;
+}
+
 /* textual field entry when in edit mode */
 .panel-line-entry input[type="password"],
 .panel-line-entry input[type="text"],

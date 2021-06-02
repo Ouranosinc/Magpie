@@ -605,26 +605,33 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
     route_name = colander.SchemaNode(
         colander.String(),
         description="Route called that generated the error.",
-        example="/users/toto")
+        example="/users/toto"
+    )
     request_url = colander.SchemaNode(
         colander.String(),
         title="Request URL",
         description="Request URL that generated the error.",
-        example="http://localhost:2001/magpie/users/toto")
+        example="http://localhost:2001/magpie/users/toto",
+        validator=colander.url,
+    )
     method = colander.SchemaNode(
         colander.String(),
         description="Request method that generated the error.",
-        example="GET")
+        example="GET"
+    )
     param = ErrorVerifyParamBodySchema(
         title="Parameter",
         missing=colander.drop,
-        description="Additional parameter details to explain the cause of error.")
+        description="Additional parameter details to explain the cause of error."
+    )
     call = ErrorCallBodySchema(
         missing=colander.drop,
-        description="Additional details to explain failure reason of operation call or raised error.")
+        description="Additional details to explain failure reason of operation call or raised error."
+    )
     fallback = ErrorFallbackBodySchema(
         missing=colander.drop,
-        description="Additional details to explain failure reason of fallback operation to cleanup call error.")
+        description="Additional details to explain failure reason of fallback operation to cleanup call error."
+    )
 
 
 class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
@@ -644,7 +651,7 @@ class UnauthorizedResponseBodySchema(ErrorResponseBodySchema):
         super(UnauthorizedResponseBodySchema, self).__init__(**kw)
 
     route_name = colander.SchemaNode(colander.String(), description="Specified API route.")
-    request_url = colander.SchemaNode(colander.String(), description="Specified request URL.")
+    request_url = colander.SchemaNode(colander.String(), description="Specified request URL.", validator=colander.url)
 
 
 class UnauthorizedResponseSchema(BaseResponseSchemaAPI):
@@ -757,12 +764,14 @@ class PermissionNameListSchema(colander.SequenceSchema):
     )
 
 
-class PendingUserInfoSchema(colander.MappingSchema):
+class BaseUserInfoSchema(colander.MappingSchema):
     user_name = UserNameParameter
     email = colander.SchemaNode(
         colander.String(),
         description="Email of the user.",
-        example="toto@mail.com")
+        example="toto@mail.com",
+        validator=colander.Email()
+    )
     status = colander.SchemaNode(
         colander.String(),
         description="Current status of the user account.",
@@ -771,7 +780,23 @@ class PendingUserInfoSchema(colander.MappingSchema):
     )
 
 
-class RegisteredUserInfoSchema(PendingUserInfoSchema):
+class PendingUserInfoSchema(BaseUserInfoSchema):
+    # any of those urls can be null if already processed, expired, or not applicable as per configuration
+    confirm_url = colander.SchemaNode(
+        colander.String(), validator=colander.url, default=None,
+        description="Temporary URL endpoint to call in order to confirm the email of the pending registration."
+    )
+    approve_url = colander.SchemaNode(
+        colander.String(), validator=colander.url, default=None,
+        description="Temporary URL endpoint to call in order to approve the pending registration if applicable."
+    )
+    decline_url = colander.SchemaNode(
+        colander.String(), validator=colander.url, default=None,
+        description="Temporary URL endpoint to call in order to decline the pending registration if applicable."
+    )
+
+
+class RegisteredUserInfoSchema(BaseUserInfoSchema):
     user_id = colander.SchemaNode(
         colander.Integer(),
         missing=colander.drop,  # if not registered or anonymous
@@ -872,13 +897,15 @@ class ServiceSummarySchema(colander.MappingSchema):
     public_url = colander.SchemaNode(
         colander.String(),
         description="Proxy URL available for public access with permissions",
-        example="http://localhost/twitcher/ows/proxy/thredds"
+        example="http://localhost/twitcher/ows/proxy/thredds",
+        validator=colander.url,
     )
     service_url = colander.SchemaNode(
         colander.String(),
         missing=colander.drop,  # if listed with corresponding scope (users/groups/admin)
         description="Private URL of the service (restricted access)",
-        example="http://localhost:9999/thredds"
+        example="http://localhost:9999/thredds",
+        validator=colander.url,
     )
 
 
@@ -1350,7 +1377,8 @@ class Services_POST_BodySchema(colander.MappingSchema):
     service_url = colander.SchemaNode(
         colander.String(),
         description="Private URL of the service to create",
-        example="http://localhost:9000/my_service"
+        example="http://localhost:9000/my_service",
+        validator=colander.url,
     )
     configuration = ServiceConfigurationSchema()
 
@@ -1407,7 +1435,8 @@ class Service_PATCH_RequestBodySchema(colander.MappingSchema):
         description="New service private URL to apply to service specified in path",
         missing=colander.drop,
         default=colander.null,
-        example="http://localhost:9000/new_service_name"
+        example="http://localhost:9000/new_service_name",
+        validator=colander.url,
     )
     service_push = PhoenixServicePushOption()
     configuration = ServiceConfigurationSchema()
@@ -1704,6 +1733,7 @@ class User_POST_RequestBodySchema(colander.MappingSchema):
         colander.String(),
         description="New email to apply to the user",
         example="john@mail.com",
+        validator=colander.Email(),
     )
     password = colander.SchemaNode(
         colander.String(),
@@ -1752,6 +1782,7 @@ class User_PATCH_RequestBodySchema(colander.MappingSchema):
         description="New email to apply to the user (admin or logged user operation).",
         missing=colander.drop,
         example="john@mail.com",
+        validator=colander.Email(),
     )
     password = colander.SchemaNode(
         colander.String(),
@@ -2826,6 +2857,7 @@ class RegisterUsers_POST_RequestSchema(colander.MappingSchema):
         colander.String(),
         description="Email to employ for new user registration.",
         example="john@mail.com",
+        validator=colander.Email(),
     )
     password = colander.SchemaNode(
         colander.String(),
@@ -2838,11 +2870,14 @@ class RegisterUserBodySchema(colander.MappingSchema):
     user_name = colander.SchemaNode(
         colander.String(),
         description="Pending user registration name.",
-        example="toto")
+        example="toto"
+    )
     email = colander.SchemaNode(
         colander.String(),
         description="Pending user registration email.",
-        example="toto@mail.com")
+        example="toto@mail.com",
+        validator=colander.Email(),
+    )
 
 
 class RegisterUsers_POST_ResponseBodySchema(BaseResponseBodySchema):

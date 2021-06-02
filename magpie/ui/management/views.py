@@ -290,9 +290,24 @@ class ManagementViews(AdminRequests, BaseViews):
         """
         user_name = self.request.matchdict["user_name"]
         path = schemas.RegisterUserAPI.path.format(user_name=user_name)
+
+        # process removal of pending user registration the same way with either button
+        if "delete" in self.request.POST or "decline" in self.request.POST:
+            resp = request_api(self.request, path, "DELETE")
+            check_response(resp)
+            return HTTPFound(self.request.route_url("view_users"))
+
         resp = request_api(self.request, path)
         check_response(resp)
         data = get_json(resp)["registration"]
+
+        # approval must be done with the explicit URL, user should exist afterwards
+        if "approve" in self.request.POST and data["approve_url"]:
+            path = data["approve_url"]
+            resp = request_api(self.request, path, "GET")
+            check_response(resp)
+            return HTTPFound(self.request.route_url("edit_user", user_name=user_name, cur_svc_type="default"))
+
         return self.add_template_data(data=data)
 
     @view_config(route_name="view_groups", renderer="templates/view_groups.mako")

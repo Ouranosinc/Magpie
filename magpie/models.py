@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, Iterable, List, Optional, Type, Union
 
+    from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session
 
     from magpie.typedefs import AccessControlListType, GroupPriority, JSON, Str
@@ -872,6 +873,20 @@ class TemporaryToken(BaseModel, Base):
         # type: (Union[Str, UUID], Optional[Session]) -> Optional[TemporaryToken]
         db_session = get_db_session(db_session)
         return db_session.query(TemporaryToken).filter(TemporaryToken.token == token).first()
+
+    @staticmethod
+    def by_user(user, db_session=None):
+        # type: (AnyUser, Optional[Session]) -> Optional[Query]
+        if not db_session:
+            db_session = get_db_session(obj=user)
+        query = db_session.query(TemporaryToken)
+        if isinstance(user, User):
+            query = query.filter(TemporaryToken.user_id == user.id)
+        elif isinstance(user, UserPending):
+            query = query.filter(TemporaryToken.user_pending_id == user.id)
+        else:
+            return None
+        return query
 
     def json(self):
         # type: () -> JSON

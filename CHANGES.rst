@@ -25,6 +25,7 @@ Features / Changes
 * Add multiple ``MAGPIE_SMTP_<...>`` configuration settings to control connections to notification email SMTP server.
 * Add ``empty_missing`` flag to ``get_constant`` utility to allow validation against existing environment variables or
   settings that should be considered as invalid when resolved value is an empty string.
+* Add missing ``format`` for applicable ``url`` and ``email`` elements in the OpenAPI specification.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

@@ -20,6 +20,7 @@ from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.notifications import get_email_template, send_email
+from magpie.api.management.register import register_formats as rf
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import generate_callback_url, webhook_update_error_status
@@ -200,7 +201,7 @@ def register_pending_user(user_name, email, password, request):
                      msg_on_fail="Error occurred during user registration when trying to send "
                                  "email to pending user for confirmation of its submitted email.")
 
-    user_content = uf.format_user(tmp_user, basic_info=True)
+    user_content = rf.format_pending_user(tmp_user)
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"registration": user_content})
 

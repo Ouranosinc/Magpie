@@ -14,6 +14,7 @@ import mock
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
 from magpie.constants import get_constant
+from magpie.models import UserStatuses
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils
 
@@ -218,15 +219,40 @@ class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
 
     @runner.MAGPIE_TEST_USERS
     @utils.mocked_send_email
+    def test_GetPendingUsersList(self):
+        utils.TestSetup.clear_PendingUsers(self)
+
+        test_user = "test-pending-user-listing"
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user, pending=True)
+
+        path = "/register/users/{}".format(test_user)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("registration", body)
+        reg = body["registration"]
+        utils.check_val_is_in("user_name", reg)
+        utils.check_val_equal(reg["user_name"], test_user)
+        utils.check_val_is_in("status", reg)
+        utils.check_val_equal(reg["status"], UserStatuses.Pending.name)
+        utils.check_val_is_in("confirm_url", reg)
+        utils.check_val_is_in("approve_url", reg)
+        utils.check_val_is_in("decline_url", reg)
+
+    @runner.MAGPIE_TEST_USERS
+    @utils.mocked_send_email
     def test_DeletePendingUser(self):
         utils.TestSetup.clear_PendingUsers(self)
 
         test_user = "test-pending-user-listing"
         utils.TestSetup.create_TestUser(self, override_user_name=test_user, pending=True)
 
-        resp = utils.test_request(self, "DELETE", "/register/users/dont-care", expect_errors=True,
+        path = "/register/users/{}".format(test_user)
+        resp = utils.test_request(self, "DELETE", path,  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 200)
+
+        resp = utils.test_request(self, "GET", path, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
-        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        utils.check_response_basic_info(resp, 404)
 
 
 @runner.MAGPIE_TEST_API

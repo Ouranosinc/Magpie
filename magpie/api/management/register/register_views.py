@@ -18,7 +18,7 @@ from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
 from magpie.api.management.register import register_utils as ru
-from magpie.api.management.user import user_formats as uf
+from magpie.api.management.register import register_formats as rf
 from magpie.api.management.user import user_utils as uu
 
 if TYPE_CHECKING:
@@ -63,7 +63,7 @@ def get_pending_user_view(request):
     Retrieve a pending user registration details.
     """
     pending_user = ar.get_user_matchdict_checked(request, user_status=models.UserStatuses.Pending)
-    data = {"registration": uf.format_user(pending_user, basic_info=True)}
+    data = {"registration": rf.format_pending_user(pending_user)}
     return ax.valid_http(http_success=HTTPOk, content=data, detail=s.RegisterUser_GET_OkResponseSchema.description)
 
 
