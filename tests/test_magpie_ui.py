@@ -314,7 +314,10 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
     def setUpClass(cls):
         # minimally, must setup the test app to provide the required routes
         # other settings related to user registration are set specifically for each test variation
-        settings = {"magpie.user_registration_enabled": True}
+        settings = {
+            "magpie.user_registration_enabled": True,  # always needed, other settings added as needed per test case
+            "magpie.smtp_host": "example.com",  # must exist when getting configs, but not used because email mocked
+        }
 
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_missing=False, raise_not_set=False)
@@ -335,19 +338,20 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_FUNCTIONAL
-    def test_end2end_user_registration_workflow(self):
+    def test_end2end_user_registration_procedure_email_confirmed_admin_approved(self):
         """
-        Validates the whole workflow with every intermediate operation defined by the user registration procedure.
+        Validates the full workflow with all possible intermediate operation defined by the user registration procedure.
 
         .. seealso::
-            :ref:`proc_user_registration`
+            - :ref:`proc_user_registration`
+            - :meth:`test_end2end_user_registration_procedure_email_confirmed_admin_declined`
 
         Mocks email notifications to allow simulation of the back-and-forth operations between Magpie, the
         pending user requesting a new registration, and the administrator validating it via email links.
         """
         utils.warn_version(self, "User self-registration.", "3.13.0", skip=True)
 
-        test_register_user = "test-functional-user-registration"
+        test_register_user = "test-func-user-registration-approved"
         test_register_email = "{}@email.com".format(test_register_user)
         utils.TestSetup.delete_TestUser(self, override_user_name=test_register_user, pending=False)
         utils.TestSetup.delete_TestUser(self, override_user_name=test_register_user, pending=True)
@@ -371,7 +375,6 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
             "magpie.user_registration_notify_enabled": True,
             "magpie.user_registration_approval_email_recipient": "fake-admin@test.com",
             "magpie.user_registration_notify_email_recipient": "notify@user-registration.com",
-            "magpie.smtp_host": "example.com",  # must exist when getting configs, but not used because email mocked
         }
 
         from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
@@ -430,7 +433,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
                 utils.check_response_basic_info(resp, 403)
                 self.login_admin()  # authenticate for actually approving next
 
-                # simulate the administrator clicking the confirmation link in 'sent' approval request email
+                # simulate the administrator clicking the approval link in 'sent' email
                 # temporary token URL that this administrator clicked should respond with successful approval
                 resp = utils.test_request(self, "GET", approve_path)
                 body = utils.check_ui_response_basic_info(resp, 200)
@@ -473,6 +476,131 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
                 body = utils.check_response_basic_info(resp, 200)
                 utils.check_val_true(body["authenticated"])
                 utils.check_val_equal(body["user"]["user_name"], test_register_user)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    def test_end2end_user_registration_procedure_email_confirmed_admin_declined(self):
+        """
+        Validates the workflow of user registration procedure up to the point where the administrator declines it.
+
+        .. seealso::
+            - :ref:`proc_user_registration`
+            - :meth:`test_end2end_user_registration_procedure_email_confirmed_admin_approved`
+
+        .. note::
+            Skip a few redundant validations in this case to concentrate on the *decline* aspect.
+            See *approved* test case for full checks of all intermediate operations.
+
+        Mocks email notifications to allow simulation of the back-and-forth operations between Magpie, the
+        pending user requesting a new registration, and the administrator validating it via email links.
+        """
+        utils.warn_version(self, "User self-registration.", "3.13.0", skip=True)
+
+        test_register_user = "test-func-user-registration-declined"
+        test_register_email = "{}@email.com".format(test_register_user)
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_register_user, pending=False)
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_register_user, pending=True)
+
+        utils.check_or_try_logout_user(self)
+
+        # press 'Register' button to be redirected to form submission for new user registration
+        # no form on the homepage for that button, so only send the corresponding request directly
+        resp = utils.test_request(self, "GET", "/ui/register/users")
+        data = {
+            "user_name": test_register_user,
+            "password": test_register_user,
+            "confirm": test_register_user,
+            "email": test_register_email,
+        }
+
+        # custom app settings for this test
+        settings = {
+            "magpie.user_registration_enabled": True,
+            "magpie.user_registration_approval_enabled": True,
+            "magpie.user_registration_notify_enabled": True,
+            "magpie.user_registration_approval_email_recipient": "fake-admin@test.com",
+            "magpie.user_registration_notify_email_recipient": "notify@user-registration.com",
+        }
+
+        with utils.mocked_get_settings(settings=settings):
+            with utils.mock_send_email() as email_contexts:
+                _, wrapped_contents, mocked_send = email_contexts
+
+                # submit the registration form to trigger the confirmation email
+                resp = utils.TestSetup.check_FormSubmit(self, previous_response=resp, form_data=data,
+                                                        form_match="add_user_form", form_submit="create")
+                utils.check_ui_response_basic_info(resp, expected_title="Magpie User Registration")
+                utils.check_val_equal(mocked_send.call_count, 1,
+                                      msg="Expected sent notification to user for its email validation.")
+
+                # simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
+                confirm_url = wrapped_contents.call_args.args[-1].get("confirm_url")
+                resp = utils.test_request(self, "GET", urlparse(confirm_url).path)
+                body = utils.check_ui_response_basic_info(resp, 200, expected_title="Magpie User Registration")
+                utils.check_val_is_in("email has been confirmed", body)
+
+                # retrieve the decline endpoint from the 'sent' email and authenticate as admin
+                # simulate the administrator clicking the decline link to suppress the pending approval
+                utils.check_val_equal(mocked_send.call_count, 2,
+                                      msg="Expected email to have been sent to the administrator for approval.")
+                decline_url = wrapped_contents.call_args.args[-1].get("decline_url")
+                decline_path = urlparse(decline_url).path
+                self.login_admin()  # admin needed for decline link
+                resp = utils.test_request(self, "GET", decline_path)
+                body = utils.check_ui_response_basic_info(resp, 200)
+                utils.check_val_is_in("Pending user registration was successfully declined", body)
+                utils.check_val_equal(
+                    mocked_send.call_count, 2,
+                    msg="neither pending user nor notify emails should be sent since registration was declined"
+                )
+
+                # validate that there is not a new user, and that pending user was removed
+                path = "/users/{}".format(test_register_user)
+                resp = utils.test_request(self, "GET", path, expect_errors=True,
+                                          headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 404)
+                resp = utils.test_request(self, "GET", "/register" + path, expect_errors=True,
+                                          headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 404)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_user_pending_status(self):
+        """
+        Verify status of pending user is correctly displayed in applicable pages.
+        """
+        utils.warn_version(self, "User self-registration.", "3.13.0", skip=True)
+
+        test_register_user = "test-user-pending-status"
+        test_register_email = "{}@email.com".format(test_register_user)
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_register_user, pending=False)
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_register_user, pending=True)
+        utils.TestSetup.delete_TestUser(self)
+
+        with utils.mocked_get_settings():
+            with utils.mock_send_email():
+                data = {
+                    "user_name": test_register_user,
+                    "password": test_register_user,
+                    "confirm": test_register_user,
+                    "email": test_register_email,
+                }
+                utils.TestSetup.create_TestUser(self, override_data=data, pending=True)
+                utils.TestSetup.create_TestUser(self, pending=False)
+
+                # check that both 'normal' user and pending ones are displayed at the same time in the user list
+                resp = utils.test_request(self, "GET", "/ui/users")
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_is_in(test_register_user, body)
+                utils.check_val_is_in(self.test_user_name, body)
+
+                # validate their status are correctly associated
+                # FIXME
+
+                # validate that pending user can be viewed directly in a detail page<
+                path = "/ui/register/users/{}".format(test_register_user)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_is_in(test_register_user, body)
 
 
 @runner.MAGPIE_TEST_UI
