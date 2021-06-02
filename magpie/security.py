@@ -12,7 +12,7 @@ from ziggurat_foundations.models import groupfinder
 from magpie.api.login import esgfopenid, wso2
 from magpie.constants import get_constant
 from magpie.models import RootFactory
-from magpie.utils import get_logger, get_settings, setup_ziggurat_config
+from magpie.utils import get_logger, get_settings
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -93,7 +93,6 @@ def get_auth_config(container):
 
     # create configurator or use one defined as input to preserve previous setup/include/etc.
     config = Configurator() if not isinstance(container, Configurator) else container
-    setup_ziggurat_config(config)
     config.setup_registry(
         settings=settings,
         root_factory=RootFactory,

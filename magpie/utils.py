@@ -288,7 +288,7 @@ def setup_ziggurat_config(config):
 
     # don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
     # replicate the value substitution optimization offered by 'reify' with an explicit attribute
-    config.add_request_method(get_user, "user", property=True, reify=False)
+    config.add_request_method(get_user, "user", reify=False, property=True)
 
 
 def get_json(response):

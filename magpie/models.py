@@ -875,7 +875,7 @@ class TemporaryToken(BaseModel, Base):
 
     def json(self):
         # type: () -> JSON
-        return {"token": self.token, "operation": self.operation.value}
+        return {"token": str(self.token), "operation": str(self.operation.value)}
 
 
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
