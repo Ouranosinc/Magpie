@@ -1,7 +1,6 @@
 from inspect import cleandoc
 from typing import TYPE_CHECKING
 
-import transaction
 from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPConflict,
@@ -188,14 +187,14 @@ def register_pending_user(user_name, email, password, request):
 
     LOGGER.debug("[User Registration - Step 2] sending confirmation email for its validation")
     confirmation_url = generate_callback_url(TokenOperation.USER_REGISTRATION_CONFIRM_EMAIL, request.db, user=tmp_user)
-    admin_approve = asbool(get_constant("MAGPIE_ADMIN_APPROVAL_ENABLED", request, default_value=False,
+    admin_approve = asbool(get_constant("MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED", request, default_value=False,
                                         print_missing=True, raise_missing=False, raise_not_set=False))
     params = {
         "user": tmp_user,
         "confirm_url": confirmation_url,
         "approval_required": admin_approve,
     }
-    template = get_email_template("MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE", request)
+    template = get_email_template("MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE", request)
     ax.evaluate_call(lambda: send_email(tmp_user.email, request, template, params),
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                      msg_on_fail="Error occurred during user registration when trying to send "
@@ -219,7 +218,7 @@ def handle_user_registration_confirmation(tmp_token, request):
         - See :ref:`request_admin_approval` for step 3B.
         - See :ref:`complete_user_registration` for step 5 (from 3A).
     """
-    require_approve = asbool(get_constant("MAGPIE_ADMIN_APPROVAL_ENABLED", request, default_value=False,
+    require_approve = asbool(get_constant("MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED", request, default_value=False,
                                           print_missing=True, raise_missing=False, raise_not_set=False))
     if not require_approve:
         LOGGER.debug("[User Registration - Step 3A] moving on to complete registration (no approval required)")
@@ -270,8 +269,8 @@ def request_admin_approval(tmp_token, request):
         "pending_url": magpie_url + s.RegisterUserAPI.path.format(user_name=tmp_user.user_name),
         "display_url": magpie_url + "/ui/register/users/" + tmp_user.user_name,
     }
-    admin_email = get_constant("MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT", request)
-    template = get_email_template("MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE", request)
+    admin_email = get_constant("MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_RECIPIENT", request)
+    template = get_email_template("MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE", request)
     ax.evaluate_call(lambda: send_email(admin_email, request, template, params),
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                      msg_on_fail="Error occurred during user registration when trying to send "
@@ -315,7 +314,7 @@ def complete_user_registration(tmp_token, request):
     Completes the successful user registration following any required validation steps.
 
     Generates the :term:`User` from the :term:`Pending User`.
-    Then, sends any requested notification emails about successful :term:`User` creation.
+    Then, sends configured notification emails about successful :term:`User` creation.
 
     Implements steps (5) and (6) of the user registration procedure.
 
@@ -332,15 +331,22 @@ def complete_user_registration(tmp_token, request):
     user = pending_user.upgrade(db_session=request.db)
     LOGGER.debug("Pending user upgraded to full user: [%s (%s)]", user.user_name, user.id)
 
-    notify = asbool(get_constant("MAGPIE_USER_REGISTERED_ENABLED", request, default_value=False,
+    # notify the user of its successful account validation, approval and creation
+    params = {"user": user}
+    template = get_email_template("MAGPIE_USER_REGISTRATION_COMPLETED_EMAIL_TEMPLATE", request)
+    ax.evaluate_call(lambda: send_email(user.email, request, template, params),
+                     fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                     msg_on_fail="Error occurred during user registration when trying to send "
+                                 "email to pending user for confirmation of its submitted email.")
+
+    # send other administrative email notification if requested
+    notify = asbool(get_constant("MAGPIE_USER_REGISTRATION_NOTIFY_ENABLED", request, default_value=False,
                                  print_missing=True, raise_missing=False, raise_not_set=False))
     if notify:
         LOGGER.debug("[User Registration - Step 6] notify completed registration: [%s]", user.user_name)
-        recipient = get_constant("MAGPIE_USER_REGISTERED_EMAIL_RECIPIENT", request)
-        template = get_email_template("MAGPIE_USER_REGISTERED_EMAIL_TEMPLATE", request)
-        params = {
-            "user": user
-        }
+        recipient = get_constant("MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_RECIPIENT", request)
+        template = get_email_template("MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_TEMPLATE", request)
+        params = {"user": user}
         sent = ax.evaluate_call(lambda: send_email(recipient, request, template, params),
                                 fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                                 msg_on_fail="Error occurred during user registration when attempting to "

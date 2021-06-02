@@ -28,7 +28,7 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
     __test__ = True
 
     @classmethod
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def setUpClass(cls):
         cls.version = __meta__.__version__
         cls.app = utils.get_test_magpie_app()
@@ -59,7 +59,7 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission="write")
         self.login_test_user()
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_unauthenticated_service_blocked(self):
         """
         Validate missing authentication token blocks access to the service if not publicly accessible.
@@ -74,7 +74,7 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="POST")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [POST, {}]".format(path))
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_unauthenticated_resource_allowed(self):
         """
         Validate granted access to a resource specified as publicly accessible even without any authentication token.
@@ -89,7 +89,7 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="POST")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg="Using [POST, {}]".format(path))
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_unknown_service(self):
         """
         Validate that unknown service-name is handled correctly.
@@ -106,7 +106,7 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), HTTPNotFound, msg="Using [GET, {}]".format(path))
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_unknown_resource_under_service(self):
         """
         Evaluate use-case where requested resource when parsing the request corresponds to non-existing element.
@@ -152,7 +152,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
     cache_reset_headers = {"Cache-Control": "no-cache"}
 
     @classmethod
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def setUpClass(cls):
         cls.version = __meta__.__version__
         cls.settings = {}
@@ -172,7 +172,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         cls.setup_adapter()
         cls.setup_admin()
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def setUp(self):
         ti.UserTestCase.setUp(self)
         self.setup_adapter()
@@ -183,7 +183,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         utils.TestSetup.delete_TestService(self)
         utils.TestSetup.create_TestService(self)
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_access_cached_service(self):
         """
         Verify caching operation of adapter to retrieve the requested service.
@@ -215,7 +215,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         utils.check_val_equal(mock_service.call_count, 1, msg="Real call expected only on first run before caching")
         utils.check_val_equal(mock_cached.call_count, number_calls + 1, msg="Cached call expected for each request")
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_access_cached_service_by_other_user(self):
         """
         Verify that cached service doesn't result into invalid permission access when different user sends the request.
@@ -254,7 +254,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         utils.check_val_equal(wrapped_cached.call_count, 1, msg="Real call expected only on first run before caching")
         utils.check_val_equal(wrapped_service.call_count, 3, msg="Service call expected for each request")
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_retrieve_cached_acl(self):
         """
         Validate caching of :term:`ACL` resolution against repeated combinations of caching arguments.

@@ -17,7 +17,7 @@
         login_url:          Endpoint where login can be accomplished.
         confirm_url:        Endpoint where email confirmation can be performed to validate the email recipient.
         approval_required:  Boolean indicating if administrator approval will be required following email confirmation
-                            (based on application settings with MAGPIE_ADMIN_APPROVAL_ENABLED).
+                            (based on application settings with MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED).
 
 </%doc>
 

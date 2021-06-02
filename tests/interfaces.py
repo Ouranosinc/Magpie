@@ -5958,7 +5958,7 @@ class SetupMagpieAdapter(ConfigTestCase):
         cls.ows = adapter.owssecurity_factory(settings)
         cls.adapter = adapter
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def mock_request(self, *args, **kwargs):
         """
         Set getters that are normally defined when running the full application.

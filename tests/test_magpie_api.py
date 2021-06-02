@@ -203,7 +203,7 @@ class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
         utils.warn_version(cls, "User self-registration.", "3.13.0", skip=True)
 
     @runner.MAGPIE_TEST_USERS
-    @utils.mock_send_email
+    @utils.mocked_send_email
     def test_GetPendingUsersList(self):
         utils.TestSetup.clear_PendingUsers(self)
 
@@ -217,7 +217,7 @@ class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
         utils.check_val_equal(body["registrations"][0], test_user)
 
     @runner.MAGPIE_TEST_USERS
-    @utils.mock_send_email
+    @utils.mocked_send_email
     def test_DeletePendingUser(self):
         utils.TestSetup.clear_PendingUsers(self)
 

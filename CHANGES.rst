@@ -22,9 +22,6 @@ Features / Changes
 * Add configuration setting ``MAGPIE_USER_REGISTRATION_ENABLED`` to control whether user account self-registration
   feature should be employed.
   With it comes multiple other ``MAGPIE_USER_REGISTRATION_<...>`` settings to customize notification emails.
-* Add configuration setting ``MAGPIE_ADMIN_APPROVAL_ENABLED`` to control whether user account must be approved prior
-  to allowing self-registration.
-  With it comes multiple other ``MAGPIE_ADMIN_APPROVAL_<...>`` settings to customize notification emails.
 * Add multiple ``MAGPIE_SMTP_<...>`` configuration settings to control connections to notification email SMTP server.
 * Add ``empty_missing`` flag to ``get_constant`` utility to allow validation against existing environment variables or
   settings that should be considered as invalid when resolved value is an empty string.

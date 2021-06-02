@@ -23,10 +23,14 @@ LOGGER = get_logger(__name__)
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 DEFAULT_TEMPLATE_MAPPING = {
-    "MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE": os.path.join(TEMPLATE_DIR, "email_user_registration.mako"),
-    "MAGPIE_USER_REGISTERED_EMAIL_TEMPLATE": os.path.join(TEMPLATE_DIR, "email_user_registered.mako"),
-    "MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE": os.path.join(TEMPLATE_DIR, "email_admin_approval.mako"),
-    "MAGPIE_ADMIN_APPROVED_EMAIL_TEMPLATE": os.path.join(TEMPLATE_DIR, "email_admin_approved.mako"),
+    "MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE":
+        os.path.join(TEMPLATE_DIR, "email_user_registration_submission.mako"),
+    "MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE":
+        os.path.join(TEMPLATE_DIR, "email_user_registration_approval.mako"),
+    "MAGPIE_USER_REGISTRATION_COMPLETED_EMAIL_TEMPLATE":
+        os.path.join(TEMPLATE_DIR, "email_user_registration_completed.mako"),
+    "MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_TEMPLATE":
+        os.path.join(TEMPLATE_DIR, "email_user_registration_notify.mako"),
 }
 
 
@@ -37,10 +41,10 @@ def get_email_template(template_constant, container=None):
 
     Allowed values of :paramref:`template_constant` are:
 
-        - :envvar:`MAGPIE_USER_REGISTRATION_EMAIL_TEMPLATE`
-        - :envvar:`MAGPIE_USER_REGISTERED_EMAIL_TEMPLATE`
-        - :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_TEMPLATE`
-        - :envvar:`MAGPIE_ADMIN_APPROVED_EMAIL_TEMPLATE`
+        - :envvar:`MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE`
+        - :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE`
+        - :envvar:`MAGPIE_USER_REGISTRATION_COMPLETED_EMAIL_TEMPLATE`
+        - :envvar:`MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_TEMPLATE`
 
     :raises IOError: if an explicit override value of the requested template cannot be located.
     :returns: template formatter from the requested template file.

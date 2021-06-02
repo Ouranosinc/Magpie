@@ -1,6 +1,6 @@
 <%doc>
     This is the default notification message sent by email to the administrator following successful user registration.
-    (see option: MAGPIE_USER_REGISTERED_ENABLED)
+    (see option: MAGPIE_USER_REGISTRATION_NOTIFY_ENABLED)
 
     It is formatted using the Mako template library (https://www.makotemplates.org/).
     The email header MUST be provided (from, to, subject, content-type).

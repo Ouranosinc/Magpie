@@ -339,15 +339,15 @@ Following is the summarized notification workflow to complete registration:
        always required.
 
     3. Once the validation is received, there are two possible outcomes according to configured value of
-       :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED`.
+       :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED`.
 
-        A) When :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` is **NOT** activated, only email validation is
+        A) When :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED` is **NOT** activated, only email validation is
            required from the confirmation email. Receiving the confirmation in that case immediately completes
            the :term:`User` registration process. The procedure moves directly to step (5) skipping (4).
 
-        B) If :envvar:`MAGPIE_ADMIN_APPROVAL_ENABLED` was instead activated, approval must first occur.
+        B) If :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED` was instead activated, approval must first occur.
            This will be possible as reception of the validated email from the :term:`Pending User` will trigger
-           another notification email toward :envvar:`MAGPIE_ADMIN_APPROVAL_EMAIL_RECIPIENT`.
+           another notification email toward :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_RECIPIENT`.
            That email should then be employed to *approve* or *decline* the subscription request with corresponding
            temporary token links.
 
@@ -359,9 +359,9 @@ Following is the summarized notification workflow to complete registration:
     5. An email is sent back to the original submitter to notify them that their account is validated and ready to be
        employed. The now created :term:`User` will be able to login using the available :ref:`authn_requests` methods.
 
-    6. (Optional) When :envvar:`MAGPIE_USER_REGISTERED_ENABLED` was activated, an additional notification email is
-       sent to :envvar:`MAGPIE_USER_REGISTERED_EMAIL_RECIPIENT` to inform of the account that was validated and the
-       generated :term:`User` from completed registration.
+    6. (Optional) When :envvar:`MAGPIE_USER_REGISTRATION_NOTIFY_ENABLED` was activated, an additional notification
+       email is sent to :envvar:`MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_RECIPIENT` to inform of the account that was
+       validated and the generated :term:`User` from completed registration.
        This email can be the same as the approving administrator email, or a completely different
        authority, whichever is desired to be notified of completed new :term:`User` accounts.
 
@@ -369,25 +369,41 @@ Following is the summarized notification workflow to complete registration:
     Once a :term:`Pending User` is validated with the above procedure, the completed :term:`User` account will trigger
     any registered :term:`Webhook` in the same manner as if the :term:`User` was directly created by the administrator.
 
+
+.. FIXME: figure user registration here
+
 Management
 ~~~~~~~~~~
 
 All :term:`Pending User` details can be queried and managed only by administrator-level :term:`User`, using the
 relevant API ``/register/users`` endpoint, or the query string ``status`` on normal API ``/users`` endpoint. Note that
 user registration endpoints will return an ``HTTP Not Found [404]`` error if :envvar:`MAGPIE_USER_REGISTRATION_ENABLED`
-was not set accordingly, which will disable the complete self-registration `procedure`_
+was not set accordingly, which will disable the complete self-registration `procedure`_.
 
 The :term:`Pending User` is a special kind of *user* that is treated differently than typical :term:`User` since their
 account validation is incomplete, and will therefore not be returned by normal API and UI endpoints. Only explicit
 queries (e.g.: ``status=pending``) or specialized requests endpoints will return those entries.
+
 Regarding relationships with other `Magpie` concepts, such as :term:`Service`, :term:`Resource`, :term:`Group` or
-:term:`Permission` definitions, those :term:`Pending User` do not exist and cannot be associated until registration
-was processed completely. When account validation and approval is completed, the :term:`Pending User` is upgraded to
-a full fledged :term:`User`, with all applicable operations on it. The :term:`User` account will then operate normally
-as any other existing ones. That :term:`User` will also be able to proceed with typical :ref:`authn_requests`
-procedures to login with `Magpie`.
+:term:`Permission` definitions, those :term:`Pending User` will not be available and cannot be associated until
+registration was processed completely. When account validation and approval is completed, the :term:`Pending User` is
+upgraded to a full fledged :term:`User`, with all applicable operations on it. The :term:`User` account will then
+operate normally as any other existing ones. That :term:`User` will also be able to proceed with
+typical :ref:`authn_requests` procedures to login with `Magpie`.
+
+Any :term:`Pending User` registration will be listed and accessible from the `Magpie` UI administration management area.
+Therefore, if a validation email gets lost or is not processed by the relevant administrators, pending registrations can
+still be obtained and processed by visiting the :term:`User` list page.
+
+Customization
+~~~~~~~~~~~~~
 
 All notification emails sent by `Magpie` can be customized to match your specific requirements or format using
 `Mako Template`_ files. Custom email contents should contain all relevant details defined in their corresponding default
 templates to ensure that basic functionalities of the user registration and administrator approval `procedure`_ can be
 accomplished as intended. The logic of the message content is left at the discretion of the developer if customized.
+
+Furthermore, as described in the `procedure`_, :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED` can be used to
+specify whether administrator approval is required or not. This additional step is purely up to the developers and
+server managers that use `Magpie` to decide if they desire more control over which individuals can join and access
+their services.

@@ -44,12 +44,14 @@
 .. _constants.py: https://github.com/Ouranosinc/Magpie/tree/master/magpie/constants.py
 .. _Dockerfile: https://github.com/Ouranosinc/Magpie/tree/master/Dockerfile
 .. _docker-compose.yml.example: https://github.com/Ouranosinc/Magpie/tree/master/docker-compose.yml.example
-.. |email_user_registration_mako| replace:: ``magpie/api/template/email_user_registration.mako``
-.. _email_user_registration_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_user_registration.mako
-.. |email_admin_approved_mako| replace:: ``magpie/api/template/email_admin_approved.mako``
-.. _email_admin_approved_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_admin_approved.mako
-.. |email_admin_approval_mako| replace:: ``magpie/api/template/email_admin_approval.mako``
-.. _email_admin_approval_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_admin_approval.mako
+.. |email_ur_submission_mako| replace:: ``magpie/api/template/email_user_registration_submission.mako``
+.. _email_ur_submission_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_user_registration_submission.mako
+.. |email_ur_completed_mako| replace:: ``magpie/api/template/email_user_registration_completed.mako``
+.. _email_ur_completed_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_user_registration_completed.mako
+.. |email_ur_approval_mako| replace:: ``magpie/api/template/email_user_registration_approval.mako``
+.. _email_ur_approval_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_user_registration_notify.mako
+.. |email_ur_notify_mako| replace:: ``magpie/api/template/email_user_registration_notify.mako``
+.. _email_ur_notify_mako: https://github.com/Ouranosinc/Magpie/blob/master/magpie/api/template/email_user_registration_notify.mako
 .. _magpie-cron: https://github.com/Ouranosinc/Magpie/tree/master/magpie-cron
 .. _magpie.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/magpie.env.example
 .. _magpie.ini: https://github.com/Ouranosinc/Magpie/tree/master/config/magpie.ini

@@ -1,6 +1,6 @@
 <%doc>
     This is the default notification message sent by email for administrator approval.
-    (see option: MAGPIE_ADMIN_APPROVAL_ENABLED)
+    (see option: MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED)
 
     It is formatted using the Mako template library (https://www.makotemplates.org/).
     The email header MUST be provided (from, to, subject, content-type).
@@ -42,19 +42,19 @@ Content-Type: text/html; charset=UTF-8
         <div style="margin-left: 1em">
             <table style="border: 1px solid; border-collapse: collapse;">
                 <thead>
-                <tr>
-                    <th colspan="2" style="font-weight: bold">User Details</th>
-                </tr>
+                    <tr>
+                        <th colspan="2" style="font-weight: bold">User Details</th>
+                    </tr>
                 </thead>
                 <tbody style="border: 1px solid; border-collapse: collapse;">
-                <tr>
-                    <td style="padding: 0.25em; font-weight: bold;">Username</td>
-                    <td style="padding: 0.25em;">${user.user_name}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 0.25em; font-weight: bold;">Email</td>
-                    <td style="padding: 0.25em;">${user.email}</td>
-                </tr>
+                    <tr>
+                        <td style="padding: 0.25em; font-weight: bold;">Username</td>
+                        <td style="padding: 0.25em;">${user.user_name}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 0.25em; font-weight: bold;">Email</td>
+                        <td style="padding: 0.25em;">${user.email}</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -66,19 +66,31 @@ Content-Type: text/html; charset=UTF-8
 
         <div style="margin-left: 1em">
             <table style="border: 1px solid; border-collapse: collapse;">
+            	<thead>
+                	<tr>
+                    	<th style="border: 1px solid; padding: 0.25em;">Action</th>
+                        <th style="border: 1px solid; padding: 0.25em;">Description</th>
+                    </tr>
+                </thead>
                 <tbody style="border: 1px solid; border-collapse: collapse;">
-                <tr>
-                    <td style="border: 1px solid; padding: 0.25em;"><a href="${approve_url}">Approve</a></td>
-                    <td style="border: 1px solid; padding: 0.25em;"><a href="${decline_url}">Decline</a></td>
-                </tr>
+                    <tr>
+                        <td style="border: 1px solid; padding: 0.25em;"><a href="${approve_url}">Approve</a></td>
+                        <td style="border: 1px solid; padding: 0.25em;">
+                        	Completes the registration process by notifying the user that its account was created.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid; padding: 0.25em;"><a href="${decline_url}">Decline</a></td>
+                        <td style="border: 1px solid; padding: 0.25em;">
+                        	Dismisses the pending user registration completely.
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
 
         <p>
-        Approving will complete the registration process by notifying the user that its account was created.<br>
-        Declining will dismiss the pending user registration completely.<br>
-        Omitting to select any result will leave the registration pending for approval.<br>
+        Omitting to select any result will leave the registration pending for approval.
         </p>
         <p>
         You can also visit the <a href="${display_url}">Pending User Details</a> page to complete

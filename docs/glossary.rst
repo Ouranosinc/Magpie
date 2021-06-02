@@ -110,8 +110,8 @@ Glossary
 
     Pending User
         Account that is pending for validation or approval following self-registration when the application is
-        configured to provide such functionality (see :envvar:`MAGPIE_USER_REGISTRATION_ENABLED`).
-        See section :ref:`user_registration` for further details.
+        configured to provide that functionality (see :envvar:`MAGPIE_USER_REGISTRATION_ENABLED`).
+        See section :ref:`user_registration` for further details about the self-registration procedure.
 
     Permission
         Element that defines which rules are applicable for a given combination of :term:`User` and/or :term:`Group`
