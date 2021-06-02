@@ -315,7 +315,7 @@ of the enabled state of this feature.
 Procedure
 ~~~~~~~~~~
 
-Following is the summarized notification workflow to complete registration:
+Following is the summarized notification workflow to complete registration.
 
 .. cannot use the 'term' in replace, or it breaks the reference link creation
 .. _proc_user_registration:
@@ -370,7 +370,15 @@ Following is the summarized notification workflow to complete registration:
     any registered :term:`Webhook` in the same manner as if the :term:`User` was directly created by the administrator.
 
 
-.. FIXME: figure user registration here
+Following figure represents the described above behaviour of the registration steps according to enabled alternatives.
+
+.. |img_user_registration| figure:: _static/user-registration-procedure.png
+    :target: `proc_user_registration`_
+    :alt: User Registration Procedure
+
+    | User Registration Procedure demonstrating communication steps for each operation and alternatives.
+      (Version 2.0, updated 2021-06-02)
+
 
 Management
 ~~~~~~~~~~

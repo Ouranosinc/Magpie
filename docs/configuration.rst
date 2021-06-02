@@ -1100,7 +1100,7 @@ approval procedures.
     .. versionadded:: 3.13
 
     Specifies whether `Magpie` should provide :term:`User` self-registration endpoints on ``/register/users`` for
-    the API and ``/ui/register/users`` for the UI and enabled the |proc_user_registration|_.
+    the API and ``/ui/register/users`` for the UI and enabled the registration procedure.
 
     .. seealso::
         See section :ref:`user_registration` for further details about this process.
