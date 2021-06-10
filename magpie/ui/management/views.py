@@ -512,17 +512,19 @@ class ManagementViews(BaseViews):
 
     @view_config(route_name="add_group", renderer="templates/add_group.mako")
     def add_group(self):
-        return_data = {"invalid_group_name": False, "invalid_description": False,
-                       "reason_group_name": "Invalid", "reason_description": "Invalid",
-                       "form_group_name": "", "form_discoverable": False, "form_description": ""}
+        return_data = {"invalid_group_name": False, "invalid_description": False, "invalid_terms": False,
+                       "reason_group_name": "Invalid", "reason_description": "Invalid", "reason_terms": "Invalid",
+                       "form_group_name": "", "form_discoverable": False, "form_description": "", "form_terms": ""}
 
         if "create" in self.request.POST:
             group_name = self.request.POST.get("group_name")
             description = self.request.POST.get("description")
             discoverable = asbool(self.request.POST.get("discoverable"))
+            terms = self.request.POST.get("terms")
             return_data["form_group_name"] = group_name
             return_data["form_description"] = description
             return_data["form_discoverable"] = discoverable
+            return_data["form_terms"] = terms
             if not group_name:
                 return_data["invalid_group_name"] = True
                 return self.add_template_data(return_data)
@@ -531,6 +533,7 @@ class ManagementViews(BaseViews):
                 "group_name": group_name,
                 "description": return_data["form_description"],
                 "discoverable": return_data["form_discoverable"],
+                "terms": return_data["form_terms"],
             }
             resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
             if resp.status_code == HTTPConflict.code:
@@ -549,6 +552,10 @@ class ManagementViews(BaseViews):
                 if param_name == "description":
                     return_data["invalid_description"] = True
                     return_data["reason_description"] = reason
+                    return self.add_template_data(return_data)
+                if param_name == "terms":
+                    return_data["invalid_terms"] = True
+                    return_data["reason_terms"] = reason
                     return self.add_template_data(return_data)
             check_response(resp)  # check for any other exception than checked use-cases
             return HTTPFound(self.request.route_url("view_groups"))

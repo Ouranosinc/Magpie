@@ -72,6 +72,31 @@
             </td>
         </tr>
         <tr>
+            <td>Terms and conditions:</td>
+            <td>
+                <label>
+                    <input type="text" name="terms" value="${form_terms}" />
+                </label>
+            </td>
+            <td>
+                %if not invalid_terms:
+                (optional)
+                %else:
+                <div class="alert-form-error"
+                    %if not invalid_terms:
+                        style="visibility: hidden"
+                    %endif
+                >
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                             alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text alert-form-text-error">
+                        ${reason_terms}
+                    </div>
+                </div>
+                %endif
+            </td>
+        </tr>
+        <tr>
             <td class="centered" colspan="2">
                 <input type="submit" value="Add Group" name="create" class="button theme">
             </td>
