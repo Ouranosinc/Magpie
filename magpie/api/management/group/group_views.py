@@ -31,7 +31,8 @@ def create_group_view(request):
     group_name = ar.get_value_multiformat_body_checked(request, "group_name")
     group_desc = ar.get_multiformat_body(request, "description", default="")
     group_disc = asbool(ar.get_multiformat_body(request, "discoverable", default=False))
-    return gu.create_group(group_name, group_desc, group_disc, request.db)
+    group_terms = ar.get_multiformat_body(request, "terms", default="")
+    return gu.create_group(group_name, group_desc, group_disc, group_terms, request.db)
 
 
 @s.GroupAPI.get(schema=s.Group_GET_RequestSchema, tags=[s.GroupsTag], response_schemas=s.Group_GET_responses)

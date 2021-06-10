@@ -2471,6 +2471,7 @@ class TestSetup(object):
     @staticmethod
     def create_TestGroup(test_case,                     # type: AnyMagpieTestCaseType
                          override_group_name=null,      # type: Optional[Str]
+                         override_terms=null,           # type: Optional[Str]
                          override_discoverable=null,    # type: Optional[bool]
                          override_data=null,            # type: Optional[JSON]
                          override_headers=null,         # type: Optional[HeadersType]
@@ -2488,6 +2489,8 @@ class TestSetup(object):
             # only add 'discoverable' if explicitly provided here to preserve original behaviour of 'no value provided'
             if override_discoverable is not null:
                 data["discoverable"] = override_discoverable
+            if override_terms is not null:
+                data["terms"] = override_terms
         grp_name = (data or {}).get("group_name")
         if grp_name:
             test_case.extra_group_names.add(grp_name)  # indicate potential removal at a later point

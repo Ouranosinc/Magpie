@@ -4353,6 +4353,22 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(body["group"]["discoverable"], True)
 
     @runner.MAGPIE_TEST_GROUPS
+    def test_UpdateGroup_Terms_BadRequest(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_discoverable=False, override_terms=terms)
+
+        path = "/groups/{}".format(self.test_group_name)
+        data = {"terms": "Bad request, trying to change the terms & conditions."}
+        resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        # T&C should be immutable
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["group"]["terms"], terms)
+
+    @runner.MAGPIE_TEST_GROUPS
     def test_UpdateGroup_MultipleFields(self):
         data = {"group_name": self.test_group_name, "discoverable": True, "description": "test-group"}
         new_group_name = "{}-new-name".format(self.test_group_name)

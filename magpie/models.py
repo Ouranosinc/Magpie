@@ -60,6 +60,13 @@ class Group(GroupMixin, Base):
         """
         return sa.Column(sa.Boolean(), default=False)
 
+    @declared_attr
+    def terms(self):
+        """
+        Text containing the terms and conditions.
+        """
+        return sa.Column(sa.UnicodeText(), nullable=True)
+
     @property
     def priority(self):
         # type: () -> GroupPriority
