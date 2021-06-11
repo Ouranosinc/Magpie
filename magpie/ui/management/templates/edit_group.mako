@@ -144,6 +144,18 @@
                 </table>
             </div>
         </div>
+        <div class="panel-box">
+            <div class="panel-heading subsection">
+                <div class="panel-title">Terms and conditions</div>
+            </div>
+            <div class="panel-body">
+                %if terms:
+                    ${terms}
+                %else:
+                    <i>No terms and conditions for this group.</i>
+                %endif
+            </div>
+        </div>
     </div>
 </div>
 
