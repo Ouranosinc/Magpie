@@ -1,7 +1,6 @@
 import datetime
 import math
 import uuid
-from enum import IntFlag, _decompose  # noqa
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -33,7 +32,7 @@ from magpie import db
 from magpie.api import exception as ax
 from magpie.constants import get_constant
 from magpie.permissions import Permission
-from magpie.utils import ExtendedEnum, get_logger, get_magpie_url
+from magpie.utils import ExtendedEnum, decompose_enum_flags, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -46,6 +45,12 @@ if TYPE_CHECKING:
 
     # for convenience of methods using both, using strings because of future definition
     AnyUser = Union["User", "UserPending"]
+
+# backward compat enums
+try:
+    from enum import IntFlag
+except ImportError:  # python < 3.6
+    from aenum import IntFlag  # noqa
 
 LOGGER = get_logger(__name__)
 
@@ -355,7 +360,7 @@ class UserStatuses(IntFlag, ExtendedEnum):
         return super(UserStatuses, self).__xor__(other)
 
     def __iter__(self):
-        values, _ = _decompose(self, self.value)
+        values = decompose_enum_flags(self.value)
         return iter(values)
 
     def __len__(self):
@@ -614,8 +619,8 @@ class Service(Resource):
 
     @staticmethod
     def by_service_name(service_name, db_session):
-        db = get_db_session(db_session)
-        service = db.query(Service).filter(Resource.resource_name == service_name).first()
+        session = get_db_session(db_session)
+        service = session.query(Service).filter(Resource.resource_name == service_name).first()
         return service
 
 

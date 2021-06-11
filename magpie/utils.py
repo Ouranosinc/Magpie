@@ -727,6 +727,16 @@ class ExtendedEnum(Enum):
         return default
 
 
+def decompose_enum_flags(enum_flags):
+    # type: (Enum) -> List[Enum]
+    """
+    Decompose a ``Flag``-enabled ``Enum`` into its individual parts.
+
+    The operation is agnostic of the ``Enum`` implementation, whether from stdlib :mod:`enum` or :mod:`aenum`.
+    """
+    return [flag for flag in type(enum_flags).__members__.values() if flag in enum_flags]
+
+
 # taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
 # works in Python 2 & 3
 class SingletonMeta(type):
