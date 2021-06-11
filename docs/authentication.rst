@@ -372,12 +372,12 @@ Following is the summarized notification workflow to complete registration.
 
 Following figure represents the described above behaviour of the registration steps according to enabled alternatives.
 
-.. |img_user_registration| figure:: _static/user-registration-procedure.png
+.. figure:: _static/user-registration-procedure.png
     :target: `proc_user_registration`_
     :alt: User Registration Procedure
 
-    | User Registration Procedure demonstrating communication steps for each operation and alternatives.
-      (Version 2.0, updated 2021-06-02)
+    User Registration Procedure demonstrating communication steps for each operation and alternatives.
+    (Version 2.0, updated 2021-06-02)
 
 
 Management

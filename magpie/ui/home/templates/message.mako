@@ -7,11 +7,6 @@
 <li><a href="${request.route_url('home')}">Home</a></li>
 </%block>
 
-<%!
-    def remove(text):
-        return text.strip().trim()
-%>
-
 <div class="panel-message">
     <img src="${request.static_url('magpie.ui.home:static/info.png')}"
          alt="INFO" class="icon-info alert-info" title="Message"/>

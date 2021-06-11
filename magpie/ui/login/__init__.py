@@ -1,6 +1,5 @@
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.settings import asbool
-from pyramid.view import view_config
 
 from magpie.constants import get_constant
 from magpie.ui.login.views import LoginViews

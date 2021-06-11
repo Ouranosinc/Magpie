@@ -377,7 +377,7 @@ class ManagementViews(AdminRequests, BaseViews):
     def resource_tree_parser(self, raw_resources_tree, permission):
         resources_tree = {}
         for r_id, resource in raw_resources_tree.items():
-            perms = self.default_get(permission, r_id, [])
+            perms = permission.get(r_id, [])
             perm_names = [PermissionSet(perm_json).explicit_permission for perm_json in perms]
             children = self.resource_tree_parser(resource["children"], permission)
             children = OrderedDict(sorted(children.items()))
@@ -394,13 +394,6 @@ class ManagementViews(AdminRequests, BaseViews):
             permission[r_id] = resource["permissions"]
             permission.update(self.perm_tree_parser(resource["children"]))
         return permission
-
-    @staticmethod
-    def default_get(dictionary, key, default):
-        try:
-            return dictionary[key]
-        except KeyError:
-            return default
 
     def edit_group_users(self, group_name):
         current_members = self.get_group_users(group_name)
@@ -505,7 +498,7 @@ class ManagementViews(AdminRequests, BaseViews):
             resp = request_api(self.request, path, "GET")
             check_response(resp)
             raw_resources = get_json(resp)[service]
-            perms = self.default_get(permission, raw_resources["resource_id"], [])
+            perms = permission.get(raw_resources["resource_id"], [])
             perm_names = [PermissionSet(perm_json).explicit_permission for perm_json in perms]
             resources[service] = OrderedDict(
                 id=raw_resources["resource_id"],

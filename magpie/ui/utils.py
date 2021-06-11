@@ -401,8 +401,8 @@ class AdminRequests(BaseViews):
         """
         resp = request_api(self.request, schemas.ResourcesAPI.path, "GET")
         check_response(resp)
-        res_dic = self.default_get(get_json(resp), "resources", dict())
-        res_ids = dict()
+        res_dic = get_json(resp).get("resources", {})
+        res_ids = {}
         self.flatten_tree_resource(res_dic, res_ids)
         return res_ids
 

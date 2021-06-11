@@ -131,7 +131,7 @@ class LoginViews(AdminRequests, BaseViews):
             return_data.update({
                 "message": cleandoc("""
                     User registration successfully submitted.
-                    
+
                     Please confirm your email address by visiting the link that was sent to the submitted email.
                 """)
             })

@@ -28,9 +28,9 @@ from ziggurat_foundations.models.user_permission import UserPermissionMixin
 from ziggurat_foundations.models.user_resource_permission import UserResourcePermissionMixin
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
-from magpie import db
 from magpie.api import exception as ax
 from magpie.constants import get_constant
+from magpie.db import get_session_from_other
 from magpie.permissions import Permission
 from magpie.utils import ExtendedEnum, decompose_enum_flags, get_logger, get_magpie_url
 
@@ -156,7 +156,7 @@ class UserPending(Base):
         return "users_pending"
 
     @declared_attr
-    def id(self):
+    def id(self):  # pylint: disable=C0103,invalid-name  # considered too short
         """
         Unique identifier of user.
         """
@@ -230,7 +230,7 @@ class UserPending(Base):
         # Because create user operation closes session to commit the user and allow webhook updating it,
         # retrieve another session to complete upgrade and remove the pending user in advance.
         cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
-        tmp_session = db.get_session_from_other(cur_session)
+        tmp_session = get_session_from_other(cur_session)
         create_user(self.user_name, email=self.email, db_session=tmp_session,
                     group_name=None, registered_date=self.registered_date,
                     # Since password was already hashed during pending user creation,
@@ -266,7 +266,9 @@ class UserStatuses(IntFlag, ExtendedEnum):
     Also, defines the possible values of :attr:`User.status` field, omitting :attr:`UserStatuses.Pending` reserved
     for objects defined by :class:`UserPending`.
     """
-    # 0: do not use
+    # pylint: disable=W0221,arguments-differ,C0103,invalid-name
+
+    # 0: do not use (reserved for no set flag)
     OK = 1  # use 1 for ok since this value is set by default by ziggurat
     WebhookError = 2
     Pending = 4
@@ -360,7 +362,7 @@ class UserStatuses(IntFlag, ExtendedEnum):
         return super(UserStatuses, self).__xor__(other)
 
     def __iter__(self):
-        values = decompose_enum_flags(self.value)
+        values = decompose_enum_flags(self)
         return iter(values)
 
     def __len__(self):
@@ -405,13 +407,13 @@ class UserSearchService(UserService):
         if UserStatuses.Pending in status:
             users = list(db_session.query(UserPending))
             status = UserStatuses(status - UserStatuses.Pending)
-        status = [int(status) for status in status]
+        status = [int(status_flag) for status_flag in status]
         query = query.filter(cls.model.status.in_(status))
         users += list(query)
         return users
 
     @classmethod
-    def by_user_name(cls, user_name, status=None, db_session=None):
+    def by_user_name(cls, user_name, status=None, db_session=None):  # pylint: disable=W0221,arguments-differ
         # type: (Str, Optional[UserStatuses], Optional[Session]) -> Optional[AnyUser]
         """
         Retrieves the user matching the given name.

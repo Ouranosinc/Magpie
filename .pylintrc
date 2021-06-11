@@ -190,6 +190,7 @@ ignored-classes=optparse.Values,
                 _thread._local,
                 str,
                 int,
+                scoped_session,
                 magpie.models.UserStatuses,
                 cornice.Service,
                 cornice.service.Service
@@ -388,7 +389,7 @@ function-naming-style=snake_case
 good-names=i,j,k,v,kv,ex,x,y,z,f,fd,h,db,kw,ns,qs,_
 
 # Include a hint for the correct naming format with invalid-name.
-include-naming-hint=no
+include-naming-hint=yes
 
 # Naming style matching correct inline iteration names.
 inlinevar-naming-style=any

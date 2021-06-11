@@ -219,7 +219,7 @@ class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
 
     @runner.MAGPIE_TEST_USERS
     @utils.mocked_send_email
-    def test_GetPendingUsersList(self):
+    def test_GetPendingUsersRegistration(self):
         utils.TestSetup.clear_PendingUsers(self)
 
         test_user = "test-pending-user-listing"
@@ -247,7 +247,7 @@ class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
         utils.TestSetup.create_TestUser(self, override_user_name=test_user, pending=True)
 
         path = "/register/users/{}".format(test_user)
-        resp = utils.test_request(self, "DELETE", path,  headers=self.test_headers, cookies=self.test_cookies)
+        resp = utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 200)
 
         resp = utils.test_request(self, "GET", path, expect_errors=True,
