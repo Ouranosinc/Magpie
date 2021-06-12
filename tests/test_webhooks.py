@@ -118,7 +118,7 @@ class TestWebhooks(ti.BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         info = utils.TestSetup.get_UserInfo(self, override_body=body)
-        utils.check_val_equal(info["status"], status.value)
+        utils.check_val_equal(info["status"], self.get_user_status_value(status))
 
     def test_Webhook_CreateUser(self):
         """

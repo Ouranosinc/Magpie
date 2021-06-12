@@ -523,7 +523,7 @@ def mocked_get_settings(test_func=None, settings=None):
     :param test_func: Test function being mocked when using the decorator variant. Unused when employed as context.
     :param settings: Additional settings to override the values retrieved from the request or application.
     """
-    def mocked_get_settings_decorator(test):
+    def mocked_get_settings_decorator(test=None):
         from magpie.utils import get_settings as real_get_settings
 
         def mocked(container, *args, **kwargs):
@@ -2352,8 +2352,11 @@ class TestSetup(object):
         """
         app_or_url = get_app_or_url(test_case)
         resp = test_request(app_or_url, "GET", "/register/users" if pending else "/users",
+                            expect_errors=pending,  # route does not exist if not enabled
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        if pending and resp.status_code == 404:  # user-registration was not enabled
+            return []
         json_body = check_response_basic_info(resp, 200, expected_method="GET")
         return json_body["registrations"] if pending else json_body["user_names"]
 

@@ -280,6 +280,8 @@ def setup_ziggurat_config(config):
         user_id = request.unauthenticated_userid
         if user_id is not None:
             user = UserService.by_id(user_id, db_session=request.db)
+            if user is None:
+                return None
             if sa_inspect(user).detached:
                 request.db.merge(user)
             setattr(request, "_user_prefetched", user)
@@ -724,6 +726,37 @@ class ExtendedEnum(Enum):
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
                 return m_val
+        return default
+
+
+# note: must not define any enum value here to allow inheritance by subclasses
+class FlexibleNameEnum(ExtendedEnum):
+    """
+    Enum that allows more permissive name cases for lookup.
+    """
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls._get_missing_(value)
+
+    @classmethod
+    def __missing_flexible(cls, value):
+        for name, item in cls.__members__.items():
+            if value in [name, name.lower(), name.upper(), name.title()]:
+                return item
+        return super(FlexibleNameEnum, cls)._missing_(value)
+
+    @classmethod
+    def get(cls, key_or_value, default=None):
+        try:
+            result = super(FlexibleNameEnum, cls).get(key_or_value)
+            if result is not None:
+                return cls(result)  # noqa
+            # use __missing_flexible instead of _missing_
+            # otherwise, _missing_ of another enum sub-class (eg: IntFlag) get called and raises directly
+            return cls.__missing_flexible(key_or_value)
+        except ValueError:
+            pass
         return default
 
 

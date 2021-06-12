@@ -30,9 +30,8 @@ from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
 from magpie.api import exception as ax
 from magpie.constants import get_constant
-from magpie.db import get_session_from_other
 from magpie.permissions import Permission
-from magpie.utils import ExtendedEnum, decompose_enum_flags, get_logger, get_magpie_url
+from magpie.utils import ExtendedEnum, FlexibleNameEnum, decompose_enum_flags, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -225,7 +224,9 @@ class UserPending(Base):
         :returns: created user instance
         """
         # employ the typical user creation utility to ensure that all webhooks and validations occur as usual
-        from magpie.api.management.user.user_utils import create_user  # avoid circular import
+        # avoid circular import errors
+        from magpie.api.management.user.user_utils import create_user
+        from magpie.db import get_session_from_other
 
         # Because create user operation closes session to commit the user and allow webhook updating it,
         # retrieve another session to complete upgrade and remove the pending user in advance.
@@ -258,7 +259,7 @@ class UserPending(Base):
         return UserService.model.passwordmanager
 
 
-class UserStatuses(IntFlag, ExtendedEnum):
+class UserStatuses(IntFlag, FlexibleNameEnum):
     """
     Values applicable to :term:`User` statues.
 
@@ -273,34 +274,14 @@ class UserStatuses(IntFlag, ExtendedEnum):
     WebhookError = 2
     Pending = 4
 
-    __str_map__ = {}
-
-    def __new__(cls, *_, **__):
-        """
-        Generates mapping to allow case insensitive retrieval of enum key names.
-
-        Definitions match literal values returned by :meth:`allowed`.
-        """
-        enum = super().__new__(cls, *_, **__)
-        for name, item in cls.__members__.items():
-            enum.__str_map__[name] = item
-            enum.__str_map__[name.lower()] = item
-            enum.__str_map__[name.title()] = item
-            enum.__str_map__[name.upper()] = item
-        return enum
-
     @classmethod
     def _get_one(cls, status):
-        # matches the literal number, the direct enum object or exact name
-        as_num = super(UserStatuses, cls).get(int(status) if str.isnumeric(str(status)) else status)
-        if as_num:
-            return UserStatuses(as_num)
-        # otherwise, attempt with case insensitive items
-        status = cls.__str_map__.get(status)
-        if status is None:
-            return None
-        # always convert as enum instance to allow flag combinations (|) and membership compare (in)
-        return UserStatuses(status)
+        # matches the literal number, the direct enum object, exact name, or flexible name (inherited)
+        status = super(UserStatuses, cls).get(int(status) if str.isnumeric(str(status)) else status)
+        if status:
+            # always convert as enum instance to allow flag combinations (|) and membership compare (in)
+            return UserStatuses(status)
+        return None
 
     @classmethod
     def get(cls,

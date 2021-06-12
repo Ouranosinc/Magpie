@@ -6,7 +6,7 @@ Magpie helpers for database migration.
 import argparse
 from typing import TYPE_CHECKING
 
-from magpie.constants import MAGPIE_INI_FILE_PATH
+from magpie.constants import get_constant
 from magpie.db import run_database_migration
 
 if TYPE_CHECKING:
@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 def make_parser():
     # type: () -> argparse.ArgumentParser
     parser = argparse.ArgumentParser(description="Run Magpie database migration.")
-    parser.add_argument("-c", "--config-file", metavar="config_file", dest="config_file", type=str,
-                        default=MAGPIE_INI_FILE_PATH,
+    parser.add_argument("-c", "--config", "--config-file", "--ini", metavar="CONFIG", dest="config_file",
+                        type=str, default=get_constant("MAGPIE_INI_FILE_PATH"),
                         help="Configuration file to employ for database connection settings "
                              "(default: MAGPIE_INI_FILE_PATH='%(default)s)'")
     return parser

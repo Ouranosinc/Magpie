@@ -29,14 +29,15 @@ def test_user_status_value_getter():
 
 @runner.MAGPIE_TEST_UTILS
 def test_user_status_combinations():
-    # below order by value is important, sorted from highest to lowest bit
-    # no matter the way they are combined using OR operator '|' (enum impl and string repr)
+    # below order by value is important, sorted from highest to lowest bit (HB -> LB)
+    # this is the resolved order, no matter the way they are combined using OR operator '|' (enum impl and string repr)
     test_statuses = [UserStatuses.Pending, UserStatuses.WebhookError, UserStatuses.OK]
+    flip_statuses = list(reversed(test_statuses))
 
-    # list of class by itself returns all elements
+    # list() of class by itself returns all elements (same as .all())
     # in this case, the member iterator is called, which prefers enum's impl to list by member definition
-    # this makes it reversed than the HB -> LB in this case
-    assert list(UserStatuses) == list(reversed(test_statuses))
+    # this makes it reversed than the above HB -> LB in this case
+    assert list(UserStatuses) == flip_statuses
     for idx, status in enumerate(reversed(UserStatuses)):
         assert test_statuses[idx] is status
 
@@ -46,13 +47,13 @@ def test_user_status_combinations():
     merge_status = UserStatuses.Pending | UserStatuses.OK | UserStatuses.WebhookError
     assert len(merge_status) == len(test_statuses)
     for idx, status in enumerate(merge_status):
-        assert test_statuses[idx] is status  # iterated value is also an enum member, not plain int
+        assert flip_statuses[idx] is status  # iterated value is also an enum member, not plain int
     assert idx == len(test_statuses) - 1
     assert merge_status.value == sum(test_statuses)
 
     # iterate over partial OR not using all items
     merge_status = UserStatuses.OK | UserStatuses.WebhookError | UserStatuses.OK  # order and duplicate don't care
-    test_statuses = [UserStatuses.WebhookError, UserStatuses.OK]  # order important
+    test_statuses = [UserStatuses.OK, UserStatuses.WebhookError]  # order important
     assert len(merge_status) == 2
     for idx, status in enumerate(merge_status):
         assert test_statuses[idx] is status  # iterated value is also an enum member, not plain int

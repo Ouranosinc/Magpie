@@ -176,6 +176,18 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
             return "PATCH"
         return "PUT"
 
+    def get_user_status_value(self, status):
+        # type: (UserStatuses) -> Union[int, Str]
+        """
+        Return expected user status representation value in API responses.
+
+        Older API versions returned the integer directly, which was not very descriptive.
+        Newer API versions return the name.
+
+        Does not impact request queries that support both regardless of version.
+        """
+        return status.name if TestVersion(self.version) >= TestVersion("3.13.0") else status.value
+
     @classmethod
     def setup_admin(cls):
         """
@@ -1894,9 +1906,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(len(body["users"]), len(all_valid_users) + 1)
         for usr in body["users"]:
             if usr["user_name"] == invalid_user:
-                utils.check_val_equal(usr["status"], UserStatuses.WebhookError.value)
+                status = UserStatuses.WebhookError
             else:
-                utils.check_val_equal(usr["status"], UserStatuses.OK.value)
+                status = UserStatuses.OK
+            utils.check_val_equal(usr["status"], self.get_user_status_value(status))
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
