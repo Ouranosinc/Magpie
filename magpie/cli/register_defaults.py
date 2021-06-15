@@ -16,6 +16,7 @@ from ziggurat_foundations.models.services.user import UserService
 
 from magpie import db, models
 from magpie.api.management.user import user_utils as uu
+from magpie.cli.utils import make_logging_options, setup_logger_from_options
 from magpie.constants import get_constant
 from magpie.register import pseudo_random_string
 from magpie.utils import get_json, get_logger, print_log, raise_log
@@ -199,6 +200,7 @@ def make_parser():
     # type: () -> argparse.ArgumentParser
     parser = argparse.ArgumentParser(description="Registers default users and groups in Magpie.")
     parser.add_argument("ini_file_path", help="Path of the configuration INI file to use to retrieve required settings")
+    make_logging_options(parser)
     return parser
 
 
@@ -207,6 +209,7 @@ def main(args=None, parser=None, namespace=None):
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
+    setup_logger_from_options(LOGGER, args)
     return register_defaults(ini_file_path=args.ini_file_path)
 
 

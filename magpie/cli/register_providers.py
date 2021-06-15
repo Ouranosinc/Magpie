@@ -6,9 +6,11 @@ Magpie helpers for service providers registration.
 import argparse
 from typing import TYPE_CHECKING
 
+from magpie.cli.utils import make_logging_options, setup_logger_from_options
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import magpie_register_services_from_config
+from magpie.utils import get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -16,10 +18,14 @@ if TYPE_CHECKING:
 
     from magpie.typedefs import Str
 
+LOGGER = get_logger(__name__,
+                    message_format="%(asctime)s - %(levelname)s - %(message)s",
+                    datetime_format="%d-%b-%y %H:%M:%S", force_stdout=False)
+
 
 def make_parser():
     # type: () -> argparse.ArgumentParser
-    parser = argparse.ArgumentParser(description="Register service providers into Magpie and Phoenix")
+    parser = argparse.ArgumentParser(description="Register service providers into Magpie and Phoenix.")
     parser.add_argument("-c", "--config-file", metavar="PROVIDERS_CONFIG", dest="providers_config",
                         type=str, default=get_constant("MAGPIE_PROVIDERS_CONFIG_PATH"),
                         help="Configuration file to employ for services registration (default: %(default)s).")
@@ -31,12 +37,13 @@ def make_parser():
                              "already exist, ie: when conflicts occur during service creation (default: %(default)s)")
     parser.add_argument("-p", "--phoenix-push", default=False, action="store_true", dest="phoenix_push",
                         help="push registered Magpie services to sync in Phoenix (default: %(default)s)")
-    parser.add_argument("-d", "--db", "--use-db-session", default=False, action="store_true", dest="use_db_session",
+    parser.add_argument("--db", "--use-db-session", default=False, action="store_true", dest="use_db_session",
                         help="Update registered services using database session configuration instead of API requests. "
                              "Can be combined with --config to specify custom configuration (default: %(default)s).")
     parser.add_argument("--config", "--ini", metavar="CONFIG", dest="ini_config",
                         default=get_constant("MAGPIE_INI_FILE_PATH"),
                         help="Configuration INI file to retrieve database connection settings (default: %(default)s).")
+    make_logging_options(parser)
     return parser
 
 
@@ -45,6 +52,7 @@ def main(args=None, parser=None, namespace=None):
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
+    setup_logger_from_options(LOGGER, args)
     db_session = None
     if args.use_db_session:
         db_session = get_db_session_from_config_ini(args.ini_config)

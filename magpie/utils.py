@@ -97,14 +97,17 @@ def get_logger(name, level=None, force_stdout=None, message_format=None, datetim
 LOGGER = get_logger(__name__)
 
 
-def set_logger_config(logger, force_stdout=False, message_format=None, datetime_format=None):
-    # type: (logging.Logger, bool, Optional[Str], Optional[Str]) -> logging.Logger
+def set_logger_config(logger, force_stdout=False, message_format=None, datetime_format=None, log_file=None):
+    # type: (logging.Logger, bool, Optional[Str], Optional[Str], Optional[Str]) -> logging.Logger
     """
     Applies the provided logging configuration settings to the logger.
     """
     if not logger:
         return logger
     handler = None
+    formatter = None
+    if message_format or datetime_format:
+        formatter = logging.Formatter(fmt=message_format, datefmt=datetime_format)
     if force_stdout:
         all_handlers = logging.root.handlers + logger.handlers
         if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
@@ -116,8 +119,15 @@ def set_logger_config(logger, force_stdout=False, message_format=None, datetime_
         else:
             handler = logging.StreamHandler(sys.stdout)
             logger.addHandler(handler)
-    if message_format or datetime_format:
-        handler.setFormatter(logging.Formatter(fmt=message_format, datefmt=datetime_format))
+    if formatter:
+        handler.setFormatter(formatter)
+    if log_file:
+        all_handlers = logging.root.handlers + logger.handlers
+        if not any(isinstance(h, logging.FileHandler) for h in all_handlers):
+            handler = logging.FileHandler(log_file)
+            if formatter:
+                handler.setFormatter(formatter)
+            logger.addHandler(handler)
     return logger
 
 

@@ -245,6 +245,7 @@ setup(
             "magpie_register_defaults = magpie.cli.register_defaults:main",
             "magpie_register_providers = magpie.cli.register_providers:main",
             "magpie_run_db_migration = magpie.cli.run_db_migration:main",
+            "magpie_send_email = magpie.cli.send_email:main",
             "magpie_sync_resources = magpie.cli.sync_resources:main",
         ],
     }

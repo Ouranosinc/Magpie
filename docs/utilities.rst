@@ -34,37 +34,44 @@ Available helpers:
       - | Run any required database migration operation, according to detected database state and required one by
           the current `Magpie` version.
         | This operation is the same command that is executed at `Magpie` startup to ensure data integrity.
+    * - ``magpie_send_email``
+      - | Sends an email generated from the selected template contents and SMTP connection configured from
+          application settings retrieved from the INI file.
     * - ``magpie_sync_resources``
       - | Synchronizes local and remote resources based on `Magpie` service's ``sync-type`` methodology.
         | See also `magpie-cron`_.
 
 
-For convenience, a generic CLI ``magpie_helper`` is also provided which allows calling each of the other helper
-operations as *mode*. You can therefore do as follows.
+For convenience, a generic entrypoint ``magpie_cli`` is also provided which allows calling each of the other *helper*
+operations directly. You can therefore do as follows.
 
 .. code-block:: console
 
     # list of available 'helper' commands
-    magpie_helper --help
+    magpie_cli --help
     # arguments of the given helper
-    magpie_helper [helper] --help
+    magpie_cli [helper] --help
 
 
 For example, the two statements below are equivalent.
 
 .. code-block:: console
 
-    magpie_helper register_providers [...]
+    magpie_cli register_providers [...]
     # OR
     magpie_register_providers [...]
 
 
-When using an ``conda`` environment, you should be able to directly call the ``magpie_helper`` CLI as above if you
+When using an ``conda`` environment, you should be able to directly call the ``magpie_cli`` CLI as above if you
 previously installed the package (see :ref:`installation`).
+
+.. _installation: installation.rst
 
 Source code of these helpers can be found `here <https://github.com/Ouranosinc/Magpie/tree/master/magpie/cli>`_.
 
-.. _installation: installation.rst
+.. note::
+    For backward compatibility reasons, ``magpie_helper`` remains and alias to ``magpie_cli``, but they are exactly
+    the same utility.
 
 .. _utilities_connection:
 

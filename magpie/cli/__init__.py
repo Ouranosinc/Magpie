@@ -37,6 +37,7 @@ def magpie_helper_cli(args=None):
                 helper_parser = parser_maker()
                 subparsers.add_parser(helper_name, parents=[helper_parser],
                                       add_help=False, help=helper_parser.description,
+                                      formatter_class=helper_parser.formatter_class,
                                       description=helper_parser.description, usage=helper_parser.usage)
                 helpers[helper_name] = {"caller": helper_caller, "parser": helper_parser}
     args = args or sys.argv[1:]         # same as was parse args does, but we must provide them to subparser

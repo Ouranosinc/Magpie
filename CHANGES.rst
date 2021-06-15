@@ -26,6 +26,10 @@ Features / Changes
 * Add ``empty_missing`` flag to ``get_constant`` utility to allow validation against existing environment variables or
   settings that should be considered as invalid when resolved value is an empty string.
 * Add missing ``format`` for applicable ``url`` and ``email`` elements in the OpenAPI specification.
+* Add better logging options control in CLI operations.
+* Add new CLI helper ``send_email`` to test various email template generation and SMTP configurations to send emails.
+* Replace ``-d`` option from ``register_providers`` CLI operation (previously used to select database mode)
+  by ``--db`` to avoid conflict with logging flags.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
