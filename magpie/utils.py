@@ -747,7 +747,7 @@ class FlexibleNameEnum(ExtendedEnum):
 
     @classmethod
     def _missing_(cls, value):
-        return cls._get_missing_(value)
+        return cls.__missing_flexible(value)
 
     @classmethod
     def __missing_flexible(cls, value):
