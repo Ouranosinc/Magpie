@@ -307,14 +307,25 @@ table.panel-line td {
     margin: 0.1em 0.25em 0.15em 0;
 }
 
+.panel-form-lock>img {
+    width: 1.25em;
+    height: 1em;
+    margin: 0 -0.1em 0.15em -0.1em;
+}
+
 .panel-form-warning,
-.panel-form-error {
+.panel-form-error,
+.panel-form-lock {
     width: auto;
     display: inline-flex;
     float: left;
     text-align: center;
     margin-left: 0.75em;
     margin-top: 0;
+}
+
+.panel-form-lock {
+    margin-top: 0.1;
 }
 
 .panel-line input[type="button"],
@@ -329,7 +340,7 @@ table.panel-line td {
 
 .panel-line-entry input[type="button"],
 .panel-line-entry input[type="submit"] {
-    margin-top: -0.15em;
+    margin-top: -0.10em;
 }
 
 /* textual field entry when in edit mode */
@@ -509,9 +520,6 @@ table.panel-line td {
     float: left;
     text-align: center;
     margin-top: 0.25em;
-}
-
-.alert-form-text {
 }
 
 .alert-form-text-locked {

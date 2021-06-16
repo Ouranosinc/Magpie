@@ -82,7 +82,7 @@ def main(args=None, parser=None, namespace=None):
         To: ${email_recipient}
         Subject: Magpie CLI Test Email
         Content-Type: text/plain; charset=UTF-8
-        
+
         This is a minimal test email sent from Magpie CLI at ${email_datetime}.
         """)
         template = Template(text=tmpl_str,  # nosec: B702  # mako escapes against XSS attacks

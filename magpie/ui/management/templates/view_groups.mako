@@ -17,7 +17,7 @@
 <thead class="theme">
 <tr>
     <th>Group</th>
-    <th>Members count</th>
+    <th>Members</th>
     <th>Action</th>
 </tr>
 </thead>

@@ -151,9 +151,11 @@
                             <span class="panel-entry">Email: </span>
                         </td>
                         <td>
+                            %if user_edit_email:
                             <form id="edit_email" action="${request.path}" method="post">
+                            %endif
                                 <div class="panel-line-entry">
-                                    %if edit_mode == "edit_email":
+                                    %if user_edit_email and edit_mode == "edit_email":
                                         <label>
                                             <input type="email" placeholder="new email" name="new_user_email"
                                                    id="input_email" value="${email}" onkeyup="adjustWidth('input_url')">
@@ -163,7 +165,12 @@
                                     %else:
                                         <label>
                                             <span class="panel-value">${email}</span>
+                                            %if user_edit_email:
                                             <input type="submit" value="Edit" name="edit_email" class="button theme">
+                                            %else:
+                                            <input type="button" value="Edit" name="edit_email"
+                                                   class="button theme disabled" disabled>
+                                            %endif
                                         </label>
                                     %endif
                                 </div>
@@ -176,6 +183,16 @@
                                      alt="ERROR" class="icon-error" />
                                 <div class="alert-form-text alert-form-text-error">
                                     ${reason_user_email}
+                                </div>
+                            </div>
+                        %elif not user_edit_email:
+                            <div class="panel-form-lock">
+                                <img src="${request.static_url('magpie.ui.home:static/lock.png')}" alt="LOCKED"
+                                     class="icon-locked"/>
+                                <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                                <meta name="source" content="https://www.flaticon.com/free-icon/lock_2089784">
+                                <div class="alert-form-text alert-form-text-locked">
+                                    Email edition not allowed. Please contact the platform administrator.
                                 </div>
                             </div>
                         %endif

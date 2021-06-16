@@ -2,9 +2,11 @@ from typing import TYPE_CHECKING
 
 from pyramid.authentication import Authenticated
 from pyramid.httpexceptions import HTTPBadRequest, HTTPFound, HTTPUnprocessableEntity
+from pyramid.settings import asbool
 from pyramid.view import view_config
 
 from magpie.api import schemas
+from magpie.constants import get_constant
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json
 
@@ -64,12 +66,18 @@ class UserViews(BaseViews):
 
     @view_config(route_name="edit_current_user", renderer="templates/edit_current_user.mako", permission=Authenticated)
     def edit_current_user(self):
+        """
+        .. seealso::
+            - :meth:`magpie.ui.management.views.ManagementViews.edit_user` for corresponding operation by administrator
+        """
         joined_groups = self.get_current_user_groups()
         public_groups = self.get_discoverable_groups()
         user_info = self.get_current_user_info()
         user_info["edit_mode"] = "no_edit"
         user_info["joined_groups"] = joined_groups
         user_info["groups"] = public_groups
+        # FIXME: disable email edit when self-registration is enabled to avoid not having any confirmation of new email
+        user_info["user_edit_email"] = not asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", self.request))
         user_info["user_with_error"] = schemas.UserStatuses.get(user_info["status"]) != schemas.UserStatuses.OK
         # reset error messages/flags
         user_info["error_message"] = ""

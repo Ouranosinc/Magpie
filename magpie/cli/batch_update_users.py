@@ -6,7 +6,6 @@ Useful for batch operations.
 """
 import argparse
 import datetime
-import logging
 import os
 import uuid
 from typing import TYPE_CHECKING

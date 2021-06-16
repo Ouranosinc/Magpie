@@ -111,6 +111,10 @@ class ManagementViews(AdminRequests, BaseViews):
 
     @view_config(route_name="edit_user", renderer="templates/edit_user.mako")
     def edit_user(self):
+        """
+        .. seealso::
+            - :meth:`magpie.ui.user.views.UserViews.edit_current_user` for corresponding operation by user self-update
+        """
         user_name = self.request.matchdict["user_name"]  # keep reference to original name in case of update request
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         inherit_grp_perms = self.request.matchdict.get("inherit_groups_permissions", False)
@@ -131,6 +135,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
         # set default values needed by the page in case of early return due to error
         user_info = get_json(user_resp)["user"]
+        user_info["user_edit_email"] = True  # always allowed by administrators
         user_info["user_with_error"] = UserStatuses.get(user_info["status"]) != UserStatuses.OK
         user_info["edit_mode"] = "no_edit"
         user_info["own_groups"] = own_groups

@@ -10,7 +10,7 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Changed ``UserStatuses.WebhookErrorStatus = 0`` to ``UserStatuses.WebhookError = 2`` to provide further
-  functionalities. Migration script applies this change to existing ``User``.
+  functionalities. Migration script applies this change to existing ``User`` entries.
 * Changed the returned ``status`` value by the API routes to use the string name representation instead of the integer.
 * Changed ``status`` search query handling of ``GET /users`` path for improved search and filtering capabilities.
 * Add new ``UserStatuses.Pending = 4`` value that can be queried by administrators.
@@ -19,6 +19,8 @@ Features / Changes
 * Add new requests under ``/register/users`` and ``/ui/register/users`` endpoints for user account self-registration.
 * Add UI view to display pending user registration details.
 * Add UI icon to indicate when a listed user is pending registration approval or email validation.
+* Disable user email self-update (when not administrator) both on the API and UI side
+  whenever ``MAGPIE_USER_REGISTRATION_ENABLED`` was activated to avoid losing the confirmation of the original email.
 * Add configuration setting ``MAGPIE_USER_REGISTRATION_ENABLED`` to control whether user account self-registration
   feature should be employed.
   With it comes multiple other ``MAGPIE_USER_REGISTRATION_<...>`` settings to customize notification emails.

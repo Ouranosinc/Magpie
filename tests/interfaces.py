@@ -3986,9 +3986,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/users/{}".format(self.test_user_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["status"], UserStatuses.OK.value)
+        utils.check_val_equal(body["user"]["status"], self.get_user_status_value(UserStatuses.OK))
 
-        data = {"status": UserStatuses.OK.value}
+        data = {"status": UserStatuses.OK.value}  # name or number both supported
         resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 400, expected_method=self.update_method,

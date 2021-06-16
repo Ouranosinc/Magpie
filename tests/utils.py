@@ -543,7 +543,7 @@ def mocked_get_settings(test_func=None, settings=None):
         else:
             # decorator variant
             def wrapped(*_, **__):
-                with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
+                with mock.patch("magpie.utils.get_settings", side_effect=mocked), \
                      mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
                     return test(*_, **__)
 

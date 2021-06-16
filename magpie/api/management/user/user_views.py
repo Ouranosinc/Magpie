@@ -74,7 +74,7 @@ def update_user_view(request):
     new_user_name = ar.get_multiformat_body(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_body(request, "email", default=user.email)
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
-    new_status = ar.get_multiformat_body(request, "status", default=None)
+    new_status = models.UserStatuses.get(ar.get_multiformat_body(request, "status", default=None))
     uu.update_user(user, request, new_user_name, new_password, new_email, new_status)
     return ax.valid_http(http_success=HTTPOk, detail=s.Users_PATCH_OkResponseSchema.description)
 

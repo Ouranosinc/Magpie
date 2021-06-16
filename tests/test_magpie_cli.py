@@ -246,7 +246,7 @@ def test_magpie_send_email_help_via_magpie_helper():
 
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
-def test_magpie_batch_update_users_help_directly():
+def test_magpie_send_email_help_directly():
     out_lines = run_and_get_output("magpie_send_email --help")
     assert "usage: magpie_send_email" in out_lines[0]
     assert "Sends email notification using SMTP connection" in out_lines[1]

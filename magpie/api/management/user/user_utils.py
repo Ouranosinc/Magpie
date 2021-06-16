@@ -12,6 +12,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
+from pyramid.settings import asbool
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -184,16 +185,25 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
     update_username = new_user_name is not None and not compare_digest(user.user_name, str(new_user_name))
     update_password = new_password is not None and not compare_digest(user.user_password, str(new_password))
     update_email = new_email is not None and not compare_digest(user.email, str(new_email))
-    update_status = new_status is not None and user.status != new_status
+    update_status = new_status is not None and models.UserStatuses.get(user.status) != new_status
     ax.verify_param(any([update_username, update_password, update_email, update_status]), is_true=True,
                     with_param=False,  # params are not useful in response for this case
                     content={"user_name": user.user_name},
                     http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
+
+    # FIXME: disable email edit when self-registration is enabled to avoid not having any confirmation of new email
+    update_email_admin_only = False
+    if update_email and asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", request)):
+        update_email_admin_only = True
+
     # user name/status change is admin-only operation
-    if update_username or update_status:
+    if update_username or update_status or update_email_admin_only:
+        err_msg = s.User_PATCH_ForbiddenResponseSchema.description
+        if update_email_admin_only and not (update_username or update_status):
+            err_msg = "User email update not permitted by non-administrators when email registration is enabled."
         ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP", request), is_in=True,
                         param_compare=get_user_groups_checked(request.user, request.db), with_param=False,
-                        http_error=HTTPForbidden, msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
+                        http_error=HTTPForbidden, msg_on_fail=err_msg)
 
     # logged user updating itself is forbidden if it corresponds to special users
     # cannot edit reserved keywords nor apply them to another user
