@@ -45,7 +45,7 @@ WEBHOOK_TEST_DELAY = 0.25  # small delay to let webhook being processed before r
 @runner.MAGPIE_TEST_WEBHOOKS
 @runner.MAGPIE_TEST_FUNCTIONAL
 @runner.MAGPIE_TEST_LOCAL
-class TestWebhooks(ti.BaseTestCase):
+class TestWebhooks(ti.AdminTestCase):
     # pylint: disable=C0103,invalid-name
     """
     Test any operation that uses webhooks.

@@ -28,8 +28,10 @@ Features / Changes
 * Add missing ``format`` for applicable ``url`` and ``email`` elements in the OpenAPI specification.
 * Add better logging options control in CLI operations.
 * Add new CLI helper ``send_email`` to test various email template generation and SMTP configurations to send emails.
-* Replace ``-d`` option from ``register_providers`` CLI operation (previously used to select database mode)
+* Replace ``-d`` option of ``register_providers`` CLI operation (previously used to select database mode)
   by ``--db`` to avoid conflict with logging flags.
+* Replace ``-d`` and ``-l`` options of ``batch_update_users`` CLI operation respectively by ``-D`` and ``-L``
+  to avoid conflict with logging flags.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -43,6 +45,8 @@ Bug Fixes
     account with duplicate email.
 * Add ``ziggurat_foundations`` extensions for Pyramid directly in the code during application setup such that an INI
   configuration file that omits them from ``pyramid.include`` won't cause `Magpie` to break.
+* Define the various constants expected by GitHub as WSO2 external identity connectors with defaults to avoid
+  unnecessary log warnings when calling CLI helper.
 
 `3.12.0 <https://github.com/Ouranosinc/Magpie/tree/3.12.0>`_ (2021-05-11)
 ------------------------------------------------------------------------------------

@@ -17,7 +17,7 @@ def make_logging_options(parser):
     """
     log_opts = parser.add_argument_group(title="Logging Options", description="Options that configure output logging.")
     log_opts.add_argument("--stdout", action="store_true", help="Enforce logging to stdout for display in console.")
-    log_opts.add_argument("-L", "--log", "--log-file", help="Output file to write generated logs.")
+    log_opts.add_argument("--log", "--log-file", help="Output file to write generated logs.")
     lvl_opts = log_opts.add_mutually_exclusive_group()
     lvl_opts.add_argument("--quiet", "-q", action="store_true", help="Do not output anything else than error.")
     lvl_opts.add_argument("--debug", "-d", action="store_true", help="Enable extra debug logging.")

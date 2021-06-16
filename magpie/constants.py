@@ -118,6 +118,15 @@ TWITCHER_PROTECTED_PATH = os.getenv("TWITCHER_PROTECTED_PATH", "/ows/proxy")
 TWITCHER_PROTECTED_URL = os.getenv("TWITCHER_PROTECTED_URL", None)
 TWITCHER_HOST = os.getenv("TWITCHER_HOST", None)
 
+# external identify connectors, define variables only to avoid unnecessary print-log warnings in each CLI call
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", None)
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", None)
+WSO2_HOSTNAME = os.getenv("WSO2_HOSTNAME", None)
+WSO2_CLIENT_ID = os.getenv("WSO2_CLIENT_ID", None)
+WSO2_CLIENT_SECRET = os.getenv("WSO2_CLIENT_SECRET", None)
+WSO2_CERTIFICATE_FILE = os.getenv("WSO2_CERTIFICATE_FILE", None)
+WSO2_SSL_VERIFY = os.getenv("WSO2_SSL_VERIFY", None)
+
 # ===========================
 # variables from postgres.env
 # ===========================

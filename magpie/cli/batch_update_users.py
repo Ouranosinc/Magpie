@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 import requests
 
+from magpie.cli.utils import make_logging_options, setup_logger_from_options
 from magpie.constants import get_constant
 from magpie.register import get_all_configs, pseudo_random_string
 from magpie.utils import get_json, get_logger
@@ -144,11 +145,10 @@ def make_parser():
     parser.add_argument("url", help="URL used to access the magpie service.")
     parser.add_argument("username", help="Admin username for magpie login.")
     parser.add_argument("password", help="Admin password for magpie login.")
-    parser.add_argument("-l", "--length", type=int,
+    parser.add_argument("-L", "--length", type=int,
                         help="Required length for passwords to be generated (must full Magpie conditions).")
-    parser.add_argument("-d", "--delete", action="store_true", help="Delete users instead of creating them.")
+    parser.add_argument("-D", "--delete", action="store_true", help="Delete users instead of creating them.")
     parser.add_argument("-o", "--output", help="Alternate output directory of results.")
-    parser.add_argument("-q", "--quiet", help="Suppress informative logging.")
     parser.add_argument("-f", "--file", help="Batch file listing user details to apply updates. "
                                              "See 'config/config.yml' for expected users/groups format.")
     parser.add_argument("-e", "--emails", nargs="*", default=[],
@@ -158,6 +158,7 @@ def make_parser():
                         help="List of user names corresponding to emails.")
     parser.add_argument("-g", "--group", help="Common group applied to all users (when using emails) "
                                               "or if missing (when using file). Defaults to no group association.")
+    make_logging_options(parser)
     return parser
 
 
@@ -166,7 +167,7 @@ def main(args=None, parser=None, namespace=None):
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
-    LOGGER.setLevel(logging.WARNING if args.quiet else logging.DEBUG)
+    setup_logger_from_options(LOGGER, args)
 
     if args.file:
         users_cfg = []

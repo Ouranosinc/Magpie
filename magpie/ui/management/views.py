@@ -131,7 +131,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
         # set default values needed by the page in case of early return due to error
         user_info = get_json(user_resp)["user"]
-        user_info["user_with_error"] = user_info["status"] != UserStatuses.OK.value
+        user_info["user_with_error"] = UserStatuses.get(user_info["status"]) != UserStatuses.OK
         user_info["edit_mode"] = "no_edit"
         user_info["own_groups"] = own_groups
         user_info["groups"] = all_groups

@@ -117,6 +117,9 @@ class TestCase_MagpieAPI_UsersAuth_Local_UserRegistration(ti.UserTestCase):
         # don't bother with any test if not supported, must wait until here to get version from app
         utils.warn_version(cls, "User self-registration.", "3.13.0", skip=True)
 
+        cls.test_group_name = "unittest-user-register-local_test-group"
+        cls.test_user_name = "unittest-user-register-local_test-user-username"
+
     @runner.MAGPIE_TEST_USERS
     def test_GetPendingUsersList_Forbidden(self):
         """

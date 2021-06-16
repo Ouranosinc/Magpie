@@ -152,7 +152,7 @@ def run_batch_update_user_command(test_app, expected_users, create_command_xargs
         utils.check_val_is_in(user, body["user_names"])
 
     # test user deletion and validate users are all deleted
-    run_command("delete", ["-d"] + delete_command_xargs)
+    run_command("delete", ["-D"] + delete_command_xargs)
     utils.check_or_try_logout_user(test_app)
     _, test_admin_cookies = utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
     resp = utils.test_request(test_app, "GET", "/users", cookies=test_admin_cookies)

@@ -156,7 +156,7 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         for usr in list(cls.extra_user_names):  # copy to update removed ones
             if usr not in cls.reserved_users:
                 utils.TestSetup.delete_TestUser(cls, override_user_name=usr)
-                if TestVersion(cls.version) >= TestVersion("3.13.0"):
+                if utils.TestSetup.get_Version(cls) >= TestVersion("3.13.0"):
                     utils.TestSetup.delete_TestUser(cls, override_user_name=usr, pending=True)
                 cls.extra_user_names.discard(usr)
         for grp in list(cls.extra_group_names):  # copy to update removed ones
@@ -4008,7 +4008,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # getting user information displays the updated status
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["status"], UserStatuses.OK.value)
+        utils.check_val_equal(body["user"]["status"], self.get_user_status_value(UserStatuses.OK))
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUser_existing(self):
@@ -5644,7 +5644,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         user_status = utils.find_html_body_contents(resp, html_search)
         utils.check_val_not_in("OK", str(user_status))
-        utils.check_val_is_in("WARNING", str(user_status))
+        utils.check_val_is_in("USER_STATUS_ERROR", str(user_status))
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED

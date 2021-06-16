@@ -33,7 +33,7 @@
             <td>
                 <div class="status-container">
                     %if user_name in users_with_error:
-                        <img title="User account status has an issue." class="icon-warning" alt="WARNING"
+                        <img title="User account status has an issue." class="icon-warning" alt="USER_STATUS_ERROR"
                              src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"/>
                     %elif user_name in users_pending:
                         <img title="User account pending approval or validation." class="icon-pending" alt="PENDING"
