@@ -6009,5 +6009,7 @@ class SetupMagpieAdapter(ConfigTestCase):
                     self.session = reify.wrapped(request)
                 setattr(request, meth, self.session)
             else:
-                setattr(request, meth, reify.wrapped(request))
+                # depending if 'reify' was requested for property registration or not (eg: 'user')
+                prop = reify.wrapped(request) if hasattr(reify, "wrapped") else reify.fget(request)
+                setattr(request, meth, prop)
         return request

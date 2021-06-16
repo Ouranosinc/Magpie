@@ -500,15 +500,14 @@ def json_msg(json_body, msg=null):
     return json_str
 
 
-@contextlib.contextmanager
 def mocked_get_settings(test_func=None, settings=None):
     """
-    Mocks :func:`magpie.utils.get_settings` to allow retrieval of settings during tests.
+    Mocks :func:`magpie.utils.get_settings` to allow retrieval of different settings during tests.
 
-    When applied as decorator onto a test method and used in combination with :func:`mock_request` calls, retrieves
-    the settings from the underlying from :class:`DummyRequest` object.
+    When applied as decorator onto a test method and used in combination with :func:`mock_request` calls, all of
+    those requests will retrieve the settings from the underlying :class:`DummyRequest` object being mocked.
 
-    Can also be applied as context manager (``with`` block) to dynamically overload the settings retrieved
+    Can also be applied as context manager (in ``with`` block) to dynamically overload the settings retrieved
     during any sub-operation that needs them. This includes :func:`magpie.constants.get_constant` that also
     employs :func:`magpie.utils.get_settings`.
 
@@ -535,13 +534,18 @@ def mocked_get_settings(test_func=None, settings=None):
             _settings.update(settings or {})
             return _settings
 
-        def wrapped(*_, **__):
-            with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
-                 mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
-                if not test:
-                    yield mock_settings  # as context manager
-                else:
-                    return test(*_, **__)  # as test decorator
+        if not test:
+            @contextlib.contextmanager
+            def wrapped(*_, **__):
+                with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
+                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
+                    yield mock_settings
+        else:
+            # decorator variant
+            def wrapped(*_, **__):
+                with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
+                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
+                    return test(*_, **__)
 
         if not test:
             return wrapped()
