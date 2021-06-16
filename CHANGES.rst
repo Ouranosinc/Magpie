@@ -20,7 +20,8 @@ Features / Changes
 * Add UI view to display pending user registration details.
 * Add UI icon to indicate when a listed user is pending registration approval or email validation.
 * Disable user email self-update (when not administrator) both on the API and UI side
-  whenever ``MAGPIE_USER_REGISTRATION_ENABLED`` was activated to avoid losing the confirmation of the original email.
+  whenever ``MAGPIE_USER_REGISTRATION_ENABLED`` was activated to avoid losing the confirmation of the original email
+  (see feature `#436 <https://github.com/Ouranosinc/Magpie/issues/436>`_).
 * Add configuration setting ``MAGPIE_USER_REGISTRATION_ENABLED`` to control whether user account self-registration
   feature should be employed.
   With it comes multiple other ``MAGPIE_USER_REGISTRATION_<...>`` settings to customize notification emails.

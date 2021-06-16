@@ -187,6 +187,7 @@
                             </div>
                         %elif not user_edit_email:
                             <div class="panel-form-lock">
+                                <!-- see https://github.com/Ouranosinc/Magpie/issues/436 -->
                                 <img src="${request.static_url('magpie.ui.home:static/lock.png')}" alt="LOCKED"
                                      class="icon-locked"/>
                                 <meta name="author" content="https://www.flaticon.com/authors/those-icons">
