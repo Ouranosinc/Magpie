@@ -7,7 +7,6 @@ import os
 import sys
 import types
 from distutils.dir_util import mkpath
-from enum import Enum
 from typing import TYPE_CHECKING
 
 import requests
@@ -29,6 +28,11 @@ from ziggurat_foundations.models.services.user import UserService
 
 from magpie import __meta__
 from magpie.constants import get_constant
+
+if sys.version_info >= (3, 6):
+    from enum import Enum
+else:
+    from aenum import Enum
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import

@@ -35,7 +35,7 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
-        cls.settings = utils.get_app_or_url(cls).registry.settings
+        cls.settings = utils.get_app_or_url(cls).app.registry.settings
 
         # following will be wiped on setup
         cls.test_user_name = "unittest-adapter-user"

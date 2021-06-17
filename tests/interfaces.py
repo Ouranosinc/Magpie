@@ -5913,10 +5913,12 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
                               for user, form in test_user_forms.items()}
         for user in test_users:
             if user in bad_users:
-                utils.check_val_not_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'bad' status.")
-                utils.check_val_is_in("WARNING", str(test_user_statuses[user]), msg="Expected user 'bad' status.")
+                utils.check_val_not_in("OK", str(test_user_statuses[user]),
+                                       msg="Expected user with 'error' status but was 'OK' instead.")
+                utils.check_val_is_in("USER_STATUS_ERROR", str(test_user_statuses[user]),  # distinguish from 'Pending'
+                                      msg="Expected user with 'error' status to display the correct error code.")
             else:
-                utils.check_val_is_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'good' status.")
+                utils.check_val_is_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'OK' status.")
 
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_USERS
@@ -5941,7 +5943,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         user_status = utils.find_html_body_contents(resp, html_search)
         utils.check_val_not_in("OK", str(user_status))
-        utils.check_val_is_in("WARNING", str(user_status))
+        utils.check_val_is_in("USER_STATUS_ERROR", str(user_status))
 
 
 @unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
