@@ -83,6 +83,7 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
 
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTRATION
 class TestCase_MagpieAPI_UsersAuth_Local_UserRegistration(ti.UserTestCase):
     # pylint: disable=C0103,invalid-name
     """
@@ -172,6 +173,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
 
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTRATION
 class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
     # pylint: disable=C0103,invalid-name
     """
@@ -199,7 +201,7 @@ class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
         cls.app = utils.get_test_magpie_app(settings)
         cls.version = utils.TestSetup.get_Version(cls, real_version=True)
         cls.setup_admin()
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.url, cls.usr, cls.pwd)
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd)
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.login_admin()
 

@@ -77,7 +77,7 @@ def main(args=None, parser=None, namespace=None):
 
     parameters = {}
     if args.template == "test":
-        tmpl_str = inspect.cleandoc("""        
+        tmpl_str = inspect.cleandoc("""
         From: Magpie
         To: ${email_recipient}
         Subject: Magpie CLI Test Email

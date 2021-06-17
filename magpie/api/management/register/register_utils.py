@@ -297,14 +297,14 @@ def handle_user_registration_admin_decision(tmp_token, request):
     if tmp_token.operation == TokenOperation.USER_REGISTRATION_ADMIN_APPROVE:
         msg = "Pending user registration was successfully approved."
         complete_user_registration(tmp_token, request)
-    elif tmp_token.token == TokenOperation.USER_REGISTRATION_ADMIN_DECLINE:
+    elif tmp_token.operation == TokenOperation.USER_REGISTRATION_ADMIN_DECLINE:
         # flush the pending user, this should cascade remove any associated temporary tokens
         ax.evaluate_call(lambda: request.db.delete(tmp_token.user), fallback=lambda: request.db.rollback(),
                          content={"user": uf.format_user(tmp_token.user)},
                          http_error=HTTPInternalServerError, msg_on_fail="Failed deletion of pending user.")
         msg = "Pending user registration was successfully declined. Pending user has been deleted."
     else:
-        msg = "Unknown operation received during pending user registration approval by administrator."
+        msg = "Unknown operation received during pending user registration decision by administrator."
         ax.raise_http(HTTPInternalServerError, detail=msg, content=tmp_token.json())
     return BaseViews(request).render("magpie.ui.home:templates/message.mako", {"message": msg})
 

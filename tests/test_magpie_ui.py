@@ -300,6 +300,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTRATION
 class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """

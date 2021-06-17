@@ -82,15 +82,25 @@ class TestWebhooks(ti.AdminTestCase):
         cls.app = None  # reset app, recreate on each test with specific webhook config
         cls.base_webhook_url = "http://localhost:8080"
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.app = utils.get_test_magpie_app()
+        super(TestWebhooks, cls).tearDownClass()
+
+    def setUp(self):
+        # skip setup to avoid cleanup error (app not yet created)
+        # cleanup manually when setup webhook is done
+        pass
+
     def tearDown(self):
         """
         Cleans up the test user after a test.
         """
         # skip if app was not set for that test
-        if self.app is not None:
+        app = utils.get_app_or_url(self)
+        if app is not None:
             utils.check_or_try_logout_user(self)
-            self.headers, self.cookies = utils.check_or_try_login_user(self.app, self.usr, self.pwd,
-                                                                       use_ui_form_submit=True)
+            self.headers, self.cookies = utils.check_or_try_login_user(app, self.usr, self.pwd, use_ui_form_submit=True)
             utils.TestSetup.delete_TestUser(self)
             utils.TestSetup.delete_TestGroup(self)
 
@@ -172,12 +182,12 @@ class TestWebhooks(ti.AdminTestCase):
             expected_payload = [{"nested_dict": {self.test_user_name: self.test_user_name + " " + self.test_user_name},
                                  "user_name": [self.test_user_name, "other_param"]},
                                 self.test_user_name, False, 1]
-            resp = requests.post(self.base_webhook_url + "/check_payload", json=expected_payload)
+            resp = requests.post(self.base_webhook_url + "/check_payload", json=expected_payload, timeout=5)
             utils.check_response_basic_info(resp, 200, expected_method="POST", expected_type=CONTENT_TYPE_HTML,
                                             extra_message=resp.text)
 
             # Check if both webhook requests have completed successfully
-            resp = requests.get(self.base_webhook_url + "/get_status")
+            resp = requests.get(self.base_webhook_url + "/get_status", timeout=5)
             utils.check_val_equal(resp.text, "2")
 
             # Check if user creation was successful
@@ -254,7 +264,7 @@ class TestWebhooks(ti.AdminTestCase):
             self.checkTestUserStatus(UserStatuses.OK)
 
             # Retrieve the callback URL and send the request to the magpie app
-            resp = requests.get(self.base_webhook_url + "/get_callback_url")
+            resp = requests.get(self.base_webhook_url + "/get_callback_url", timeout=5)
             utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=CONTENT_TYPE_HTML)
             utils.check_val_true(resp.text.startswith("http://"),
                                  msg="Expected to have a valid templated URL, but got: [{}]".format(resp.text))
@@ -342,7 +352,7 @@ class TestWebhooks(ti.AdminTestCase):
 
             # Webhooks shouldn't have been called during the user creation
             sleep(WEBHOOK_TEST_DELAY)
-            resp = requests.get(self.base_webhook_url + "/get_status")
+            resp = requests.get(self.base_webhook_url + "/get_status", timeout=5)
             utils.check_val_equal(resp.text, "0")
 
             # delete the test user, webhooks should be called during this delete request
@@ -353,7 +363,7 @@ class TestWebhooks(ti.AdminTestCase):
 
             # Wait for the webhook requests to complete and check their success
             sleep(WEBHOOK_TEST_DELAY)
-            resp = requests.get(self.base_webhook_url + "/get_status")
+            resp = requests.get(self.base_webhook_url + "/get_status", timeout=5)
             assert resp.text == "2"
 
     def test_Webhook_DeleteUser_EmptyUrl(self):
@@ -423,13 +433,13 @@ class TestWebhooks(ti.AdminTestCase):
 
             # Wait for the webhook requests to complete and check it was received by the middleware
             sleep(WEBHOOK_TEST_DELAY)
-            resp = requests.get(self.base_webhook_url + "/get_status")
+            resp = requests.get(self.base_webhook_url + "/get_status", timeout=5)
             utils.check_val_equal(resp.text, "1")
             # at this point, the user is considered valid following status update in magpie
             self.checkTestUserStatus(UserStatuses.OK)
 
             # simulate that the middleware operation fails, so it sends the callback request to revert status
-            resp = requests.get(self.base_webhook_url + "/get_callback_url")
+            resp = requests.get(self.base_webhook_url + "/get_callback_url", timeout=5)
             callback_url = urlparse(resp.text).path
             resp = utils.test_request(self, "GET", callback_url)
             utils.check_response_basic_info(resp, 200, expected_method="GET", expected_type=None)
@@ -520,7 +530,7 @@ class TestWebhooks(ti.AdminTestCase):
 
                 # check that webhook was triggered and sent to the middleware
                 sleep(WEBHOOK_TEST_DELAY)
-                resp = requests.get(self.base_webhook_url + "/get_status")
+                resp = requests.get(self.base_webhook_url + "/get_status", timeout=5)
                 utils.check_val_equal(resp.text, "1")
 
                 # prepare expected payload the webhook should have sent based on templated parameters
@@ -555,9 +565,9 @@ class TestWebhooks(ti.AdminTestCase):
                 expected["data"]["permission_scope"] = perm.scope.value
 
                 # validate and reset for next test
-                resp = requests.get(self.base_webhook_url + "/get_payload")
+                resp = requests.get(self.base_webhook_url + "/get_payload", timeout=5)
                 utils.check_val_equal(resp.json(), expected, diff=True)
-                requests.post(self.base_webhook_url + "/reset")
+                requests.post(self.base_webhook_url + "/reset", timeout=5)
 
             # test cases, in mixed order of permissions, affected user/group, resource/service and create/delete action
             _test(self.test_user_name, res_id, rAM, WebhookAction.CREATE_USER_PERMISSION)    # ──┐

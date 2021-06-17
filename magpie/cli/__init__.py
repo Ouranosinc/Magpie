@@ -19,6 +19,7 @@ class SubArgumentParserFixedMutexGroups(argparse.ArgumentParser):
         - https://bugs.python.org/issue16807
     """
     def _add_container_actions(self, container):
+        # pylint: disable=W0212
         groups = container._mutually_exclusive_groups
         container._mutually_exclusive_groups = []
         super(SubArgumentParserFixedMutexGroups, self)._add_container_actions(container)

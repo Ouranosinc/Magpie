@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, Str
 
 
+@six.add_metaclass(ABCMeta)
 class ConfigTestCase(object):
     """
     Various test configuration fields that can be employed across test case implementations.
@@ -66,7 +67,6 @@ class ConfigTestCase(object):
     require = None                  # type: Optional[Str]
     url = None                      # type: Optional[Str]
     app = None                      # type: Optional[TestApp]
-    test_app = None                 # type: Optional[TestApp]
     # parameters for setup operations, admin-level access to the app
     grp = None                      # type: Optional[Str]
     usr = None                      # type: Optional[Str]
@@ -583,7 +583,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_RegisterDiscoverableGroup_Unauthorized(self):
         """
         Not logged-in user cannot update membership to group although group is discoverable.
@@ -595,7 +595,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_UnregisterDiscoverableGroup_Unauthorized(self):
         """
         Not logged-in user cannot remove membership to group although group is discoverable.
@@ -607,7 +607,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_ViewDiscoverableGroup_Unauthorized(self):
         """
         Not logged-in user cannot view group although group is discoverable.
@@ -631,7 +631,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_ListDiscoverableGroup_Unauthorized(self):
         """
         Not logged-in user cannot list group names although groups are discoverable.
@@ -1597,7 +1597,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_RegisterDiscoverableGroup(self):
         """
         Non-admin logged user is allowed to update is membership to register to a discoverable group by itself.
@@ -1622,7 +1622,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_UnregisterDiscoverableGroup(self):
         """
         Non-admin logged user is allowed to revoke its membership to leave a discoverable group by itself.
