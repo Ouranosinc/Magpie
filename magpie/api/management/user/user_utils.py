@@ -60,7 +60,7 @@ def create_user(user_name,              # type: Str
                 email,                  # type: Str
                 group_name,             # type: Optional[Str]
                 db_session,             # type: Session
-                **extra_fields,         # type: Any
+                **extra_fields          # type: Any
                 ):                      # type: (...) -> HTTPException
     """
     Creates a :term:`User` if it is permitted and not conflicting with existing ones.
