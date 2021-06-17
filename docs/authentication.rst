@@ -342,8 +342,9 @@ Following is the summarized notification workflow to complete registration.
        :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED`.
 
         A) When :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED` is **NOT** activated, only email validation is
-           required from the confirmation email. Receiving the confirmation in that case immediately completes
-           the :term:`User` registration process. The procedure moves directly to step (5) skipping (4).
+           required from the confirmation email. When visiting the confirmation link inside the sent email, the
+           emitted request received by `Magpie` will in that case immediately complete that :term:`User` registration
+           process. The procedure moves directly to step (5) skipping (4).
 
         B) If :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED` was instead activated, approval must first occur.
            This will be possible as reception of the validated email from the :term:`Pending User` will trigger
