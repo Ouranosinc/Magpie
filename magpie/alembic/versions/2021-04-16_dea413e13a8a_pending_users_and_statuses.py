@@ -14,7 +14,6 @@ from alembic import op
 from alembic.context import get_context  # noqa: F401
 from sqlalchemy.orm.session import sessionmaker
 
-
 # revision identifiers, used by Alembic.
 revision = "dea413e13a8a"
 down_revision = "954a9d7fe740"

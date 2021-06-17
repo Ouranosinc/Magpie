@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from typing import Optional
 
     from magpie.models import UserPending
-    from magpie.typedefs import AnySettingsContainer, JSON
+    from magpie.typedefs import JSON, AnySettingsContainer
 
 
 def format_pending_user(user, basic_info=False, dotted=False, container=None):

@@ -1,5 +1,4 @@
 from magpie.models import UserStatuses
-
 from tests import runner
 
 

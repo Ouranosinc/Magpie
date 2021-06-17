@@ -2,8 +2,8 @@ from inspect import cleandoc
 from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import (
-    HTTPCreated,
     HTTPConflict,
+    HTTPCreated,
     HTTPException,
     HTTPForbidden,
     HTTPGone,
@@ -19,15 +19,15 @@ from ziggurat_foundations.models.services.group import GroupService
 from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
-from magpie.api.notifications import get_email_template, send_email
 from magpie.api.management.register import register_formats as rf
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
+from magpie.api.notifications import get_email_template, send_email
 from magpie.api.webhooks import generate_callback_url, webhook_update_error_status
 from magpie.constants import get_constant
-from magpie.models import Group, UserPending, UserSearchService, UserStatuses, TemporaryToken, TokenOperation
-from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url
+from magpie.models import Group, TemporaryToken, TokenOperation, UserPending, UserSearchService, UserStatuses
 from magpie.ui.utils import BaseViews
+from magpie.utils import CONTENT_TYPE_JSON, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     from typing import List, Union

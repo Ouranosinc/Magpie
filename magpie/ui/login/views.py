@@ -1,13 +1,7 @@
 from inspect import cleandoc
 
 import requests
-from pyramid.httpexceptions import (
-    HTTPException,
-    HTTPFound,
-    HTTPInternalServerError,
-    HTTPOk,
-    HTTPUnauthorized
-)
+from pyramid.httpexceptions import HTTPException, HTTPFound, HTTPInternalServerError, HTTPOk, HTTPUnauthorized
 from pyramid.renderers import render_to_response
 from pyramid.response import Response
 from pyramid.security import NO_PERMISSION_REQUIRED, forget

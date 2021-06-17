@@ -17,8 +17,8 @@ from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
-from magpie.api.management.register import register_utils as ru
 from magpie.api.management.register import register_formats as rf
+from magpie.api.management.register import register_utils as ru
 from magpie.api.management.user import user_utils as uu
 
 if TYPE_CHECKING:

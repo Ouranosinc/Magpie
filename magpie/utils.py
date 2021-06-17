@@ -21,9 +21,9 @@ from pyramid.settings import asbool, truthy
 from pyramid.threadlocal import get_current_registry
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
-from sqlalchemy import inspect as sa_inspect
 from six.moves import configparser
 from six.moves.urllib.parse import urlparse
+from sqlalchemy import inspect as sa_inspect
 from webob.headers import EnvironHeaders, ResponseHeaders
 from ziggurat_foundations.models.services.user import UserService
 
