@@ -234,8 +234,19 @@ DB_COMMAND := MAGPIE_INI_FILE_PATH="$(APP_INI)" alembic -c "$(APP_INI)"
 
 .PHONY: database-migration
 database-migration: conda-env _alembic 	## run database migration (make [REVISION=head,<empty=1>,ID] database-migration)
-	@echo "Running database migration (using revision: [$(DB_REVISION)])..."
+	@echo "Running database upgrade migration (using revision: [$(DB_REVISION)])..."
 	@bash -c '$(CONDA_CMD) $(DB_COMMAND) upgrade $(DB_REVISION)'
+
+.PHONY: database-upgrade
+database-upgrade: database-migration	## run database upgrade to more recent version (alias to 'database-migration')
+
+.PHONY: database-downgrade
+database-downgrade: conda-env _alembic  ## run database downgrade to older version (inverse of 'database-upgrade')
+	echo "$(DB_REVISION)"
+	echo "${DB_REVISION}"
+	@[ "$(DB_REVISION)" != "head" ] || ( echo ">> Invalid 'DB_REVISION' cannot be 'head' to downgrade."; exit 1 )
+	@echo "Running database downgrade migration (using revision: [$(DB_REVISION)])..."
+	@bash -c '$(CONDA_CMD) $(DB_COMMAND) downgrade $(DB_REVISION)'
 
 .PHONY: database-history
 database-history: conda-env _alembic    ## obtain database revision history
