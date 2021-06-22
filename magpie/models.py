@@ -166,14 +166,14 @@ class UserPending(Base):
         """
         Unique user name.
         """
-        return sa.Column(sa.Unicode(128), unique=True)
+        return sa.Column(sa.Unicode(128), nullable=False, unique=True)
 
     @declared_attr
     def user_password(self):
         """
         Password hash of the user.
         """
-        return sa.Column(sa.Unicode(256))
+        return sa.Column(sa.Unicode(256), nullable=False)
 
     @declared_attr
     def email(self):

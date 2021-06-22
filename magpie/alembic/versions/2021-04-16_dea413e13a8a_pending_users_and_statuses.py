@@ -30,8 +30,8 @@ User = sa.table(
 def upgrade():
     op.create_table("users_pending",
                     sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
-                    sa.Column("user_name", sa.Unicode(128), unique=True),
-                    sa.Column("user_password", sa.Unicode(256)),
+                    sa.Column("user_name", sa.Unicode(128), nullable=False, unique=True),
+                    sa.Column("user_password", sa.Unicode(256), nullable=False),
                     sa.Column("email", sa.Unicode(100), nullable=False, unique=True),
                     sa.Column("registered_date", sa.TIMESTAMP(timezone=False),
                               default=datetime.datetime.utcnow, server_default=sa.func.now())
@@ -45,3 +45,9 @@ def upgrade():
 
 def downgrade():
     op.drop_table("users_pending")
+
+    # revert the webhook error status
+    session = Session(bind=op.get_bind())
+    query = sa.update(User).where(User.c.status == 2).values(status=0)  # use literals to avoid enum value changes
+    session.execute(query)
+    session.commit()
