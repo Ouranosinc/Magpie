@@ -49,6 +49,10 @@ def make_parser():
     email_opts = parser.add_argument_group(title="Email Arguments",
                                            description="Operation arguments to define email to be sent.")
     email_opts.add_argument("-e", "--email", required=True, help="Address where to sent the test email.")
+    # Because email template names are long and inconvenient to type, provide a "index" map for quick selection
+    #   Example: "test", "0" (str) and 0 (int) will all map to the same template, and so on for all available templates.
+    # str(index) mapping is needed for parsing since int indices become str when parsed from command line inputs
+    # int(index) are useful to avoid duplicates items when generating the option list in EmailTemplateChoiceFormatter
     email_choices = ["test"] + list(DEFAULT_TEMPLATE_MAPPING)
     email_choices_map = {i: tmpl for i, tmpl in enumerate(email_choices)}
     email_choices_map.update({str(i): tmpl for i, tmpl in list(email_choices_map.items())})
