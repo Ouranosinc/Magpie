@@ -27,15 +27,16 @@ Content-Type: text/html; charset=UTF-8
 
 <html lang="en">
     <head><title>Magpie User Registration Completed</title></head>
-    <body>
+    <p>
         <p>
         Dear administrator,
         </p>
         <p>
-        This notification email is to inform you that the following user as completed registration and email validation.
+        This notification email is to inform you that the following
+        user has completed registration and email validation.
         </p>
 
-        <div style="margin-left: 1em">
+        <div style="margin: 1em">
             <table style="border: 1px solid; border-collapse: collapse;">
                 <thead>
                 <tr>

@@ -39,7 +39,7 @@ Content-Type: text/html; charset=UTF-8
         Following details were submitted by the user:<br>
         </p>
 
-        <div style="margin-left: 1em">
+        <div style="margin: 1em">
             <table style="border: 1px solid; border-collapse: collapse;">
                 <thead>
                     <tr>
@@ -64,7 +64,7 @@ Content-Type: text/html; charset=UTF-8
         Please select the link with desired result regarding this request:
         </p>
 
-        <div style="margin-left: 1em">
+        <div style="margin: 1em">
             <table style="border: 1px solid; border-collapse: collapse;">
             	<thead>
                 	<tr>
