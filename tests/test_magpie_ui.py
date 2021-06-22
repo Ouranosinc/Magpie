@@ -457,7 +457,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
                 notify_addr = settings["magpie.user_registration_notify_email_recipient"]
                 utils.check_val_is_in("To: {}".format(notify_addr), msg_str)
                 utils.check_val_is_in("From: Magpie", msg_str)
-                utils.check_val_is_in("following user as completed registration", msg_str)
+                utils.check_val_is_in("user has completed registration", msg_str)
                 utils.check_val_is_in(test_register_user, msg_str)
                 utils.check_val_is_in(test_register_email, msg_str)
 
