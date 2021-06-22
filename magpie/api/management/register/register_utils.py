@@ -294,13 +294,19 @@ def handle_user_registration_admin_decision(tmp_token, request):
         - See :ref:`proc_user_registration` for the procedure step details.
         - :func:`complete_user_registration` for step 5 following approval.
     """
+    admin_user = request.user
+    pending_user = tmp_token.user
     if tmp_token.operation == TokenOperation.USER_REGISTRATION_ADMIN_APPROVE:
+        LOGGER.info("Administrator [%s:%s] approved registration of pending user [%s:%s]",
+                    admin_user.id, admin_user.user_name, pending_user.id, pending_user.user_name)
         msg = "Pending user registration was successfully approved."
         complete_user_registration(tmp_token, request)
     elif tmp_token.operation == TokenOperation.USER_REGISTRATION_ADMIN_DECLINE:
+        LOGGER.info("Administrator [%s:%s] declined registration of pending user [%s:%s]",
+                    admin_user.id, admin_user.user_name, pending_user.id, pending_user.user_name)
         # flush the pending user, this should cascade remove any associated temporary tokens
-        ax.evaluate_call(lambda: request.db.delete(tmp_token.user), fallback=lambda: request.db.rollback(),
-                         content={"user": uf.format_user(tmp_token.user)},
+        ax.evaluate_call(lambda: request.db.delete(pending_user), fallback=lambda: request.db.rollback(),
+                         content={"user": uf.format_user(pending_user)},
                          http_error=HTTPInternalServerError, msg_on_fail="Failed deletion of pending user.")
         msg = "Pending user registration was successfully declined. Pending user has been deleted."
     else:
