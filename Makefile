@@ -207,7 +207,7 @@ clean-report: 	## remove check linting reports
 	@-rm -fr "$(REPORTS_DIR)"
 
 .PHONY: clean-test
-clean-test:	clean-report	## remove test and coverage artifacts
+clean-test: clean-report	## remove test and coverage artifacts
 	@echo "Cleaning tests artifacts..."
 	@-rm -fr .tox/
 	@-rm -fr .pytest_cache/
