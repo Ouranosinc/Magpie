@@ -223,7 +223,7 @@ def handle_user_registration_confirmation(tmp_token, request):
                                           print_missing=True, raise_missing=False, raise_not_set=False))
     if not require_approve:
         LOGGER.debug("[User Registration - Step 3A] moving on to complete registration (no approval required)")
-        complete_user_registration(tmp_token, request)
+        complete_user_registration(tmp_token, require_approve, request)
         data = {
             # from the message UI page template, it is possible to see the 'Login' button in the Magpie header
             # user should be able to find its way there to use its registered account
@@ -300,10 +300,19 @@ def handle_user_registration_admin_decision(tmp_token, request):
         LOGGER.info("Administrator [%s:%s] approved registration of pending user [%s:%s]",
                     admin_user.id, admin_user.user_name, pending_user.id, pending_user.user_name)
         msg = "Pending user registration was successfully approved."
-        complete_user_registration(tmp_token, request)
+        complete_user_registration(tmp_token, True, request)
     elif tmp_token.operation == TokenOperation.USER_REGISTRATION_ADMIN_DECLINE:
         LOGGER.info("Administrator [%s:%s] declined registration of pending user [%s:%s]",
                     admin_user.id, admin_user.user_name, pending_user.id, pending_user.user_name)
+
+        # notify user of declined user account submission
+        params = {"user": pending_user}
+        template = get_email_template("MAGPIE_USER_REGISTRATION_DECLINED_EMAIL_TEMPLATE", request)
+        ax.evaluate_call(lambda: send_email(pending_user.email, request, template, params),
+                         fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                         msg_on_fail="Error occurred during user registration when trying to send "
+                                     "email to pending user for notification of its declined submission.")
+
         # flush the pending user, this should cascade remove any associated temporary tokens
         ax.evaluate_call(lambda: request.db.delete(pending_user), fallback=lambda: request.db.rollback(),
                          content={"user": uf.format_user(pending_user)},
@@ -315,8 +324,8 @@ def handle_user_registration_admin_decision(tmp_token, request):
     return BaseViews(request).render("magpie.ui.home:templates/message.mako", {"message": msg})
 
 
-def complete_user_registration(tmp_token, request):
-    # type: (TemporaryToken, Request) -> None
+def complete_user_registration(tmp_token, approval_required, request):
+    # type: (TemporaryToken, bool, Request) -> None
     """
     Completes the successful user registration following any required validation steps.
 
@@ -339,7 +348,7 @@ def complete_user_registration(tmp_token, request):
     LOGGER.debug("Pending user upgraded to full user: [%s (%s)]", user.user_name, user.id)
 
     # notify the user of its successful account validation, approval and creation
-    params = {"user": user}
+    params = {"user": user, "approval_required": approval_required}
     template = get_email_template("MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE", request)
     ax.evaluate_call(lambda: send_email(user.email, request, template, params),
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,

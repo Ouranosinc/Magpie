@@ -1219,8 +1219,8 @@ approval procedures.
     .. versionadded:: 3.13
 
     Path to a `Mako Template`_ file providing custom email format to send notification email to
-    :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_RECIPIENT` following a user registration demand that must be
-    *approved* or *declined*.
+    :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_RECIPIENT` following a submitted user registration
+    that must be *approved* or *declined* by the administrator.
 
     When overridden with a custom email format, the contents should provide sufficient details indicating to
     the administrator which :term:`Pending User` requested a new account registration, and links where it can
@@ -1235,8 +1235,17 @@ approval procedures.
     .. versionadded:: 3.13
 
     Path to a `Mako Template`_ file providing custom email format to send an email to the
-    :term:`Pending User` that initially requested the user registration to notify them of the completed registration
-    process following administrator approval and that their account is active starting from that moment.
+    :term:`Pending User` that initially submitted the user registration to notify them that the registration
+    process was successfully approved and completed, and that their account is active starting from that moment.
+
+    The default template provides details about available template arguments.
+
+    .. note::
+        This email template is employed regardless of value defined for
+        setting :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED`. When administrator approval is enabled, the email
+        will be sent only after the account was approved. Otherwise, it is sent as soon as email conformation is
+        obtained from the :term:`Pending User`. Parameter ``approval_required`` is provided to generate alternative
+        `Mako Template`_ contents in case different messages should be sent for each situation.
 
 .. envvar:: MAGPIE_USER_REGISTRATION_DECLINED_EMAIL_TEMPLATE
 
@@ -1245,8 +1254,10 @@ approval procedures.
     .. versionadded:: 3.13
 
     Path to a `Mako Template`_ file providing custom email format to send an email to the
-    :term:`Pending User` that initially requested the user registration to notify them of that their submitted
+    :term:`Pending User` that initially submitted the user registration to notify them of that their
     user registration request was declined by the administrator following approval process.
+
+    The default template provides details about available template arguments.
 
 
 .. _config_webhook:

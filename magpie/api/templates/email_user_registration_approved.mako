@@ -15,6 +15,8 @@
         email_datetime:     Date and time (ISO-8601 UTC) when that email was generated.
         magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration settings.
         login_url:          Endpoint where login can be accomplished.
+        approval_required:  Boolean indicating if administrator approval was required for this email to be sent
+                            (based on application settings with MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED).
 
 </%doc>
 

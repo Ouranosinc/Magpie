@@ -558,7 +558,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
                 )
 
                 # verify the declined email
-                email_decline = wrapped_contents.call_args_list[3]
+                email_decline = wrapped_contents.call_args_list[2]
                 message = real_contents(*email_decline.args, **email_decline.kwargs)
                 msg_str = message.decode()
                 utils.check_val_is_in("To: {}".format(test_register_email), msg_str)
