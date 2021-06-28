@@ -1,6 +1,6 @@
 <%doc>
     This is the default notification message sent by email to the user to notify of accepted administrator approval.
-    (see option: MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED)
+    (see options: MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED and MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE)
 
     It is formatted using the Mako template library (https://www.makotemplates.org/).
     The email header MUST be provided (from, to, subject, content-type).

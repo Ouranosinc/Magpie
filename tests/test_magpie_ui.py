@@ -523,6 +523,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
             "magpie.user_registration_notify_email_recipient": "notify@user-registration.com",
         }
 
+        from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
         with utils.mocked_get_settings(settings=settings):
             with utils.mock_send_email() as email_contexts:
                 _, wrapped_contents, mocked_send = email_contexts
@@ -551,9 +552,18 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
                 body = utils.check_ui_response_basic_info(resp, 200)
                 utils.check_val_is_in("Pending user registration was successfully declined", body)
                 utils.check_val_equal(
-                    mocked_send.call_count, 2,
-                    msg="neither pending user nor notify emails should be sent since registration was declined"
+                    mocked_send.call_count, 3,  # not 4 like in other test (to user: approved + to admin: notify)
+                    msg="Pending user notify email to administrator to indicate completed user registration process "
+                        "should not be sent since user was declined, but email to that declined user should be sent."
                 )
+
+                # verify the declined email
+                email_decline = wrapped_contents.call_args_list[3]
+                message = real_contents(*email_decline.args, **email_decline.kwargs)
+                msg_str = message.decode()
+                utils.check_val_is_in("To: {}".format(test_register_email), msg_str)
+                utils.check_val_is_in("From: Magpie", msg_str)
+                utils.check_val_is_in("Magpie User Registration Declined", msg_str)
 
                 # validate that there is not a new user, and that pending user was removed
                 path = "/users/{}".format(test_register_user)

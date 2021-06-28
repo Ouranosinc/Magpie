@@ -340,7 +340,7 @@ def complete_user_registration(tmp_token, request):
 
     # notify the user of its successful account validation, approval and creation
     params = {"user": user}
-    template = get_email_template("MAGPIE_USER_REGISTRATION_COMPLETED_EMAIL_TEMPLATE", request)
+    template = get_email_template("MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE", request)
     ax.evaluate_call(lambda: send_email(user.email, request, template, params),
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                      msg_on_fail="Error occurred during user registration when trying to send "

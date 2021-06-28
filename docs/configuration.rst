@@ -1228,15 +1228,25 @@ approval procedures.
 
     The default template provides details about available template arguments.
 
-.. envvar:: MAGPIE_USER_REGISTRATION_COMPLETED_EMAIL_TEMPLATE
+.. envvar:: MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE
 
-    (Default: |email_ur_completed_mako|_)
+    (Default: |email_ur_approved_mako|_)
 
     .. versionadded:: 3.13
 
     Path to a `Mako Template`_ file providing custom email format to send an email to the
     :term:`Pending User` that initially requested the user registration to notify them of the completed registration
-    process and that their account is active starting from that moment.
+    process following administrator approval and that their account is active starting from that moment.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_DECLINED_EMAIL_TEMPLATE
+
+    (Default: |email_ur_declined_mako|_)
+
+    .. versionadded:: 3.13
+
+    Path to a `Mako Template`_ file providing custom email format to send an email to the
+    :term:`Pending User` that initially requested the user registration to notify them of that their submitted
+    user registration request was declined by the administrator following approval process.
 
 
 .. _config_webhook:

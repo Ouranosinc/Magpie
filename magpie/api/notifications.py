@@ -27,8 +27,10 @@ DEFAULT_TEMPLATE_MAPPING = {
         os.path.join(TEMPLATE_DIR, "email_user_registration_submission.mako"),
     "MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE":
         os.path.join(TEMPLATE_DIR, "email_user_registration_approval.mako"),
-    "MAGPIE_USER_REGISTRATION_COMPLETED_EMAIL_TEMPLATE":
-        os.path.join(TEMPLATE_DIR, "email_user_registration_completed.mako"),
+    "MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE":
+        os.path.join(TEMPLATE_DIR, "email_user_registration_approved.mako"),
+    "MAGPIE_USER_REGISTRATION_DECLINED_EMAIL_TEMPLATE":
+        os.path.join(TEMPLATE_DIR, "email_user_registration_declined.mako"),
     "MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_TEMPLATE":
         os.path.join(TEMPLATE_DIR, "email_user_registration_notify.mako"),
 }
@@ -43,7 +45,7 @@ def get_email_template(template_constant, container=None):
 
         - :envvar:`MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE`
-        - :envvar:`MAGPIE_USER_REGISTRATION_COMPLETED_EMAIL_TEMPLATE`
+        - :envvar:`MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_TEMPLATE`
 
     :raises IOError: if an explicit override value of the requested template cannot be located.
