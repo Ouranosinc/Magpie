@@ -171,7 +171,7 @@ info:		## display make information
 clean: clean-all	## alias for 'clean-all' target
 
 .PHONY: clean-all
-clean-all: clean-build clean-pyc clean-test clean-docs	## remove all artifacts
+clean-all: clean-build clean-pyc clean-test clean-report clean-docs		## remove all artifacts
 
 .PHONY: clean-build
 clean-build:	## remove build artifacts
@@ -201,15 +201,21 @@ clean-pyc:		## remove Python file artifacts
 	@find . -type f -name '*~' -exec rm -f {} +
 	@find . -type f -name '__pycache__' -exec rm -fr {} +
 
+.PHONY: clean-report
+clean-report: 	## remove check linting reports
+	@echo "Cleaning check linting reports..."
+	@-rm -fr "$(REPORTS_DIR)"
+
 .PHONY: clean-test
-clean-test:		## remove test and coverage artifacts
+clean-test:	clean-report	## remove test and coverage artifacts
 	@echo "Cleaning tests artifacts..."
 	@-rm -fr .tox/
 	@-rm -fr .pytest_cache/
 	@-rm -f .coverage*
 	@-rm -f coverage.*
 	@-rm -fr "$(APP_ROOT)/coverage/"
-	@-rm -fr "$(REPORTS_DIR)"
+	@-rm -fr "$(APP_ROOT)/node_modules"
+	@-rm -f "$(APP_ROOT)/package-lock.json"
 
 .PHONY: clean-docker
 clean-docker: docker-clean	## alias for 'docker-clean' target
@@ -342,6 +348,18 @@ install-dev: conda-env	## install package requirements for development and testi
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
+# install locally to ensure they can be found by config extending them
+.PHONY: install-npm
+install-npm:    		## install npm package manager if it cannot be found
+	@[ -f "$(shell which npm)" ] || ( \
+		echo "Binary package manager npm not found. Attempting to install it."; \
+		apt-get install npm \
+	)
+	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | wc -l` = 1 ] || ( \
+		echo "Install required libraries for style checks." && \
+		npm install stylelint stylelint-config-standard --save-dev \
+	)
+
 ## --- Launchers targets --- ##
 
 .PHONY: cron
@@ -424,7 +442,7 @@ mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
-CHECKS := pep8 lint security doc8 links imports
+CHECKS := pep8 lint security doc8 links imports css
 CHECKS := $(addprefix check-, $(CHECKS))
 
 $(CHECKS): check-%: install-dev check-%-only
@@ -510,8 +528,16 @@ check-imports-only: mkdir-reports	## run imports code checks
 	 	isort --check-only --diff --recursive $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
+.PHONY: check-css-only
+check-css-only: mkdir-reports install-npm
+	@echo "Running CSS style checks..."
+	@npx stylelint \
+		--config "$(APP_ROOT)/.stylelintrc.json" \
+		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
+		"$(APP_ROOT)/**/*.css"
+
 # autogen fix variants with pre-install of dependencies using the '-only' target references
-FIXES := imports lint docf
+FIXES := imports lint docf css
 FIXES := $(addprefix fix-, $(FIXES))
 
 $(FIXES): fix-%: install-dev fix-%-only
@@ -556,6 +582,15 @@ fix-docf-only: mkdir-reports	## fix some PEP8 code documentation style problems 
 			--recursive \
 			$(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
+
+.PHONY: fix-css-only
+fix-css-only: mkdir-reports install-npm		## fix CSS styles problems automatically
+	@echo "Fixing CSS style problems..."
+	@npx stylelint \
+		--fix \
+		--config "$(APP_ROOT)/.stylelintrc.json" \
+		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
+		"$(APP_ROOT)/**/*.css"
 
 ## --- Test targets --- ##
 
