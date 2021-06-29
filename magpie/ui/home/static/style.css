@@ -339,7 +339,7 @@ table.panel-line td {
 
 .panel-line-entry input[type="button"],
 .panel-line-entry input[type="submit"] {
-    margin-top: -0.10em;
+    margin-top: -0.1em;
 }
 
 /* textual field entry when in edit mode */
@@ -483,7 +483,7 @@ table.panel-line td {
 }
 
 .alert-text-container > img {
-    margin: 0.10em 0.25em 0.15em 0;
+    margin: 0.1em 0.25em 0.15em 0;
 }
 
 .alert-text {
