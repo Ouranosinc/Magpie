@@ -108,6 +108,11 @@ Glossary
         `Web Map Service` (WMS) and `Web Processing Service` (WPS) for which `Magpie` offers some specific
         :term:`Service` request parser implementations.
 
+    Pending User
+        Account that is pending for validation or approval following self-registration when the application is
+        configured to provide that functionality (see :envvar:`MAGPIE_USER_REGISTRATION_ENABLED`).
+        See section :ref:`user_registration` for further details about the self-registration procedure.
+
     Permission
         Element that defines which rules are applicable for a given combination of :term:`User` and/or :term:`Group`
         against one or many :term:`Service` and/or :term:`Resource`, depending of the many contexts for which they

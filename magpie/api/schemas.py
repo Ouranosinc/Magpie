@@ -25,6 +25,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 
 from magpie import __meta__
 from magpie.constants import get_constant
+from magpie.models import UserStatuses
 from magpie.permissions import Access, Permission, PermissionType, Scope
 from magpie.security import get_provider_names
 from magpie.utils import (
@@ -32,8 +33,7 @@ from magpie.utils import (
     CONTENT_TYPE_JSON,
     KNOWN_CONTENT_TYPES,
     SUPPORTED_ACCEPT_TYPES,
-    SUPPORTED_FORMAT_TYPES,
-    ExtendedEnum
+    SUPPORTED_FORMAT_TYPES
 )
 
 if TYPE_CHECKING:
@@ -92,15 +92,6 @@ def service_api_route_info(service_api, **kwargs):
 # Service Routes
 _LOGGED_USER_VALUE = get_constant("MAGPIE_LOGGED_USER")
 LoggedUserBase = "/users/{}".format(_LOGGED_USER_VALUE)
-
-
-class UserStatuses(ExtendedEnum):
-    """
-    Values for the 'status' field of Users.
-    """
-    WebhookErrorStatus = 0
-    OK = 1  # use 1 for ok since this value is set by default by ziggurat
-
 
 SwaggerGenerator = Service(
     path="/json",
@@ -220,6 +211,12 @@ RegisterGroupsAPI = Service(
 RegisterGroupAPI = Service(
     path="/register/groups/{group_name}",
     name="RegisterGroup")
+RegisterUsersAPI = Service(
+    path="/register/users",
+    name="RegisterUsers")
+RegisterUserAPI = Service(
+    path="/register/users/{user_name}",
+    name="RegisterUser")
 ResourcesAPI = Service(
     path="/resources",
     name="Resources")
@@ -608,26 +605,33 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
     route_name = colander.SchemaNode(
         colander.String(),
         description="Route called that generated the error.",
-        example="/users/toto")
+        example="/users/toto"
+    )
     request_url = colander.SchemaNode(
         colander.String(),
         title="Request URL",
         description="Request URL that generated the error.",
-        example="http://localhost:2001/magpie/users/toto")
+        example="http://localhost:2001/magpie/users/toto",
+        validator=colander.url,
+    )
     method = colander.SchemaNode(
         colander.String(),
         description="Request method that generated the error.",
-        example="GET")
+        example="GET"
+    )
     param = ErrorVerifyParamBodySchema(
         title="Parameter",
         missing=colander.drop,
-        description="Additional parameter details to explain the cause of error.")
+        description="Additional parameter details to explain the cause of error."
+    )
     call = ErrorCallBodySchema(
         missing=colander.drop,
-        description="Additional details to explain failure reason of operation call or raised error.")
+        description="Additional details to explain failure reason of operation call or raised error."
+    )
     fallback = ErrorFallbackBodySchema(
         missing=colander.drop,
-        description="Additional details to explain failure reason of fallback operation to cleanup call error.")
+        description="Additional details to explain failure reason of fallback operation to cleanup call error."
+    )
 
 
 class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
@@ -647,7 +651,7 @@ class UnauthorizedResponseBodySchema(ErrorResponseBodySchema):
         super(UnauthorizedResponseBodySchema, self).__init__(**kw)
 
     route_name = colander.SchemaNode(colander.String(), description="Specified API route.")
-    request_url = colander.SchemaNode(colander.String(), description="Specified request URL.")
+    request_url = colander.SchemaNode(colander.String(), description="Specified request URL.", validator=colander.url)
 
 
 class UnauthorizedResponseSchema(BaseResponseSchemaAPI):
@@ -760,34 +764,55 @@ class PermissionNameListSchema(colander.SequenceSchema):
     )
 
 
-class UserInfoSchema(colander.MappingSchema):
+class BaseUserInfoSchema(colander.MappingSchema):
     user_name = UserNameParameter
     email = colander.SchemaNode(
         colander.String(),
         description="Email of the user.",
-        example="toto@mail.com")
-    status = colander.SchemaNode(
-        colander.Integer(),
-        missing=colander.drop,
-        description="Current status of the user account.",
-        example=UserStatuses.OK.value,
-        validator=colander.OneOf(UserStatuses.values())
+        example="toto@mail.com",
+        validator=colander.Email()
     )
+    status = colander.SchemaNode(
+        colander.String(),
+        description="Current status of the user account.",
+        example=UserStatuses.OK.name,
+        validator=colander.OneOf(UserStatuses.names())
+    )
+
+
+class PendingUserInfoSchema(BaseUserInfoSchema):
+    # any of those urls can be null if already processed, expired, or not applicable as per configuration
+    confirm_url = colander.SchemaNode(
+        colander.String(), validator=colander.url, default=None,
+        description="Temporary URL endpoint to call in order to confirm the email of the pending registration."
+    )
+    approve_url = colander.SchemaNode(
+        colander.String(), validator=colander.url, default=None,
+        description="Temporary URL endpoint to call in order to approve the pending registration if applicable."
+    )
+    decline_url = colander.SchemaNode(
+        colander.String(), validator=colander.url, default=None,
+        description="Temporary URL endpoint to call in order to decline the pending registration if applicable."
+    )
+
+
+class RegisteredUserInfoSchema(BaseUserInfoSchema):
     user_id = colander.SchemaNode(
         colander.Integer(),
         missing=colander.drop,  # if not registered or anonymous
-        description="Registered user identifier."
+        description="Registered user identifier. "
+                    "User entries that do not correspond to a registered account will not have this field."
     )
 
 
-class UserBodySchema(UserInfoSchema):
+class UserBodySchema(RegisteredUserInfoSchema):
     group_names = GroupNamesListSchema(
         example=["administrators", "users"]
     )
 
 
 class UserDetailListSchema(colander.SequenceSchema):
-    user = UserInfoSchema()
+    user = RegisteredUserInfoSchema()
 
 
 class GroupBaseBodySchema(colander.MappingSchema):
@@ -872,13 +897,15 @@ class ServiceSummarySchema(colander.MappingSchema):
     public_url = colander.SchemaNode(
         colander.String(),
         description="Proxy URL available for public access with permissions",
-        example="http://localhost/twitcher/ows/proxy/thredds"
+        example="http://localhost/twitcher/ows/proxy/thredds",
+        validator=colander.url,
     )
     service_url = colander.SchemaNode(
         colander.String(),
         missing=colander.drop,  # if listed with corresponding scope (users/groups/admin)
         description="Private URL of the service (restricted access)",
-        example="http://localhost:9999/thredds"
+        example="http://localhost:9999/thredds",
+        validator=colander.url,
     )
 
 
@@ -1350,7 +1377,8 @@ class Services_POST_BodySchema(colander.MappingSchema):
     service_url = colander.SchemaNode(
         colander.String(),
         description="Private URL of the service to create",
-        example="http://localhost:9000/my_service"
+        example="http://localhost:9000/my_service",
+        validator=colander.url,
     )
     configuration = ServiceConfigurationSchema()
 
@@ -1407,7 +1435,8 @@ class Service_PATCH_RequestBodySchema(colander.MappingSchema):
         description="New service private URL to apply to service specified in path",
         missing=colander.drop,
         default=colander.null,
-        example="http://localhost:9000/new_service_name"
+        example="http://localhost:9000/new_service_name",
+        validator=colander.url,
     )
     service_push = PhoenixServicePushOption()
     configuration = ServiceConfigurationSchema()
@@ -1599,8 +1628,11 @@ class UsersQuery(QueryRequestSchemaAPI):
     status = colander.SchemaNode(
         colander.Integer(),
         missing=colander.drop,
-        description="Obtain the user name list filtered by their account status. Returns all regardless otherwise.",
-        validator=colander.OneOf(UserStatuses.values())
+        description="Obtain the user name list filtered by their account status. "
+                    "Can be any combination of comma-separated list of known status values. "
+                    "Returns all *registered* users if not provided. "
+                    "Otherwise, 'all' can return every user regardless of registration status.",
+        validator=colander.OneOf(UserStatuses.allowed())
     )
     detail = colander.SchemaNode(
         colander.Boolean(),
@@ -1701,6 +1733,7 @@ class User_POST_RequestBodySchema(colander.MappingSchema):
         colander.String(),
         description="New email to apply to the user",
         example="john@mail.com",
+        validator=colander.Email(),
     )
     password = colander.SchemaNode(
         colander.String(),
@@ -1749,6 +1782,7 @@ class User_PATCH_RequestBodySchema(colander.MappingSchema):
         description="New email to apply to the user (admin or logged user operation).",
         missing=colander.drop,
         example="john@mail.com",
+        validator=colander.Email(),
     )
     password = colander.SchemaNode(
         colander.String(),
@@ -1834,7 +1868,7 @@ class User_DELETE_RequestSchema(BaseRequestSchemaAPI):
 
 class User_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Delete user successful."
-    body = BaseResponseBodySchema(code=HTTPForbidden.code, description=description)
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class User_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -2797,6 +2831,101 @@ RegisterGroup_DELETE_ForbiddenResponseSchema = UserGroup_DELETE_ForbiddenRespons
 RegisterGroup_DELETE_NotFoundResponseSchema = UserGroup_DELETE_NotFoundResponseSchema
 
 
+class RegisterUsers_GET_RequestSchema(BaseRequestSchemaAPI):
+    pass  # no query string in this case (see Users_GET_RequestSchema)
+
+
+class RegisterUsers_GET_ResponseBodySchema(BaseResponseBodySchema):
+    registrations = UserNamesListSchema()
+
+
+class RegisterUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Get users pending registration successful."
+    body = RegisterUsers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+RegisterUsers_GET_ForbiddenResponseSchema = Users_GET_ForbiddenResponseSchema
+
+
+class RegisterUsers_POST_RequestSchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name to employ for new user registration.",
+        example="john",
+    )
+    email = colander.SchemaNode(
+        colander.String(),
+        description="Email to employ for new user registration.",
+        example="john@mail.com",
+        validator=colander.Email(),
+    )
+    password = colander.SchemaNode(
+        colander.String(),
+        description="Password to employ for new user registration.",
+        example="itzaseekit",
+    )
+
+
+class RegisterUserBodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Pending user registration name.",
+        example="toto"
+    )
+    email = colander.SchemaNode(
+        colander.String(),
+        description="Pending user registration email.",
+        example="toto@mail.com",
+        validator=colander.Email(),
+    )
+
+
+class RegisterUsers_POST_ResponseBodySchema(BaseResponseBodySchema):
+    registration = RegisterUserBodySchema()
+
+
+class RegisterUsers_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
+    description = "Get users pending registration successful."
+    body = RegisterUsers_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
+
+
+RegisterUser_Check_BadRequestResponseSchema = User_Check_BadRequestResponseSchema
+RegisterUsers_POST_ForbiddenResponseSchema = Users_POST_ForbiddenResponseSchema
+
+
+class RegisterUser_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
+
+
+class RegisterUser_Check_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Pending user registration could not be found."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class RegisterUser_Check_ConflictResponseSchema(BaseResponseSchemaAPI):
+    description = "User registration is already pending approval."
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class RegisterUser_GET_ResponseBodySchema(BaseResponseBodySchema):
+    registration = PendingUserInfoSchema()
+
+
+class RegisterUser_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Get pending user registration details successful."
+    body = RegisterUser_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class RegisterUser_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    path = User_RequestPathSchema()
+    body = colander.MappingSchema(default={})
+
+
+class RegisterUser_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Delete pending user registration successful."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
 class TemporaryURL_GET_RequestSchema(BaseRequestSchemaAPI):
     path = TemporaryURL_RequestPathSchema()
 
@@ -2807,7 +2936,7 @@ class TemporaryURL_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class TemporaryURL_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Could not find any operation matching temporary URL token."
+    description = "Operation matching temporary URL token could not be found or was already processed."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
@@ -3190,7 +3319,7 @@ Users_GET_responses = {
 }
 Users_POST_responses = {
     "201": Users_POST_CreatedResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": Users_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
@@ -3208,7 +3337,7 @@ User_GET_responses = {
 }
 User_PATCH_responses = {
     "200": Users_PATCH_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "400": User_Check_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": UserGroup_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
@@ -3643,6 +3772,38 @@ RegisterGroup_DELETE_responses = {
     "401": UnauthorizedResponseSchema(),
     "403": RegisterGroup_DELETE_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": RegisterGroup_DELETE_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterUsers_GET_responses = {
+    "200": RegisterUsers_GET_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": RegisterUsers_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterUsers_POST_responses = {
+    "201": RegisterUsers_POST_CreatedResponseSchema(),
+    "400": RegisterUser_Check_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": RegisterUsers_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "406": NotAcceptableResponseSchema(),
+    "409": RegisterUser_Check_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterUser_GET_responses = {
+    "200": RegisterUser_GET_OkResponseSchema(),
+    "400": RegisterUser_Check_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": HTTPForbiddenResponseSchema(),
+    "404": RegisterUser_Check_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+RegisterUser_DELETE_responses = {
+    "200": RegisterUser_DELETE_OkResponseSchema(),
+    "400": RegisterUser_Check_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": HTTPForbiddenResponseSchema(),
+    "404": RegisterUser_Check_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 TemporaryURL_GET_responses = {

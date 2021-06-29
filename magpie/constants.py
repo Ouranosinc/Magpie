@@ -118,6 +118,15 @@ TWITCHER_PROTECTED_PATH = os.getenv("TWITCHER_PROTECTED_PATH", "/ows/proxy")
 TWITCHER_PROTECTED_URL = os.getenv("TWITCHER_PROTECTED_URL", None)
 TWITCHER_HOST = os.getenv("TWITCHER_HOST", None)
 
+# external identify connectors, define variables only to avoid unnecessary print-log warnings in each CLI call
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", None)
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", None)
+WSO2_HOSTNAME = os.getenv("WSO2_HOSTNAME", None)
+WSO2_CLIENT_ID = os.getenv("WSO2_CLIENT_ID", None)
+WSO2_CLIENT_SECRET = os.getenv("WSO2_CLIENT_SECRET", None)
+WSO2_CERTIFICATE_FILE = os.getenv("WSO2_CERTIFICATE_FILE", None)
+WSO2_SSL_VERIFY = os.getenv("WSO2_SSL_VERIFY", None)
+
 # ===========================
 # variables from postgres.env
 # ===========================
@@ -180,9 +189,10 @@ def get_constant(constant_name,             # type: Str
                  settings_container=None,   # type: Optional[AnySettingsContainer]
                  settings_name=None,        # type: Optional[Str]
                  default_value=None,        # type: Optional[SettingValue]
+                 raise_not_set=True,        # type: bool
                  raise_missing=True,        # type: bool
                  print_missing=False,       # type: bool
-                 raise_not_set=True         # type: bool
+                 empty_missing=False,       # type: bool
                  ):                         # type: (...) -> SettingValue
     """
     Search in order for matched value of :paramref:`constant_name`:
@@ -204,11 +214,12 @@ def get_constant(constant_name,             # type: Str
     :param settings_container: WSGI application settings container (if not provided, uses found one in current thread)
     :param settings_name: alternative name for `settings` if specified
     :param default_value: default value to be returned if not found anywhere, and exception raises are disabled.
+    :param raise_not_set: raise an exception if the found key is ``None``, search until last case if others are ``None``
     :param raise_missing: raise exception if key is not found anywhere
     :param print_missing: print message if key is not found anywhere, return ``None``
-    :param raise_not_set: raise an exception if the found key is ``None``, search until last case if others are ``None``
+    :param empty_missing: consider an empty value for an existing key as if it was missing (i.e.: as if not set).
     :returns: found value or `default_value`
-    :raises ValueError: if resulting value is invalid based on options (by default raise missing/``None`` value)
+    :raises ValueError: if resulting value is invalid based on options (by default raise missing/empty/``None`` value)
     :raises LookupError: if no appropriate value could be found from all search locations (according to options)
     """
     from magpie.utils import get_settings, print_log, raise_log  # pylint: disable=C0415  # avoid circular import error
@@ -222,8 +233,10 @@ def get_constant(constant_name,             # type: Str
         missing = False
         magpie_value = settings.get(constant_name)
         if magpie_value is not None:
-            print_log("Constant found in settings with: {}".format(constant_name), level=logging.DEBUG)
-            return magpie_value
+            if not empty_missing or magpie_value != "":
+                print_log("Config found in settings with: {}".format(constant_name), level=logging.DEBUG)
+                return magpie_value
+            print_log("Constant ignored from settings (empty): {}".format(constant_name), level=logging.DEBUG)
     if not settings_name:
         settings_name = get_constant_setting_name(constant_name)
         print_log("Constant alternate search: {}".format(settings_name), level=logging.DEBUG)
@@ -231,21 +244,27 @@ def get_constant(constant_name,             # type: Str
         missing = False
         magpie_value = settings.get(settings_name)
         if magpie_value is not None:
-            print_log("Constant found in settings with: {}".format(settings_name), level=logging.DEBUG)
-            return magpie_value
+            if not empty_missing or magpie_value != "":
+                print_log("Constant found in settings with: {}".format(settings_name), level=logging.DEBUG)
+                return magpie_value
+            print_log("Constant ignored from settings (empty): {}".format(settings_name), level=logging.DEBUG)
     magpie_globals = globals()
     if constant_name in magpie_globals:
         missing = False
         magpie_value = magpie_globals.get(constant_name)
         if magpie_value is not None:
-            print_log("Constant found in definitions with: {}".format(constant_name), level=logging.DEBUG)
-            return magpie_value
+            if not empty_missing or magpie_value != "":
+                print_log("Constant found in definitions with: {}".format(constant_name), level=logging.DEBUG)
+                return magpie_value
+            print_log("Constant ignored from definition (empty): {}".format(constant_name), level=logging.DEBUG)
     if constant_name in os.environ:
         missing = False
         magpie_value = os.environ.get(constant_name)
         if magpie_value is not None:
-            print_log("Constant found in environment with: {}".format(constant_name), level=logging.DEBUG)
-            return magpie_value
+            if not empty_missing or magpie_value != "":
+                print_log("Constant found in environment with: {}".format(constant_name), level=logging.DEBUG)
+                return magpie_value
+            print_log("Constant ignored from environment (empty): {}".format(constant_name), level=logging.DEBUG)
     if not missing and raise_not_set:
         raise_log("Constant was found but was not set: {}".format(constant_name),
                   level=logging.ERROR, exception=ValueError)

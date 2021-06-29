@@ -123,7 +123,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
     test_cookies = None
 
     @classmethod
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def setUpClass(cls):
         cls.version = __meta__.__version__
         cls.app = utils.get_test_magpie_app()
@@ -136,7 +136,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         cls.test_user_name = "unittest-service-user"
         cls.test_group_name = "unittest-service-group"
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def setUp(self):
         ti.UserTestCase.setUp(self)
         self.setup_adapter()
@@ -156,7 +156,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         res_info = utils.TestSetup.get_ResourceInfo(self, override_body=res_body)
         return res_info["resource_id"], res_name
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceAPI_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceAPI` against a mocked `Magpie` adapter for `Twitcher`.
@@ -283,7 +283,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                 msg = "Using [{}, {}]".format(method, path)
                 utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceTHREDDS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceTHREDDS` against a mocked `Magpie` adapter for `Twitcher`.
@@ -459,7 +459,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             msg = "Unknown prefix must be refused even when resource is normally allowed. Using [GET, {}]".format(path)
             utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceTHREDDS_custom_config(self):
         """
         Evaluate that :class:`ServiceTHREDDS` behaviour results into wanted behaviour of corresponding custom settings.
@@ -582,14 +582,14 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
     @unittest.skip("impl")
     @pytest.mark.skip
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceNCWMS2_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceNCWMS2` against a mocked `Magpie` adapter for `Twitcher`.
         """
         raise NotImplementedError  # FIXME
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceGeoserverWMS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceGeoserverWMS` against a mocked `Magpie` adapter for `Twitcher`.
@@ -692,14 +692,14 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
     @unittest.skip("impl")
     @pytest.mark.skip
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceWFS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceWFS` against a mocked `Magpie` adapter for `Twitcher`.
         """
         raise NotImplementedError  # FIXME
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceWPS_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceWFS` against a mocked `Magpie` adapter for `Twitcher`.
@@ -873,7 +873,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         req = self.mock_request(path, method="POST", body=body, params=None, headers=xml_headers)
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceAccess_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceAccess` against a mocked `Magpie` adapter for `Twitcher`.
@@ -967,7 +967,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
     @unittest.skip("impl")
     @pytest.mark.skip
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def test_ServiceADES_effective_permissions(self):
         """
         Evaluates functionality of :class:`ServiceADES` against a mocked `Magpie` adapter for `Twitcher`.

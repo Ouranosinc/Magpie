@@ -1,3 +1,4 @@
+import contextlib
 import difflib
 import functools
 import importlib
@@ -7,6 +8,7 @@ import threading
 import unittest
 import uuid
 import warnings
+from copy import deepcopy
 from distutils.version import LooseVersion
 from errno import EADDRINUSE
 from typing import TYPE_CHECKING
@@ -40,7 +42,8 @@ from magpie.utils import (
     fully_qualified_name,
     get_header,
     get_magpie_url,
-    get_settings_from_config_ini
+    get_settings_from_config_ini,
+    setup_cache_settings
 )
 
 if TYPE_CHECKING:
@@ -257,23 +260,6 @@ def config_setup_from_ini(config_ini_file_path):
     return config
 
 
-def setup_cache_settings(settings, enabled=False, expire=10):
-    # type: (SettingsType, bool, int) -> None
-    """
-    Enforces caching settings for tests execution, disabled by default.
-    """
-    regions = ["acl", "service"]
-    settings["cache.regions"] = ", ".join(regions)
-    settings["cache.type"] = "memory"
-    for region in regions:
-        settings["cache.{}.enabled".format(region)] = str(enabled).lower()
-        region_expire = "cache.{}.expire".format(region)
-        if enabled:
-            settings[region_expire] = str(expire)
-        else:
-            settings.pop(region_expire, None)
-
-
 def get_test_magpie_app(settings=None, setup_cache=True):
     # type: (Optional[SettingsType], bool) -> TestApp
     """
@@ -281,13 +267,11 @@ def get_test_magpie_app(settings=None, setup_cache=True):
     """
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant("MAGPIE_INI_FILE_PATH"))
-    config.include("ziggurat_foundations.ext.pyramid.sign_in")
-    config.include("ziggurat_foundations.ext.pyramid.get_user")
     config.registry.settings["magpie.url"] = "http://localhost:80"
     if settings:
         config.registry.settings.update(settings)
     if setup_cache:
-        setup_cache_settings(config.registry.settings)
+        setup_cache_settings(config.registry.settings, force=True)
     # create the test application
     magpie_app = TestApp(app.main({}, **config.registry.settings))
     return magpie_app
@@ -516,31 +500,65 @@ def json_msg(json_body, msg=null):
     return json_str
 
 
-def mock_get_settings(arg=None):
-    def mock_get_settings_decorator(test):
-        """
-        Decorator to mock :func:`magpie.utils.get_settings` to allow retrieval of settings from :class:`DummyRequest`.
+def mocked_get_settings(test_func=None, settings=None):
+    """
+    Mocks :func:`magpie.utils.get_settings` to allow retrieval of different settings during tests.
 
-        .. warning::
-            Only apply on test methods (not on class TestCase) to ensure that :mod:`pytest` can collect them correctly.
-        """
+    When applied as decorator onto a test method and used in combination with :func:`mock_request` calls, all of
+    those requests will retrieve the settings from the underlying :class:`DummyRequest` object being mocked.
+
+    Can also be applied as context manager (in ``with`` block) to dynamically overload the settings retrieved
+    during any sub-operation that needs them. This includes :func:`magpie.constants.get_constant` that also
+    employs :func:`magpie.utils.get_settings`.
+
+    .. seealso::
+        - :func:`mock_request`
+        - :func:`magpie.utils.get_settings`
+
+    .. warning::
+        Only apply the decorator on test methods (not on class :class:`unittest.TestCase` directly) to ensure
+        that :mod:`pytest` can still collect them correctly.
+
+    :param test_func: Test function being mocked when using the decorator variant. Unused when employed as context.
+    :param settings: Additional settings to override the values retrieved from the request or application.
+    """
+    def mocked_get_settings_decorator(test=None):
         from magpie.utils import get_settings as real_get_settings
 
         def mocked(container, *args, **kwargs):
             if isinstance(container, DummyRequest):
-                return container.registry.settings
-            return real_get_settings(container, *args, **kwargs)
+                _settings = container.registry.settings
+            else:
+                _settings = real_get_settings(container, *args, **kwargs)
+            _settings = deepcopy(_settings or {})
+            _settings.update(settings or {})
+            return _settings
 
-        @functools.wraps(test)
-        def wrapped(*_, **__):
-            with mock.patch("magpie.utils.get_settings", side_effect=mocked), \
-                 mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
-                return test(*_, **__)
-        return wrapped
+        if not test:
+            @contextlib.contextmanager
+            def wrapped(*_, **__):
+                with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
+                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
+                    yield mock_settings
+        else:
+            # decorator variant
+            def wrapped(*_, **__):
+                with mock.patch("magpie.utils.get_settings", side_effect=mocked), \
+                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
+                    return test(*_, **__)
 
-    if callable(arg):
-        return mock_get_settings_decorator(arg)
-    return mock_get_settings_decorator
+        if not test:
+            return wrapped()
+        return functools.wraps(test)(wrapped)
+
+    # handle definition as context manager
+    if not test_func:
+        return mocked_get_settings_decorator(None)
+
+    # handle definition as decorator with or without parenthesis
+    if callable(test_func):
+        return mocked_get_settings_decorator(test_func)
+    return mocked_get_settings_decorator
 
 
 def mock_request(request_path_query="",     # type: Str
@@ -590,6 +608,102 @@ def mock_request(request_path_query="",     # type: Str
     return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
 
 
+def mocked_send_email(func):
+    """
+    Decorator that mocks :func:`magpie.api.notifications.send_email`.
+
+    When decorated, functions can run user registration operations without any email notifications being sent.
+    Email and SMTP related configuration can also be omitted as its configuration is completely skipped.
+
+    .. seealso::
+        :func:`mock_send_mail`
+    """
+
+    def no_email(*_, **__):
+        return True  # "success" email
+
+    @functools.wraps(func)
+    def wrapped(*_, **__):
+        # mock both direct reference if imported and places that use it to globally mock email notifications
+        with wrapped_call("magpie.api.management.register.register_utils.send_email", side_effect=no_email):
+            with wrapped_call("magpie.api.notifications.send_email", side_effect=no_email):
+                return func(*_, **__)
+
+    return wrapped
+
+
+@contextlib.contextmanager
+def mock_send_email():
+    """
+    Context that mocks :func:`magpie.api.notifications.send_email` steps and returns email contents and call parameters.
+
+    Usage:
+
+    .. code-block:: python
+
+        with mock_send_email() as email_mocks:
+            mocked_connect, mocked_contents, mocked_send = email_mocks
+            # run tests with mock contexts
+            # ex: mocked_contents.call_args == ...
+
+    .. seealso::
+        Decorator :func:`mocked_send_email` can be used instead if only a generic mock of the full
+        :func:`magpie.api.notifications.send_email` execution is needed.
+
+    Operations under the returned context will mock :func:`magpie.api.notifications.send_email` in such a way that
+    it will still be called as normal, but the actual expedition of the email will be skipped. Because of this, all
+    email and SMTP related configuration must be defined.
+
+    The context references returned can be used to test each part of the email process, once during connection to the
+    SMTP server, another for the email contents generation and finally, the simulated expedition of the generated email.
+    Using those, it is possible to retrieve all calls and arguments that were passed to individual steps.
+    """
+
+    # Employ the function that builds the SMTP connection to raise an error midway to skip sending the email.
+    # This way we test everything including configuration retrieval and body template generation, except sending.
+    from magpie.api.notifications import send_email as real_send_email
+
+    class TestFakeConnectError(NotImplementedError):
+        pass
+
+    def fake_connect(*_, **__):
+        raise TestFakeConnectError
+
+    def fake_email(*args, **kwargs):
+        try:
+            params = kwargs.pop("parameters", {})
+            # parameters are last arguments in signature
+            if "user" not in params and isinstance(args[-1], dict) and "user" in args[-1]:
+                params = args[-1]
+                args = args[:-1]
+            if "user" in params:
+                # Because 'user' is a database object that will be submitted at the end of the request transaction,
+                # the reference becomes detached (error). Replace by equivalent mock object to bypass and
+                # transparently call the corresponding methods after the session transaction was completed.
+                class MockUser(object):
+                    user_name = params["user"].user_name
+                    status = params["user"].status
+                    email = params["user"].email
+                    id = params["user"].id
+
+                params["user"] = MockUser()
+                kwargs["parameters"] = params
+            real_send_email(*args, **kwargs)  # should end up calling 'fake_connect' after template body generation
+        except TestFakeConnectError:  # only catch known mocked error to
+            return True  # silently catch, Magpie will believe email was sent correctly without error
+        except Exception as exc:
+            raise AssertionError("Expected 'TestFakeConnectError' from mocked 'send_email' during connection, "
+                                 "but other exception was raised: {!r}".format(exc))
+        raise AssertionError("Expected 'send_email' mock but it was not captured as intended.")
+
+    # Run the test - full user registration procedure!
+    with wrapped_call("magpie.api.notifications.get_smtp_server_connection", side_effect=fake_connect) as wrapped_conn:
+        with wrapped_call("magpie.api.notifications.make_email_contents") as wrapped_contents:
+            with wrapped_call("magpie.api.management.register.register_utils.send_email",
+                              side_effect=fake_email) as mocked_email:
+                yield wrapped_conn, wrapped_contents, mocked_email
+
+
 __WRAPPED_INSTANCES__ = {}
 
 
@@ -608,7 +722,7 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
         instance = MyObjectRef()
         mock = wrapped_call(MyObjectRef, "target_method", instance)
         # ...
-        # do operations that lead to 'MyObjectRef.target_method' call
+        # do operations that leads to 'MyObjectRef.target_method' call
         # ...
         assert mock.called
 
@@ -618,7 +732,7 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
 
         mock = wrapped_call("package.module.target_function")
         # ...
-        # do operations that lead to 'target.module.function' call
+        # do operations that leads to 'target.module.function' call
         # ...
         assert mock.called
 
@@ -2233,29 +2347,36 @@ class TestSetup(object):
             check_val_is_in(resp.status_code, 404)
 
     @staticmethod
-    def get_RegisteredUsersList(test_case, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType]) -> List[Str]
+    def get_RegisteredUsersList(test_case, override_headers=null, override_cookies=null, pending=False):
+        # type: (AnyMagpieTestCaseType, Optional[HeadersType], Optional[CookiesType], bool) -> List[Str]
         """
         Obtains the list of registered users.
 
         :raises AssertionError: if the response does not correspond to successful retrieval of user names.
         """
         app_or_url = get_app_or_url(test_case)
-        resp = test_request(app_or_url, "GET", "/users",
+        resp = test_request(app_or_url, "GET", "/register/users" if pending else "/users",
+                            expect_errors=pending,  # route does not exist if not enabled
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        if pending and resp.status_code == 404:  # user-registration was not enabled
+            return []
         json_body = check_response_basic_info(resp, 200, expected_method="GET")
-        return json_body["user_names"]
+        return json_body["registrations"] if pending else json_body["user_names"]
 
     @staticmethod
-    def check_NonExistingTestUser(test_case, override_user_name=null, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
+    def check_NonExistingTestUser(test_case,                # type: AnyMagpieTestCaseType
+                                  override_user_name=null,  # type: Optional[Str]
+                                  override_headers=null,    # type: Optional[HeadersType]
+                                  override_cookies=null,    # type: Optional[CookiesType]
+                                  pending=False,            # type: bool
+                                  ):                        # type: (...) -> None
         """
         Ensures that the test user does not exist.
 
         :raises AssertionError: if the test user exists.
         """
-        users = TestSetup.get_RegisteredUsersList(test_case,
+        users = TestSetup.get_RegisteredUsersList(test_case, pending=pending,
                                                   override_headers=override_headers, override_cookies=override_cookies)
         user_name = override_user_name if override_user_name is not null else test_case.test_user_name
         check_val_not_in(user_name, users)
@@ -2269,6 +2390,7 @@ class TestSetup(object):
                         override_group_name=null,   # type: Optional[Str]
                         override_headers=null,      # type: Optional[HeadersType]
                         override_cookies=null,      # type: Optional[CookiesType]
+                        pending=False,              # type: bool
                         ):                          # type: (...) -> JSON
         """
         Creates the test user.
@@ -2289,14 +2411,18 @@ class TestSetup(object):
         usr_name = (data or {}).get("user_name")
         if usr_name:
             test_case.extra_user_names.add(usr_name)  # indicate potential removal at a later point
-        resp = test_request(app_or_url, "POST", "/users", json=data,
+        resp = test_request(app_or_url, "POST", "/register/users" if pending else "/users", json=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
-    def delete_TestUser(test_case, override_user_name=null, override_headers=null, override_cookies=null):
-        # type: (AnyMagpieTestCaseType, Optional[Str], Optional[HeadersType], Optional[CookiesType]) -> None
+    def delete_TestUser(test_case,                  # type: AnyMagpieTestCaseType
+                        override_user_name=null,    # type: Optional[Str]
+                        override_headers=null,      # type: Optional[HeadersType]
+                        override_cookies=null,      # type: Optional[CookiesType]
+                        pending=False,              # type: bool
+                        ):                          # type: (...) -> None
         """
         Ensures that the test user does not exist.
 
@@ -2307,15 +2433,35 @@ class TestSetup(object):
         app_or_url = get_app_or_url(test_case)
         headers = override_headers if override_headers is not null else test_case.json_headers
         cookies = override_cookies if override_cookies is not null else test_case.cookies
-        users = TestSetup.get_RegisteredUsersList(test_case, override_headers=headers, override_cookies=cookies)
+        users = TestSetup.get_RegisteredUsersList(test_case, pending=pending,
+                                                  override_headers=headers, override_cookies=cookies)
         user_name = override_user_name if override_user_name is not null else test_case.test_user_name
         # delete as required, skip if non-existing
         if user_name in users:
-            path = "/users/{usr}".format(usr=user_name)
+            path = "{}/users/{}".format("/register" if pending else "", user_name)
             resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies)
             check_response_basic_info(resp, 200, expected_method="DELETE")
         TestSetup.check_NonExistingTestUser(test_case, override_user_name=user_name,
                                             override_headers=headers, override_cookies=cookies)
+
+    @staticmethod
+    def clear_PendingUsers(test_case,               # type: AnyMagpieTestCaseType
+                           override_headers=null,   # type: Optional[HeadersType]
+                           override_cookies=null,   # type: Optional[CookiesType]
+                           ):                       # type: (...) -> None
+        """
+        Removes all existing pending user registrations.
+        """
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        users = TestSetup.get_RegisteredUsersList(test_case, pending=True,
+                                                  override_headers=headers, override_cookies=cookies)
+        for user in users:
+            TestSetup.delete_TestUser(test_case, pending=True, override_user_name=user,
+                                      override_headers=headers, override_cookies=cookies)
+        users = TestSetup.get_RegisteredUsersList(test_case, pending=True,
+                                                  override_headers=headers, override_cookies=cookies)
+        check_val_equal(len(users), 0)
 
     @staticmethod
     def get_UserInfo(test_case,                 # type: AnyMagpieTestCaseType

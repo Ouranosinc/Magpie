@@ -64,6 +64,15 @@
                     Log Out
                 </button>
             %else:
+                %if MAGPIE_USER_REGISTRATION_ENABLED:
+                <button class="img-button theme" type="button"
+                        onclick="location.href='${request.route_url('register_user')}'">
+                    <img src="${request.static_url('magpie.ui.home:static/register-user.png')}" alt="">
+                    <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                    <meta name="source" content="https://www.flaticon.com/free-icon/login_2089700">
+                    Register
+                </button>
+                %endif
                 <button class="img-button theme" type="button"
                         onclick="location.href='${request.route_url('login')}'">
                     <img src="${request.static_url('magpie.ui.home:static/login.png')}" alt="">

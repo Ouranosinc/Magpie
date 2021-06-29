@@ -17,7 +17,7 @@
 <thead class="theme">
 <tr>
     <th>Group</th>
-    <th>Members count</th>
+    <th>Members</th>
     <th>Action</th>
 </tr>
 </thead>
@@ -32,12 +32,12 @@
     <td><input type="hidden" value=${group} name="group_name">${group}</td>
     <td>${group_names[group]["members"]}</td>
     <td style="white-space: nowrap">
-        <input type="submit" value="Edit" name="edit" class="button theme">
+        <input type="submit" value="Edit" name="edit" class="list-button button theme">
         <input value="Delete" name="delete"
             %if group in MAGPIE_FIXED_GROUP_EDITS:
-                class="button delete disabled" type="button" disabled
+                class="list-button button delete disabled" type="button" disabled
             %else:
-                class="button delete" type="submit"
+                class="list-button button delete" type="submit"
             %endif
         >
     </td>

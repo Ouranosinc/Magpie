@@ -7,7 +7,49 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Changed ``UserStatuses.WebhookErrorStatus = 0`` to ``UserStatuses.WebhookError = 2`` to provide further
+  functionalities. Migration script applies this change to existing ``User`` entries.
+* Changed the returned ``status`` value by the API routes to use the string name representation instead of the integer.
+* Changed ``status`` search query handling of ``GET /users`` path for improved search and filtering capabilities.
+* Add new ``UserStatuses.Pending = 4`` value that can be queried by administrators.
+* Add ``UserPending`` object with corresponding table for pending approval by an administrator for some new
+  self-registered user. Migration script creates the table with expected fields.
+* Add new requests under ``/register/users`` and ``/ui/register/users`` endpoints for user account self-registration.
+* Add UI view to display pending user registration details.
+* Add UI icon to indicate when a listed user is pending registration approval or email validation.
+* Disable user email self-update (when not administrator) both on the API and UI side
+  whenever ``MAGPIE_USER_REGISTRATION_ENABLED`` was activated to avoid losing the confirmation of the original email
+  (see feature `#436 <https://github.com/Ouranosinc/Magpie/issues/436>`_).
+* Add configuration setting ``MAGPIE_USER_REGISTRATION_ENABLED`` to control whether user account self-registration
+  feature should be employed.
+  With it comes multiple other ``MAGPIE_USER_REGISTRATION_<...>`` settings to customize notification emails.
+* Add multiple ``MAGPIE_SMTP_<...>`` configuration settings to control connections to notification email SMTP server.
+* Add ``empty_missing`` flag to ``get_constant`` utility to allow validation against existing environment variables or
+  settings that should be considered as invalid when resolved value is an empty string.
+* Add missing ``format`` for applicable ``url`` and ``email`` elements in the OpenAPI specification.
+* Add better logging options control in CLI operations.
+* Add new CLI helper ``send_email`` to test various email template generation and SMTP configurations to send emails.
+* Replace ``-d`` option of ``register_providers`` CLI operation (previously used to select database mode)
+  by ``--db`` to avoid conflict with logging flags.
+* Replace ``-d`` and ``-l`` options of ``batch_update_users`` CLI operation respectively by ``-D`` and ``-L``
+  to avoid conflict with logging flags.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* | Explicitly disallow duplicate email entries, both with pre-validation and literal database values.
+    Note that any duplicate email will be raised an migration script will fail. Manual cleanup of the undesired entry
+    will be required, as `Magpie` will not be able to assume which one corresponds to the valid user to preserve.
+  |
+  | **SECURITY**:
+  | Since email can be employed as another mean of login credential instead of the more typically used username,
+    this caused potential denial of authentication for some user accounts where email was matched against another
+    account with duplicate email.
+* Add ``ziggurat_foundations`` extensions for Pyramid directly in the code during application setup such that an INI
+  configuration file that omits them from ``pyramid.include`` won't cause `Magpie` to break.
+* Define the various constants expected by GitHub as WSO2 external identity connectors with defaults to avoid
+  unnecessary log warnings when calling CLI helper.
 
 `3.12.0 <https://github.com/Ouranosinc/Magpie/tree/3.12.0>`_ (2021-05-11)
 ------------------------------------------------------------------------------------
