@@ -57,9 +57,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI CodeCov Coverage
     :target: https://codecov.io/gh/Ouranosinc/Magpie
 
-.. |codacy| image:: https://api.codacy.com/project/badge/Grade/1920f28c7e2140a083f527a803c58ae7
+.. |codacy| image:: https://app.codacy.com/project/badge/Grade/0dd500de5e3c4bdf84093eaa64cf9a81
     :alt: Codacy Badge
-    :target: https://www.codacy.com/app/fmigneault/Magpie?utm_source=github.com&utm_medium=referral&utm_content=Ouranosinc/Magpie&utm_campaign=Badge_Grade
+    :target: https://app.codacy.com/gh/Ouranosinc/Magpie/dashboard
 
 .. |docker_build_mode| image:: https://img.shields.io/docker/automated/pavics/magpie.svg?label=build
     :alt: Docker Build Status (latest tag)
