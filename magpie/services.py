@@ -426,7 +426,9 @@ class ServiceOWS(ServiceInterface):
             req = str(self.parser.params["request"]).lower()
             perm = Permission.get(req)
             if perm is None:
-                raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
+                raise NotImplementedError(
+                    "Missing or unknown 'Permission' from OWS 'request' parameter: {!s}".format(req)
+                )
             return perm
         except KeyError as exc:
             raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(exc, type(self)))
