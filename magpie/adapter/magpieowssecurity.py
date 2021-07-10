@@ -5,9 +5,10 @@ import requests
 from beaker.cache import cache_region, cache_regions
 from pyramid.authentication import IAuthenticationPolicy
 from pyramid.authorization import IAuthorizationPolicy
-from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound, HTTPOk, HTTPUnauthorized
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPOk, HTTPUnauthorized
 from pyramid.settings import asbool
 from requests.cookies import RequestsCookieJar
+from simplejson import JSONDecodeError
 from six.moves.urllib.parse import urlparse
 
 from magpie.api.exception import evaluate_call, verify_param
@@ -22,7 +23,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_authenticate_headers, get_logger
 #   Twitcher available only when this module is imported from it.
 #   It is installed during tests for evaluation.
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
-from twitcher.owsexceptions import OWSAccessForbidden  # noqa
+from twitcher.owsexceptions import OWSAccessForbidden, OWSInvalidParameterValue, OWSMissingParameterValue  # noqa
 from twitcher.owssecurity import OWSSecurityInterface  # noqa
 from twitcher.utils import parse_service_name  # noqa
 
@@ -115,18 +116,43 @@ class MagpieOWSSecurity(OWSSecurityInterface):
 
         In the case `Twitcher` proxy path is matched, the :term:`Logged User` **MUST** be allowed access following
         :term:`Effective Permissions` resolution via :term:`ACL`. Otherwise, :exception:`OWSForbidden` is raised.
-        Failing to parse the request or any underlying component also raises that exception.
+
+        Failing to parse the request or any underlying component that raises an exception will be left up to the
+        parent caller to handle the exception. In most typical use case, this means `Twitcher` will raise a
+        generic :exception:`OWSException` with ``NoApplicableCode``, unless the exception was .
 
         :raises OWSForbidden: if user does not have access to the targeted resource under the service.
         :returns: nothing if user has access.
         """
         if request.path.startswith(self.twitcher_protected_path):
+            # each service implementation defines their ACL and permission resolution using request definition
             service_impl = self.get_service(request)
-            # should contain all the acl, this the only thing important
-            # parse request (GET/POST) to get the permission requested for that service
-            permission_requested = service_impl.permission_requested()
-            # convert permission enum to str for comparison
-            permission_requested = Permission.get(permission_requested).value if permission_requested else None
+
+            perm_exc = None
+            try:
+                # parse request (GET/POST) to get the permission requested for that service
+                permission_requested = service_impl.permission_requested()
+                # convert permission enum to str for comparison
+                permission_requested = Permission.get(permission_requested).value if permission_requested else None
+            except HTTPBadRequest as exc:
+                perm_exc = exc
+                # if special case of HTTPBadRequest was raised, attempt providing a better description of the error
+                # otherwise, Twitcher will capture other exceptions and re-raise them as generic OWSException
+                try:
+                    data = getattr(exc, "json", {})
+                except JSONDecodeError:
+                    data = {}
+                detail = data.pop("detail", None) or str(exc)
+                ows_err = OWSMissingParameterValue if data.get("value", None) is None else OWSInvalidParameterValue
+                locator = data.get("param", {}).get("name", None)
+                raise ows_err(detail, value=locator)
+            except Exception as exc:
+                perm_exc = exc
+                raise  # re-raise and let Twitcher handle it, only do this to obtain 'exc' for logging
+            finally:
+                if perm_exc is not None:
+                    LOGGER.debug("Error during service [%s] permission requested resolution [%s](%s)",
+                                 service_impl.service.resource_name, type(perm_exc).__name__, perm_exc)
 
             if permission_requested:
                 LOGGER.info("'%s' request '%s' permission on '%s'", request.user, permission_requested, request.path)

@@ -89,6 +89,11 @@ class ServiceInterface(object):
         If ``None`` is returned, the :term:`ACL` will effectively be resolved to denied access.
         Otherwise, one or more returned :class:`Permission` will indicate which permissions should be looked for to
         resolve the :term:`ACL` of the authenticated user and its groups.
+
+        If the request cannot be parsed for any reason to retrieve needed parameters (e.g.: Bad Request),
+        the :exception:`HTTPBadRequest` can be raised to indicate specifically the cause, which will
+        help :class:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity` create a better response with
+        the relevant error details.
         """
         raise NotImplementedError("missing implementation of request permission converter")
 
@@ -412,9 +417,20 @@ class ServiceOWS(ServiceInterface):
 
     def __init__(self, service, request):
         # type: (models.Service, Request) -> None
-        super(ServiceOWS, self).__init__(service, request)
+        super(ServiceOWS, self).__init__(service, request)  # sets request, which in turn parses it with below setter
+
+    def _get_request(self):
+        # type: () -> Request
+        return self._request
+
+    def _set_request(self, request):
+        # type: (Request) -> None
+        self._request = request
+        # must reset the parser from scratch if request changes to ensure everything is updated with new inputs
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)  # run parsing to obtain guaranteed lowered-name parameters
+
+    request = property(_get_request, _set_request)
 
     @abc.abstractmethod
     def resource_requested(self):
@@ -423,12 +439,16 @@ class ServiceOWS(ServiceInterface):
     def permission_requested(self):
         # type: () -> Permission
         try:
-            req = str(self.parser.params["request"]).lower()
-            perm = Permission.get(req)
-            if perm is None:
-                raise NotImplementedError(
-                    "Missing or unknown 'Permission' from OWS 'request' parameter: {!s}".format(req)
+            req = self.parser.params["request"]
+            perm = Permission.get(str(req).lower())
+            ax.verify_param(
+                perm, not_none=True, param_name="request", http_error=HTTPBadRequest,
+                content={"service": self.service.resource_name, "type": self.service_type, "value": req},
+                msg_on_fail=(
+                    "Missing or unknown 'Permission' inferred from OWS 'request' parameter: [{!s}]. ".format(req) +
+                    "Unable to resolve the requested access for service: [{!s}].".format(self.service.resource_name)
                 )
+            )
             return perm
         except KeyError as exc:
             raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(exc, type(self)))
