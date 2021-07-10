@@ -417,6 +417,8 @@ class ServiceOWS(ServiceInterface):
 
     def __init__(self, service, request):
         # type: (models.Service, Request) -> None
+        self._request = None
+        self.parser = None
         super(ServiceOWS, self).__init__(service, request)  # sets request, which in turn parses it with below setter
 
     def _get_request(self):
