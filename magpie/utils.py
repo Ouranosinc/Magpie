@@ -32,7 +32,7 @@ from magpie.constants import get_constant
 if sys.version_info >= (3, 6):
     from enum import Enum
 else:
-    from aenum import Enum
+    from aenum import Enum  # noqa
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -228,7 +228,7 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name="app:mag
     return settings
 
 
-def setup_cache_settings(settings, force=False, enabled=False, expire=10):
+def setup_cache_settings(settings, force=False, enabled=False, expire=0):
     # type: (SettingsType, bool, bool, int) -> None
     """
     Setup caching settings if not defined in configuration and enforce values if requested.
@@ -241,17 +241,28 @@ def setup_cache_settings(settings, force=False, enabled=False, expire=10):
     :param enabled: enable caching when enforced settings is requested.
     :param expire: cache expiration delay if setting values are enforced and enabled.
     """
-    regions = ["acl", "service"]
-    settings["cache.regions"] = ", ".join(regions)
-    settings["cache.type"] = "memory"
     if force:
-        for region in regions:
-            settings["cache.{}.enabled".format(region)] = str(enabled).lower()
-            region_expire = "cache.{}.expire".format(region)
-            if enabled:
-                settings[region_expire] = str(expire)
-            else:
-                settings.pop(region_expire, None)
+        LOGGER.warning("Enforcing cache settings (enabled=%s, expire=%s)", enabled, expire)
+
+    def _set(key, value):
+        if force:
+            settings[key] = value
+        elif key not in settings:
+            LOGGER.warning("Setting missing cache setting (%s=%s)", key, value)
+            settings.setdefault(key, value)
+
+    regions = ["acl", "service"]
+    _set("cache.regions", ", ".join(regions))
+    _set("cache.type", "memory")
+    for region in regions:
+        cache_region = "cache.{}.enabled".format(region)
+        cache_expire = "cache.{}.expire".format(region)
+        cache_enable = str(enabled).lower()
+        _set(cache_region, cache_enable)
+        if asbool(settings[cache_region]):
+            _set(cache_expire, str(expire))
+        else:
+            settings.pop(cache_expire, None)
 
 
 def setup_ziggurat_config(config):

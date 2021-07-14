@@ -16,7 +16,14 @@ from magpie.api.exception import raise_http, valid_http
 from magpie.api.schemas import SigninAPI
 from magpie.db import get_engine, get_session_factory, get_tm_session
 from magpie.security import get_auth_config
-from magpie.utils import CONTENT_TYPE_JSON, SingletonMeta, get_logger, get_magpie_url, get_settings
+from magpie.utils import (
+    CONTENT_TYPE_JSON,
+    SingletonMeta,
+    get_logger,
+    get_magpie_url,
+    get_settings,
+    setup_cache_settings
+)
 
 # WARNING:
 #   Twitcher available only when this module is imported from it.
@@ -171,7 +178,8 @@ class MagpieAdapter(AdapterInterface):
     def configurator_factory(self, container):  # noqa: N805, R0201
         # type: (AnySettingsContainer) -> Configurator
         settings = get_settings(container)
-        set_cache_regions_from_settings(settings)
+        setup_cache_settings(settings)  # default 'cache=off' if missing since 'pyramid_beaker' enables it otherwise
+        set_cache_regions_from_settings(settings)  # parse/convert cache settings into regions understood by beaker
 
         # disable rpcinterface which is conflicting with postgres db
         settings["twitcher.rpcinterface"] = False

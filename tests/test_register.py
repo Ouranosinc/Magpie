@@ -28,7 +28,7 @@ from magpie.utils import CONTENT_TYPE_JSON
 from tests import interfaces, runner, utils
 
 if six.PY2:
-    from backports import tempfile as tempfile2  # noqa  # Python 2
+    from backports import tempfile as tempfile2  # noqa  # pylint: disable=E0611,no-name-in-module  # Python 2
 else:
     tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 

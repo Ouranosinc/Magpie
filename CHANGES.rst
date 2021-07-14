@@ -7,7 +7,32 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Improve error reporting of ``MagpieAdapter`` when validating the *requested* ``Permission``. If the `Service`
+  implementation raises an ``HTTP Bad Request [400]`` due to insufficient, invalid or missing parameters from
+  the request to properly resolve the corresponding `Magpie` ``Permission``, more details about the cause will
+  be reported in the `Twitcher` response body. Also, code ``400`` is returned instead of ``500``
+  (relates to `#433 <https://github.com/Ouranosinc/Magpie/issues/433>`_).
+* Improve caches invalidation of computed `ACL` permissions following corresponding `Service` cache invalidation.
+* Enforce disabled caching of ``service`` and ``acl`` regions if corresponding settings where not provided
+  in INI configuration files of both `Magpie` and `Twitcher` (via ``MagpieAdapter``).
+* Add more tests that validate invalidation and resolution behaviours of caching.
+* Add test that validates performance speedup caching provides when enabled.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* | Fix an issue in ``MagpieAdapter`` when `Service` caching is enabled (in `Twitcher` INI configuration) that caused
+    implementations derived from ``ServiceOWS`` (WPS, WMS, WFS) to incorrectly retrieve and parse the cached request
+    parameters instead of the new ones from the incoming request.
+  |
+  | **SECURITY**:
+  | Because ``ServiceOWS`` implementations employ request parameter ``request`` (in query or body based on HTTP method)
+    to infer their corresponding `Magpie` ``Permission`` (e.g.: ``GetCapabilities``, ``GetMap``, etc.), this produced
+    potential inconsistencies between the *requested* ``Permission`` that `Twitcher` was evaluating with `Magpie`, and
+    the *actual request* sent to the `Service` behind the proxy. Depending on the request order and cache expiration
+    times, this could lead to permissions incorrectly resolved for some requests, granting or rejecting wrong user
+    access to resources.
 
 `3.13.0 <https://github.com/Ouranosinc/Magpie/tree/3.13.0>`_ (2021-06-29)
 ------------------------------------------------------------------------------------

@@ -18,6 +18,7 @@ import pytest
 import requests
 import requests.exceptions
 import six
+from beaker.cache import cache_managers, cache_regions
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPException
 from pyramid.response import Response
@@ -260,21 +261,90 @@ def config_setup_from_ini(config_ini_file_path):
     return config
 
 
-def get_test_magpie_app(settings=None, setup_cache=True):
-    # type: (Optional[SettingsType], bool) -> TestApp
+def get_test_magpie_app(settings=None):
+    # type: (Optional[SettingsType]) -> TestApp
     """
     Instantiate a Magpie local test application.
     """
     # parse settings from ini file to pass them to the application
     config = config_setup_from_ini(get_constant("MAGPIE_INI_FILE_PATH"))
     config.registry.settings["magpie.url"] = "http://localhost:80"
-    if settings:
-        config.registry.settings.update(settings)
-    if setup_cache:
-        setup_cache_settings(config.registry.settings, force=True)
+    config.registry.settings.update(settings or {})
+
+    # reset caches so they get parsed and configured by the app settings as if loaded normally
+    setup_cache_settings(config.registry.settings, force=True, enabled=False)
+    config.registry.settings.update(settings or {})
+
     # create the test application
     magpie_app = TestApp(app.main({}, **config.registry.settings))
+    patch_cache_handles()  # must call after app creation to retrieve updated 'cache_regions' and 'cache_managers'
     return magpie_app
+
+
+# shared handles to monkey-patch caches over test cases
+TEST_CACHE_HANDLES = {}
+TEST_CACHE_REGIONS_FUNCTIONS = {
+    "acl": ["_get_acl_cached"],
+    "service": ["_get_service_cached", "_fetch_by_name_cached"]
+}
+
+
+def patch_cache_handles():
+    """
+    Monkey-patch :mod:`beaker` caches employed with different settings over multiple test cases.
+
+    .. warning::
+        This is a massive hack around limitations due to how :mod:`beaker` is coded.
+        Does not apply during "real" application execution because cache-region settings should not change dynamically.
+
+    .. seealso::
+        https://github.com/bbangert/beaker/issues/215
+
+    Regardless of "current" enabled/disabled cache options globally or per region, reset all caches that could have
+    been set by previous tests to ensure the next test starts from fresh settings and cache instances.
+
+    Beaker doesn't check each time 'enabled' parameter in case settings from :py:data:`beaker.cache.cache_regions`
+    changed once :class:`beaker.cache.Cache` objects are already created, which is the case during tests execution with
+    different cache settings combinations for distinct test cases, as they all run under the same application process.
+
+    Following each :class:`TestApp` creation, containers :py:data:`beaker.cache.cache_regions` (settings) and
+    :py:data:`beaker.cache.cache_managers` (handles to cache instances) are updated. The 'managers' refer to every
+    combination of function decorated with :func:`beaker.cache.cache_region` concatenated with "current" settings
+    for that region. This means that each region settings combination generates a new cache in ``cache_managers``.
+
+    On the other hand, an internal list (see ``cache[0]``) within :func:`beaker.cache._cache_decorate` preserves an
+    handle to the **first enabled** cache, whichever happened first. Disabled caches are skipped entirely, and any
+    following enabled cache doesn't update the decorator's local list reference. Clearing ``Cache`` instances from
+    dictionary ``cache_managers`` leaves ``cache[0]`` intact, but we lose any access to it. Wiping the cache completely
+    (i.e:. ``cache_managers[<key>].clear()``) causes a ``KeyError`` when accessing ``cache[0]``.
+
+    The only method is therefore to *detect* when the first enabled cache is instantiated, store our own handle to it,
+    and dynamically update its settings for any future test.
+    """
+    for manager in list(cache_managers):
+        cache = cache_managers[manager]
+        # don't consider disabled caches as they won't be stored in ``cache[0]`` of the decorator
+        if cache.nsargs.get("enabled"):
+            TEST_CACHE_HANDLES.setdefault(manager, cache)  # store first enabled cache handle for decorated functions
+    for region_name, region in cache_regions.items():
+        region_func = TEST_CACHE_REGIONS_FUNCTIONS[region_name]
+        for manager in list(TEST_CACHE_HANDLES):
+            # match the decorated function against the cache handle 'key'
+            # not an 'hard' match, there are more items stored in the manager/function name
+            if not any(func_name in manager for func_name in region_func):
+                continue
+            # retrieve the handle and patch it with updated region settings following application config parsing
+            # for the moment, the only important parameter to update is the expire time
+            cache = TEST_CACHE_HANDLES[manager]
+            if region.get("enabled"):
+                cache.expiretime = region.get("expire")
+            else:
+                # This is where the magic happens when switching from previous 'enabled=true' to 'enabled=false'.
+                # Since pre-existing caches ignore 'enabled' setting and cannot be removed from internal list,
+                # force reset every time it check for expired value, which in turn will call the decorated function.
+                cache.expiretime = 0
+            cache.nsargs = region   # apply new settings onto cache (mostly for convenience when debugging?)
+            cache.namespace.dictionary.clear()  # wipe any still-active cached call/return values
 
 
 def get_app_or_url(test_item):
@@ -538,13 +608,15 @@ def mocked_get_settings(test_func=None, settings=None):
             @contextlib.contextmanager
             def wrapped(*_, **__):
                 with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
-                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
+                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked), \
+                     mock.patch("magpie.adapter.magpieservice.get_settings", side_effect=mocked):
                     yield mock_settings
         else:
             # decorator variant
             def wrapped(*_, **__):
                 with mock.patch("magpie.utils.get_settings", side_effect=mocked), \
-                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
+                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked), \
+                     mock.patch("magpie.adapter.magpieservice.get_settings", side_effect=mocked):
                     return test(*_, **__)
 
         if not test:
