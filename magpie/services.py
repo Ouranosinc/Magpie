@@ -3,9 +3,10 @@ import re
 from typing import TYPE_CHECKING
 
 import six
-from beaker.cache import cache_region, cache_regions, region_invalidate
+from beaker.cache import Cache, cache_region, cache_regions, region_invalidate
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotImplemented
 from pyramid.security import ALL_PERMISSIONS, DENY_ALL
+from ziggurat_foundations.models.base import get_db_session
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -75,6 +76,7 @@ class ServiceInterface(object):
         # type: (models.Service, Request) -> None
         self.service = service          # type: models.Service
         self.request = request          # type: Request
+        self._flag_acl_cached = {}      # type: Dict[Tuple[Str, Str, Str, Optional[int]], bool]
 
     @abc.abstractmethod
     def permission_requested(self):
@@ -167,12 +169,16 @@ class ServiceInterface(object):
             cache_regions["acl"] = {"enabled": False}
         user_id = None if self.request.user is None else self.request.user.id
         cache_keys = (self.service.resource_name, self.request.method, self.request.path_qs, user_id)
+        self._flag_acl_cached[cache_keys] = True
         if self.request.headers.get("Cache-Control") == "no-cache":
             region_invalidate(self._get_acl_cached, "acl", *cache_keys)
-        return self._get_acl_cached(*cache_keys)
+        acl = self._get_acl_cached(*cache_keys)
+        if self._flag_acl_cached[cache_keys]:
+            LOGGER.warning("Using cached ACL")
+        return acl
 
     @cache_region("acl")
-    def _get_acl_cached(self, service_name, request_method, request_path, user_id):  # noqa: F811
+    def _get_acl_cached(self, service_name, request_method, request_path, user_id):
         # type: (Str, Str, Str, Optional[int]) -> AccessControlListType
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
@@ -190,6 +196,7 @@ class ServiceInterface(object):
             - :meth:`ServiceInterface.resource_requested`
             - :meth:`ServiceInterface.user_requested`
         """
+        self._flag_acl_cached[(service_name, request_method, request_path, user_id)] = False
         permissions = self.permission_requested()
         if permissions is None:
             return [DENY_ALL]
@@ -304,6 +311,18 @@ class ServiceInterface(object):
         full_break = False
         # current and parent resource(s) recursive-scope
         while resource is not None and not full_break:  # bottom-up until service is reached
+
+            # reconnect resource reference to active database session if it is detached
+            #   This can happen during mismatching sources of cached objects for service/ACL combinations,
+            #   where service-resource data is available from cache but not associated with the session state.
+            #   Since this operation is being computed, ACL is not yet cached (or was reset before service cache was).
+            #   The service must be refreshed regardless of cache to resolve it with other object references.
+            if get_db_session(session=None, obj=resource) is None:
+                LOGGER.debug("Reconnect cached resource (id=%s, name=%s, type=%s) with active session state.",
+                             resource.resource_id, resource.resource_name, resource.resource_type)
+                resource = ResourceService.by_resource_id(resource.resource_id, db_session=db_session)
+                if resource is None:
+                    break
 
             # include both permissions set in database as well as defined directly on resource
             cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=db_session)

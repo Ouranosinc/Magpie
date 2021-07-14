@@ -53,8 +53,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
 
-        If the cache is not hit (expired timeout or new key entry), calls :meth:`get_service` to retrieve the actual
-        :class:`ServiceInterface` implementation. Otherwise, returns the cached service to avoid SQL queries.
+        If the cache is not hit (expired timeout or new key entry), calls :func:`service_factory` to retrieve the
+        actual :class:`ServiceInterface` implementation. Otherwise, returns the cached service to avoid SQL queries.
 
         .. note::
             Function arguments are required to generate caching keys by which cached elements will be retrieved.
