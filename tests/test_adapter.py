@@ -1,4 +1,5 @@
 import random
+import time
 import unittest
 from typing import TYPE_CHECKING
 
@@ -316,6 +317,7 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
         utils.check_val_equal(wrapped_cached.call_count, 1, msg="Real call expected only on first run before caching")
         utils.check_val_equal(wrapped_service.call_count, 3, msg="Service call expected for each request")
 
+    @runner.MAGPIE_TEST_PERFORMANCE
     @utils.mocked_get_settings
     def test_retrieve_cached_acl(self):
         """
@@ -331,6 +333,11 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
         When :term:`ACL` caching is applied properly, the complete computation of the access result should only be
         accomplished on the first call of each combination, and all following ones (within the caching timeout) will
         resolve from the cache.
+
+        Validates also correct invalidation of :term:`ACL` caches when corresponding :term:`Service` caches get reset
+        using the ``Cache-Control: no-cache`` header.
+
+        Finally, validate performance such that requests with caching provide an increased response time.
         """
         # create some test resources under the service with permission for the user
         # service not allowed access, resource allowed
@@ -401,7 +408,17 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
             # all caches should remain active for the whole duration and not conflict with each other
             run_check(cache_requests, True)
 
+        # run cached requests tests
+        t_start = time.perf_counter()
         mock_service_cached, mock_service, mock_acl_cached, mock_acl = self.run_with_caching_mocks(service, test_ops)
+        t_exec = time.perf_counter() - t_start
+
+        # validate performance
+        #   average execution times for 'number_duplicate_call_cached = 20' and 8 requests in 'test_requests'
+        #   caching:  ~[0.15s, 0.30s]
+        #   no cache: ~[1.20s, 1.50s]
+        t_avg_min = 1.0  # to be safe, use >2x caching max times, that is still well below no-cache min times
+        utils.check_val_true(t_exec < t_avg_min, msg="Average execution time should be much lower with caching active")
 
         # there should be as many service resolution as there are requests, but only first ones without cache fetches it
         # for ACL resolution, there should also be as many as there are requests, but actual computation will be limited
@@ -409,7 +426,18 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
         total_cached = len(cache_requests)
         total_no_cache = len(test_requests)
         total_calls = total_cached + total_no_cache
-        total_acl_cached = len(unique_calls)
+        # Because each request in 'test_requests' that targets the same 'service' with 'no-cache' header resets it,
+        # and because each 'service' cache reset also invalidates *all* ACL caches that refer to that 'service', the
+        # number of real ACL resolution is repeated until caching of the last request in 'test_requests' is reached.
+        # (ie: 1st request of 'test_requests' resets ACL cache due to 'no-cache', then computes ACL, and finally stores
+        #      the result it in cache. Following requests to same (user/resource/permission) and without 'no-cache'
+        #      header would *normally* use those cached ACL directly instead of re-computing them, but 2nd request
+        #      in 'test_requests' pointing to different ACL combination re-flushes the 1st ACL cache since 'no-cache'
+        #      header applies to the whole 'service' and its children ACL caches. This goes on until the last 'no-cache'
+        #      request that pre-flushes cache, computes ACL, but then stores them for future requests. Being the last
+        #      request resolved, those final cached ACL remains valid, while N-1 requests before must recalculate
+        #      invalidated ACL once against on the first pass of non-'no-cache' header requests.)
+        total_acl_cached = len(unique_calls) * 2 - 1
         utils.check_val_equal(mock_service_cached.call_count, total_calls,
                               msg="Cached service call expected for each request")
         utils.check_val_equal(mock_acl_cached.call_count, total_calls,
