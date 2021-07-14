@@ -18,7 +18,7 @@ import pytest
 import requests
 import requests.exceptions
 import six
-from beaker.cache import Cache, cache_managers, cache_regions
+from beaker.cache import cache_managers, cache_regions
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPException
 from pyramid.response import Response
@@ -608,13 +608,15 @@ def mocked_get_settings(test_func=None, settings=None):
             @contextlib.contextmanager
             def wrapped(*_, **__):
                 with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
-                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
+                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked), \
+                     mock.patch("magpie.adapter.magpieservice.get_settings", side_effect=mocked):
                     yield mock_settings
         else:
             # decorator variant
             def wrapped(*_, **__):
                 with mock.patch("magpie.utils.get_settings", side_effect=mocked), \
-                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked):
+                     mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked), \
+                     mock.patch("magpie.adapter.magpieservice.get_settings", side_effect=mocked):
                     return test(*_, **__)
 
         if not test:

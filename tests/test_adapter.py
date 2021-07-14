@@ -2,6 +2,7 @@ import random
 import unittest
 from typing import TYPE_CHECKING
 
+import mock
 import pytest
 import six
 from pyramid.httpexceptions import HTTPNotFound
@@ -391,6 +392,7 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
         # prepare wrapped mock references to its '__acl__' and '_get_acl' methods
         tmp_req = test_requests[0][1]
         service = self.ows.get_service(tmp_req)
+        invalidate_service(self.test_service_name)
 
         def test_ops():
             # run all requests with caching disabled to initialize their expire duration
@@ -507,6 +509,92 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
                               msg="Real service call expected only for first call since it is always the same service")
         utils.check_val_equal(mock_acl.call_count, total_acl_cached,
                               msg="Real ACL expected only once per unique permission combination")
+
+    @utils.mocked_get_settings
+    def test_cached_service_invalidated_acl(self):
+        """
+        Validate that any operation triggering cached service's invalidation also invalidates corresponding ACL caches.
+        """
+
+        svc1_name = self.test_service_name + "_invalidate_1"
+        svc2_name = self.test_service_name + "_invalidate_2"
+        svc1_path = "/ows/proxy/{}".format(svc1_name)
+        svc2_path = "/ows/proxy/{}".format(svc2_name)
+        info = utils.TestSetup.create_TestService(self, override_service_name=svc1_name)
+        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission="read")
+        info = utils.TestSetup.create_TestService(self, override_service_name=svc2_name)
+        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info, override_permission="read")
+
+        admin_cookies = self.cookies.copy()
+        self.login_test_user()
+        user_cookies = self.test_cookies.copy()
+        user_headers = self.test_headers.copy()
+        utils.check_or_try_logout_user(self)
+        self.test_headers = None
+        self.test_cookies = None
+
+        tmp_req = self.mock_request(svc1_path, method="GET", headers=self.cache_reset_headers.copy())
+        svc1_ref = self.ows.get_service(tmp_req)
+        tmp_req = self.mock_request(svc2_path, method="GET", headers=self.cache_reset_headers.copy())
+        svc2_ref = self.ows.get_service(tmp_req)
+        invalidate_service(svc1_name)
+        invalidate_service(svc2_name)
+
+        def run_svc_req(_svc_path):
+            _msg = "User is expected to have access to service"
+            _req = self.mock_request(_svc_path, method="GET", headers=user_headers, cookies=user_cookies)
+            utils.check_no_raise(lambda: self.ows.check_request(_req), msg=_msg)
+            utils.check_no_raise(lambda: self.ows.check_request(_req), msg=_msg)
+
+        # run first set of requests to trigger caching of both Service and ACL, for both services
+        for svc_path, svc_ref in [(svc1_path, svc1_ref), (svc2_path, svc2_ref)]:
+            mocks = self.run_with_caching_mocks(svc_ref, lambda: run_svc_req(svc_path))
+            mock_svc_cached, mock_svc_real, mock_acl_cached, mock_acl_real = mocks
+            utils.check_val_equal(mock_svc_cached.call_count, 2,
+                                  msg="Cached service call expected for each request (preparation)")
+            utils.check_val_equal(mock_acl_cached.call_count, 2,
+                                  msg="Cached ACL resolution expected for each request (preparation)")
+            utils.check_val_equal(mock_svc_real.call_count, 1,
+                                  msg="Real service call expected only for first request before caching (preparation)")
+            utils.check_val_equal(mock_acl_real.call_count, 1,
+                                  msg="Real ACL call expected only for first request before caching (preparation)")
+
+        # trigger service cache invalidation
+        # NOTE:
+        #  It is important that the operation done by the method only explicitly interacts with the Service cache and
+        #  not the ACL cache. Only service cache invalidation should also cascade invalidation of corresponding ACL
+        #  caches for that service.
+
+        # path not important, only need a 'request' object with 'no-cache' set
+        req_no_cache = self.mock_request("", method="GET", headers=self.cache_reset_headers.copy())
+        req_no_cache.registry["dbsession_factory"] = lambda *_, **__: self.session
+        with mock.patch("magpie.adapter.magpieservice.get_admin_cookies", lambda *_, **__: admin_cookies):
+            store = self.adapter.servicestore_factory(req_no_cache)
+        store.fetch_by_name(svc1_name)  # this triggers invalidate service cache because of request no-cache header
+
+        # re-run service/ACL requests, now cache should have been invalidated for service 1, but not for service 2
+        # because service 1 caches and its corresponding ACL caches were reset, same counts as last run
+        # for service 2 though, real call count should be 0 because they are still in valid caches
+        mocks1 = self.run_with_caching_mocks(svc1_ref, lambda: run_svc_req(svc1_path))
+        mocks2 = self.run_with_caching_mocks(svc2_ref, lambda: run_svc_req(svc2_path))
+        mock_svc1_cached, mock_svc1_real, mock_acl1_cached, mock_acl1_real = mocks1
+        mock_svc2_cached, mock_svc2_real, mock_acl2_cached, mock_acl2_real = mocks2
+        utils.check_val_equal(mock_svc1_cached.call_count, 2,
+                              msg="Cached service call expected for each request")
+        utils.check_val_equal(mock_acl1_cached.call_count, 2,
+                              msg="Cached ACL resolution expected for each request")
+        utils.check_val_equal(mock_svc1_real.call_count, 1,
+                              msg="Real service call expected only for first request before caching (after reset)")
+        utils.check_val_equal(mock_acl1_real.call_count, 1,
+                              msg="Real ACL call expected only for first request before caching (after reset)")
+        utils.check_val_equal(mock_svc2_cached.call_count, 2,
+                              msg="Cached service call expected for each request")
+        utils.check_val_equal(mock_acl2_cached.call_count, 2,
+                              msg="Cached ACL resolution expected for each request")
+        utils.check_val_equal(mock_svc2_real.call_count, 0,
+                              msg="Real service call not expected since caches should remain valid (after reset)")
+        utils.check_val_equal(mock_acl2_real.call_count, 0,
+                              msg="Real ACL call not expected since caches should remain valid (after reset)")
 
 
 class TestAdapterCachingPartialRegions(TestAdapterCaching):
