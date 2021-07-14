@@ -14,6 +14,11 @@ Features / Changes
   the request to properly resolve the corresponding `Magpie` ``Permission``, more details about the cause will
   be reported in the `Twitcher` response body. Also, code ``400`` is returned instead of ``500``
   (relates to `#433 <https://github.com/Ouranosinc/Magpie/issues/433>`_).
+* Improve caches invalidation of computed `ACL` permissions following corresponding `Service` cache invalidation.
+* Enforce disabled caching of ``service`` and ``acl`` regions if corresponding settings where not provided
+  in INI configuration files of both `Magpie` and `Twitcher` (via ``MagpieAdapter``).
+* Add more tests that validate invalidation and resolution behaviours of caching.
+* Add test that validates performance speedup caching provides when enabled.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

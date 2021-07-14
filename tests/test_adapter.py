@@ -20,6 +20,7 @@ if six.PY3:
 
 if TYPE_CHECKING:
     from typing import Callable, Tuple
+
     from mock import MagicMock
 
 
