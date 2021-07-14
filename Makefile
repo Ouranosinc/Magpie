@@ -218,7 +218,7 @@ clean-test: clean-report	## remove test and coverage artifacts
 	@-rm -f "$(APP_ROOT)/package-lock.json"
 
 .PHONY: clean-docker
-clean-docker: docker-clean	## alias for 'docker-clean' target
+clean-docker: docker-clean	## remove docker images (alias for 'docker-clean' target)
 
 ## --- Database targets --- ##
 
@@ -459,13 +459,15 @@ CHECKS := $(addprefix check-, $(CHECKS))
 $(CHECKS): check-%: install-dev check-%-only
 
 .PHONY: check
-check: check-all  ## alias for 'check-all' target
+check: install-dev $(CHECKS)  ## run code checks (alias to 'check-all' target)
 
+# undocumented to avoid duplicating aliases in help listing
 .PHONY: check-only
-check-only: $(addsuffix -only, $(CHECKS))
+check-only: check-all-only
 
-.PHONY: check-all
-check-all: install-dev $(CHECKS)  ## run all code checks
+.PHONY: check-all-only
+check-all-only: $(addsuffix -only, $(CHECKS))  ## run all code checks
+	@echo "All checks passed!"
 
 .PHONY: check-pep8-only
 check-pep8-only: mkdir-reports		## run PEP8 code style checks
@@ -527,7 +529,7 @@ check-docf-only: mkdir-reports	## run PEP8 code documentation format checks
 		1>&2 2> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
 .PHONY: check-links-only
-check-links-only: mkdir-reports		## check all external links in documentation for integrity
+check-links-only: mkdir-reports		## run check of external links in documentation for integrity
 	@echo "Running link checks on docs..."
 	@bash -c '$(CONDA_CMD) $(MAKE) -C "$(APP_ROOT)/docs" linkcheck'
 
@@ -554,13 +556,15 @@ FIXES := $(addprefix fix-, $(FIXES))
 $(FIXES): fix-%: install-dev fix-%-only
 
 .PHONY: fix
-fix: fix-all 	## alias for 'fix-all' target
+fix: fix-all    ## run all fixes (alias for 'fix-all' target)
 
+# undocumented to avoid duplicating aliases in help listing
 .PHONY: fix-only
 fix-only: $(addsuffix -only, $(FIXES))
 
-.PHONY: fix-all
-fix-all: install-dev $(FIXES)  ## fix all code check problems automatically
+.PHONY: fix-all-only
+fix-all-only: $(FIXES)  ## fix all code check problems automatically
+	@echo "All fixes applied!"
 
 .PHONY: fix-imports-only
 fix-imports-only: 	## fix import code checks corrections automatically
@@ -617,7 +621,7 @@ TESTS := $(addprefix test-, $(TESTS))
 $(TESTS): test-%: install install-dev test-%-only
 
 .PHONY: test
-test: clean-test test-all   ## alias for 'test-all' target
+test: clean-test test-all   ## run tests (alias for 'test-all' target)
 
 .PHONY: test-all
 test-all: install install-dev test-only  ## run all tests (including long running tests)
@@ -650,7 +654,7 @@ test-custom-only:		## run custom marker tests using SPEC="<marker-specification>
 	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
-test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
+test-docker: docker-test  ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
 
 # coverage file location cannot be changed
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
@@ -669,7 +673,7 @@ $(COVERAGE_FILE): install-dev
 coverage-only: $(COVERAGE_FILE)
 
 .PHONY: coverage
-coverage: install-dev install coverage-only		## check code coverage and generate an analysis report
+coverage: install-dev install coverage-only		## run tests with code coverage and generate an analysis report
 
 .PHONY: coverage-show
 coverage-show: $(COVERAGE_HTML_IDX)		## display HTML webpage of generated coverage report (run coverage if missing)
