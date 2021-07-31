@@ -4,7 +4,7 @@ backports.tempfile; python_version < "3"
 bandit==1.6.2
 bump2version
 codacy-coverage
-coverage==4.0; python_version < "3"
+coverage==5.5; python_version < "3"
 coverage; python_version >= "3"
 doc8
 docformatter
