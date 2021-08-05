@@ -6,7 +6,15 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
-* Nothing new for the moment.
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* N/A
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix lookup error of setting ``MAGPIE_USER_REGISTRATION_ENABLED`` when omitted from configuration during
+  user email update (fixes `#459 <https://github.com/Ouranosinc/Magpie/issues/459>`_).
 
 `3.14.0 <https://github.com/Ouranosinc/Magpie/tree/3.14.0>`_ (2021-07-14)
 ------------------------------------------------------------------------------------
