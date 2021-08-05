@@ -78,7 +78,9 @@ class UserViews(BaseViews):
         user_info["groups"] = public_groups
         # FIXME: disable email edit when self-registration is enabled to avoid not having any confirmation of new email
         #   (see https://github.com/Ouranosinc/Magpie/issues/436)
-        user_info["user_edit_email"] = not asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", self.request))
+        user_info["user_edit_email"] = not asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", self.request,
+                                                               default_value=False, print_missing=True,
+                                                               raise_missing=False, raise_not_set=False))
         user_info["user_with_error"] = schemas.UserStatuses.get(user_info["status"]) != schemas.UserStatuses.OK
         # reset error messages/flags
         user_info["error_message"] = ""

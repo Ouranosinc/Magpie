@@ -194,8 +194,10 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
     # FIXME: disable email edit when self-registration is enabled to avoid not having any confirmation of new email
     #   (see https://github.com/Ouranosinc/Magpie/issues/436)
     update_email_admin_only = False
-    if update_email and asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", request)):
-        update_email_admin_only = True
+    if update_email:
+        update_email_admin_only = asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", request,
+                                                      default_value=False, print_missing=True,
+                                                      raise_missing=False, raise_not_set=False))
 
     # user name/status change is admin-only operation
     if update_username or update_status or update_email_admin_only:
