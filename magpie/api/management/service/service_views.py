@@ -126,18 +126,23 @@ def update_service_view(request):
     cur_svc_name = service.resource_name
     svc_name = select_update(ar.get_multiformat_body(request, "service_name"), cur_svc_name)
     svc_url = select_update(ar.get_multiformat_body(request, "service_url"), service.url)
+
+    # config explicitly provided as None (null) means override (erase)
+    # to leave it as is, just don't specify the field
+    old_svc_config = service.configuration
+    new_svc_config = ar.get_multiformat_body(request, "configuration", {-1})
+    has_svc_config = not isinstance(new_svc_config, set)  # use set() since not a possible JSON type (cannot use None)
+
     ax.verify_param(svc_name, param_compare="types", not_equal=True,
                     param_name="service_name", http_error=HTTPForbidden,
                     msg_on_fail=s.Service_PATCH_ForbiddenResponseSchema_ReservedKeyword.description)
-    ax.verify_param(svc_name == cur_svc_name and svc_url == service.url, not_equal=True,
-                    param_compare=True, param_name="service_name/service_url",
+    ax.verify_param(svc_name == cur_svc_name and svc_url == service.url and
+                    (not has_svc_config or old_svc_config == new_svc_config),
+                    not_equal=True, param_compare=True, param_name="service_name/service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Service_PATCH_BadRequestResponseSchema.description)
 
-    # config explicitly provided as None (null) means override (erase)
-    # to leave it as is, just don't specific the field
-    old_svc_config = service.configuration
-    new_svc_config = ar.get_multiformat_body(request, "configuration")
-    if old_svc_config != new_svc_config:
+    if has_svc_config and old_svc_config != new_svc_config:
+        # configuration must be an explicit JSON object or None (erase)
         if new_svc_config is not None:
             ax.verify_param(new_svc_config, param_compare=dict, is_type=True, http_error=HTTPUnprocessableEntity,
                             msg_on_fail=s.Service_CheckConfig_UnprocessableEntityResponseSchema.description)
@@ -166,8 +171,10 @@ def update_service_view(request):
                      http_error=HTTPForbidden, msg_on_fail=s.Service_PATCH_ForbiddenResponseSchema.description,
                      content=err_svc_content)
     invalidate_service(cur_svc_name)
-    return ax.valid_http(http_success=HTTPOk, detail=s.Service_PATCH_OkResponseSchema.description,
-                         content={"service": sf.format_service(service, show_private_url=True)})
+    return ax.valid_http(
+        http_success=HTTPOk, detail=s.Service_PATCH_OkResponseSchema.description,
+        content={"service": sf.format_service(service, show_private_url=True, show_configuration=True)}
+    )
 
 
 @s.ServiceAPI.get(tags=[s.ServicesTag], response_schemas=s.Service_GET_responses)
