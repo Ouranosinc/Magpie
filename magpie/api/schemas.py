@@ -1387,9 +1387,13 @@ class Services_POST_RequestBodySchema(BaseRequestSchemaAPI):
     body = Services_POST_BodySchema()
 
 
+class Services_POST_CreatedResponseBodySchema(BaseResponseBodySchema):
+    service = ServiceDetailSchema()
+
+
 class Services_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     description = "Service registration to db successful."
-    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+    body = Services_POST_CreatedResponseBodySchema(code=HTTPCreated.code, description=description)
 
 
 class Services_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
@@ -1423,6 +1427,10 @@ class Services_POST_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
 
 
 class Service_PATCH_RequestBodySchema(colander.MappingSchema):
+    description = (
+        "New parameters to apply for service update. Any combination of new values can be provided. "
+        "At least one field must be provided with a different value than the current service parameters."
+    )
     service_name = colander.SchemaNode(
         colander.String(),
         description="New service name to apply to service specified in path",
@@ -1439,7 +1447,11 @@ class Service_PATCH_RequestBodySchema(colander.MappingSchema):
         validator=colander.url,
     )
     service_push = PhoenixServicePushOption()
-    configuration = ServiceConfigurationSchema()
+    configuration = ServiceConfigurationSchema(
+        description="New service configuration to be applied. "
+                    "Must be a valid JSON object definition different than the currently active configuration. "
+                    "If explicitly provided with null value, instead erase the current service configuration."
+    )
 
 
 class Service_PATCH_RequestSchema(BaseRequestSchemaAPI):

@@ -4825,19 +4825,100 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PatchService_NoUpdateInfo(self):
-        # no path PATCH on '/services/types' (not equivalent to '/services/{service_name}')
-        # so not even a forbidden case to handle
-        resp = utils.test_request(self, self.update_method, "/services/types", data={}, expect_errors=True,
+        """
+        Verify that update operation of service raises when no update information is provided.
+
+        Both omitted (empty body) information, or identical one to already defined values in the current service are
+        handled the same way in this case (no update detail provided).
+        """
+        svc_name = "unittest-test-thredds"
+        svc_type = ServiceTHREDDS.service_type
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        svc_url = body["service"]["service_url"]
+        path = "/services/{}".format(svc_name)
+
+        # apply basic config update just to ensure it is evaluated with anything other than None/null
+        svc_config = {"ignore_prefix": "dont-care"}
+        data = {"service_name": svc_name, "configuration": svc_config}
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        if TestVersion(self.version) >= TestVersion("0.9.5"):
-            # directly interpreted as expected path `/services/types` behaviour, so method PATCH not allowed
-            utils.check_response_basic_info(resp, 405, expected_method=self.update_method)
-        else:
-            # no path with service named 'types', filtered as not found
-            utils.check_response_basic_info(resp, 404, expected_method=self.update_method)
+        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+
+        # test case of omitted update fields
+        resp = utils.test_request(self, self.update_method, path, data={}, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+        # test cases where same details as current service should raise
+        tests_same_data = [
+            {"service_name": svc_name},
+            {"service_name": svc_name, "service_url": svc_url},
+            {"service_url": svc_url},
+            {"service_name": svc_name, "configuration": svc_config},
+            {"service_url": svc_url, "configuration": svc_config},
+            {"service_name": svc_name, "service_url": svc_url, "configuration": svc_config},
+        ]
+        for test_data in tests_same_data:
+            resp = utils.test_request(self, self.update_method, path, data=test_data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 400, expected_method=self.update_method,
+                                            extra_message="Using update data: {}".format(test_data))
+
+        # following a valid erasure of config, None update should indicate missing update values since already erased
+        # leave 'service_name' in body although not modified to avoid pre-3.15 issue where config-only was not cleared
+        erase_cfg_data = {"service_name": svc_name, "configuration": None}
+        resp = utils.test_request(self, self.update_method, path, data=erase_cfg_data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        resp = utils.test_request(self, self.update_method, path, data=erase_cfg_data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PatchService_UpdateConfigOnly(self):
+        """
+        Validate that an update of only the additional JSON configuration field is accepted.
+
+        Updates should allow both modification or erasure of the configuration without any other field.
+        """
+        # Prior to this version, config-only was refused (had to be combined with service name or url field)
+        utils.warn_version(self, "update only service configuration field", "3.15", skip=True)
+
+        svc_name = "unittest-test-thredds"
+        svc_type = ServiceTHREDDS.service_type
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        path = "/services/{}".format(svc_name)
+        apply_config_data = {"configuration": {"ignore_prefix": "something"}}
+        modif_config_data = {"configuration": {"ignore_prefix": "other", "file_patterns": [".+\\.nc"]}}
+        erase_config_data = {"configuration": None}
+
+        resp = utils.test_request(self, self.update_method, path, data=apply_config_data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        utils.check_val_equal(body["service"]["configuration"], apply_config_data["configuration"], diff=True)
+
+        resp = utils.test_request(self, self.update_method, path, data=modif_config_data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        utils.check_val_equal(body["service"]["configuration"], modif_config_data["configuration"], diff=True)
+
+        resp = utils.test_request(self, self.update_method, path, data=erase_config_data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        utils.check_val_equal(body["service"]["configuration"], None, diff=True,
+                              msg="Erase should be allowed with explicit None (null) JSON configuration.")
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PatchService_ReservedKeyword_Types(self):
+        """
+        Verify that update operation on reserved keyword ``types`` on path ``/services/types`` raises.
+
+        Because path ``/services/types`` is not the same configuration as ``'/services/{service_name}``
+        (actually two different routes), the forbidden test case is not even applicable here (missing occurs before).
+        The update HTTP method should directly be missing (404/405 according to version).
+        """
         # try to PATCH on 'types' path should raise the error
         data = {"service_name": "dummy", "service_url": "dummy"}
         resp = utils.test_request(self, self.update_method, "/services/types", json=data, expect_errors=True,

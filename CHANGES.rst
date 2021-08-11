@@ -9,12 +9,18 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* N/A
+* Improve API update operation of ``Service`` for allowed fields in order to accept body containing only the
+  new value for the custom ``configuration`` without additional parameters. It was not possible to
+  update ``configuration`` by itself, as ``service_name`` and ``service_url`` were independently validated
+  for new values beforehand.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix lookup error of setting ``MAGPIE_USER_REGISTRATION_ENABLED`` when omitted from configuration during
   user email update (fixes `#459 <https://github.com/Ouranosinc/Magpie/issues/459>`_).
+* Fix erasure value ``None`` (JSON ``null``) validation when updating ``Service`` field ``configuration`` to
+  properly distinguish explicitly provided ``None`` against default value when the field is omitted.
+* Fix incorrect OpenAPI body schema indicated in response of ``POST /services`` request.
 
 `3.14.0 <https://github.com/Ouranosinc/Magpie/tree/3.14.0>`_ (2021-07-14)
 ------------------------------------------------------------------------------------
