@@ -7,6 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+`3.15.0 <https://github.com/Ouranosinc/Magpie/tree/3.15.0>`_ (2021-08-11)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Improve API update operation of ``Service`` for allowed fields in order to accept body containing only the
