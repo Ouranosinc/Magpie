@@ -178,7 +178,7 @@ class ServiceInterface(object):
         return acl
 
     @cache_region("acl")
-    def _get_acl_cached(self, service_name, request_method, request_path, user_id):
+    def _get_acl_cached(self, service_name, request_method, request_path_qs, user_id):
         # type: (Str, Str, Str, Optional[int]) -> AccessControlListType
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
@@ -196,7 +196,7 @@ class ServiceInterface(object):
             - :meth:`ServiceInterface.resource_requested`
             - :meth:`ServiceInterface.user_requested`
         """
-        self._flag_acl_cached[(service_name, request_method, request_path, user_id)] = False
+        self._flag_acl_cached[(service_name, request_method, request_path_qs, user_id)] = False
         permissions = self.permission_requested()
         if permissions is None:
             return [DENY_ALL]
@@ -447,9 +447,14 @@ class ServiceOWS(ServiceInterface):
     def _set_request(self, request):
         # type: (Request) -> None
         self._request = request
-        # must reset the parser from scratch if request changes to ensure everything is updated with new inputs
-        self.parser = ows_parser_factory(request)
-        self.parser.parse(self.params_expected)  # run parsing to obtain guaranteed lowered-name parameters
+        # if explicit detach of pre-parsed request (for caching/pickling) is asked, flush references
+        # it is assumed that every parameter was already parsed and interpreted, or should be reprocessed after reattach
+        if request is None and self.parser is not None:
+            self.parser.request = None
+        else:
+            # must reset the parser from scratch if request changes to ensure everything is updated with new inputs
+            self.parser = ows_parser_factory(request)
+            self.parser.parse(self.params_expected)  # run parsing to obtain guaranteed lowered-name parameters
 
     request = property(_get_request, _set_request)
 
@@ -915,7 +920,7 @@ def invalidate_service(service_name):
 
     if "acl" in cache_regions:
         for namespace in [ServiceInterface._get_acl_cached]:
-            cache_keys = (service_name, )  # full signature: (service_name, request_method, request_path, user_id)
+            cache_keys = (service_name, )  # full signature: (service_name, request_method, request_path_qs, user_id)
             region_invalidate(namespace, "acl", *cache_keys)  # noqa
             # beaker doesn't provide a direct method to invalidate partial key.
             # Therefore, do 'region_invalidate' equivalent operations manually.

@@ -289,6 +289,7 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=err_content,
                      msg_on_fail=s.UserResourcePermissions_POST_ForbiddenResponseSchema.description)
+    ru.invalidate_acl(resource, db_session=db_session, user=user)
     webhook_params = get_permission_update_params(user, resource, permission)
     process_webhook_requests(WebhookAction.CREATE_USER_PERMISSION, webhook_params)
     return ax.valid_http(http_success=http_success, content=err_content, detail=http_detail)
@@ -362,6 +363,7 @@ def delete_user_resource_permission_response(user, resource, permission, db_sess
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPNotFound, content=err_content,
                      msg_on_fail=s.UserResourcePermissionName_DELETE_NotFoundResponseSchema.description)
+    ru.invalidate_acl(resource, db_session=db_session, user=user)
     webhook_params = get_permission_update_params(user, resource, permission)
     process_webhook_requests(WebhookAction.DELETE_USER_PERMISSION, webhook_params)
     return ax.valid_http(http_success=HTTPOk, detail=s.UserResourcePermissionName_DELETE_OkResponseSchema.description)

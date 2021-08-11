@@ -18,8 +18,8 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.management.group.group_formats import format_group
-from magpie.api.management.resource.resource_formats import format_resource
-from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
+
+from magpie.api.management.resource import resource_formats as rf, resource_utils as ru
 from magpie.api.management.service.service_formats import format_service, format_service_resources
 from magpie.api.webhooks import WebhookAction, get_permission_update_params, process_webhook_requests
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
@@ -123,7 +123,7 @@ def get_similar_group_resource_permission(group, resource, permission, db_sessio
     permission.type = PermissionType.APPLIED
     res_id = resource.resource_id
     err_content = {"group": format_group(group, basic_info=True),
-                   "resource": format_resource(resource, basic_info=True),
+                   "resource": rf.format_resource(resource, basic_info=True),
                    "permission_name": str(permission), "permission": permission.json()}
 
     def is_similar_permission():
@@ -159,10 +159,10 @@ def create_group_resource_permission_response(group, resource, permission, db_se
     :raises HTTPException: error HTTP response of corresponding situation.
     """
     resource_id = resource.resource_id
-    check_valid_service_or_resource_permission(permission.name, resource, db_session)
+    ru.check_valid_service_or_resource_permission(permission.name, resource, db_session)
     exist_perm = get_similar_group_resource_permission(group, resource, permission, db_session=db_session)
     perm_content = {"permission_name": str(permission), "permission": permission.json(),
-                    "resource": format_resource(resource, basic_info=True),
+                    "resource": rf.format_resource(resource, basic_info=True),
                     "group": format_group(group, basic_info=True)}
     http_success = HTTPCreated
     http_detail = s.GroupResourcePermissions_POST_CreatedResponseSchema.description
@@ -182,6 +182,7 @@ def create_group_resource_permission_response(group, resource, permission, db_se
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=perm_content,
                      msg_on_fail=s.GroupResourcePermissions_POST_ForbiddenAddResponseSchema.description)
+    ru.invalidate_acl(resource, db_session=db_session, group=group)
     webhook_params = get_permission_update_params(group, resource, permission)
     process_webhook_requests(WebhookAction.CREATE_GROUP_PERMISSION, webhook_params)
     return ax.valid_http(http_success=http_success, content=perm_content, detail=http_detail)
@@ -253,7 +254,7 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
     """
-    check_valid_service_or_resource_permission(permission.name, resource, db_session)
+    ru.check_valid_service_or_resource_permission(permission.name, resource, db_session)
     res_id = resource.resource_id
     if similar:
         found_perm = get_similar_group_resource_permission(group, resource, permission, db_session=db_session)
@@ -262,13 +263,14 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
     del_perm = GroupResourcePermissionService.get(group.id, res_id, str(found_perm), db_session=db_session)
     permission.type = PermissionType.APPLIED
     perm_content = {"permission_name": str(permission), "permission": permission.json(),
-                    "resource": format_resource(resource, basic_info=True),
+                    "resource": rf.format_resource(resource, basic_info=True),
                     "group": format_group(group, basic_info=True)}
     ax.verify_param(del_perm, not_none=True, http_error=HTTPNotFound, content=perm_content,
                     msg_on_fail=s.GroupServicePermission_DELETE_NotFoundResponseSchema.description)
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=perm_content,
                      msg_on_fail=s.GroupServicePermission_DELETE_ForbiddenResponseSchema.description)
+    ru.invalidate_acl(resource, db_session=db_session, group=group)
     webhook_params = get_permission_update_params(group, resource, permission)
     process_webhook_requests(WebhookAction.DELETE_GROUP_PERMISSION, webhook_params)
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupServicePermission_DELETE_OkResponseSchema.description)
