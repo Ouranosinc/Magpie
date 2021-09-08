@@ -25,7 +25,7 @@ services:
       MAGPIE_SECRET : itzaseekrit
       MAGPIE_ADMIN_GROUP : administrators
       MAGPIE_ADMIN_USER : admin
-      MAGPIE_ADMIN_PASSWORD : qwerty
+      MAGPIE_ADMIN_PASSWORD : minimum-12-char
       MAGPIE_USER_GROUP : users
       MAGPIE_ANONYMOUS_USER : anonymous
       MAGPIE_PORT : 2001

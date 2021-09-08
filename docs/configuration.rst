@@ -331,6 +331,9 @@ These settings can be used to specify where to find other settings through custo
         This variable ignores the setting/env-var resolution order since settings cannot be defined without
         firstly loading the file referenced by its value.
 
+    .. seealso::
+        `config_magpie_ini`_
+
 .. envvar:: MAGPIE_ENV_DIR
 
     (Default: ``"${MAGPIE_ROOT}/env"``)
@@ -452,6 +455,75 @@ at the start of the :ref:`Configuration` section.
     (Default: ``True``)
 
     Specifies whether `Magpie` should log a raised exception during a process execution.
+
+.. envvar:: MAGPIE_SMTP_USER
+
+    (Default: ``"Magpie"``)
+
+    .. versionadded:: 3.13
+
+    Display name employed as sending user of notification emails.
+
+    If explicitly overridden by an empty string, the :envvar:`MAGPIE_SMTP_FROM` is used as replacement.
+
+.. envvar:: MAGPIE_SMTP_FROM
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.13
+
+    Email that identifies the sender of notification emails by the application.
+
+    This value is also employed to run the authentication step to the SMTP server in combination with
+    :envvar:`MAGPIE_SMTP_PASSWORD` if it is also provided. Furthermore, if the value is provided while
+    :envvar:`MAGPIE_SMTP_USER` is empty, the default email sender (display name) will revert to this value.
+
+.. envvar:: MAGPIE_SMTP_PASSWORD
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.13
+
+    Authentication password to use in combination with :envvar:`MAGPIE_SMTP_FROM` to connect the server
+    specified by :envvar:`MAGPIE_SMTP_HOST` as required.
+
+    Leave blank if SMTP server does not require or should not execute authentication step.
+
+.. envvar:: MAGPIE_SMTP_HOST
+
+    .. versionadded:: 3.13
+
+    Host of the SMTP server to employ for sending notification emails.
+
+.. envvar:: MAGPIE_SMTP_PORT
+
+    [:class:`int`]
+    (Default: ``465``)
+
+    .. versionadded:: 3.13
+
+    Port of the outgoing notification emails from the SMTP server.
+
+    In case of doubt, port value ``25`` (an sometimes ``587``) is employed for non-encrypted emails.
+    For secure TLS, ``587`` is the usual choice, and ``465`` when using SSL.
+    Other ports based on the functionalities offered by targeted :envvar:`MAGPIE_SMTP_HOST` could be available.
+
+    Note that :envvar:`MAGPIE_SMTP_SSL` should be set accordingly when using those standard values.
+    It is strongly recommended to employ an encrypted email since transferred details by `Magpie` can potentially
+    contain some sensible details.
+
+.. envvar:: MAGPIE_SMTP_SSL
+
+    [:class:`bool`]
+    (Default: ``True``)
+
+    .. versionadded:: 3.13
+
+    Specifies if SSL should be employed for sending email.
+
+    If not enabled, `Magpie` will first attempt to establish a TLS connection if the targeted SMTP server
+    supports it to use encrypted emails. If it is not supported by that server, it falls back to unencrypted
+    emails since no other alternatives exist.
 
 .. envvar:: MAGPIE_TOKEN_EXPIRE
 
@@ -962,9 +1034,6 @@ configuration names are supported where mentioned.
         variants.
 
 
-.. _SQLAlchemy Engine: https://docs.sqlalchemy.org/en/13/core/engines.html
-
-
 .. _config_auth_github:
 
 GitHub Settings
@@ -999,6 +1068,196 @@ parameters), please refer to |WSO2_doc|_.
 
 .. seealso::
     Refer to :ref:`authn_requests` and :ref:`authn_providers` for details.
+
+
+.. _config_user_register_approval:
+
+User Registration and Approval Configuration
+-----------------------------------------------
+
+.. versionadded:: 3.13
+
+This section describes the relevant details regarding the activation of settings
+:envvar:`MAGPIE_USER_REGISTRATION_ENABLED` and :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED`.
+If those settings are not defined, or are explicitly set to ``False``, all other options can be safely ignored.
+
+.. note::
+    When any of the above parameters are enabled, the :ref:`config_app_settings` regarding ``SMTP`` server
+    and ``EMAIL`` options must also be defined.
+
+All details regarding the procedures of registration and approval of user accounts are defined
+in section :ref:`user_registration`.
+
+Following are the full description of all configuration parameters employed by the :term:`User` registration and
+approval procedures.
+
+
+.. envvar:: MAGPIE_USER_REGISTRATION_ENABLED
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.13
+
+    Specifies whether `Magpie` should provide :term:`User` self-registration endpoints on ``/register/users`` for
+    the API and ``/ui/register/users`` for the UI and enabled the registration procedure.
+
+    .. seealso::
+        See section :ref:`user_registration` for further details about this process.
+
+    When enabled, all other configuration regarding SMTP and EMAIL :ref:`config_app_settings` must also be defined
+    to properly send notification and validation email during registration.
+
+    The default value of this configuration setting is to preserve the original behavior of `Magpie` where no such
+    :term:`User` self-registration is possible. Therefore, the option must be explicitly defined to activate it.
+
+    .. warning::
+        **Security Notice**
+
+        Under normal operation (when disabled), `Magpie` can take advantage of stronger security by obfuscation
+        as the ``user_name`` component is not accessible by any means other than administrator-level users.
+        It is therefore hidden away from public view and acts as stronger credentials.
+
+        When this option is enabled, both the ``user_name`` and ``email`` of existing users become *indirectly*
+        accessible for validation purposes, to avoid account conflicts during user registration. When enabling
+        this option, the developer or server maintainer must be aware of these consideration.
+
+        For best security result, the setting should be activated only when the feature is required, and that
+        ``user_name``/``email`` information is deemed adequate for potential public visibility, hence why the
+        option is disabled by default. This is a design choice for respective servers and platforms.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE
+
+    (Default: |email_ur_submission_mako|_)
+
+    .. versionadded:: 3.13
+
+    Path to a `Mako Template`_ file providing custom email format to send notification email to
+    the :term:`Pending User` following submission of a new :ref:`user_registration`.
+
+    When overridden with a custom email format, the contents should provide sufficient details indicating to
+    the :term:`Pending User` that its submitted email must be confirmed by visiting the link contained in that email.
+    The confirmation URL would validate that emails can indeed be received by that :term:`Pending User` to the
+    submitted address be notified of future events.
+
+    The default template provides details about available template arguments.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_NOTIFY_ENABLED
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.13
+
+    Controls whether a notification email should be sent to :envvar:`MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_RECIPIENT`
+    once a :term:`Pending User` successfully *completed* the registration process.
+
+    This can be used for example when no administrator validation is required
+    (i.e.: :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED` is ``False``), but that some platform manager still
+    want to receive notices of any users that registered to its service.
+
+    .. note::
+        Enabling this option at the same time as :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED` while using the
+        same email for both *approval* and *notification* could lead to noisy emails expeditions as approving
+        administrators would be immediately notified of their own action of approving the user registration.
+        Different emails can be set to communicate relevant notifications to intended parties.
+        It is up to the developer to properly configure how verbose and to whom those emails should be addressed to.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_RECIPIENT
+
+    .. versionadded:: 3.13
+
+    Email address where emails with contents defined by :envvar:`MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_TEMPLATE` should
+    be sent to when :envvar:`MAGPIE_USER_REGISTRATION_NOTIFY_ENABLED` was activated.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_NOTIFY_EMAIL_TEMPLATE
+
+    (Default: |email_ur_notify_mako|_)
+
+    .. versionadded:: 3.13
+
+    Path to a `Mako Template`_ file providing custom email format to send notification email following completion of
+    a new :ref:`user_registration`. The default template provides details about available template arguments.
+
+    A custom body must contain all relevant details defined in the default template to ensure basic functionalities
+    of the :ref:`user_registration` workflow can be accomplished. The logic of the message content is left at the
+    discretion of the developer if customized.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.13
+
+    Specifies whether administrator approval is required to resume :ref:`user_registration`.
+
+    This setting is relevant only if :envvar:`MAGPIE_USER_REGISTRATION_ENABLED` was also activated.
+    When enabled and following email *confirmation* by the :term:`Pending User`
+    (see :envvar:`MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE`), an email using following configuration options
+    will be sent to notify the administrator authority that :term:`Pending User` approval is awaiting their validation.
+
+    Approval process is bypassed if this setting is disabled, meaning that :term:`Pending User` account will be
+    immediately and automatically approved as soon as their email was validated, without any administrator intervention.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_RECIPIENT
+
+    .. versionadded:: 3.13
+
+    Email of the *administrator* to which a notification is sent using the body defined by
+    :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE`, when a new user registration was requested.
+
+    The email employed for this parameter can be toward any target, including an email that does not correspond to any
+    :term:`User` in the `Magpie` database. For example, that email could be for a shared user support team that replies
+    to those requests. Note that to validate the user registration though, valid administrative-level :term:`User` with
+    matching credentials will be required to complete the process.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE
+
+    (Default: |email_ur_approval_mako|_)
+
+    .. versionadded:: 3.13
+
+    Path to a `Mako Template`_ file providing custom email format to send notification email to
+    :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_RECIPIENT` following a submitted user registration
+    that must be *approved* or *declined* by the administrator.
+
+    When overridden with a custom email format, the contents should provide sufficient details indicating to
+    the administrator which :term:`Pending User` requested a new account registration, and links where it can
+    review it to be *approved* or *declined*.
+
+    The default template provides details about available template arguments.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE
+
+    (Default: |email_ur_approved_mako|_)
+
+    .. versionadded:: 3.13
+
+    Path to a `Mako Template`_ file providing custom email format to send an email to the
+    :term:`Pending User` that initially submitted the user registration to notify them that the registration
+    process was successfully approved and completed, and that their account is active starting from that moment.
+
+    The default template provides details about available template arguments.
+
+    .. note::
+        This email template is employed regardless of value defined for
+        setting :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_ENABLED`. When administrator approval is enabled, the email
+        will be sent only after the account was approved. Otherwise, it is sent as soon as email conformation is
+        obtained from the :term:`Pending User`. Parameter ``approval_required`` is provided to generate alternative
+        `Mako Template`_ contents in case different messages should be sent for each situation.
+
+.. envvar:: MAGPIE_USER_REGISTRATION_DECLINED_EMAIL_TEMPLATE
+
+    (Default: |email_ur_declined_mako|_)
+
+    .. versionadded:: 3.13
+
+    Path to a `Mako Template`_ file providing custom email format to send an email to the
+    :term:`Pending User` that initially submitted the user registration to notify them of that their
+    user registration request was declined by the administrator following approval process.
+
+    The default template provides details about available template arguments.
 
 
 .. _config_webhook:
@@ -1117,7 +1376,7 @@ User Creation
     * - Action
       - :attr:`WebhookAction.CREATE_USER`
     * - Parameters
-      - ``user_name``, ``user_id``, ``user_email``, ``callback_url``
+      - ``{{user.name}}``, ``{{user.id}}``, ``{{user.email}}``, ``{{callback_url}}``
 
 Triggered whenever a :term:`User` gets successfully created, using a ``POST /users`` request.
 
@@ -1126,10 +1385,10 @@ configured |webhook_param_url|_.
 
 The ``callback_url`` serves as follow-up endpoint, should the registered external application need it, to request using
 HTTP ``GET`` method (no body) that `Magpie` sets the :term:`User` account status as erroneous. That :term:`User` would
-then be affected with ``status`` value :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. The ``callback_url``
+then be affected with ``status`` value :attr:`magpie.models.UserStatuses.WebhookError`. The ``callback_url``
 location will be available until called or expired according to :envvar:`MAGPIE_TOKEN_EXPIRE` setting. When no request
 is sent to the ``callback_url``, the created :term:`User` is assumed valid and its account is attributed
-:attr:`magpie.api.schemas.UserStatuses.OK` status.
+:attr:`magpie.models.UserStatuses.OK` status.
 
 .. _webhook_user_delete:
 
@@ -1142,7 +1401,7 @@ User Deletion
     * - Action
       - :attr:`WebhookAction.DELETE_USER`
     * - Parameters
-      - ``user_name``, ``user_id``, ``user_email``
+      - ``{{user.name}}``, ``{{user.id}}``, ``{{user.email}}``
 
 Triggered whenever a :term:`User` gets successfully deleted, using a ``DELETE /users/{user_name}`` request.
 
@@ -1158,7 +1417,7 @@ User Status Update
     * - Action
       - :attr:`WebhookAction.UPDATE_USER_STATUS`
     * - Parameters
-      - ``user_name``, ``user_id``, ``user_status``, ``callback_url``
+      - ``{{user.name}}``, ``{{user.id}}``, ``{{user.status}}``, ``{{callback_url}}``
 
 Triggered whenever a :term:`User` status gets successfully updated, using a ``PATCH /users/{user_name}`` request.
 
@@ -1166,7 +1425,7 @@ This event **DOES NOT** apply to changes of :term:`User` status caused by callba
 a :ref:`webhook_user_create` event.
 
 The ``callback_url`` in this case can be requested with ``GET`` method (no body) to ask `Magpie` to reset the just
-updated :term:`User` account status to :attr:`magpie.api.schemas.UserStatuses.WebhookErrorStatus`. This :term:`Webhook`
+updated :term:`User` account status to :attr:`magpie.models.UserStatuses.WebhookError`. This :term:`Webhook`
 can be employed to retry an external operation of the registered application, by triggering status updates, and only
 consider the complete operation successful when no further ``callback_url`` requests are received.
 

@@ -1,10 +1,20 @@
+from typing import TYPE_CHECKING
+
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
 from magpie.constants import get_constant
+from magpie.models import UserStatuses
+
+if TYPE_CHECKING:
+    from typing import List
+
+    from magpie.models import AnyUser
+    from magpie.typedefs import JSON, Str
 
 
 def format_user(user, group_names=None, basic_info=False, dotted=False):
+    # type: (AnyUser, List[Str], bool, bool) -> JSON
     """
     Formats a :term:`User` information into JSON.
 
@@ -23,15 +33,17 @@ def format_user(user, group_names=None, basic_info=False, dotted=False):
     def fmt_usr():
         sep = "." if dotted else "_"
         prefix = "user." if dotted else ""
+        status = UserStatuses.get(user.status)
         user_info = {
             "user{}name".format(sep): str(user.user_name),
             "{}email".format(prefix): str(user.email),
-            "{}status".format(prefix): int(user.status)
+            "{}status".format(prefix): status.name,
         }
         if not basic_info:
             grp_names = group_names if group_names else [grp.group_name for grp in user.groups]
             user_info["group_names"] = list(sorted(grp_names))
-        if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER"):
+        # special users not meant to be used as valid "accounts" marked as without an ID
+        if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER") and status != UserStatuses.Pending:
             user_info["user{}id".format(sep)] = int(user.id)
         return user_info
 

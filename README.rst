@@ -29,13 +29,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requires Python 2.7, 3.5+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.12.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.15.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/3.12.0...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/3.15.0...master
 
-.. |version| image:: https://img.shields.io/badge/tag-3.12.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-3.15.0-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/3.12.0
+    :target: https://github.com/Ouranosinc/Magpie/tree/3.15.0
 
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/Magpie/shield.svg
     :alt: Dependencies Status
@@ -45,9 +45,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Github Actions CI Build Status (master branch)
     :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3Amaster
 
-.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/3.12.0?label=3.12.0
+.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/3.15.0?label=3.15.0
     :alt: Github Actions CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A3.12.0
+    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A3.15.0
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
     :alt: Readthedocs Build Status (master branch)
@@ -57,9 +57,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Travis-CI CodeCov Coverage
     :target: https://codecov.io/gh/Ouranosinc/Magpie
 
-.. |codacy| image:: https://api.codacy.com/project/badge/Grade/1920f28c7e2140a083f527a803c58ae7
+.. |codacy| image:: https://app.codacy.com/project/badge/Grade/0dd500de5e3c4bdf84093eaa64cf9a81
     :alt: Codacy Badge
-    :target: https://www.codacy.com/app/fmigneault/Magpie?utm_source=github.com&utm_medium=referral&utm_content=Ouranosinc/Magpie&utm_campaign=Badge_Grade
+    :target: https://app.codacy.com/gh/Ouranosinc/Magpie/dashboard
 
 .. |docker_build_mode| image:: https://img.shields.io/docker/automated/pavics/magpie.svg?label=build
     :alt: Docker Build Status (latest tag)
@@ -75,7 +75,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 .. |docker_semver_tag| image:: https://img.shields.io/docker/v/pavics/magpie?label=version&sort=semver
     :alt: Docker Version Tag
-    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=3.12.0
+    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=3.15.0
 
 .. end-badges
 
@@ -119,8 +119,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - ``pavics/magpie:3.12.0``
-      - ``pavics/twitcher:magpie-3.12.0``
+    * - ``pavics/magpie:3.15.0``
+      - ``pavics/twitcher:magpie-3.15.0``
     * - ``pavics/magpie:latest``
       - ``pavics/twitcher:magpie-latest``
 

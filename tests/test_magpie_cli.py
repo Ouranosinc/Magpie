@@ -21,7 +21,7 @@ from magpie.constants import get_constant
 from tests import runner, utils
 
 if six.PY2:
-    from backports import tempfile as tempfile2  # noqa  # Python 2
+    from backports import tempfile as tempfile2  # noqa  # pylint: disable=E0611,no-name-in-module  # Python 2
 else:
     tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 
@@ -30,6 +30,7 @@ KNOWN_HELPERS = [
     "register_defaults",
     "register_providers",
     "run_db_migration",
+    "send_email",
     "sync_resources"
 ]
 
@@ -48,12 +49,22 @@ def run_and_get_output(command, trim=True):
     return out_lines
 
 
+def magpie_cli_helper_alias(alias):
+    out_lines = run_and_get_output(alias + " --help", trim=False)
+    assert "usage: " + alias in out_lines[0]
+    assert all([helper in out_lines[1] for helper in KNOWN_HELPERS])
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_cli_help():
+    magpie_cli_helper_alias("magpie_cli")
+
+
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
 def test_magpie_helper_help():
-    out_lines = run_and_get_output("magpie_helper --help", trim=False)
-    assert "usage: magpie_helper" in out_lines[0]
-    assert all([helper in out_lines[1] for helper in KNOWN_HELPERS])
+    magpie_cli_helper_alias("magpie_helper")
 
 
 @runner.MAGPIE_TEST_CLI
@@ -141,7 +152,7 @@ def run_batch_update_user_command(test_app, expected_users, create_command_xargs
         utils.check_val_is_in(user, body["user_names"])
 
     # test user deletion and validate users are all deleted
-    run_command("delete", ["-d"] + delete_command_xargs)
+    run_command("delete", ["-D"] + delete_command_xargs)
     utils.check_or_try_logout_user(test_app)
     _, test_admin_cookies = utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
     resp = utils.test_request(test_app, "GET", "/users", cookies=test_admin_cookies)
@@ -223,6 +234,22 @@ def test_magpie_run_db_migration_help_directly():
     out_lines = run_and_get_output("magpie_run_db_migration --help")
     assert "usage: magpie_run_db_migration" in out_lines[0]
     assert "Run Magpie database migration." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_send_email_help_via_magpie_helper():
+    out_lines = run_and_get_output("magpie_helper send_email --help")
+    assert "usage: magpie_helper send_email" in out_lines[0]
+    assert "Sends email notification using SMTP connection" in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_send_email_help_directly():
+    out_lines = run_and_get_output("magpie_send_email --help")
+    assert "usage: magpie_send_email" in out_lines[0]
+    assert "Sends email notification using SMTP connection" in out_lines[1]
 
 
 @runner.MAGPIE_TEST_CLI

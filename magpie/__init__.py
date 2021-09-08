@@ -17,7 +17,7 @@ def includeme(config):
 
     from magpie.api import generic as ag
     from magpie.constants import get_constant
-    from magpie.utils import fully_qualified_name, get_logger, log_exception_tween, log_request
+    from magpie.utils import fully_qualified_name, get_logger, log_exception_tween, log_request, setup_ziggurat_config
 
     mod_dir = get_constant("MAGPIE_MODULE_DIR", config)
     logger = get_logger(__name__)
@@ -39,11 +39,13 @@ def includeme(config):
         tween_position = tween_name
     config.add_tween(fully_qualified_name(ag.validate_accept_header_tween), under=tween_position)
 
+    setup_ziggurat_config(config)
     config.include("cornice")
     config.include("cornice_swagger")
     config.include("pyramid_chameleon")
     config.include("pyramid_beaker")
     config.include("pyramid_mako")
+
     config.include("magpie.api")
     config.include("magpie.db")
     if get_constant("MAGPIE_UI_ENABLED", config):

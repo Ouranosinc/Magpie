@@ -19,7 +19,7 @@ from magpie import __meta__
 from magpie.api import schemas as s
 from magpie.api.webhooks import webhook_update_error_status
 from magpie.constants import MAGPIE_ROOT, get_constant
-from magpie.models import RESOURCE_TYPE_DICT, Directory, Route
+from magpie.models import RESOURCE_TYPE_DICT, Directory, Route, UserStatuses
 from magpie.permissions import (
     PERMISSION_REASON_DEFAULT,
     PERMISSION_REASON_MULTIPLE,
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, Str
 
 
+@six.add_metaclass(ABCMeta)
 class ConfigTestCase(object):
     """
     Various test configuration fields that can be employed across test case implementations.
@@ -66,7 +67,6 @@ class ConfigTestCase(object):
     require = None                  # type: Optional[Str]
     url = None                      # type: Optional[Str]
     app = None                      # type: Optional[TestApp]
-    test_app = None                 # type: Optional[TestApp]
     # parameters for setup operations, admin-level access to the app
     grp = None                      # type: Optional[Str]
     usr = None                      # type: Optional[Str]
@@ -118,43 +118,75 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """
-        Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to sets prefixed by
-        ``extra_``, in case some test failed to do so (e.g.: because it raised midway or was simply forgotten).
+        Run cleanup and tear down any testing references to the application.
         """
+        # reset app, just in case some test messed with it that would break cleanup
         cls.usr = get_constant("MAGPIE_ADMIN_USER")
         cls.pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
         cls.app = cls.app or cls.url or utils.get_test_magpie_app(settings=getattr(cls, "settings", None))
-        utils.check_or_try_logout_user(cls)
-        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, username=cls.usr, password=cls.pwd)
+        cls.cleanup()
+        pyramid.testing.tearDown()
+
+    @classmethod
+    def cleanup(cls):
+        """
+        Cleans up any left-over known object prefixed by ``test_`` as well as any other items added to sets prefixed by
+        ``extra_``, in case tests did not do manual cleanup (e.g.: because it raised midway or was simply omitted).
+
+        .. note::
+            This cleanup procedure assumes that all ``TestSetup.create_<TestItem>`` operations add
+            their respective ``<TestItem>`` instance to the corresponding ``TestCase.extra_<test_items>`` sets.
+        """
+        # avoid removal of reserved keyword user/group, since it will fail with magpie '>=2.x'
+        cls.reserved_users = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
+        cls.reserved_groups = [get_constant("MAGPIE_ADMIN_GROUP"), get_constant("MAGPIE_ANONYMOUS_GROUP")]
+        cls.test_admin = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.usr = get_constant("MAGPIE_ADMIN_USER")
+        cls.pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
+
+        cls.login_admin()  # re-login as needed in case test logged out the user with needed admin permissions
         # remove test service/resource if overridden by test-case class implementers
         if cls.test_resource_name:
             utils.TestSetup.delete_TestServiceResource(cls)
         if cls.test_service_name:
             utils.TestSetup.delete_TestService(cls)
-        # avoid attempt cleanup of reserved keyword user/group, since it will fail with magpie '>=2.x'
-        reserved_users = [get_constant("MAGPIE_ADMIN_USER"), get_constant("MAGPIE_ANONYMOUS_USER")]
-        reserved_groups = [get_constant("MAGPIE_ADMIN_GROUP"), get_constant("MAGPIE_ANONYMOUS_GROUP")]
-        test_admin = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
-        cls.extra_user_names.add(test_admin)
+        cls.extra_user_names.add(cls.test_admin)
         cls.extra_user_names.add(cls.test_user_name)
         cls.extra_group_names.add(cls.test_group_name)
-        for usr in cls.extra_user_names:
-            if usr not in reserved_users:
+        for usr in list(cls.extra_user_names):  # copy to update removed ones
+            if usr not in cls.reserved_users:
                 utils.TestSetup.delete_TestUser(cls, override_user_name=usr)
-        for grp in cls.extra_group_names:
-            if grp not in reserved_groups:
+                if utils.TestSetup.get_Version(cls) >= TestVersion("3.13.0"):
+                    utils.TestSetup.delete_TestUser(cls, override_user_name=usr, pending=True)
+                cls.extra_user_names.discard(usr)
+        for grp in list(cls.extra_group_names):  # copy to update removed ones
+            if grp not in cls.reserved_groups:
                 utils.TestSetup.delete_TestGroup(cls, override_group_name=grp)
-        for svc in cls.extra_service_names:
+                cls.extra_user_names.discard(grp)
+        for svc in list(cls.extra_service_names):  # copy to update removed ones
             utils.TestSetup.delete_TestService(cls, override_service_name=svc)
-        for res in cls.extra_resource_ids:
+            cls.extra_service_names.discard(svc)
+        for res in list(cls.extra_resource_ids):  # copy to update removed ones
             utils.TestSetup.delete_TestResource(cls, res)
-        pyramid.testing.tearDown()
+            cls.extra_resource_ids.discard(res)
 
     @property
     def update_method(self):
         if TestVersion(self.version) >= TestVersion("2.0.0"):
             return "PATCH"
         return "PUT"
+
+    def get_user_status_value(self, status):
+        # type: (UserStatuses) -> Union[int, Str]
+        """
+        Return expected user status representation value in API responses.
+
+        Older API versions returned the integer directly, which was not very descriptive.
+        Newer API versions return the name.
+
+        Does not impact request queries that support both regardless of version.
+        """
+        return status.name if TestVersion(self.version) >= TestVersion("3.13.0") else status.value
 
     @classmethod
     def setup_admin(cls):
@@ -237,22 +269,6 @@ class BaseAdminTestCase(BaseTestCase):
     @classmethod
     def tearDownClass(cls):
         super(BaseAdminTestCase, cls).tearDownClass()
-
-    def cleanup(self):
-        """
-        Removes test attributes from database to avoid conflict and unwanted behaviour due to previous definitions.
-
-        Each employed test attribute must be overridden by the :attr:`setUpClass` of the `Test Case`.
-        """
-        self.login_admin()  # re-login as needed in case test logged out the user with permissions
-        if self.test_resource_name:
-            utils.TestSetup.delete_TestServiceResource(self)
-        if self.test_service_name:
-            utils.TestSetup.delete_TestService(self)
-        if self.test_user_name:
-            utils.TestSetup.delete_TestUser(self)
-        if self.test_group_name:
-            utils.TestSetup.delete_TestGroup(self)
 
     def setUp(self):
         super(BaseAdminTestCase, self).setUp()
@@ -567,7 +583,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_RegisterDiscoverableGroup_Unauthorized(self):
         """
         Not logged-in user cannot update membership to group although group is discoverable.
@@ -579,7 +595,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_UnregisterDiscoverableGroup_Unauthorized(self):
         """
         Not logged-in user cannot remove membership to group although group is discoverable.
@@ -591,7 +607,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_ViewDiscoverableGroup_Unauthorized(self):
         """
         Not logged-in user cannot view group although group is discoverable.
@@ -615,7 +631,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_STATUS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_ListDiscoverableGroup_Unauthorized(self):
         """
         Not logged-in user cannot list group names although groups are discoverable.
@@ -1098,13 +1114,13 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         webhook_update_error_status(test_user1)
         self.login_test_user(override_user_name=test_user1)
 
-        data = {"status": s.UserStatuses.OK.value}
+        data = {"status": UserStatuses.OK.value}
         path = "/users/{}".format(test_user1)  # try update its own status to 'OK' when it was bad
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
         utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
 
-        data = {"status": s.UserStatuses.WebhookErrorStatus.value}
+        data = {"status": UserStatuses.WebhookError.value}
         path = "/users/{}".format(test_user2)  # try update other user's status to be considered bad
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
@@ -1139,7 +1155,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         # update status only available after this version
         if TestVersion(self.version) >= TestVersion("3.9"):
             data = {
-                "status": s.UserStatuses.OK.value,       # forbidden by non-admin
+                "status": UserStatuses.OK.value,       # forbidden by non-admin
                 "password": test_user + "-new-password"  # allowed if it was by itself, but not with user name
             }
             resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
@@ -1581,7 +1597,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_RegisterDiscoverableGroup(self):
         """
         Non-admin logged user is allowed to update is membership to register to a discoverable group by itself.
@@ -1606,7 +1622,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
-    @runner.MAGPIE_TEST_REGISTER
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_UnregisterDiscoverableGroup(self):
         """
         Non-admin logged user is allowed to revoke its membership to leave a discoverable group by itself.
@@ -1832,8 +1848,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # test response results
         test_cases = [
-            (test_good_users, s.UserStatuses.OK.value),
-            (test_bad_users, s.UserStatuses.WebhookErrorStatus.value)
+            (test_good_users, UserStatuses.OK.value),
+            (test_bad_users, UserStatuses.WebhookError.value)
         ]
         for user_list, user_status in test_cases:
             query = {"status": user_status}
@@ -1852,7 +1868,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # cleanup any possible user that is marked as invalid
         invalid_user = "invalid-user-status"
         utils.TestSetup.delete_TestUser(self, override_user_name=invalid_user)
-        query = {"status": s.UserStatuses.WebhookErrorStatus.value}
+        query = {"status": UserStatuses.WebhookError.value}
         resp = utils.test_request(self, "GET", "/users", params=query, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         for user in body["user_names"]:
@@ -1876,7 +1892,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestUser(self, override_user_name=invalid_user)
         webhook_update_error_status(invalid_user)  # simulate a webhook failure that sets the bad status to user
 
-        query = {"detail": "true", "status": s.UserStatuses.OK.value}
+        query = {"detail": "true", "status": UserStatuses.OK.value}
         resp = utils.test_request(self, "GET", "/users", params=query, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
 
@@ -1890,9 +1906,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(len(body["users"]), len(all_valid_users) + 1)
         for usr in body["users"]:
             if usr["user_name"] == invalid_user:
-                utils.check_val_equal(usr["status"], s.UserStatuses.WebhookErrorStatus.value)
+                status = UserStatuses.WebhookError
             else:
-                utils.check_val_equal(usr["status"], s.UserStatuses.OK.value)
+                status = UserStatuses.OK
+            utils.check_val_equal(usr["status"], self.get_user_status_value(status))
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_DEFAULTS
@@ -3762,13 +3779,45 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_PostUsers_ReservedKeyword_LoggedUser(self):
         data = {
             "user_name": get_constant("MAGPIE_LOGGED_USER"),
-            "password": "pwd",
+            "password": "pwd",  # noqa  # nosec
             "email": "email@mail.com",
             "group_name": self.test_group_name,
         }
         resp = utils.test_request(self, "POST", "/users", data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_Conflict_Name(self):
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestUser(self)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        data = {
+            "user_name": self.test_user_name,
+            "password": self.test_user_name,
+            "email": info["email"].replace("email", "other-email"),
+        }
+        resp = utils.test_request(self, "POST", "/users", data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 409, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_Conflict_Email(self):
+        utils.warn_version(self, "user creation with duplicate email conflict", "3.11.0", skip=True)
+
+        other_name = self.test_user_name + "-other"
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_name)
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestUser(self)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        data = {
+            "email": info["email"],
+            "user_name": other_name,
+            "password": self.test_user_name,
+        }
+        resp = utils.test_request(self, "POST", "/users", data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -3937,9 +3986,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/users/{}".format(self.test_user_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["status"], s.UserStatuses.OK.value)
+        utils.check_val_equal(body["user"]["status"], self.get_user_status_value(UserStatuses.OK))
 
-        data = {"status": s.UserStatuses.OK.value}
+        data = {"status": UserStatuses.OK.value}  # name or number both supported
         resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 400, expected_method=self.update_method,
@@ -3959,7 +4008,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # getting user information displays the updated status
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_equal(body["user"]["status"], s.UserStatuses.OK.value)
+        utils.check_val_equal(body["user"]["status"], self.get_user_status_value(UserStatuses.OK))
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUser_existing(self):
@@ -4792,19 +4841,100 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PatchService_NoUpdateInfo(self):
-        # no path PATCH on '/services/types' (not equivalent to '/services/{service_name}')
-        # so not even a forbidden case to handle
-        resp = utils.test_request(self, self.update_method, "/services/types", data={}, expect_errors=True,
+        """
+        Verify that update operation of service raises when no update information is provided.
+
+        Both omitted (empty body) information, or identical one to already defined values in the current service are
+        handled the same way in this case (no update detail provided).
+        """
+        svc_name = "unittest-test-thredds"
+        svc_type = ServiceTHREDDS.service_type
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        body = utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        svc_url = body["service"]["service_url"]
+        path = "/services/{}".format(svc_name)
+
+        # apply basic config update just to ensure it is evaluated with anything other than None/null
+        svc_config = {"ignore_prefix": "dont-care"}
+        data = {"service_name": svc_name, "configuration": svc_config}
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        if TestVersion(self.version) >= TestVersion("0.9.5"):
-            # directly interpreted as expected path `/services/types` behaviour, so method PATCH not allowed
-            utils.check_response_basic_info(resp, 405, expected_method=self.update_method)
-        else:
-            # no path with service named 'types', filtered as not found
-            utils.check_response_basic_info(resp, 404, expected_method=self.update_method)
+        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+
+        # test case of omitted update fields
+        resp = utils.test_request(self, self.update_method, path, data={}, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+        # test cases where same details as current service should raise
+        tests_same_data = [
+            {"service_name": svc_name},
+            {"service_name": svc_name, "service_url": svc_url},
+            {"service_url": svc_url},
+            {"service_name": svc_name, "configuration": svc_config},
+            {"service_url": svc_url, "configuration": svc_config},
+            {"service_name": svc_name, "service_url": svc_url, "configuration": svc_config},
+        ]
+        for test_data in tests_same_data:
+            resp = utils.test_request(self, self.update_method, path, data=test_data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 400, expected_method=self.update_method,
+                                            extra_message="Using update data: {}".format(test_data))
+
+        # following a valid erasure of config, None update should indicate missing update values since already erased
+        # leave 'service_name' in body although not modified to avoid pre-3.15 issue where config-only was not cleared
+        erase_cfg_data = {"service_name": svc_name, "configuration": None}
+        resp = utils.test_request(self, self.update_method, path, data=erase_cfg_data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        resp = utils.test_request(self, self.update_method, path, data=erase_cfg_data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PatchService_UpdateConfigOnly(self):
+        """
+        Validate that an update of only the additional JSON configuration field is accepted.
+
+        Updates should allow both modification or erasure of the configuration without any other field.
+        """
+        # Prior to this version, config-only was refused (had to be combined with service name or url field)
+        utils.warn_version(self, "update only service configuration field", "3.15", skip=True)
+
+        svc_name = "unittest-test-thredds"
+        svc_type = ServiceTHREDDS.service_type
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        path = "/services/{}".format(svc_name)
+        apply_config_data = {"configuration": {"ignore_prefix": "something"}}
+        modif_config_data = {"configuration": {"ignore_prefix": "other", "file_patterns": [".+\\.nc"]}}
+        erase_config_data = {"configuration": None}
+
+        resp = utils.test_request(self, self.update_method, path, data=apply_config_data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        utils.check_val_equal(body["service"]["configuration"], apply_config_data["configuration"], diff=True)
+
+        resp = utils.test_request(self, self.update_method, path, data=modif_config_data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        utils.check_val_equal(body["service"]["configuration"], modif_config_data["configuration"], diff=True)
+
+        resp = utils.test_request(self, self.update_method, path, data=erase_config_data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        utils.check_val_equal(body["service"]["configuration"], None, diff=True,
+                              msg="Erase should be allowed with explicit None (null) JSON configuration.")
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PatchService_ReservedKeyword_Types(self):
+        """
+        Verify that update operation on reserved keyword ``types`` on path ``/services/types`` raises.
+
+        Because path ``/services/types`` is not the same configuration as ``'/services/{service_name}``
+        (actually two different routes), the forbidden test case is not even applicable here (missing occurs before).
+        The update HTTP method should directly be missing (404/405 according to version).
+        """
         # try to PATCH on 'types' path should raise the error
         data = {"service_name": "dummy", "service_url": "dummy"}
         resp = utils.test_request(self, self.update_method, "/services/types", json=data, expect_errors=True,
@@ -5611,7 +5741,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         user_status = utils.find_html_body_contents(resp, html_search)
         utils.check_val_not_in("OK", str(user_status))
-        utils.check_val_is_in("WARNING", str(user_status))
+        utils.check_val_is_in("USER_STATUS_ERROR", str(user_status))
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -5880,10 +6010,12 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
                               for user, form in test_user_forms.items()}
         for user in test_users:
             if user in bad_users:
-                utils.check_val_not_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'bad' status.")
-                utils.check_val_is_in("WARNING", str(test_user_statuses[user]), msg="Expected user 'bad' status.")
+                utils.check_val_not_in("OK", str(test_user_statuses[user]),
+                                       msg="Expected user with 'error' status but was 'OK' instead.")
+                utils.check_val_is_in("USER_STATUS_ERROR", str(test_user_statuses[user]),  # distinguish from 'Pending'
+                                      msg="Expected user with 'error' status to display the correct error code.")
             else:
-                utils.check_val_is_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'good' status.")
+                utils.check_val_is_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'OK' status.")
 
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_USERS
@@ -5908,7 +6040,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
         user_status = utils.find_html_body_contents(resp, html_search)
         utils.check_val_not_in("OK", str(user_status))
-        utils.check_val_is_in("WARNING", str(user_status))
+        utils.check_val_is_in("USER_STATUS_ERROR", str(user_status))
 
 
 @unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
@@ -5926,10 +6058,11 @@ class SetupMagpieAdapter(ConfigTestCase):
     cache_expire = None     # type: Optional[int]
 
     @classmethod
-    def setup_adapter(cls):
+    def setup_adapter(cls, setup_cache=True):
         test_app = utils.get_app_or_url(cls)
         settings = test_app.app.registry.settings
-        utils.setup_cache_settings(settings, enabled=cls.cache_enabled, expire=cls.cache_expire)
+        if setup_cache:
+            utils.setup_cache_settings(settings, force=True, enabled=cls.cache_enabled, expire=cls.cache_expire)
         adapter = MagpieAdapter(settings)
         config = adapter.configurator_factory(settings)
         # making the app triggers creation of class instances from registry (eg: AuthN/AuthZ Policies)
@@ -5938,7 +6071,7 @@ class SetupMagpieAdapter(ConfigTestCase):
         cls.ows = adapter.owssecurity_factory(settings)
         cls.adapter = adapter
 
-    @utils.mock_get_settings
+    @utils.mocked_get_settings
     def mock_request(self, *args, **kwargs):
         """
         Set getters that are normally defined when running the full application.
@@ -5976,5 +6109,7 @@ class SetupMagpieAdapter(ConfigTestCase):
                     self.session = reify.wrapped(request)
                 setattr(request, meth, self.session)
             else:
-                setattr(request, meth, reify.wrapped(request))
+                # depending if 'reify' was requested for property registration or not (eg: 'user')
+                prop = reify.wrapped(request) if hasattr(reify, "wrapped") else reify.fget(request)
+                setattr(request, meth, prop)
         return request

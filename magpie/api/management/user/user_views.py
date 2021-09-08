@@ -29,14 +29,16 @@ def get_users_view(request):
     """
     List all registered user names or details.
     """
-    user_status_filter = request.params.get("status")
-    user_status_valid = list(str(status) for status in s.UserStatuses.values())
-    user_status_valid.append(None)  # allow unspecified as 'all'
-    ax.verify_param(user_status_filter, is_in=True, param_compare=user_status_valid, param_name="status",
-                    http_error=HTTPBadRequest, msg_on_fail=s.Users_GET_BadRequestSchema.description)
-    status = user_status_filter if user_status_filter is None else int(user_status_filter)
+    query = request.params.get("status")
+    status = None
+    if query is not None:
+        status = models.UserStatuses.get(query)
+        allowed = models.UserStatuses.allowed()
+        ax.verify_param(status, not_none=True, param_name="status",
+                        param_content={"compare": allowed},  # provide literals in error response
+                        http_error=HTTPBadRequest, msg_on_fail=s.Users_GET_BadRequestSchema.description)
     detail = asbool(request.params.get("detail", False))
-    user_list = ax.evaluate_call(lambda: models.UserSearchService.search(status=status, db_session=request.db),
+    user_list = ax.evaluate_call(lambda: models.UserSearchService.by_status(status, db_session=request.db),
                                  fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                  msg_on_fail=s.Users_GET_ForbiddenResponseSchema.description)
     if detail:
@@ -72,7 +74,7 @@ def update_user_view(request):
     new_user_name = ar.get_multiformat_body(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_body(request, "email", default=user.email)
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
-    new_status = ar.get_multiformat_body(request, "status", default=None)
+    new_status = models.UserStatuses.get(ar.get_multiformat_body(request, "status", default=None))
     uu.update_user(user, request, new_user_name, new_password, new_email, new_status)
     return ax.valid_http(http_success=HTTPOk, detail=s.Users_PATCH_OkResponseSchema.description)
 

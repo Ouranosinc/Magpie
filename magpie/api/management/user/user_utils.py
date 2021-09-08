@@ -12,6 +12,7 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPOk
 )
+from pyramid.settings import asbool
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -38,7 +39,7 @@ LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Iterable, List, Optional
+    from typing import Any, Iterable, List, Optional
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
@@ -54,20 +55,46 @@ if TYPE_CHECKING:
     )
 
 
-def create_user(user_name, password, email, group_name, db_session):
-    # type: (Str, Optional[Str], Str, Optional[Str], Session) -> HTTPException
+def create_user(user_name,              # type: Str
+                password,               # type: Optional[Str]
+                email,                  # type: Str
+                group_name,             # type: Optional[Str]
+                db_session,             # type: Session
+                **extra_fields          # type: Any
+                ):                      # type: (...) -> HTTPException
     """
-    Creates a user if it is permitted and not conflicting. Password must be set to ``None`` if using external identity.
+    Creates a :term:`User` if it is permitted and not conflicting with existing ones.
 
-    Created user will immediately assigned membership to the group matching :paramref:`group_name`
+    Password must be set to ``None`` if using an external identity or skip its encrypted value generation.
+
+    Created :term:`User` will immediately be assigned membership to the group matching :paramref:`group_name`
     (can be :py:data:`MAGPIE_ANONYMOUS_GROUP` for minimal access). If no group is provided, this anonymous group will
-    be applied by default, creating a user effectively without any permissions other than ones set directly for him.
+    be applied by default, creating a user effectively without any permissions other than ones set directly for him and
+    inherited from :ref:`perm_public_access`.
 
-    Furthermore, the user will also *always* be associated with :py:data:`MAGPIE_ANONYMOUS_GROUP` (if not already
+    Furthermore, the :term:`User` *always* gets associated with :py:data:`MAGPIE_ANONYMOUS_GROUP` (if not already
     explicitly or implicitly requested with :paramref:`group_name`) to allow access to resources with public permission.
+    This means that when :paramref:`group_name` is provided with another name than :py:data:`MAGPIE_ANONYMOUS_GROUP`,
+    the :term:`User` will have two memberships initially.
+
     Argument :paramref:`group_name` **MUST** be an existing group if provided.
 
-    :returns: valid HTTP response on successful operation.
+    .. note::
+        In order to properly handle subscribed :term:`Webhook` that could request to change the user status to an
+        error following a failing external operation, the created user is immediately committed. This way, following
+        requests will have access to the instance from the database. Because of this requirement, any operation that
+        desire an handle to the created :class:`User` instance should retrieve it again from the database session.
+
+    :param user_name: Unique name of the user to validate and employ for creation.
+    :param password:
+        Raw password of the user to validate and employ for creation.
+        If Skipped if ``None``. Otherwise, apply hash encryption on the value.
+    :param email: User email to be validated and employed for creation.
+    :param group_name: Group name to associate the user with at creation time.
+    :param db_session: database connection.
+    :param extra_fields:
+        Additional fields that should be set for the user. Must be known properties of the instance.
+    :returns: valid HTTP response on successful operation, or the :class:`User` when requested.
     """
 
     def _get_group(grp_name):
@@ -89,21 +116,25 @@ def create_user(user_name, password, email, group_name, db_session):
     check_user_info(user_name, email, password, group_name, check_password=is_internal)
     group_checked = _get_group(group_name)
 
-    # Check if user already exists
-    user_checked = ax.evaluate_call(lambda: UserService.by_user_name(user_name=user_name, db_session=db_session),
-                                    http_error=HTTPForbidden,
-                                    msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
+    # check if user already exists
+    user_checked = ax.evaluate_call(
+        lambda: models.UserSearchService.by_name_or_email(user_name=user_name, email=email, db_session=db_session),
+        http_error=HTTPForbidden, msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
     ax.verify_param(user_checked, is_none=True, with_param=False, http_error=HTTPConflict,
                     msg_on_fail=s.User_Check_ConflictResponseSchema.description)
 
     # Create user with specified name and group to assign
     new_user = models.User(user_name=user_name, email=email)  # noqa
     if is_internal:
-        UserService.set_password(new_user, password)
-        UserService.regenerate_security_code(new_user)
+        UserService.set_password(new_user, password)  # already regenerates security code
+    for field, value in extra_fields.items():
+        if hasattr(new_user, field):
+            setattr(new_user, field, value)
+    if "user_password" in extra_fields:
+        UserService.regenerate_security_code(new_user)  # force if reset with explicit hash
     ax.evaluate_call(lambda: db_session.add(new_user), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.Users_POST_ForbiddenResponseSchema.description)
-    # Fetch user to update fields
+    # Fetch user to update auto-generated fields (i.e.: id)
     new_user = ax.evaluate_call(lambda: UserService.by_user_name(user_name, db_session=db_session),
                                 http_error=HTTPForbidden,
                                 msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
@@ -139,7 +170,7 @@ def create_user(user_name, password, email, group_name, db_session):
 
 
 def update_user(user, request, new_user_name=None, new_password=None, new_email=None, new_status=None):
-    # type: (models.User, Request, Optional[Str], Optional[Str], Optional[Str], Optional[s.UserStatuses]) -> None
+    # type: (models.User, Request, Optional[Str], Optional[Str], Optional[Str], Optional[models.UserStatuses]) -> None
     """
     Applies updates of user details with specified values after validation.
 
@@ -154,16 +185,28 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
     update_username = new_user_name is not None and not compare_digest(user.user_name, str(new_user_name))
     update_password = new_password is not None and not compare_digest(user.user_password, str(new_password))
     update_email = new_email is not None and not compare_digest(user.email, str(new_email))
-    update_status = new_status is not None and user.status != new_status
+    update_status = new_status is not None and models.UserStatuses.get(user.status) != new_status
     ax.verify_param(any([update_username, update_password, update_email, update_status]), is_true=True,
                     with_param=False,  # params are not useful in response for this case
                     content={"user_name": user.user_name},
                     http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
+
+    # FIXME: disable email edit when self-registration is enabled to avoid not having any confirmation of new email
+    #   (see https://github.com/Ouranosinc/Magpie/issues/436)
+    update_email_admin_only = False
+    if update_email:
+        update_email_admin_only = asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", request,
+                                                      default_value=False, print_missing=True,
+                                                      raise_missing=False, raise_not_set=False))
+
     # user name/status change is admin-only operation
-    if update_username or update_status:
+    if update_username or update_status or update_email_admin_only:
+        err_msg = s.User_PATCH_ForbiddenResponseSchema.description
+        if update_email_admin_only and not (update_username or update_status):
+            err_msg = "User email update not permitted by non-administrators when email registration is enabled."
         ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP", request), is_in=True,
                         param_compare=get_user_groups_checked(request.user, request.db), with_param=False,
-                        http_error=HTTPForbidden, msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
+                        http_error=HTTPForbidden, msg_on_fail=err_msg)
 
     # logged user updating itself is forbidden if it corresponds to special users
     # cannot edit reserved keywords nor apply them to another user

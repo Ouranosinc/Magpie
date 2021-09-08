@@ -22,6 +22,7 @@ import transaction
 from magpie import constants, db, models
 from magpie.api.management.resource.resource_utils import get_resource_children
 from magpie.cli.sync_services import SYNC_SERVICES_TYPES, SyncServiceDefault, is_valid_resource_schema
+from magpie.cli.utils import make_logging_options, setup_logger_from_options
 from magpie.utils import get_logger
 
 if TYPE_CHECKING:
@@ -344,8 +345,7 @@ def make_parser():
     # type: () -> argparse.ArgumentParser
     parser = argparse.ArgumentParser(description="Synchronize local and remote resources based on "
                                                  "Magpie Service sync-type.")
-    parser.add_argument("--log-level", "-l", dest="log_level", default="INFO",
-                        help="Log level to employ (default: %(default)s).")
+    make_logging_options(parser)
     parser.add_argument("--db", metavar="CONNECTION_URL", dest="db",
                         help="Magpie database URL to connect to. Otherwise employ typical environment variables.")
     return parser
@@ -362,6 +362,7 @@ def main(args=None, parser=None, namespace=None):
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
+    setup_logger_from_options(LOGGER, args)
     settings = {"magpie.db_url": args.db} if args.db else None
 
     setup_cron_logger(args.log_level)

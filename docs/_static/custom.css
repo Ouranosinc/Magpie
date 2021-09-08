@@ -1,4 +1,7 @@
-div.body p, div.body dd, div.body li, div.body blockquote {
+div.body p,
+div.body dd,
+div.body li,
+div.body blockquote {
     -moz-hyphens: none;
     -ms-hyphens: none;
     -webkit-hyphens: none;
@@ -11,12 +14,12 @@ div.body p, div.body dd, div.body li, div.body blockquote {
 */
 code.docutils.literal:not(.xref) {
     /* same as original */
-    color: #222;
+    color: #222222;
     font-size: 1.1em;
     font-family: monospace;
 
     /* overrides and additions */
-    background-color: #dbdbdd;  /* slightly darker than original to make more obvious */
+    background-color: #DBDBDD;  /* slightly darker than original to make more obvious */
     padding: 0.1em 0.1em;       /* pad so that background color encapsulate letters going 'lower' (eg: g, j, y) */
     white-space: nowrap;        /* don't allow breaking on non-word items such as dot in value */
 }
@@ -28,20 +31,23 @@ code.docutils.literal:not(.xref) {
 #functions > table {
     word-wrap: anywhere;
 }
+
 #functions > table > colgroup > col {
     width: 75% !important;  /* need to make important as style is defined inline */
 }
 
 /* imitate the automatically generated container by directive code-block */
 div.bordered-caption {
-    background-color: #DDD;
+    background-color: #DDDDDD;
     border: 1px solid #C6C9CB;
     padding: 0 1em 1em 0;
     font-size: small;
 }
+
 div.bordered-caption > p {
     margin: 0 0 0 0.25em;
 }
+
 div.bordered-content {
     border: 1px solid #C6C9CB;
     padding: 0 1em 1em 0;

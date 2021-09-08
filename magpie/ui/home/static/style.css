@@ -6,9 +6,9 @@ Note:
 
 html,
 body {
-    margin:0;
-    padding:0;
-    border:0;
+    margin: 0;
+    padding: 0;
+    border: 0;
     font-family: "Open Sans", sans-serif;
 }
 
@@ -21,7 +21,7 @@ body {
     right: 0;
 }
 
-.version-box>div{
+.version-box > div {
     font-size: 75%;
     display: inline-block;
     position: relative;
@@ -40,6 +40,7 @@ body {
     padding: 0.5em;
     margin: 1em 0 1em;
     display: inline-flex;
+
     /* align-items: flex-end; */
 }
 
@@ -159,10 +160,9 @@ input[type="submit"].button.cancel:hover {
     background-color: #8A8A8A;
 }
 
+.img-button,
 a.tab:link,
 a.tab:visited,
-.img-button,
-.admin-button,
 input[type="submit"],
 input[type="submit"].button.normal {
     vertical-align: center;
@@ -192,8 +192,9 @@ table {
     width: auto;
 }
 
-td, th {
-    border: 1px solid #dddddd;
+td,
+th {
+    border: 1px solid #DDDDDD;
     padding: 0.5em;
 }
 
@@ -202,18 +203,16 @@ table thead {
     font-weight: bold;
 }
 
-.no-border {
-    border-style: none;
-}
-
 .checkbox-align label {
     display: block;
-    /*float: left;*/
+
+    /* float: left; */
     padding-left: 0.2em;
     padding-right: 0.2em;
     padding-bottom: 1em;
     white-space: nowrap;
 }
+
 .checkbox-align input {
     vertical-align: middle;
     margin-top: 0.05em;
@@ -223,7 +222,7 @@ table thead {
     vertical-align: middle;
 }
 
-/*---Panel Information Box---*/
+/* --- Panel Information Box --- */
 
 .panel-body {
     padding: 0.5em;
@@ -256,11 +255,16 @@ table thead {
     text-align: left;
 }
 
+.panel-message-text > span {
+    white-space: pre-wrap;
+}
+
 .subsection {
     background-color: #CCCCCC;
 }
 
 .no-border {
+    border-style: none;
     border-width: 0;
 }
 
@@ -295,21 +299,32 @@ table.panel-line td {
     min-height: 1em;
 }
 
-.panel-form-warning>img,
-.panel-form-error>img {
+.panel-form-warning > img,
+.panel-form-error > img {
     width: 1em;
     height: 1em;
     margin: 0.1em 0.25em 0.15em 0;
 }
 
+.panel-form-lock > img {
+    width: 1.25em;
+    height: 1em;
+    margin: 0 -0.1em 0.15em -0.1em;
+}
+
 .panel-form-warning,
-.panel-form-error {
+.panel-form-error,
+.panel-form-lock {
     width: auto;
     display: inline-flex;
     float: left;
     text-align: center;
     margin-left: 0.75em;
     margin-top: 0;
+}
+
+.panel-form-lock {
+    margin-top: 0.1;
 }
 
 .panel-line input[type="button"],
@@ -322,6 +337,11 @@ table.panel-line td {
     min-width: 4em;  /* for save/edit buttons alignment when editing one field and others are still in non-edit mode */
 }
 
+.panel-line-entry input[type="button"],
+.panel-line-entry input[type="submit"] {
+    margin-top: -0.1em;
+}
+
 /* textual field entry when in edit mode */
 .panel-line-entry input[type="password"],
 .panel-line-entry input[type="text"],
@@ -330,14 +350,14 @@ table.panel-line td {
     -webkit-appearance: none;
     appearance: none;
     height: 1.125em;
-    border: solid #666 1px;
+    border: solid #666666 1px;
     font-size: 14px;
     margin-bottom: 0.1em;
 }
 
 /* textual field entry when in non-edit mode */
 .panel-line-entry span {
-/*
+    /*
     background-color: lightgray;
     border-color: black;
     border-width: 0.15em;
@@ -373,20 +393,20 @@ table.panel-line td {
     margin-left: 0.5em;
 }
 
-/*---Labels---*/
+/* --- Labels --- */
 
 .label {
     display: inline;
-    padding: .2em .5em;
+    padding: 0.2em 0.5em;
     font-size: 75%;
     font-weight: 700;
     line-height: 1;
-    color: #fff;
+    color: #FFFFFF;
     text-align: center;
     white-space: nowrap;
     vertical-align: baseline;
-    border-radius: .25em;
-    background-color: #5BC0DE; /*info default*/
+    border-radius: 0.25em;
+    background-color: #5BC0DE; /* info default */
 }
 
 .label-danger {
@@ -405,7 +425,7 @@ table.panel-line td {
     background-color: #4CAF50;
 }
 
-/*---Alerts---*/
+/* --- Alerts --- */
 
 .alert {
     padding: 20px;
@@ -413,8 +433,8 @@ table.panel-line td {
     opacity: 1;
     transition: opacity 0.6s;
     margin-bottom: 15px;
-    display: none;              /*hidden default*/
-    background-color: #2196F3;  /*info default*/
+    display: none;              /* hidden default */
+    background-color: #2196F3;  /* info default */
 }
 
 .alert-danger {
@@ -434,7 +454,7 @@ table.panel-line td {
 }
 
 .alert-visible {
-    display: block; /*override hidden default*/
+    display: block; /* override hidden default */
 }
 
 .alert-title {
@@ -462,8 +482,8 @@ table.panel-line td {
     text-align: center;
 }
 
-.alert-text-container>img {
-    margin: 0.10em 0.25em 0.15em 0;
+.alert-text-container > img {
+    margin: 0.1em 0.25em 0.15em 0;
 }
 
 .alert-text {
@@ -499,9 +519,6 @@ table.panel-line td {
     float: left;
     text-align: center;
     margin-top: 0.25em;
-}
-
-.alert-form-text {
 }
 
 .alert-form-text-locked {
@@ -546,6 +563,15 @@ table.panel-line td {
     width: 1.25em;
     height: 1.25em;
     margin-top: 0.05em;
+}
+
+.icon-pending {
+    width: 1.5em;
+    height: 1.5em;
+    padding-right: 0.2em;
+    margin-top: 0.1em;
+    margin-bottom: -0.1em;
+    filter: contrast(0);
 }
 
 .icon-check {
@@ -616,7 +642,7 @@ table.panel-line td {
     width: 100%;
 }
 
-.permission-apply-container>input {
+.permission-apply-container > input {
     float: right;
     margin-right: 1.25em;
 }
@@ -626,6 +652,7 @@ table.panel-line td {
     padding: 1px 2px 2px;
     font-weight: bold;
     font-size: 1.25em;
+
     /* make sure current line test button converted to success/failure icon remains aligned with other lines buttons.
        is affected by width of 'permission-effective-button' to align, impacts width of 'permission-title-effective' */
     margin-left: 0.1em;
@@ -678,7 +705,7 @@ input[type="button"].button-no-click:hover {
     cursor: default;
 }
 
-/*---View users & groups pages ---*/
+/* --- View users & groups pages  --- */
 
 table.simple-list {
     width: 100%;
@@ -688,6 +715,7 @@ table.simple-list {
 table.simple-list tr.list-row-odd {
     background-color: white;
 }
+
 table.simple-list tr.list-row-even {
     background-color: #F2F2F2;
 }
@@ -709,7 +737,7 @@ table.simple-list input[type="submit"] {
     margin: 0 0.5em;
 }
 
-/*---Resource tree rendering ---*/
+/* --- Resource tree rendering  --- */
 
 .tree {
     background: white;
@@ -721,7 +749,9 @@ table.simple-list input[type="submit"] {
 }
 
 .tree .collapsible {
-    /*cursor: pointer;*/  /* looks better on 'tree-key' element */
+    /* cursor: pointer; */
+
+    /* looks better on 'tree-key' element */
     margin-top: -1em;  /* make each new sub-list aligned such as if continuous flat list without extra spacing */
 }
 
@@ -740,6 +770,7 @@ table.simple-list input[type="submit"] {
     position: relative;
     left: -1.25em;
     top: 1.25em;
+
     /* make the marker area large enough to overlap completely the arrow with a little overflow  */
     width: 1.25em;
     height: 1.25em;
@@ -753,13 +784,17 @@ table.simple-list input[type="submit"] {
 
 /* leaf nodes will have this style, as not overridden by following ones */
 .tree li {
-    /*margin-top: 0.25em;*/
-    /*margin-left: 2em;*/
-    /*margin-bottom: 0.25em;*/
+    /* margin-top: 0.25em; */
+
+    /* margin-left: 2em; */
+
+    /* margin-bottom: 0.25em; */
     line-height: 1.5em;
     list-style-type: square;
-    /*list-style-position: inside;*/
-    /*border-bottom: 1px solid #DDDDDD;*/
+
+    /* list-style-position: inside; */
+
+    /* border-bottom: 1px solid #DDDDDD; */
 }
 
 /* nodes that have child node(s) will have a expanded menu, default marker style when collapsed */
@@ -767,7 +802,8 @@ table.simple-list input[type="submit"] {
     content: "►\00a0\00a0";
     list-style-type: none;
     font-size: 0.875em;
-    /*font-family: monospace;*/
+
+    /* font-family: monospace; */
 }
 
 /* all collapsible nodes inherits from 'li.expanded::marker', 'expanded' added on top of it for expanded marker */
@@ -780,11 +816,12 @@ table.simple-list input[type="submit"] {
 }
 
 .tree-key {
-    /*display: block;
-    float: left;*/
+    /* display: block;
+    float: left; */
     display: inline-block;
     position: absolute;
-    /*margin-top: 0.5em;*/
+
+    /* margin-top: 0.5em; */
     cursor: pointer;
 
     /* this ensures that element is on top to capture the click event to toggle collapsed/expanded
@@ -793,8 +830,8 @@ table.simple-list input[type="submit"] {
 }
 
 .tree-item {
-    /*display: block;
-    float: right;*/
+    /* display: block;
+    float: right; */
     display: inline-block;
     width: 100%;
     vertical-align: middle;
@@ -812,7 +849,7 @@ table.simple-list input[type="submit"] {
     margin: 0.25em 0 0 0;
 }
 
-.tree-item-message>img {
+.tree-item-message > img {
     width: 1.5em;
     height: 1.5em;
     margin: -0.15em 0 0 0;
@@ -841,10 +878,21 @@ div.tree-button {
     float: right;
     text-align: left;
 
-    /*-webkit-transform: rotate(-10deg);*/   /* Safari */
-    /*-moz-transform: rotate(-10deg);*/      /* Firefox */
-    /*-ms-transform: rotate(-10deg);*/       /* IE */
-    /*-o-transform: rotate(-10deg);*/        /* Opera */
+    /* -webkit-transform: rotate(-10deg); */
+
+    /* Safari */
+
+    /* -moz-transform: rotate(-10deg); */
+
+    /* Firefox */
+
+    /* -ms-transform: rotate(-10deg); */
+
+    /* IE */
+
+    /* -o-transform: rotate(-10deg); */
+
+    /* Opera */
 }
 
 .permission-title-effective {
@@ -853,7 +901,7 @@ div.tree-button {
 }
 
 .permission-entry {
-    float:right;
+    float: right;
     text-align: left;
     margin-top: 0.05em;
     margin-right: 0.5em;    /* must be included in 'permission-title' width */
@@ -870,7 +918,7 @@ div.tree-button {
 .permission-combobox {
     /* use separate border values to inherit the theme color */
     -webkit-border-radius: 3px;
-	-moz-border-radius: 3px;
+    -moz-border-radius: 3px;
     border-radius: 3px;
     border-width: 1px;
     border-style: solid;
@@ -881,33 +929,42 @@ div.tree-button {
     display: none;
 }
 
-/*---Header breadcrumb---*/
+/* --- Header breadcrumb --- */
 
 ul.breadcrumb {
     padding: 10px 16px;
     list-style: none;
 }
+
 ul.breadcrumb li {
     display: inline;
     font-size: 18px;
 }
-ul.breadcrumb li+li:before {
+
+ul.breadcrumb li + li::before {
     padding: 8px;
     color: #DDDDDD;
     content: ">\00a0";
 }
+
 ul.breadcrumb li a {
     color: #DDDDDD;
     text-decoration: none;
 }
+
 ul.breadcrumb li a:hover {
     color: white;
     text-decoration: underline;
 }
 
-/*---Header---*/
+/* --- Header --- */
 
-/*noinspection CssInvalidFunction*/
+/* stylelint-disable no-descending-specificity
+    Ignore header and body section order to allow specific overrides of other buttons
+    and to preserve item within same section grouped together.
+*/
+
+/* noinspection CssInvalidFunction */
 .header {
     background: black; /* For browsers that do not support gradients */
     background: -webkit-gradient(bottom top, black, gray); /* Chrome, Safari4+ */
@@ -917,9 +974,6 @@ ul.breadcrumb li a:hover {
     background: -ms-linear-gradient(bottom top, black, gray); /* IE10+ */
     background: linear-gradient(to bottom top, black, gray); /* Standard syntax (must be last) */
     padding: 1em 1em 0 1em;
-}
-
-.header{
     vertical-align: center;
 }
 
@@ -931,7 +985,7 @@ ul.breadcrumb li a:hover {
 .header-section {
 }
 
-.header>div>a {
+.header > div > a {
     color: white;
     font-size: 3em;
     text-decoration: none;
@@ -939,7 +993,7 @@ ul.breadcrumb li a:hover {
     vertical-align: center;
 }
 
-.header>button {
+.header > button {
     height: 40px;
     width: 100px;
     float: right;
@@ -963,7 +1017,7 @@ ul.breadcrumb li a:hover {
     height: inherit;
 }
 
-#image-background>img {
+#image-background > img {
     width: inherit;
     height: inherit;
 }
@@ -976,7 +1030,7 @@ ul.breadcrumb li a:hover {
     top: 10px;
 }
 
-#image-overlay>img {
+#image-overlay > img {
     width: inherit;
     height: inherit;
 }
@@ -989,7 +1043,7 @@ ul.breadcrumb li a:hover {
     float: right;
 }
 
-/*---Home---*/
+/* --- Home --- */
 
 /*  when the screen width is too small, force
     buttons block-stacking with style override,
@@ -1007,15 +1061,8 @@ ul.breadcrumb li a:hover {
     text-align: center;
 }
 
-.admin-button,
-.admin-button:focus,
-.admin-button:hover,
-.admin-button:active {
-    color: #000000;
-}
-
 .admin-button {
-    display:inline-block;
+    display: inline-block;
     box-sizing: border-box;
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
     width: 10em;
@@ -1024,6 +1071,9 @@ ul.breadcrumb li a:hover {
     padding: 1em;
     text-align: center;
     text-decoration: none;
+    vertical-align: center;
+    cursor: pointer;
+
     /* use separate border values to inherit the theme color */
     border-radius: 3px;
     border-width: 1px;
@@ -1031,7 +1081,14 @@ ul.breadcrumb li a:hover {
     font-weight: bold;
 }
 
-.admin-button>img {
+.admin-button,
+.admin-button:focus,
+.admin-button:hover,
+.admin-button:active {
+    color: #000000;
+}
+
+.admin-button > img {
     height: 60%;
     padding: 5%;
 }
@@ -1054,6 +1111,10 @@ ul.breadcrumb li a:hover {
     vertical-align: middle;
 }
 
+.list-button {
+    width: 5em;
+}
+
 .error div {
     text-align: center;
 }
@@ -1061,19 +1122,24 @@ ul.breadcrumb li a:hover {
 table.request-details {
     text-align: left;
     width: 60%;
-    margin-left:auto;
-    margin-right:auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+table.request-details thead,
+table.request-details tbody,
+table.request-details td,
+table.request-details th {
+    text-align: left;
 }
 
 table.request-details td:first-child {
     white-space: nowrap;
 }
 
-table.request-details thead tbody td th {
-    text-align: left;
-}
+/* stylelint-enable */
 
-/*---Service tabs---*/
+/* --- Service tabs --- */
 
 .tabs-panel {
     background: #DDDDDD;
@@ -1107,6 +1173,7 @@ a.current-tab:visited {
 .tab {
     min-width: 6em;  /* make tabs same width regardless of text length, but must be adjusted for longest one */
     border-color: black;
+
     /* below margins top/left must be opposite to bottom/right of 'tab-panel-selector' to make it look equally spaced */
     margin-top: 0.125em;   /* in case page is not wide enough, avoid wrapped tabs to be sticking top row tabs */
     margin-left: 0.125em;  /* also avoid sticking to previous tab or edge of 'tab-panel-selector' */
@@ -1120,7 +1187,7 @@ a.tab:visited {
     display: inline-block;
 }
 
-/*---service configuration languages---*/
+/* --- service configuration languages --- */
 
 .panel-code-language {
     background: #DDDDDD;
@@ -1148,13 +1215,13 @@ a.tab:visited {
 
 }
 
-/*---service details---*/
+/* --- service details --- */
 
 table.service-details {
     table-layout: fixed;
 }
 
-/*---field form---*/
+/* --- field form --- */
 
 .new-item-form {
     margin: auto;
@@ -1180,22 +1247,24 @@ table.fields-table input[type="radio"] {
     margin-left: 2em;
 }
 
-/*---field form equal width inputs
+/* ---
+field form equal width inputs
 support different browsers using an higher level container
----*/
+--- */
 
 select.equal-width,
 option.equal-width,
 input.equal-width {
     width: 250px;
-    /*-webkit-box-sizing: border-box;*/
-       -moz-box-sizing: border-box;
-            box-sizing: border-box;
+
+    /* -webkit-box-sizing: border-box; */
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
     float: left;
 }
 
 div.input-container {
     width: 100%;
-    height:100%;
+    height: 100%;
     -webkit-box-sizing: border-box;
 }

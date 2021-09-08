@@ -17,12 +17,67 @@ from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
+from magpie.api.management.register import register_formats as rf
 from magpie.api.management.register import register_utils as ru
 from magpie.api.management.user import user_utils as uu
 
 if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
+
+
+# note: optional view config added in includeme according to setting
+@s.RegisterUsersAPI.get(schema=s.RegisterUsers_GET_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
+                        response_schemas=s.RegisterUsers_GET_responses)
+def get_pending_users_view(request):
+    """
+    List all user names pending registration.
+    """
+    user_name_list = ax.evaluate_call(lambda: [user.user_name for user in
+                                               models.UserSearchService.by_status(models.UserStatuses.Pending,
+                                                                                  db_session=request.db)],
+                                      fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
+                                      msg_on_fail=s.RegisterUsers_GET_ForbiddenResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, content={"registrations": sorted(user_name_list)},
+                         detail=s.RegisterUsers_GET_OkResponseSchema.description)
+
+
+# note: optional view config added in includeme according to setting
+@s.RegisterUsersAPI.post(schema=s.RegisterUsers_POST_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
+                         response_schemas=s.RegisterUsers_POST_responses)
+def create_pending_user_view(request):
+    """
+    Create a new pending user registration.
+    """
+    user_name = ar.get_multiformat_body(request, "user_name")
+    email = ar.get_multiformat_body(request, "email")
+    password = ar.get_multiformat_body(request, "password")
+    return ru.register_pending_user(user_name, email, password, request)
+
+
+# note: optional view config added in includeme according to setting
+@s.RegisterUserAPI.get(schema=s.RegisterUser_GET_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
+                       response_schemas=s.RegisterUser_GET_responses)
+def get_pending_user_view(request):
+    """
+    Retrieve a pending user registration details.
+    """
+    pending_user = ar.get_user_matchdict_checked(request, user_status=models.UserStatuses.Pending)
+    data = {"registration": rf.format_pending_user(pending_user)}
+    return ax.valid_http(http_success=HTTPOk, content=data, detail=s.RegisterUser_GET_OkResponseSchema.description)
+
+
+# note: optional view config added in includeme according to setting
+@s.RegisterUserAPI.delete(schema=s.RegisterUser_DELETE_RequestSchema, tags=[s.UsersTag, s.RegisterTag],
+                          response_schemas=s.RegisterUser_DELETE_responses)
+def delete_pending_user_view(request):
+    """
+    Remove a pending user registration (disapprove account creation).
+    """
+    pending_user = ar.get_user_matchdict_checked(request, user_status=models.UserStatuses.Pending)
+    ax.evaluate_call(lambda: request.db.delete(pending_user), fallback=lambda: request.db.rollback(),
+                     http_error=HTTPInternalServerError, msg_on_fail=s.InternalServerErrorResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.RegisterUser_DELETE_OkResponseSchema.description)
 
 
 @s.RegisterGroupsAPI.get(tags=[s.GroupsTag, s.LoggedUserTag, s.RegisterTag],
@@ -94,7 +149,7 @@ def leave_discoverable_group_view(request):
 
 
 @s.TemporaryUrlAPI.get(schema=s.TemporaryURL_GET_RequestSchema, tags=[s.RegisterTag],
-                       response_schemas=s.TemporaryURL_GET_responses)
+                       response_schemas=s.TemporaryURL_GET_responses)  # note: endpoint public, sub-task can have auth
 @view_config(route_name=s.TemporaryUrlAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
 def handle_temporary_url(request):
     """
@@ -102,10 +157,8 @@ def handle_temporary_url(request):
     """
     str_token = ar.get_value_matchdict_checked(request, key="token", pattern=ax.UUID_REGEX)
     str_token = str_token.split(":")[-1]  # remove optional prefix if any (e.g.: 'urn:uuid:')
-    db_session = request.db
-    tmp_token = models.TemporaryToken.by_token(str_token, db_session=db_session)
+    tmp_token = models.TemporaryToken.by_token(str_token, db_session=request.db)
     ax.verify_param(tmp_token, not_none=True,
                     http_error=HTTPNotFound, content={"token": str(str_token)},
                     msg_on_fail=s.TemporaryURL_GET_NotFoundResponseSchema.description)
-    ru.handle_temporary_token(tmp_token, db_session=db_session)
-    return ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)
+    return ru.handle_temporary_token(tmp_token, request)

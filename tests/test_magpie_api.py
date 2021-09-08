@@ -14,6 +14,7 @@ import mock
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
 from magpie.constants import get_constant
+from magpie.models import UserStatuses
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils
 
@@ -82,6 +83,69 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
 
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTRATION
+class TestCase_MagpieAPI_UsersAuth_Local_UserRegistration(ti.UserTestCase):
+    # pylint: disable=C0103,invalid-name
+    """
+    Test any operation that require logged AuthN/AuthZ, but lower than ``MAGPIE_ADMIN_GROUP``.
+
+    Use a local Magpie test application. Enables the User self-registration feature.
+    """
+
+    __test__ = True
+
+    @classmethod
+    def setUpClass(cls):
+        # configuration employed for user registration tests
+        settings = {
+            "magpie.user_registration_enabled": True,
+            "magpie.user_registered_enabled": True,
+            "magpie.admin_approval_enabled": True,
+            "magpie.admin_approval_email_recipient": "fake-admin@test.com",
+        }
+        cls.app = utils.get_test_magpie_app(settings)
+
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.cookies = None
+        cls.version = utils.TestSetup.get_Version(cls)
+        cls.setup_admin()
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd, use_ui_form_submit=True)
+        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
+        assert cls.headers and cls.cookies, cls.require  # nosec
+
+        # don't bother with any test if not supported, must wait until here to get version from app
+        utils.warn_version(cls, "User self-registration.", "3.13.0", skip=True)
+
+        cls.test_group_name = "unittest-user-register-local_test-group"
+        cls.test_user_name = "unittest-user-register-local_test-user-username"
+
+    @runner.MAGPIE_TEST_USERS
+    def test_GetPendingUsersList_Forbidden(self):
+        """
+        Non-admin logged user cannot list pending user registrations.
+        """
+        self.login_test_user()
+
+        resp = utils.test_request(self, "GET", "/register/users", expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_DeletePendingUser_Forbidden(self):
+        """
+        Non-admin logged user cannot remove pending user registrations.
+        """
+        self.login_test_user()
+
+        resp = utils.test_request(self, "DELETE", "/register/users/dont-care", expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+
+
+@runner.MAGPIE_TEST_API
+@runner.MAGPIE_TEST_LOCAL
 class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unittest.TestCase):
     # pylint: disable=C0103,invalid-name
     """
@@ -105,6 +169,95 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.login_admin()
         cls.setup_test_values()
+
+
+@runner.MAGPIE_TEST_API
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_REGISTRATION
+class TestCase_MagpieAPI_AdminAuth_Local_UserRegistration(ti.AdminTestCase):
+    # pylint: disable=C0103,invalid-name
+    """
+    Test any operation that require at least ``MAGPIE_ADMIN_GROUP`` AuthN/AuthZ.
+
+    Use a local Magpie test application. Enables the User self-registration feature.
+    """
+
+    __test__ = True
+
+    @classmethod
+    def setUpClass(cls):
+        # configuration employed for user registration tests
+        settings = {
+            "magpie.user_registration_enabled": True,
+            "magpie.user_registered_enabled": True,
+            "magpie.admin_approval_enabled": True,
+            "magpie.admin_approval_email_recipient": "fake-admin@test.com",
+        }
+
+        # setup
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.app = utils.get_test_magpie_app(settings)
+        cls.version = utils.TestSetup.get_Version(cls, real_version=True)
+        cls.setup_admin()
+        cls.headers, cls.cookies = utils.check_or_try_login_user(cls.app, cls.usr, cls.pwd)
+        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
+        cls.login_admin()
+
+        # don't bother with any test if not supported, must wait until here to get version from app
+        utils.warn_version(cls, "User self-registration.", "3.13.0", skip=True)
+
+    @runner.MAGPIE_TEST_USERS
+    @utils.mocked_send_email
+    def test_GetPendingUsersList(self):
+        utils.TestSetup.clear_PendingUsers(self)
+
+        test_user = "test-pending-user-listing"
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user, pending=True)
+
+        resp = utils.test_request(self, "GET", "/register/users", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_is_in("registrations", body)
+        utils.check_val_equal(len(body["registrations"]), 1)
+        utils.check_val_equal(body["registrations"][0], test_user)
+
+    @runner.MAGPIE_TEST_USERS
+    @utils.mocked_send_email
+    def test_GetPendingUsersRegistration(self):
+        utils.TestSetup.clear_PendingUsers(self)
+
+        test_user = "test-pending-user-listing"
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user, pending=True)
+
+        path = "/register/users/{}".format(test_user)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("registration", body)
+        reg = body["registration"]
+        utils.check_val_is_in("user_name", reg)
+        utils.check_val_equal(reg["user_name"], test_user)
+        utils.check_val_is_in("status", reg)
+        utils.check_val_equal(reg["status"], UserStatuses.Pending.name)
+        utils.check_val_is_in("confirm_url", reg)
+        utils.check_val_is_in("approve_url", reg)
+        utils.check_val_is_in("decline_url", reg)
+
+    @runner.MAGPIE_TEST_USERS
+    @utils.mocked_send_email
+    def test_DeletePendingUser(self):
+        utils.TestSetup.clear_PendingUsers(self)
+
+        test_user = "test-pending-user-listing"
+        utils.TestSetup.create_TestUser(self, override_user_name=test_user, pending=True)
+
+        path = "/register/users/{}".format(test_user)
+        resp = utils.test_request(self, "DELETE", path, headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 200)
+
+        resp = utils.test_request(self, "GET", path, expect_errors=True,
+                                  headers=self.test_headers, cookies=self.test_cookies)
+        utils.check_response_basic_info(resp, 404)
 
 
 @runner.MAGPIE_TEST_API

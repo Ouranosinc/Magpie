@@ -7,7 +7,6 @@ import os
 import sys
 import types
 from distutils.dir_util import mkpath
-from enum import Enum
 from typing import TYPE_CHECKING
 
 import requests
@@ -17,16 +16,23 @@ from pyramid.httpexceptions import HTTPClientError, HTTPException, HTTPOk
 from pyramid.registry import Registry
 from pyramid.request import Request
 from pyramid.response import Response
-from pyramid.settings import truthy
+from pyramid.settings import asbool, truthy
 from pyramid.threadlocal import get_current_registry
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
 from six.moves import configparser
 from six.moves.urllib.parse import urlparse
+from sqlalchemy import inspect as sa_inspect
 from webob.headers import EnvironHeaders, ResponseHeaders
+from ziggurat_foundations.models.services.user import UserService
 
 from magpie import __meta__
 from magpie.constants import get_constant
+
+if sys.version_info >= (3, 6):
+    from enum import Enum
+else:
+    from aenum import Enum  # noqa
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -95,14 +101,17 @@ def get_logger(name, level=None, force_stdout=None, message_format=None, datetim
 LOGGER = get_logger(__name__)
 
 
-def set_logger_config(logger, force_stdout=False, message_format=None, datetime_format=None):
-    # type: (logging.Logger, bool, Optional[Str], Optional[Str]) -> logging.Logger
+def set_logger_config(logger, force_stdout=False, message_format=None, datetime_format=None, log_file=None):
+    # type: (logging.Logger, bool, Optional[Str], Optional[Str], Optional[Str]) -> logging.Logger
     """
     Applies the provided logging configuration settings to the logger.
     """
     if not logger:
         return logger
     handler = None
+    formatter = None
+    if message_format or datetime_format:
+        formatter = logging.Formatter(fmt=message_format, datefmt=datetime_format)
     if force_stdout:
         all_handlers = logging.root.handlers + logger.handlers
         if not any(isinstance(h, logging.StreamHandler) for h in all_handlers):
@@ -114,8 +123,15 @@ def set_logger_config(logger, force_stdout=False, message_format=None, datetime_
         else:
             handler = logging.StreamHandler(sys.stdout)
             logger.addHandler(handler)
-    if message_format or datetime_format:
-        handler.setFormatter(logging.Formatter(fmt=message_format, datefmt=datetime_format))
+    if formatter:
+        handler.setFormatter(formatter)
+    if log_file:
+        all_handlers = logging.root.handlers + logger.handlers
+        if not any(isinstance(h, logging.FileHandler) for h in all_handlers):
+            handler = logging.FileHandler(log_file)
+            if formatter:
+                handler.setFormatter(formatter)
+            logger.addHandler(handler)
     return logger
 
 
@@ -210,6 +226,96 @@ def get_settings_from_config_ini(config_ini_path, ini_main_section_name="app:mag
         raise ValueError(message)
     settings = dict(parser.items(ini_main_section_name))
     return settings
+
+
+def setup_cache_settings(settings, force=False, enabled=False, expire=0):
+    # type: (SettingsType, bool, bool, int) -> None
+    """
+    Setup caching settings if not defined in configuration and enforce values if requested.
+
+    Required caching regions that were missing from configuration are initiated with disabled caching by default.
+    This ensures that any decorators or region references will not cause unknown key or region errors.
+
+    :param settings: reference to application settings that will be updated in place.
+    :param force: enforce following parameters, otherwise only ensure that caching regions exist.
+    :param enabled: enable caching when enforced settings is requested.
+    :param expire: cache expiration delay if setting values are enforced and enabled.
+    """
+    if force:
+        LOGGER.warning("Enforcing cache settings (enabled=%s, expire=%s)", enabled, expire)
+
+    def _set(key, value):
+        if force:
+            settings[key] = value
+        elif key not in settings:
+            LOGGER.warning("Setting missing cache setting (%s=%s)", key, value)
+            settings.setdefault(key, value)
+
+    regions = ["acl", "service"]
+    _set("cache.regions", ", ".join(regions))
+    _set("cache.type", "memory")
+    for region in regions:
+        cache_region = "cache.{}.enabled".format(region)
+        cache_expire = "cache.{}.expire".format(region)
+        cache_enable = str(enabled).lower()
+        _set(cache_region, cache_enable)
+        if asbool(settings[cache_region]):
+            _set(cache_expire, str(expire))
+        else:
+            settings.pop(cache_expire, None)
+
+
+def setup_ziggurat_config(config):
+    # type: (Configurator) -> None
+    """
+    Setup :mod:`ziggurat_foundations` configuration settings and extensions that are required by `Magpie`.
+
+    Ensures that all needed extensions and parameter configuration values are defined as intended.
+    Resolves any erroneous configuration or conflicts from the INI (backward compatible to when it was required to
+    provide them explicitly) to guarantee that references are defined as needed for the application to behave correctly.
+
+    :param config: configurator reference when loading the web application.
+    """
+    settings = config.registry.settings
+    pyr_incl = "pyramid.includes"
+    zig_user = "ziggurat_foundations.ext.pyramid.get_user"
+    if pyr_incl in settings and zig_user in settings[pyr_incl]:
+        settings[pyr_incl] = settings[pyr_incl].replace("\n" + zig_user, "").replace(zig_user, "")
+
+    settings["ziggurat_foundations.model_locations.User"] = "magpie.models:User"
+    settings["ziggurat_foundations.session_provider_callable"] = "magpie.models:get_session_callable"
+    settings["ziggurat_foundations.sign_in.username_key"] = "user_name"
+    settings["ziggurat_foundations.sign_in.password_key"] = "password"
+    settings["ziggurat_foundations.sign_in.came_from_key"] = "came_from"
+    settings["ziggurat_foundations.sign_in.sign_in_pattern"] = "/signin_internal"
+    settings["ziggurat_foundations.sign_in.sign_out_pattern"] = "/signout"
+    config.include("ziggurat_foundations.ext.pyramid.sign_in")
+
+    # register an improved 'request.user' that reattaches the detached session if a transaction commit occurred
+    #   This can happen for example when creating a user from a pending-user where the user must be committed to
+    #   allow webhooks to refer to it. The operations using the 'user' reference following that user creation
+    #   have a detached object from the session.
+    # following is the original config that was used to setup 'request.user' similarly to below methodology
+    #   config.include("ziggurat_foundations.ext.pyramid.get_user")
+
+    def get_user(request):
+        user = getattr(request, "_user_prefetched", None)
+        if user is not None and not sa_inspect(user).detached:
+            return user
+        user_id = request.unauthenticated_userid
+        if user_id is not None:
+            user = UserService.by_id(user_id, db_session=request.db)
+            if user is None:
+                return None
+            if sa_inspect(user).detached:
+                request.db.merge(user)
+            setattr(request, "_user_prefetched", user)
+            return user
+        return None
+
+    # don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
+    # replicate the value substitution optimization offered by 'reify' with an explicit attribute
+    config.add_request_method(get_user, "user", reify=False, property=True)
 
 
 def get_json(response):
@@ -434,6 +540,7 @@ def get_magpie_url(container=None):
             return url_parsed.geturl()
         magpie_url = "http://{}".format(url_parsed.geturl())
         print_log("Missing scheme from settings URL, new value: '{}'".format(magpie_url), LOGGER, logging.WARNING)
+        settings.setdefault("magpie.url", magpie_url)  # simplify the process for direct retrieval next time
         return magpie_url
     except AttributeError:
         # If magpie.url does not exist, calling strip fct over None will raise this issue
@@ -518,7 +625,7 @@ def is_magpie_ui_path(request):
     magpie_path = str(urlparse(magpie_url).path)
     magpie_path = magpie_path.split("/magpie/", 1)[-1]  # make sure we don't split a /magpie(.*) element by mistake
     magpie_path = "/" + magpie_path if not magpie_path.startswith("/") else magpie_path
-    magpie_ui_home = get_constant("MAGPIE_UI_ENABLED", request) and magpie_path in ("", "/")
+    magpie_ui_home = asbool(get_constant("MAGPIE_UI_ENABLED", request)) and magpie_path in ("", "/")
     # ignore types defined under UI or static routes to allow rendering
     return magpie_ui_home or any(magpie_path.startswith(p) for p in ("/api", "/ui", "/static"))
 
@@ -645,6 +752,47 @@ class ExtendedEnum(Enum):
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
                 return m_val
         return default
+
+
+# note: must not define any enum value here to allow inheritance by subclasses
+class FlexibleNameEnum(ExtendedEnum):
+    """
+    Enum that allows more permissive name cases for lookup.
+    """
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.__missing_flexible(value)
+
+    @classmethod
+    def __missing_flexible(cls, value):
+        for name, item in cls.__members__.items():
+            if value in [name, name.lower(), name.upper(), name.title()]:
+                return item
+        return super(FlexibleNameEnum, cls)._missing_(value)
+
+    @classmethod
+    def get(cls, key_or_value, default=None):
+        try:
+            result = super(FlexibleNameEnum, cls).get(key_or_value)
+            if result is not None:
+                return cls(result)  # noqa
+            # use __missing_flexible instead of _missing_
+            # otherwise, _missing_ of another enum sub-class (eg: IntFlag) get called and raises directly
+            return cls.__missing_flexible(key_or_value)
+        except ValueError:
+            pass
+        return default
+
+
+def decompose_enum_flags(enum_flags):
+    # type: (Enum) -> List[Enum]
+    """
+    Decompose a ``Flag``-enabled ``Enum`` into its individual parts.
+
+    The operation is agnostic of the ``Enum`` implementation, whether from stdlib :mod:`enum` or :mod:`aenum`.
+    """
+    return [flag for flag in type(enum_flags).__members__.values() if flag in enum_flags]
 
 
 # taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python

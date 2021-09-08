@@ -91,7 +91,7 @@ def create_service(service_name, service_type, service_url, service_push, servic
                                msg_on_fail=s.Services_POST_ForbiddenResponseSchema.description,
                                content=format_service(service, show_private_url=True))
     return ax.valid_http(http_success=HTTPCreated, detail=s.Services_POST_CreatedResponseSchema.description,
-                         content={"service": format_service(service, show_private_url=True)})
+                         content={"service": format_service(service, show_private_url=True, show_configuration=True)})
 
 
 def get_services_by_type(service_type, db_session):

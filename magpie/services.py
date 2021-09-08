@@ -3,9 +3,10 @@ import re
 from typing import TYPE_CHECKING
 
 import six
-from beaker.cache import cache_region, cache_regions, region_invalidate
+from beaker.cache import Cache, cache_region, cache_regions, region_invalidate
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotImplemented
 from pyramid.security import ALL_PERMISSIONS, DENY_ALL
+from ziggurat_foundations.models.base import get_db_session
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
 from ziggurat_foundations.models.services.user import UserService
@@ -75,6 +76,7 @@ class ServiceInterface(object):
         # type: (models.Service, Request) -> None
         self.service = service          # type: models.Service
         self.request = request          # type: Request
+        self._flag_acl_cached = {}      # type: Dict[Tuple[Str, Str, Str, Optional[int]], bool]
 
     @abc.abstractmethod
     def permission_requested(self):
@@ -89,6 +91,11 @@ class ServiceInterface(object):
         If ``None`` is returned, the :term:`ACL` will effectively be resolved to denied access.
         Otherwise, one or more returned :class:`Permission` will indicate which permissions should be looked for to
         resolve the :term:`ACL` of the authenticated user and its groups.
+
+        If the request cannot be parsed for any reason to retrieve needed parameters (e.g.: Bad Request),
+        the :exception:`HTTPBadRequest` can be raised to indicate specifically the cause, which will
+        help :class:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity` create a better response with
+        the relevant error details.
         """
         raise NotImplementedError("missing implementation of request permission converter")
 
@@ -162,12 +169,16 @@ class ServiceInterface(object):
             cache_regions["acl"] = {"enabled": False}
         user_id = None if self.request.user is None else self.request.user.id
         cache_keys = (self.service.resource_name, self.request.method, self.request.path_qs, user_id)
+        self._flag_acl_cached[cache_keys] = True
         if self.request.headers.get("Cache-Control") == "no-cache":
             region_invalidate(self._get_acl_cached, "acl", *cache_keys)
-        return self._get_acl_cached(*cache_keys)
+        acl = self._get_acl_cached(*cache_keys)
+        if self._flag_acl_cached[cache_keys]:
+            LOGGER.warning("Using cached ACL")
+        return acl
 
     @cache_region("acl")
-    def _get_acl_cached(self, service_name, request_method, request_path, user_id):  # noqa: F811
+    def _get_acl_cached(self, service_name, request_method, request_path, user_id):
         # type: (Str, Str, Str, Optional[int]) -> AccessControlListType
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
@@ -185,6 +196,7 @@ class ServiceInterface(object):
             - :meth:`ServiceInterface.resource_requested`
             - :meth:`ServiceInterface.user_requested`
         """
+        self._flag_acl_cached[(service_name, request_method, request_path, user_id)] = False
         permissions = self.permission_requested()
         if permissions is None:
             return [DENY_ALL]
@@ -300,6 +312,18 @@ class ServiceInterface(object):
         # current and parent resource(s) recursive-scope
         while resource is not None and not full_break:  # bottom-up until service is reached
 
+            # reconnect resource reference to active database session if it is detached
+            #   This can happen during mismatching sources of cached objects for service/ACL combinations,
+            #   where service-resource data is available from cache but not associated with the session state.
+            #   Since this operation is being computed, ACL is not yet cached (or was reset before service cache was).
+            #   The service must be refreshed regardless of cache to resolve it with other object references.
+            if get_db_session(session=None, obj=resource) is None:
+                LOGGER.debug("Reconnect cached resource (id=%s, name=%s, type=%s) with active session state.",
+                             resource.resource_id, resource.resource_name, resource.resource_type)
+                resource = ResourceService.by_resource_id(resource.resource_id, db_session=db_session)
+                if resource is None:
+                    break
+
             # include both permissions set in database as well as defined directly on resource
             cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=db_session)
             cur_res_perms.extend(permission_to_pyramid_acls(resource.__acl__))
@@ -412,9 +436,22 @@ class ServiceOWS(ServiceInterface):
 
     def __init__(self, service, request):
         # type: (models.Service, Request) -> None
-        super(ServiceOWS, self).__init__(service, request)
+        self._request = None
+        self.parser = None
+        super(ServiceOWS, self).__init__(service, request)  # sets request, which in turn parses it with below setter
+
+    def _get_request(self):
+        # type: () -> Request
+        return self._request
+
+    def _set_request(self, request):
+        # type: (Request) -> None
+        self._request = request
+        # must reset the parser from scratch if request changes to ensure everything is updated with new inputs
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)  # run parsing to obtain guaranteed lowered-name parameters
+
+    request = property(_get_request, _set_request)
 
     @abc.abstractmethod
     def resource_requested(self):
@@ -423,10 +460,16 @@ class ServiceOWS(ServiceInterface):
     def permission_requested(self):
         # type: () -> Permission
         try:
-            req = str(self.parser.params["request"]).lower()
-            perm = Permission.get(req)
-            if perm is None:
-                raise NotImplementedError("Undefined 'Permission' from 'request' parameter: {!s}".format(req))
+            req = self.parser.params["request"]
+            perm = Permission.get(str(req).lower())
+            ax.verify_param(
+                perm, not_none=True, param_name="request", http_error=HTTPBadRequest,
+                content={"service": self.service.resource_name, "type": self.service_type, "value": req},
+                msg_on_fail=(
+                    "Missing or unknown 'Permission' inferred from OWS 'request' parameter: [{!s}]. ".format(req) +
+                    "Unable to resolve the requested access for service: [{!s}].".format(self.service.resource_name)
+                )
+            )
             return perm
         except KeyError as exc:
             raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(exc, type(self)))
@@ -862,12 +905,28 @@ def invalidate_service(service_name):
     try:
         # could fail if twitcher was not installed
         from magpie.adapter.magpieowssecurity import MagpieOWSSecurity  # noqa
+        from magpie.adapter.magpieservice import MagpieServiceStore  # noqa
 
         if "service" in cache_regions:
             region_invalidate(MagpieOWSSecurity._get_service_cached, "service", service_name)  # noqa
+            region_invalidate(MagpieServiceStore._fetch_by_name_cached, "service", service_name)  # noqa
     except ImportError:
         LOGGER.warning("Could not invalidate cache of service: [%s]", service_name)
 
     if "acl" in cache_regions:
-        cache_keys = (service_name, )  # (service_name, request_method, request_path, user_id)
-        region_invalidate(ServiceInterface._get_acl_cached, "acl", *cache_keys)  # noqa
+        for namespace in [ServiceInterface._get_acl_cached]:
+            cache_keys = (service_name, )  # full signature: (service_name, request_method, request_path, user_id)
+            region_invalidate(namespace, "acl", *cache_keys)  # noqa
+            # beaker doesn't provide a direct method to invalidate partial key.
+            # Therefore, do 'region_invalidate' equivalent operations manually.
+            #   If above 'region_invalidate' did not raise cache-key error,
+            #   it is safe to simplify most steps without pre-checks.
+            region = cache_regions["acl"]
+            ns_key = getattr(namespace, "_arg_namespace")
+            cache = Cache._get_cache(ns_key, region)
+            # keys are normally generated by concatenating byte-str repr of all params received as input
+            # we care only about service-name in this case
+            service_param_key = (service_name + " ").encode("ascii", "backslashreplace")
+            for func_params_key in list(cache.namespace.dictionary):
+                if func_params_key.startswith(service_param_key):
+                    cache.namespace.dictionary.pop(func_params_key, None)

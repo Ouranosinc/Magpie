@@ -1,15 +1,28 @@
+from inspect import cleandoc
+
 import requests
 from pyramid.httpexceptions import HTTPException, HTTPFound, HTTPInternalServerError, HTTPOk, HTTPUnauthorized
+from pyramid.renderers import render_to_response
 from pyramid.response import Response
 from pyramid.security import NO_PERMISSION_REQUIRED, forget
 from pyramid.view import view_config
 
 from magpie.api import schemas
-from magpie.ui.utils import BaseViews, check_response, request_api
+from magpie.ui.utils import AdminRequests, BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json
 
 
-class LoginViews(BaseViews):
+class LoginViews(AdminRequests, BaseViews):
+    """
+    Handles UI operations related to login to, logout from, or registration of user accounts.
+
+    .. warning::
+        Admin requests are applicable only when using the temporary login.
+        The temporary session is handled by dispatching operations to :class:`AdminRequest`.
+        Only those methods should work with elevated session to ensure that returning those views in this class
+        are back to unauthenticated level access.
+    """
+
     def request_providers_json(self):
         resp = request_api(self.request, schemas.ProvidersAPI.path, "GET")
         check_response(resp)
@@ -74,3 +87,49 @@ class LoginViews(BaseViews):
         # Flush cookies and return to home
         request_api(self.request, schemas.SignoutAPI.path, "GET")
         return HTTPFound(location=self.request.route_url("home"), headers=forget(self.request))
+
+    @handle_errors
+    def get_group_info(self, group_name):
+        path = schemas.GroupAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "GET")
+        check_response(resp)
+        return get_json(resp)["group"]
+
+    def register_user(self):
+        """
+        User self-registration form results.
+
+        .. note::
+            The template employed for this form is reused for user creation by an administrator as the fields and
+            validation of inputs are essentially the same. Their actual processing is different though, as in this
+            case, the user attempting registration is not yet logged nor has any administrative access.
+
+        .. seealso::
+            :meth:`magpie.ui.management.views.ManagementViews.add_user`
+        """
+
+        return_data = {
+            "is_registration": True,  # require login as admin for registration, dispatch operation checks
+            "MAGPIE_SUB_TITLE": "User Registration",  # avoid default referring to administration operations
+        }
+        return_data = self.create_user_default_template_data(return_data)
+
+        if "create" in self.request.POST:
+            # delegate form submission to validation and creation
+            return_data = self.create_user(return_data)
+            forget(self.request)  # sanity check, remove any left over session cookies
+            if return_data["is_error"]:
+                return self.add_template_data(return_data)
+            # successful submission of user registration
+            # regardless of the combination of registration steps enabled, first is to validate email
+            return_data.update({
+                "message": cleandoc("""
+                    User registration successfully submitted.
+
+                    Please confirm your email address by visiting the link that was sent to the submitted email.
+                """)
+            })
+            data = self.add_template_data(return_data)
+            return render_to_response("magpie.ui.home:templates/message.mako", data, request=self.request)
+        # first page load or refresh
+        return self.add_template_data(return_data)

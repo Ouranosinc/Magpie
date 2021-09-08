@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 3.12.0
+APP_VERSION ?= 3.15.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # guess OS (Linux, Darwin,...)
@@ -171,7 +171,7 @@ info:		## display make information
 clean: clean-all	## alias for 'clean-all' target
 
 .PHONY: clean-all
-clean-all: clean-build clean-pyc clean-test clean-docs	## remove all artifacts
+clean-all: clean-build clean-pyc clean-test clean-report clean-docs		## remove all artifacts
 
 .PHONY: clean-build
 clean-build:	## remove build artifacts
@@ -201,18 +201,24 @@ clean-pyc:		## remove Python file artifacts
 	@find . -type f -name '*~' -exec rm -f {} +
 	@find . -type f -name '__pycache__' -exec rm -fr {} +
 
+.PHONY: clean-report
+clean-report: 	## remove check linting reports
+	@echo "Cleaning check linting reports..."
+	@-rm -fr "$(REPORTS_DIR)"
+
 .PHONY: clean-test
-clean-test:		## remove test and coverage artifacts
+clean-test: clean-report	## remove test and coverage artifacts
 	@echo "Cleaning tests artifacts..."
 	@-rm -fr .tox/
 	@-rm -fr .pytest_cache/
 	@-rm -f .coverage*
 	@-rm -f coverage.*
 	@-rm -fr "$(APP_ROOT)/coverage/"
-	@-rm -fr "$(REPORTS_DIR)"
+	@-rm -fr "$(APP_ROOT)/node_modules"
+	@-rm -f "$(APP_ROOT)/package-lock.json"
 
 .PHONY: clean-docker
-clean-docker: docker-clean	## alias for 'docker-clean' target
+clean-docker: docker-clean	## remove docker images (alias for 'docker-clean' target)
 
 ## --- Database targets --- ##
 
@@ -228,8 +234,19 @@ DB_COMMAND := MAGPIE_INI_FILE_PATH="$(APP_INI)" alembic -c "$(APP_INI)"
 
 .PHONY: database-migration
 database-migration: conda-env _alembic 	## run database migration (make [REVISION=head,<empty=1>,ID] database-migration)
-	@echo "Running database migration (using revision: [$(DB_REVISION)])..."
+	@echo "Running database upgrade migration (using revision: [$(DB_REVISION)])..."
 	@bash -c '$(CONDA_CMD) $(DB_COMMAND) upgrade $(DB_REVISION)'
+
+.PHONY: database-upgrade
+database-upgrade: database-migration	## run database upgrade to more recent version (alias to 'database-migration')
+
+.PHONY: database-downgrade
+database-downgrade: conda-env _alembic  ## run database downgrade to older version (inverse of 'database-upgrade')
+	echo "$(DB_REVISION)"
+	echo "${DB_REVISION}"
+	@[ "$(DB_REVISION)" != "head" ] || ( echo ">> Invalid 'DB_REVISION' cannot be 'head' to downgrade."; exit 1 )
+	@echo "Running database downgrade migration (using revision: [$(DB_REVISION)])..."
+	@bash -c '$(CONDA_CMD) $(DB_COMMAND) downgrade $(DB_REVISION)'
 
 .PHONY: database-history
 database-history: conda-env _alembic    ## obtain database revision history
@@ -342,6 +359,18 @@ install-dev: conda-env	## install package requirements for development and testi
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
+# install locally to ensure they can be found by config extending them
+.PHONY: install-npm
+install-npm:    		## install npm package manager if it cannot be found
+	@[ -f "$(shell which npm)" ] || ( \
+		echo "Binary package manager npm not found. Attempting to install it."; \
+		apt-get install npm \
+	)
+	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | wc -l` = 1 ] || ( \
+		echo "Install required libraries for style checks." && \
+		npm install stylelint stylelint-config-standard --save-dev \
+	)
+
 ## --- Launchers targets --- ##
 
 .PHONY: cron
@@ -424,19 +453,21 @@ mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
-CHECKS := pep8 lint security doc8 links imports
+CHECKS := pep8 lint security doc8 links imports css
 CHECKS := $(addprefix check-, $(CHECKS))
 
 $(CHECKS): check-%: install-dev check-%-only
 
 .PHONY: check
-check: check-all  ## alias for 'check-all' target
+check: install-dev $(CHECKS)  ## run code checks (alias to 'check-all' target)
 
+# undocumented to avoid duplicating aliases in help listing
 .PHONY: check-only
-check-only: $(addsuffix -only, $(CHECKS))
+check-only: check-all-only
 
-.PHONY: check-all
-check-all: install-dev $(CHECKS)  ## run all code checks
+.PHONY: check-all-only
+check-all-only: $(addsuffix -only, $(CHECKS))  ## run all code checks
+	@echo "All checks passed!"
 
 .PHONY: check-pep8-only
 check-pep8-only: mkdir-reports		## run PEP8 code style checks
@@ -498,7 +529,7 @@ check-docf-only: mkdir-reports	## run PEP8 code documentation format checks
 		1>&2 2> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
 .PHONY: check-links-only
-check-links-only: mkdir-reports		## check all external links in documentation for integrity
+check-links-only: mkdir-reports		## run check of external links in documentation for integrity
 	@echo "Running link checks on docs..."
 	@bash -c '$(CONDA_CMD) $(MAKE) -C "$(APP_ROOT)/docs" linkcheck'
 
@@ -510,20 +541,30 @@ check-imports-only: mkdir-reports	## run imports code checks
 	 	isort --check-only --diff --recursive $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
+.PHONY: check-css-only
+check-css-only: mkdir-reports install-npm
+	@echo "Running CSS style checks..."
+	@npx stylelint \
+		--config "$(APP_ROOT)/.stylelintrc.json" \
+		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
+		"$(APP_ROOT)/**/*.css"
+
 # autogen fix variants with pre-install of dependencies using the '-only' target references
-FIXES := imports lint docf
+FIXES := imports lint docf css
 FIXES := $(addprefix fix-, $(FIXES))
 
 $(FIXES): fix-%: install-dev fix-%-only
 
 .PHONY: fix
-fix: fix-all 	## alias for 'fix-all' target
+fix: fix-all    ## run all fixes (alias for 'fix-all' target)
 
+# undocumented to avoid duplicating aliases in help listing
 .PHONY: fix-only
 fix-only: $(addsuffix -only, $(FIXES))
 
-.PHONY: fix-all
-fix-all: install-dev $(FIXES)  ## fix all code check problems automatically
+.PHONY: fix-all-only
+fix-all-only: $(FIXES)  ## fix all code check problems automatically
+	@echo "All fixes applied!"
 
 .PHONY: fix-imports-only
 fix-imports-only: 	## fix import code checks corrections automatically
@@ -557,6 +598,15 @@ fix-docf-only: mkdir-reports	## fix some PEP8 code documentation style problems 
 			$(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
 
+.PHONY: fix-css-only
+fix-css-only: mkdir-reports install-npm		## fix CSS styles problems automatically
+	@echo "Fixing CSS style problems..."
+	@npx stylelint \
+		--fix \
+		--config "$(APP_ROOT)/.stylelintrc.json" \
+		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
+		"$(APP_ROOT)/**/*.css"
+
 ## --- Test targets --- ##
 
 
@@ -571,7 +621,7 @@ TESTS := $(addprefix test-, $(TESTS))
 $(TESTS): test-%: install install-dev test-%-only
 
 .PHONY: test
-test: clean-test test-all   ## alias for 'test-all' target
+test: clean-test test-all   ## run tests (alias for 'test-all' target)
 
 .PHONY: test-all
 test-all: install install-dev test-only  ## run all tests (including long running tests)
@@ -604,7 +654,7 @@ test-custom-only:		## run custom marker tests using SPEC="<marker-specification>
 	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
-test-docker: docker-test			## alias for 'docker-test' target - WARNING: could build image if missing
+test-docker: docker-test  ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
 
 # coverage file location cannot be changed
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
@@ -623,7 +673,7 @@ $(COVERAGE_FILE): install-dev
 coverage-only: $(COVERAGE_FILE)
 
 .PHONY: coverage
-coverage: install-dev install coverage-only		## check code coverage and generate an analysis report
+coverage: install-dev install coverage-only		## run tests with code coverage and generate an analysis report
 
 .PHONY: coverage-show
 coverage-show: $(COVERAGE_HTML_IDX)		## display HTML webpage of generated coverage report (run coverage if missing)
