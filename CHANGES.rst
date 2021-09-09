@@ -7,7 +7,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Pin ``sqlalchemy``, ``sqlalchemy_utils``, ``zope.sqlalchemy`` and ``ziggurat_foundations`` to specific package
+  versions to avoid underlying issues when combining dependencies with `Twitcher` (in ``Docker.adapter``).
+  Some definitions at lower level in ``ziggurat_foundations`` cause an issue when moving to ``sqlalchemy>=1.4``,
+  which was allowed since `Twitcher` ``v0.5.5``.
+
 `3.15.0 <https://github.com/Ouranosinc/Magpie/tree/3.15.0>`_ (2021-08-11)
 ------------------------------------------------------------------------------------
 
