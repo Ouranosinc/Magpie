@@ -2635,6 +2635,7 @@ class TestSetup(object):
                              ):                         # type: (...) -> None
         """
         Ensures that the test user is a member of the test group, adding him to the group as needed.
+        Note that it will not work with a group that has terms and conditions, since it requires a confirmation by a user.
 
         :raises AssertionError: if any request response does not match successful validation or assignation to group.
         """

@@ -7,6 +7,7 @@ from cornice import Service
 from cornice.service import get_services
 from cornice_swagger.swagger import CorniceSwagger
 from pyramid.httpexceptions import (
+    HTTPAccepted,
     HTTPBadRequest,
     HTTPConflict,
     HTTPCreated,
@@ -1930,6 +1931,12 @@ class UserGroups_POST_ResponseBodySchema(BaseResponseBodySchema):
 class UserGroups_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     description = "Create user-group assignation successful. User is a member of the group."
     body = UserGroups_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
+
+
+class UserGroups_POST_AcceptedResponseSchema(BaseResponseSchemaAPI):
+    description = "Accepted request to add user to the group. Group requires accepting terms and conditions." \
+                  "Pending confirmation by the user."
+    body = UserGroups_POST_ResponseBodySchema(code=HTTPAccepted.code, description=description)
 
 
 class UserGroups_POST_GroupNotFoundResponseSchema(BaseResponseSchemaAPI):

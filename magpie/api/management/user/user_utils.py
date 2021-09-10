@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import six
 import transaction
 from pyramid.httpexceptions import (
+    HTTPAccepted,
     HTTPBadRequest,
     HTTPConflict,
     HTTPCreated,
@@ -139,19 +140,13 @@ def create_user(user_name,              # type: Str
                                 http_error=HTTPForbidden,
                                 msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
 
-    def _add_to_group(usr, grp):
-        # type: (models.User, models.Group) -> None
-        group_entry = models.UserGroup(group_id=grp.id, user_id=usr.id)  # noqa
-        ax.evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
-                         http_error=HTTPForbidden, msg_on_fail=s.UserGroup_GET_ForbiddenResponseSchema.description)
-
     # Assign user to group
     new_user_groups = [group_name]
-    _add_to_group(new_user, group_checked)
+    request_assign_user_group(new_user, group_checked, db_session)
     # Also add user to anonymous group if not already done
     anonym_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
     if group_checked.group_name != anonym_grp_name:
-        _add_to_group(new_user, _get_group(anonym_grp_name))
+        request_assign_user_group(new_user, _get_group(anonym_grp_name), db_session)
         new_user_groups.append(anonym_grp_name)
 
     user_content = uf.format_user(new_user, new_user_groups)
@@ -309,6 +304,26 @@ def assign_user_group(user, group, db_session):
                      fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
                      content={"user_name": user.user_name, "group_name": group.group_name})
+
+
+def request_assign_user_group(user, group, db_session):
+    # type: (models.User, models.Group, Session) -> None
+    """
+    Requests the creation of a user-group relationship (user membership to a group).
+    Adds the user to a group if the group has no terms and conditions confirmation,
+    else, sends an email for terms and conditions confirmation.
+
+    :returns: valid HTTP response on successful operations.
+    :raises HTTPError: corresponding error matching problem encountered.
+    """
+    if group.terms:
+        # TODO: create tmp_token with (ie: "pending-terms")
+        return ax.valid_http(http_success=HTTPAccepted, detail=s.UserGroups_POST_CreatedResponseSchema.description,
+                             content={"user_name": user.user_name, "group_name": group.group_name})
+    assign_user_group(user, group, db_session=db_session)
+    return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
+                         content={"user_name": user.user_name, "group_name": group.group_name})
+
 
 
 def delete_user_group(user, group, db_session):
