@@ -25,6 +25,7 @@ from magpie.api import schemas as s
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
+from magpie.api.notifications import get_email_template, send_email
 from magpie.api.webhooks import (
     WebhookAction,
     generate_callback_url,
@@ -34,7 +35,8 @@ from magpie.api.webhooks import (
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
-from magpie.utils import get_logger
+from magpie.utils import get_logger, get_settings_from_config_ini
+
 
 LOGGER = get_logger(__name__)
 
@@ -317,13 +319,29 @@ def request_assign_user_group(user, group, db_session):
     :raises HTTPError: corresponding error matching problem encountered.
     """
     if group.terms:
-        # TODO: create tmp_token with (ie: "pending-terms")
+        confirmation_url = generate_callback_url(models.TokenOperation.GROUP_ACCEPT_TERMS,
+                                                 db_session,
+                                                 user=user,
+                                                 group=group)
+        params = {
+            "user": user,
+            "group_name": group.group_name,
+            "group_terms": group.terms,
+            "confirm_url": confirmation_url
+        }
+        settings = get_settings_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
+        template = get_email_template("MAGPIE_GROUP_TERMS_SUBMISSION_EMAIL_TEMPLATE", settings)
+        ax.evaluate_call(lambda: send_email(user.email, settings, template, params),
+                         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
+                         msg_on_fail="Error occurred while adding user to a group when trying to send "
+                                     "email to user for requesting agreement of the group's Terms and Conditions.")
+
         return ax.valid_http(http_success=HTTPAccepted, detail=s.UserGroups_POST_CreatedResponseSchema.description,
                              content={"user_name": user.user_name, "group_name": group.group_name})
+
     assign_user_group(user, group, db_session=db_session)
     return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
                          content={"user_name": user.user_name, "group_name": group.group_name})
-
 
 
 def delete_user_group(user, group, db_session):

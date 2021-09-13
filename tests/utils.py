@@ -705,7 +705,7 @@ def mocked_send_email(func):
 
 
 @contextlib.contextmanager
-def mock_send_email():
+def mock_send_email(target):
     """
     Context that mocks :func:`magpie.api.notifications.send_email` steps and returns email contents and call parameters.
 
@@ -713,7 +713,7 @@ def mock_send_email():
 
     .. code-block:: python
 
-        with mock_send_email() as email_mocks:
+        with mock_send_email("magpie.api.management.register.register_utils.send_email") as email_mocks:
             mocked_connect, mocked_contents, mocked_send = email_mocks
             # run tests with mock contexts
             # ex: mocked_contents.call_args == ...
@@ -729,6 +729,8 @@ def mock_send_email():
     The context references returned can be used to test each part of the email process, once during connection to the
     SMTP server, another for the email contents generation and finally, the simulated expedition of the generated email.
     Using those, it is possible to retrieve all calls and arguments that were passed to individual steps.
+
+    :param target: Target function which will be replaced by a mocked send_email function.
     """
 
     # Employ the function that builds the SMTP connection to raise an error midway to skip sending the email.
@@ -771,8 +773,7 @@ def mock_send_email():
     # Run the test - full user registration procedure!
     with wrapped_call("magpie.api.notifications.get_smtp_server_connection", side_effect=fake_connect) as wrapped_conn:
         with wrapped_call("magpie.api.notifications.make_email_contents") as wrapped_contents:
-            with wrapped_call("magpie.api.management.register.register_utils.send_email",
-                              side_effect=fake_email) as mocked_email:
+            with wrapped_call(target, side_effect=fake_email) as mocked_email:
                 yield wrapped_conn, wrapped_contents, mocked_email
 
 
