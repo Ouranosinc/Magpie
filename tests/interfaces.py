@@ -1623,6 +1623,35 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
     @runner.MAGPIE_TEST_REGISTRATION
+    @utils.mocked_send_email
+    def test_RegisterDiscoverableGroupWithTerms(self):
+        """
+        Non-admin logged user is allowed to request to join a group requiring terms and conditions acceptation.
+        """
+        terms = "Test terms and conditions."
+        utils.TestSetup.delete_TestGroup(self)
+        utils.TestSetup.create_TestGroup(self, override_discoverable=True, override_terms=terms)
+        self.login_test_user()
+
+        path = "/register/groups/{}".format(self.test_group_name)
+        resp = utils.test_request(self, "POST", path, data={}, headers=self.test_headers, cookies=self.test_cookies)
+        body = utils.check_response_basic_info(resp, 202, expected_method="POST")
+        utils.check_val_is_in("group_name", body)
+        utils.check_val_is_in("user_name", body)
+        utils.check_val_is_in(body["group_name"], self.test_group_name)
+        utils.check_val_is_in(body["user_name"], self.test_user_name)
+
+        # validate as admin that user was not registered yet to the group,
+        # since it requires terms and condition acceptation
+        utils.check_or_try_logout_user(self)
+        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.check_UserGroupMembership(self, member=False,
+                                                  override_headers=self.json_headers, override_cookies=self.cookies)
+        # TODO: check if user membership is pending
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_REGISTRATION
     def test_UnregisterDiscoverableGroup(self):
         """
         Non-admin logged user is allowed to revoke its membership to leave a discoverable group by itself.
@@ -4051,6 +4080,34 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.check_UserGroupMembership(self)
 
     @runner.MAGPIE_TEST_GROUPS
+    @utils.mocked_send_email
+    def test_PostUserGroupWithTerms(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+
+        # First test adding an existing user to a group with terms
+        utils.TestSetup.create_TestUser(self)
+
+        # Request adding the user to test group
+        path = "/users/{usr}/groups".format(usr=self.test_user_name)
+        data = {"group_name": self.test_group_name}
+        resp = utils.test_request(self, "POST", path, json=data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 202, expected_method="POST")
+
+        # User should not be added to group until terms are accepted
+        utils.TestSetup.check_UserGroupMembership(self, member=False)
+
+        # Now test adding a new user to a group with terms upon user creation
+        new_user_name = 'new_usr_in_group_with_terms'
+        utils.TestSetup.create_TestUser(self,
+                                        override_user_name=new_user_name,
+                                        override_group_name=self.test_group_name)
+        utils.TestSetup.check_UserGroupMembership(self, override_user_name=new_user_name, member=False)
+
+        # TODO: check if both user memberships are pending
+
+    @runner.MAGPIE_TEST_GROUPS
     def test_PostUserGroup_not_found(self):
         path = "/users/{usr}/groups".format(usr=get_constant("MAGPIE_ADMIN_USER"))
         data = {"group_name": "not_found"}
@@ -4404,7 +4461,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_GROUPS
     def test_UpdateGroup_Terms_BadRequest(self):
         terms = "Test terms and conditions."
-        utils.TestSetup.create_TestGroup(self, override_discoverable=False, override_terms=terms)
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
 
         path = "/groups/{}".format(self.test_group_name)
         data = {"terms": "Bad request, trying to change the terms & conditions."}

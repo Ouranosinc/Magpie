@@ -86,71 +86,6 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_ui-group-local",
                                            raise_missing=False, raise_not_set=False)
 
-    @runner.MAGPIE_TEST_USERS
-    @runner.MAGPIE_TEST_FUNCTIONAL
-    @runner.MAGPIE_TEST_GROUPS
-    def test_PostUserGroup_Terms(self):
-        terms = "Test terms and conditions."
-
-        group_with_terms_name = "unittest-user-auth_ui-group-with-terms-local"
-        utils.TestSetup.create_TestGroup(self, override_group_name=group_with_terms_name,
-                                         override_terms=terms)
-
-        # custom app settings, smtp_host must exist when getting configs, but not used because email mocked
-        settings = {"magpie.smtp_host": "example.com",
-                    # for testing, ignore any 'from' and 'password' arguments that could be found in the .ini file
-                    "magpie.smtp_from": "",
-                    "magpie.smtp_password": ""}
-
-        from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
-        with utils.mocked_get_settings(settings=settings):
-            with utils.mock_send_email("magpie.api.management.user.user_utils.send_email") as email_contexts:
-                _, wrapped_contents, mocked_send = email_contexts
-
-                # Request adding the user to test group
-                path = "/users/{usr}/groups".format(usr=self.test_user_name)
-                data = {"group_name": group_with_terms_name}
-                resp = utils.test_request(self, "POST", path, json=data,
-                                          headers=self.json_headers, cookies=self.cookies)
-                utils.check_response_basic_info(resp, 202, expected_method="POST")
-
-                # User should not be added to group until terms are accepted
-                utils.TestSetup.check_UserGroupMembership(self, member=False, override_group_name=group_with_terms_name)
-
-                utils.check_val_equal(mocked_send.call_count, 1,
-                                      msg="Expected sent notification to user for an email confirmation "
-                                          "of Terms and Conditions.")
-
-                # Validate the content of the email that would have been sent if not mocked
-                message = real_contents(*wrapped_contents.call_args.args, **wrapped_contents.call_args.kwargs)
-                msg_str = message.decode()
-
-                confirm_url = wrapped_contents.call_args.args[-1].get("confirm_url")
-
-                test_user_email = "{}@mail.com".format(self.test_user_name)
-                utils.check_val_is_in("To: {}".format(test_user_email), msg_str)
-                utils.check_val_is_in("From: Magpie", msg_str)
-                utils.check_val_is_in(confirm_url, msg_str)
-                utils.check_val_true(confirm_url.startswith("http://localhost") and "/tmp/" in confirm_url,
-                                     msg="Expected confirmation URL in email to be a temporary token URL.")
-
-                # Simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
-                resp = utils.test_request(self, "GET", urlparse(confirm_url).path)
-                print(resp)
-                body = utils.check_ui_response_basic_info(resp, 200)  # , expected_title="Magpie User Registration")
-                utils.check_val_is_in("accepted the Terms and Conditions", body)
-
-                utils.check_val_equal(mocked_send.call_count, 2,
-                                      msg="Expected sent notification to user for an email confirmation of user added "
-                                          "to requested group, following Terms and Conditions acceptation.")
-
-                # Check if user has been added to group successfully
-                utils.TestSetup.check_UserGroupMembership(self, override_group_name=group_with_terms_name)
-                path = "/groups/{grp}".format(grp=group_with_terms_name)
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-                utils.check_val_equal(body["group"]["member_count"], 1)
-                utils.check_val_is_in(self.test_user_name, body["group"]["user_names"])
 
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_LOCAL
@@ -361,6 +296,78 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         check_ui_resource_permissions(res_perm_form, res_id, [to_ui_permission(perm) for perm in res_perms_mod])
         check_ui_resource_permissions(res_perm_form, sub_id, [to_ui_permission(perm) for perm in sub_perms_mod])
         check_api_resource_permissions([(svc_id, svc_perms_mod), (res_id, res_perms_mod), (sub_id, sub_perms_mod)])
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    @runner.MAGPIE_TEST_GROUPS
+    def test_end2end_user_join_group_with_terms_confirmation(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+
+        terms = "Test terms and conditions."
+        group_with_terms_name = "unittest-user-auth_ui-group-with-terms-local"
+        utils.TestSetup.create_TestGroup(self, override_group_name=group_with_terms_name,
+                                         override_terms=terms)
+
+        # custom app settings, smtp_host must exist when getting configs, but not used because email mocked
+        settings = {"magpie.smtp_host": "example.com",
+                    # for testing, ignore any 'from' and 'password' arguments that could be found in the .ini file
+                    "magpie.smtp_from": "",
+                    "magpie.smtp_password": ""}
+
+        from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
+        with utils.mocked_get_settings(settings=settings):
+            with utils.mock_send_email("magpie.api.management.user.user_utils.send_email") as email_contexts:
+                _, wrapped_contents, mocked_send = email_contexts
+
+                # Request adding the user to test group
+                path = "/users/{usr}/groups".format(usr=self.test_user_name)
+                data = {"group_name": group_with_terms_name}
+                resp = utils.test_request(self, "POST", path, json=data,
+                                          headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 202, expected_method="POST")
+
+                # User should not be added to group until terms are accepted
+                utils.TestSetup.check_UserGroupMembership(self, member=False,
+                                                          override_group_name=group_with_terms_name)
+
+                utils.check_val_equal(mocked_send.call_count, 1,
+                                      msg="Expected sent notification to user for an email confirmation "
+                                          "of Terms and Conditions.")
+
+                # TODO: check ui if pending is displayed?
+                # TODO: check if user membership is pending
+
+                # Validate the content of the email that would have been sent if not mocked
+                message = real_contents(*wrapped_contents.call_args.args, **wrapped_contents.call_args.kwargs)
+                msg_str = message.decode()
+
+                confirm_url = wrapped_contents.call_args.args[-1].get("confirm_url")
+
+                test_user_email = "{}@mail.com".format(self.test_user_name)
+                utils.check_val_is_in("To: {}".format(test_user_email), msg_str)
+                utils.check_val_is_in("From: Magpie", msg_str)
+                utils.check_val_is_in(confirm_url, msg_str)
+                utils.check_val_true(confirm_url.startswith("http://localhost") and "/tmp/" in confirm_url,
+                                     msg="Expected confirmation URL in email to be a temporary token URL.")
+
+                # Simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
+                resp = utils.test_request(self, "GET", urlparse(confirm_url).path)
+                print(resp)
+                body = utils.check_ui_response_basic_info(resp, 200)  # , expected_title="Magpie User Registration")
+                utils.check_val_is_in("accepted the Terms and Conditions", body)
+
+                utils.check_val_equal(mocked_send.call_count, 2,
+                                      msg="Expected sent notification to user for an email confirmation of user added "
+                                          "to requested group, following Terms and Conditions acceptation.")
+
+                # Check if user has been added to group successfully
+                utils.TestSetup.check_UserGroupMembership(self, override_group_name=group_with_terms_name)
+                path = "/groups/{grp}".format(grp=group_with_terms_name)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+                utils.check_val_equal(body["group"]["member_count"], 1)
+                utils.check_val_is_in(self.test_user_name, body["group"]["user_names"])
 
 
 @runner.MAGPIE_TEST_UI

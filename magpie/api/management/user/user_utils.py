@@ -311,6 +311,36 @@ def assign_user_group(user, group, db_session):
                      content={"user_name": user.user_name, "group_name": group.group_name})
 
 
+def send_group_terms_email(user, group, db_session):
+    # type: (models.User, models.Group, Session) -> None
+    """
+    Sends an email for terms and conditions confirmation, in the case of a request for the creation of
+    a user-group relationship where the group requires a terms and conditions confirmation.
+
+    :returns: valid HTTP response on successful operations.
+    :raises HTTPError: corresponding error matching problem encountered.
+    """
+    confirmation_url = generate_callback_url(models.TokenOperation.GROUP_ACCEPT_TERMS,
+                                             db_session,
+                                             user=user,
+                                             group=group)
+    params = {
+        "user": user,
+        "group_name": group.group_name,
+        "group_terms": group.terms,
+        "confirm_url": confirmation_url
+    }
+    settings = get_settings_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
+    template = get_email_template("MAGPIE_GROUP_TERMS_SUBMISSION_EMAIL_TEMPLATE", settings)
+    ax.evaluate_call(lambda: send_email(user.email, settings, template, params),
+                     fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
+                     msg_on_fail="Error occurred while adding user to a group when trying to send "
+                                 "email to user for requesting agreement of the group's Terms and Conditions.")
+
+    return ax.valid_http(http_success=HTTPAccepted, detail=s.UserGroups_POST_AcceptedResponseSchema.description,
+                         content={"user_name": user.user_name, "group_name": group.group_name})
+
+
 def request_assign_user_group(user, group, db_session):
     # type: (models.User, models.Group, Session) -> None
     """
@@ -322,25 +352,7 @@ def request_assign_user_group(user, group, db_session):
     :raises HTTPError: corresponding error matching problem encountered.
     """
     if group.terms:
-        confirmation_url = generate_callback_url(models.TokenOperation.GROUP_ACCEPT_TERMS,
-                                                 db_session,
-                                                 user=user,
-                                                 group=group)
-        params = {
-            "user": user,
-            "group_name": group.group_name,
-            "group_terms": group.terms,
-            "confirm_url": confirmation_url
-        }
-        settings = get_settings_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
-        template = get_email_template("MAGPIE_GROUP_TERMS_SUBMISSION_EMAIL_TEMPLATE", settings)
-        ax.evaluate_call(lambda: send_email(user.email, settings, template, params),
-                         fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
-                         msg_on_fail="Error occurred while adding user to a group when trying to send "
-                                     "email to user for requesting agreement of the group's Terms and Conditions.")
-
-        return ax.valid_http(http_success=HTTPAccepted, detail=s.UserGroups_POST_CreatedResponseSchema.description,
-                             content={"user_name": user.user_name, "group_name": group.group_name})
+        return send_group_terms_email(user, group, db_session)
 
     assign_user_group(user, group, db_session=db_session)
     return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
