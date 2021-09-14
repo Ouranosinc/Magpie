@@ -65,7 +65,7 @@ def handle_temporary_token(tmp_token, request):
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         ax.verify_param(tmp_token.user, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
-        response = handle_user_group_terms_confirmation(tmp_token, request)
+        response = uu.handle_user_group_terms_confirmation(tmp_token, request)
 
     elif tmp_token.operation == TokenOperation.USER_PASSWORD_RESET:
         ax.verify_param(tmp_token.user, not_none=True,
@@ -105,25 +105,6 @@ def handle_temporary_token(tmp_token, request):
     if not response:
         response = ax.valid_http(http_success=HTTPOk, detail=s.TemporaryURL_GET_OkResponseSchema.description)
     return response
-
-
-def handle_user_group_terms_confirmation(tmp_token, request):
-    # type: (TemporaryToken, Request) -> Response
-    """
-    Handles the confirmation of a user to accept the terms and conditions of a group.
-
-    Generates the appropriate response that will be displayed to the user.
-    """
-    LOGGER.info(f"User {tmp_token.user.user_name} approved Terms and Conditions of group {tmp_token.group.group_name}.")
-    uu.assign_user_group(tmp_token.user, tmp_token.group, request.db)
-
-    msg = cleandoc(f"""
-        You have accepted the Terms and Conditions of the '{tmp_token.group.group_name}' group. 
-
-        User '{tmp_token.user.user_name}' has now been successfully added to the '{tmp_token.group.group_name}' group. 
-        """)
-
-    return BaseViews(request).render("magpie.ui.home:templates/message.mako", {"message": msg})
 
 
 def get_discoverable_groups(db_session):

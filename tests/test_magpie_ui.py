@@ -121,7 +121,7 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
                                       msg="Expected sent notification to user for an email confirmation "
                                           "of Terms and Conditions.")
 
-                # validate the content of the email that would have been sent if not mocked
+                # Validate the content of the email that would have been sent if not mocked
                 message = real_contents(*wrapped_contents.call_args.args, **wrapped_contents.call_args.kwargs)
                 msg_str = message.decode()
 
@@ -134,15 +134,18 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
                 utils.check_val_true(confirm_url.startswith("http://localhost") and "/tmp/" in confirm_url,
                                      msg="Expected confirmation URL in email to be a temporary token URL.")
 
-                # simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
+                # Simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
                 resp = utils.test_request(self, "GET", urlparse(confirm_url).path)
                 print(resp)
                 body = utils.check_ui_response_basic_info(resp, 200)  # , expected_title="Magpie User Registration")
                 utils.check_val_is_in("accepted the Terms and Conditions", body)
 
-                # Simulate user accepting terms by calling the tmp_url
-                utils.TestSetup.check_UserGroupMembership(self, override_group_name=group_with_terms_name)
+                utils.check_val_equal(mocked_send.call_count, 2,
+                                      msg="Expected sent notification to user for an email confirmation of user added "
+                                          "to requested group, following Terms and Conditions acceptation.")
 
+                # Check if user has been added to group successfully
+                utils.TestSetup.check_UserGroupMembership(self, override_group_name=group_with_terms_name)
                 path = "/groups/{grp}".format(grp=group_with_terms_name)
                 resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
                 body = utils.check_response_basic_info(resp, 200, expected_method="GET")

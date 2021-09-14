@@ -6,8 +6,8 @@
 
     Additional variables available to build the content are:
 
-        user:               Pending user from registration submission, with associated details.
-        group_name:         Name of the group the user has requested to join
+        user:               User requested to join a group, with associated details.
+        group_name:         Name of the group the user has been requested to join
         group_terms:        Text containing the group's Terms and Conditions
         email_user:         Value defined by MAGPIE_SMTP_USER to identify the sender of this email.
         email_from:         Value defined by MAGPIE_SMTP_FROM to identify the sender of this email.
@@ -15,7 +15,7 @@
         email_recipient:    Resolved email of the identity where to send the notification email.
         email_datetime:     Date and time (ISO-8601 UTC) when that email was generated.
         magpie_url:         Application endpoint defined by MAGPIE_URL or derived configuration.
-        confirm_url:        Endpoint where email confirmation can be performed to validate the email recipient.
+        confirm_url:        Endpoint where Terms and Condition confirmation can be performed to join the group.
 
 </%doc>
 

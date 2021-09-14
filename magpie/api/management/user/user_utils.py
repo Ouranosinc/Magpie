@@ -1,3 +1,4 @@
+from inspect import cleandoc
 from secrets import compare_digest
 from typing import TYPE_CHECKING
 
@@ -35,6 +36,7 @@ from magpie.api.webhooks import (
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
+from magpie.ui.utils import BaseViews
 from magpie.utils import get_logger, get_settings_from_config_ini
 
 
@@ -46,6 +48,7 @@ if TYPE_CHECKING:
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
+    from pyramid.response import Response
     from sqlalchemy.orm.session import Session
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
@@ -342,6 +345,33 @@ def request_assign_user_group(user, group, db_session):
     assign_user_group(user, group, db_session=db_session)
     return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
                          content={"user_name": user.user_name, "group_name": group.group_name})
+
+
+def handle_user_group_terms_confirmation(tmp_token, request):
+    # type: (models.TemporaryToken, Request) -> Response
+    """
+    Handles the confirmation of a user to accept the terms and conditions of a group.
+
+    Generates the appropriate response that will be displayed to the user.
+    """
+    LOGGER.info(f"User {tmp_token.user.user_name} approved Terms and Conditions of group {tmp_token.group.group_name}.")
+    assign_user_group(tmp_token.user, tmp_token.group, request.db)
+
+    # notify the user of its successful T&C acceptation, and confirm the user has been added to the requested group
+    params = {"user": tmp_token.user, "group_name": tmp_token.group.group_name}
+    template = get_email_template("MAGPIE_GROUP_TERMS_APPROVED_EMAIL_TEMPLATE", request)
+    ax.evaluate_call(lambda: send_email(tmp_token.user.email, request, template, params),
+                     fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                     msg_on_fail="Error occurred during group terms confirmation when trying to send "
+                                 "email to user for confirmation of the Terms and Conditions acceptation.")
+
+    msg = cleandoc(f"""
+        You have accepted the Terms and Conditions of the '{tmp_token.group.group_name}' group. 
+
+        User '{tmp_token.user.user_name}' has now been successfully added to the '{tmp_token.group.group_name}' group. 
+        """)
+
+    return BaseViews(request).render("magpie.ui.home:templates/message.mako", {"message": msg})
 
 
 def delete_user_group(user, group, db_session):
