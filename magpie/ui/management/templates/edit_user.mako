@@ -230,7 +230,11 @@
                    onchange="document.getElementById('edit_membership').submit()"
                 %endif
                >
-            ${group}
+            %if group in pending_groups:
+                ${group} [pending]
+            %else:
+                ${group}
+            %endif
             </label>
         </td>
     </tr>

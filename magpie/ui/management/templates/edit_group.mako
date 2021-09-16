@@ -178,7 +178,11 @@
                onchange="document.getElementById('edit_members').submit()"
             %endif
         >
-        ${user}
+        %if user in pending_users:
+            ${user} [pending]
+        %else:
+            ${user}
+        %endif
         </label>
     </td>
 </tr>

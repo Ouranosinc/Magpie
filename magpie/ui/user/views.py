@@ -28,6 +28,13 @@ class UserViews(BaseViews):
         return get_json(resp)["group_names"]
 
     @handle_errors
+    def get_current_user_pending_groups(self):
+        # type: () -> List[str]
+        resp = request_api(self.request, schemas.LoggedUserPendingGroupsAPI.path, "GET")
+        check_response(resp)
+        return get_json(resp)["pending_group_names"]
+
+    @handle_errors
     def get_current_user_info(self):
         # type: () -> JSON
         user_resp = request_api(self.request, schemas.LoggedUserAPI.path, "GET")
@@ -71,10 +78,12 @@ class UserViews(BaseViews):
             - :meth:`magpie.ui.management.views.ManagementViews.edit_user` for corresponding operation by administrator
         """
         joined_groups = self.get_current_user_groups()
+        pending_groups = self.get_current_user_pending_groups()
         public_groups = self.get_discoverable_groups()
         user_info = self.get_current_user_info()
         user_info["edit_mode"] = "no_edit"
         user_info["joined_groups"] = joined_groups
+        user_info["pending_groups"] = pending_groups
         user_info["groups"] = public_groups
         # FIXME: disable email edit when self-registration is enabled to avoid not having any confirmation of new email
         #   (see https://github.com/Ouranosinc/Magpie/issues/436)

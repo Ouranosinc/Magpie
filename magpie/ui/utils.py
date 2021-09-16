@@ -323,6 +323,13 @@ class AdminRequests(BaseViews):
         return get_json(resp)["user_names"]
 
     @handle_errors
+    def get_group_pending_users(self, group_name):
+        path = schemas.GroupPendingUsersAPI.path.format(group_name=group_name)
+        resp = request_api(self.request, path, "GET")
+        check_response(resp)
+        return get_json(resp)["pending_user_names"]
+
+    @handle_errors
     def update_group_info(self, group_name, group_info):
         path = schemas.GroupAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "PATCH", data=group_info)
@@ -342,6 +349,13 @@ class AdminRequests(BaseViews):
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         return get_json(resp)["group_names"]
+
+    @handle_errors
+    def get_user_pending_groups(self, user_name):
+        path = schemas.UserPendingGroupsAPI.path.format(user_name=user_name)
+        resp = request_api(self.request, path, "GET")
+        check_response(resp)
+        return get_json(resp)["pending_group_names"]
 
     @handle_errors
     def get_user_names(self):

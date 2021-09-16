@@ -150,6 +150,9 @@ def get_group_pending_users_view(request):
     # Find and return all user names associated with the discovered tokens
     pending_user_names = [tmp_token.user.user_name for tmp_token in tmp_tokens]
 
+    # TODO: check if any pending user names is found in members too? should not happen? tmp_token should be deleted?
+    # Or should assumed it is all okay
+
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupPendingUsers_GET_OkResponseSchema.description,
                          content={"pending_user_names": pending_user_names})
 

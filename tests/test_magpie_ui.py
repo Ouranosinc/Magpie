@@ -335,8 +335,32 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                       msg="Expected sent notification to user for an email confirmation "
                                           "of Terms and Conditions.")
 
-                # TODO: check ui if pending is displayed?
-                # TODO: check if user membership is pending
+                # Check if the user's membership is pending
+                path = "/users/{user_name}/pending_groups".format(user_name=self.test_user_name)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+                utils.check_val_is_in("pending_group_names", body)
+                utils.check_val_type(body["pending_group_names"], list)
+                utils.check_val_is_in(group_with_terms_name, body["pending_group_names"])
+
+                # validate that pending user can be viewed in the edit group page
+                path = "/ui/groups/{}/default".format(group_with_terms_name)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_is_in(f"{self.test_user_name} [pending]", body)
+
+                # validate that pending group membership can be viewed in the edit user page
+                path = "/ui/users/{}/default".format(self.test_user_name)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_is_in(f"{group_with_terms_name} [pending]", body)
+
+                # validate that pending group membership can be viewed in the user's account page
+                resp = utils.test_request(self, "GET", "/ui/users/current")
+                body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
+                # FIXME : pending is not displayed on this page (checkbox is unchecked)
+                #utils.check_val_is_in(f"{group_with_terms_name} [pending]", body)
 
                 # Validate the content of the email that would have been sent if not mocked
                 message = real_contents(*wrapped_contents.call_args.args, **wrapped_contents.call_args.kwargs)
@@ -353,7 +377,6 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 
                 # Simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
                 resp = utils.test_request(self, "GET", urlparse(confirm_url).path)
-                print(resp)
                 body = utils.check_ui_response_basic_info(resp, 200)  # , expected_title="Magpie User Registration")
                 utils.check_val_is_in("accepted the Terms and Conditions", body)
 
@@ -368,6 +391,23 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 body = utils.check_response_basic_info(resp, 200, expected_method="GET")
                 utils.check_val_equal(body["group"]["member_count"], 1)
                 utils.check_val_is_in(self.test_user_name, body["group"]["user_names"])
+
+                # validate that user is no longer pending in the edit group page
+                path = "/ui/groups/{}/default".format(group_with_terms_name)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_not_in(f"{self.test_user_name} [pending]", body)
+
+                # validate that group membership is no longer pending in the edit user page
+                path = "/ui/users/{}/default".format(self.test_user_name)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_not_in(f"{group_with_terms_name} [pending]", body)
+
+                # validate that group membership is no longer pending in the user's account page
+                resp = utils.test_request(self, "GET", "/ui/users/current")
+                body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
+                utils.check_val_not_in(f"{group_with_terms_name} [pending]", body)
 
 
 @runner.MAGPIE_TEST_UI

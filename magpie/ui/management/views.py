@@ -120,6 +120,7 @@ class ManagementViews(AdminRequests, BaseViews):
         inherit_grp_perms = self.request.matchdict.get("inherit_groups_permissions", False)
 
         own_groups = self.get_user_groups(user_name)
+        pending_groups = self.get_user_pending_groups(user_name)
         all_groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_USERS_GROUP", self.request))
 
         # TODO:
@@ -139,6 +140,7 @@ class ManagementViews(AdminRequests, BaseViews):
         user_info["user_with_error"] = UserStatuses.get(user_info["status"]) != UserStatuses.OK
         user_info["edit_mode"] = "no_edit"
         user_info["own_groups"] = own_groups
+        user_info["pending_groups"] = pending_groups
         user_info["groups"] = all_groups
         user_info["cur_svc_type"] = cur_svc_type
         user_info["svc_types"] = svc_types
@@ -616,6 +618,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
         group_info.update(self.get_group_info(group_name))
         group_info["members"] = group_info.pop("user_names")
+        group_info["pending_users"] = self.get_group_pending_users(group_name)
         group_info["error_message"] = error_message
         group_info["ids_to_clean"] = ";".join(ids_to_clean)
         group_info["last_sync"] = last_sync_humanized
