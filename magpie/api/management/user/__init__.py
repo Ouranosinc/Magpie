@@ -15,6 +15,7 @@ def includeme(config):
     config.add_route(**s.service_api_route_info(s.UsersAPI))  # no user instance, admin-only
     config.add_route(**s.service_api_route_info(s.UserAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.UserGroupsAPI, **user_kwargs))
+    config.add_route(**s.service_api_route_info(s.UserPendingGroupsAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.UserGroupAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.UserServicesAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.UserServicePermissionsAPI, **user_kwargs))
@@ -27,6 +28,7 @@ def includeme(config):
     # Logged User routes
     config.add_route(**s.service_api_route_info(s.LoggedUserAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.LoggedUserGroupsAPI, **user_kwargs))
+    config.add_route(**s.service_api_route_info(s.LoggedUserPendingGroupsAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.LoggedUserGroupAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.LoggedUserServicesAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.LoggedUserServicePermissionsAPI, **user_kwargs))

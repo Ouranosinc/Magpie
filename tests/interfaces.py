@@ -1647,7 +1647,15 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
         utils.TestSetup.check_UserGroupMembership(self, member=False,
                                                   override_headers=self.json_headers, override_cookies=self.cookies)
-        # TODO: check if user membership is pending
+
+        # Check if the user's membership is pending
+        path = "/users/{user_name}/pending_groups".format(user_name=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        utils.check_val_is_in("pending_group_names", body)
+        utils.check_val_type(body["pending_group_names"], list)
+        utils.check_val_is_in(self.test_group_name, body["pending_group_names"])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_GROUPS
@@ -4082,11 +4090,11 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_GROUPS
     @utils.mocked_send_email
     def test_PostUserGroupWithTerms(self):
-        terms = "Test terms and conditions."
-        utils.TestSetup.create_TestGroup(self, override_terms=terms)
 
         # First test adding an existing user to a group with terms
-        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestUser(self, override_group_name=None)
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
 
         # Request adding the user to test group
         path = "/users/{usr}/groups".format(usr=self.test_user_name)
@@ -4105,7 +4113,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                         override_group_name=self.test_group_name)
         utils.TestSetup.check_UserGroupMembership(self, override_user_name=new_user_name, member=False)
 
-        # TODO: check if both user memberships are pending
+        # Check if both user memberships are pending
+        path = "/groups/{grp}/pending_users".format(grp=self.test_group_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        utils.check_val_is_in("pending_user_names", body)
+        utils.check_val_type(body["pending_user_names"], list)
+        utils.check_val_is_in(self.test_user_name, body["pending_user_names"])
+        utils.check_val_is_in(new_user_name, body["pending_user_names"])
 
     @runner.MAGPIE_TEST_GROUPS
     def test_PostUserGroup_not_found(self):

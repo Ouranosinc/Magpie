@@ -16,6 +16,7 @@ from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
+from magpie.models import TemporaryToken, TokenOperation
 from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
@@ -129,6 +130,24 @@ def get_user_groups_view(request):
     group_names = uu.get_user_groups_checked(user, request.db)
     return ax.valid_http(http_success=HTTPOk, content={"group_names": group_names},
                          detail=s.UserGroups_GET_OkResponseSchema.description)
+
+
+@s.UserPendingGroupsAPI.get(schema=s.UserPendingGroups_GET_RequestSchema, tags=[s.UsersTag],
+                            response_schemas=s.UserPendingGroups_GET_responses, api_security=s.SecurityAuthenticatedAPI)
+@s.LoggedUserPendingGroupsAPI.get(schema=s.UserPendingGroups_GET_RequestSchema, tags=[s.LoggedUserTag],
+                                  response_schemas=s.LoggedUserPendingGroups_GET_responses,
+                                  api_security=s.SecurityAuthenticatedAPI)
+@view_config(route_name=s.UserPendingGroupsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
+def get_user_pending_groups_view(request):
+    """
+    List all groups where the user's membership is pending, because of required Terms and Conditions acceptation.
+    """
+    user = ar.get_user_matchdict_checked_or_logged(request)
+    tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
+    pending_group_names = [tmp_token.group.group_name for tmp_token in tmp_tokens]
+
+    return ax.valid_http(http_success=HTTPOk, content={"pending_group_names": pending_group_names},
+                         detail=s.UserPendingGroups_GET_OkResponseSchema.description)
 
 
 @s.UserGroupsAPI.post(schema=s.UserGroups_POST_RequestSchema, tags=[s.UsersTag],

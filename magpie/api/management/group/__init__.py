@@ -10,6 +10,7 @@ def includeme(config):
     config.add_route(**s.service_api_route_info(s.GroupsAPI))
     config.add_route(**s.service_api_route_info(s.GroupAPI))
     config.add_route(**s.service_api_route_info(s.GroupUsersAPI))
+    config.add_route(**s.service_api_route_info(s.GroupPendingUsersAPI))
     config.add_route(**s.service_api_route_info(s.GroupServicesAPI))
     config.add_route(**s.service_api_route_info(s.GroupServicePermissionsAPI))
     config.add_route(**s.service_api_route_info(s.GroupServicePermissionAPI))
