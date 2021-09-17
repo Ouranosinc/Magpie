@@ -34,6 +34,7 @@ from magpie.api.webhooks import (
     process_webhook_requests
 )
 from magpie.constants import get_constant
+from magpie.models import TemporaryToken, TokenOperation
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import service_factory
 from magpie.ui.utils import BaseViews
@@ -376,6 +377,13 @@ def handle_user_group_terms_confirmation(tmp_token, request):
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                      msg_on_fail="Error occurred during group terms confirmation when trying to send "
                                  "email to user for confirmation of the Terms and Conditions acceptation.")
+
+    # Remove all group_accept_terms temporary tokens associated with the same user and group
+    tmp_tokens = TemporaryToken.by_user(tmp_token.user)\
+        .filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)\
+        .filter(TemporaryToken.group == tmp_token.group)
+    for tmp_token in tmp_tokens:
+        request.db.delete(tmp_token)
 
     msg = cleandoc(f"""
         You have accepted the Terms and Conditions of the '{tmp_token.group.group_name}' group. 

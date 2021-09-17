@@ -327,11 +327,16 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                           headers=self.json_headers, cookies=self.cookies)
                 utils.check_response_basic_info(resp, 202, expected_method="POST")
 
+                # Send a second request, to check later if both tmp_tokens are removed upon T&C acceptation
+                resp = utils.test_request(self, "POST", path, json=data,
+                                          headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 202, expected_method="POST")
+
                 # User should not be added to group until terms are accepted
                 utils.TestSetup.check_UserGroupMembership(self, member=False,
                                                           override_group_name=group_with_terms_name)
 
-                utils.check_val_equal(mocked_send.call_count, 1,
+                utils.check_val_equal(mocked_send.call_count, 2,
                                       msg="Expected sent notification to user for an email confirmation "
                                           "of Terms and Conditions.")
 
@@ -380,7 +385,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 body = utils.check_ui_response_basic_info(resp, 200)  # , expected_title="Magpie User Registration")
                 utils.check_val_is_in("accepted the Terms and Conditions", body)
 
-                utils.check_val_equal(mocked_send.call_count, 2,
+                utils.check_val_equal(mocked_send.call_count, 3,
                                       msg="Expected sent notification to user for an email confirmation of user added "
                                           "to requested group, following Terms and Conditions acceptation.")
 
@@ -392,6 +397,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 utils.check_val_equal(body["group"]["member_count"], 1)
                 utils.check_val_is_in(self.test_user_name, body["group"]["user_names"])
 
+                # Check UI elements: validates that both tmp_tokens were deleted if '[pending]' is not displayed anymore
                 # validate that user is no longer pending in the edit group page
                 path = "/ui/groups/{}/default".format(group_with_terms_name)
                 resp = utils.test_request(self, "GET", path)
