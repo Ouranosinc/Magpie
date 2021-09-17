@@ -1,5 +1,5 @@
 """
-Pending Users and statuses
+Pending Users and statuses.
 
 Create table for pending users, and update existing user statuses '0' to '2' for WebhookError
 

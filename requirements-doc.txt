@@ -1,7 +1,7 @@
 # these are doc-only requirements
 # we actually need to install all requirements during docs build because of OpenAPI generation
 # (see 'docs/conf.py')
-pycodestyle
+pycodestyle==2.6.0; python_version >= "3.6"
 # sphinx-autoapi dropped 3.5 support at 1.3.0
 # latest to fullfil requirements, but that is not the main doc builder version
 sphinx-autoapi; python_version < "3.6"
