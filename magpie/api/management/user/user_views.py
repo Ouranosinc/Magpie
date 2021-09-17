@@ -146,6 +146,11 @@ def get_user_pending_groups_view(request):
     tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
     pending_group_names = [tmp_token.group.group_name for tmp_token in tmp_tokens]
 
+    # Remove any group a user already belongs to, in case any tokens are irrelevant.
+    # Should not happen since related tokens are deleted upon T&C acceptation.
+    member_group_names = uu.get_user_groups_checked(user, request.db)
+    pending_group_names = [grp for grp in pending_group_names if grp not in member_group_names]
+
     return ax.valid_http(http_success=HTTPOk, content={"pending_group_names": pending_group_names},
                          detail=s.UserPendingGroups_GET_OkResponseSchema.description)
 

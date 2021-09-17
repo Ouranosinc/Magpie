@@ -150,8 +150,12 @@ def get_group_pending_users_view(request):
     # Find and return all user names associated with the discovered tokens
     pending_user_names = [tmp_token.user.user_name for tmp_token in tmp_tokens]
 
-    # TODO: check if any pending user names is found in members too? should not happen? tmp_token should be deleted?
-    # Or should assumed it is all okay
+    # Remove any user already belonging to the group, in case any tokens are irrelevant.
+    # Should not happen since related tokens are deleted upon T&C acceptation.
+    member_user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
+                                         http_error=HTTPForbidden,
+                                         msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
+    pending_user_names = [usr for usr in pending_user_names if usr not in member_user_names]
 
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupPendingUsers_GET_OkResponseSchema.description,
                          content={"pending_user_names": pending_user_names})
