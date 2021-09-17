@@ -548,6 +548,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
         # move to service or edit requested group/permission changes
         if self.request.method == "POST":
+            is_edit_group_members = False
             res_id = self.request.POST.get("resource_id")
 
             if "delete" in self.request.POST:
@@ -587,8 +588,8 @@ class ManagementViews(AdminRequests, BaseViews):
                 #     res_id = self.add_remote_resource(cur_svc_type, services_names, group_name,
                 #                                       remote_id, is_user=False)
                 self.edit_user_or_group_resource_permissions(group_name, is_user=False)
-            elif "member" in self.request.POST:
-                self.edit_group_users(group_name)
+            elif "edit_group_members" in self.request.POST:
+                is_edit_group_members = True
             elif "force_sync" in self.request.POST:
                 _, errmsg = self.sync_services(services)
                 error_message += errmsg or ""
@@ -598,6 +599,10 @@ class ManagementViews(AdminRequests, BaseViews):
                     self.delete_resource(id_)
             elif "no_edit" not in self.request.POST:
                 raise HTTPBadRequest(detail="Invalid POST request for group edit.")
+
+            # edits to group members checkboxes
+            if is_edit_group_members:
+                self.edit_group_users(group_name)
 
         # display resources permissions per service type tab
         try:

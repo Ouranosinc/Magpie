@@ -162,34 +162,35 @@
 <h3>Members</h3>
 
 <form id="edit_members" action="${request.path}" method="post">
-<table class="simple-list" id="edit_group_members_list">
-%for user in users:
-<tr>
-    <td>
-        <label class="checkbox-align">
-        <input type="checkbox" value="${user}" name="member"
-            %if user in members:
-               checked
-            %endif
-            %if group_name in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
-               disabled
-               class="disabled"
+    <input type="hidden" value="True" name="edit_group_members"/>
+    <table class="simple-list" id="edit_group_members_list">
+    %for user in users:
+    <tr>
+        <td>
+            <label class="checkbox-align">
+            <input type="checkbox" value="${user}" name="member"
+                %if user in members:
+                   checked
+                %endif
+                %if group_name in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
+                   disabled
+                   class="disabled"
+                %else:
+                   onchange="document.getElementById('edit_members').submit()"
+                %endif
+            >
+            %if user in pending_users:
+                <!-- checkbox is not checked or disabled for pending users
+                     so additional requests and emails can still be sent if needed -->
+                ${user} [pending]
             %else:
-               onchange="document.getElementById('edit_members').submit()"
+                ${user}
             %endif
-        >
-        %if user in pending_users:
-            <!-- checkbox is not checked or disabled for pending users
-                 so additional requests and emails can still be sent if needed -->
-            ${user} [pending]
-        %else:
-            ${user}
-        %endif
-        </label>
-    </td>
-</tr>
-%endfor
-</table>
+            </label>
+        </td>
+    </tr>
+    %endfor
+    </table>
 </form>
 
 <h3>Permissions</h3>
