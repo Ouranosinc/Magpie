@@ -7,7 +7,7 @@ codacy-coverage
 coverage==5.5; python_version < "3"
 coverage; python_version >= "3"
 doc8
-docformatter
+docformatter==1.4
 flake8
 isort; python_version < "3.6"
 isort>5; python_version >= "3.6"
