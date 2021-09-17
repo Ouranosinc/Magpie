@@ -17,6 +17,9 @@ Bug Fixes
   It is temporarily addressed by reducing requirements of `Twitcher`
   (see `bird-house/twitcher#108 <https://github.com/bird-house/twitcher/pull/108>`_) and referencing its associated
   release ``v0.5.6`` in the ``Docker.adapter``, which downgrades needed packages when extending it with `Magpie`.
+* Use ``pip`` legacy and faster resolver as per
+  `pypa/pip#9187 (comment) <https://github.com/pypa/pip/issues/9187#issuecomment-853091201>`_
+  since current one is endlessly failing to resolve development packages (linting tools from ``check`` targets).
 
 `3.15.0 <https://github.com/Ouranosinc/Magpie/tree/3.15.0>`_ (2021-08-11)
 ------------------------------------------------------------------------------------
