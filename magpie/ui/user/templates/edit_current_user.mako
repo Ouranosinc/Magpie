@@ -243,6 +243,8 @@
                             %endif
                         >
                         %if group in pending_groups:
+                            <!-- checkbox is not checked or disabled for pending groups
+                                 so additional requests and emails can still be sent if needed -->
                             ${group} [pending]
                         %else:
                             ${group}

@@ -179,6 +179,8 @@
             %endif
         >
         %if user in pending_users:
+            <!-- checkbox is not checked or disabled for pending users
+                 so additional requests and emails can still be sent if needed -->
             ${user} [pending]
         %else:
             ${user}
