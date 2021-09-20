@@ -74,7 +74,10 @@ Glossary
     Group
         Entity on which :term:`Permission` over a :term:`Service` or :term:`Resource` can be applied. Any :term:`User`
         can be set as a member of any number of :term:`Group`, making it inherit all applicable set of
-        :term:`Permission`.
+        :term:`Permission`. A :term:`Group` can optionally have Terms and Conditions, which the :term:`User` has to
+        accept before being assigned to the :term:`Group`. In this case, an email is sent to the :term:`User` upon a
+        request to ask for confirmation. The Terms and Conditions can only be defined upon the :term:`Group` creation
+        and can never be modified afterwards.
 
     Immediate Permissions
         Describes a :term:`Permission` that originates directly and only from a :term:`Service`.
