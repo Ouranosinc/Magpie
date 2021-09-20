@@ -259,6 +259,7 @@ class ManagementViews(AdminRequests, BaseViews):
                     resp = request_api(self.request, path, "POST", data=data)
                     check_response(resp)
                 user_info["own_groups"] = self.get_user_groups(user_name)
+                user_info["pending_groups"] = self.get_user_pending_groups(user_name)
 
         # display resources permissions per service type tab
         try:

@@ -158,6 +158,7 @@ class UserViews(BaseViews):
                 for group in new_groups:
                     self.join_discoverable_group(group)
                 user_info["joined_groups"] = self.get_current_user_groups()
+                user_info["pending_groups"] = self.get_current_user_pending_groups()
 
         user_info.pop("password", None)  # always remove password from output
         return self.add_template_data(data=user_info)

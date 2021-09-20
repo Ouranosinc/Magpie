@@ -306,7 +306,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 
         terms = "Test terms and conditions."
         group_with_terms_name = "unittest-user-auth_ui-group-with-terms-local"
-        utils.TestSetup.create_TestGroup(self, override_group_name=group_with_terms_name,
+        utils.TestSetup.create_TestGroup(self, override_group_name=group_with_terms_name, override_discoverable=True,
                                          override_terms=terms)
 
         # custom app settings, smtp_host must exist when getting configs, but not used because email mocked
@@ -362,10 +362,12 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 utils.check_val_is_in(f"{group_with_terms_name} [pending]", body)
 
                 # validate that pending group membership can be viewed in the user's account page
+                utils.check_or_try_logout_user(self)
+                utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name,
+                                              use_ui_form_submit=True)
                 resp = utils.test_request(self, "GET", "/ui/users/current")
                 body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
-                # FIXME : pending is not displayed on this page (checkbox is unchecked)
-                #utils.check_val_is_in(f"{group_with_terms_name} [pending]", body)
+                utils.check_val_is_in(f"{group_with_terms_name} [pending]", body)
 
                 # Validate the content of the email that would have been sent if not mocked
                 message = real_contents(*wrapped_contents.call_args.args, **wrapped_contents.call_args.kwargs)
@@ -389,6 +391,10 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                       msg="Expected sent notification to user for an email confirmation of user added "
                                           "to requested group, following Terms and Conditions acceptation.")
 
+                # Log back to admin user to apply admin-only checks
+                utils.check_or_try_logout_user(self)
+                self.login_admin()
+
                 # Check if user has been added to group successfully
                 utils.TestSetup.check_UserGroupMembership(self, override_group_name=group_with_terms_name)
                 path = "/groups/{grp}".format(grp=group_with_terms_name)
@@ -397,7 +403,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 utils.check_val_equal(body["group"]["member_count"], 1)
                 utils.check_val_is_in(self.test_user_name, body["group"]["user_names"])
 
-                # Check UI elements: validates that both tmp_tokens were deleted if '[pending]' is not displayed anymore
+                # UI checks: validates that both test tmp_tokens were deleted if '[pending]' is not displayed anymore
                 # validate that user is no longer pending in the edit group page
                 path = "/ui/groups/{}/default".format(group_with_terms_name)
                 resp = utils.test_request(self, "GET", path)
@@ -411,6 +417,9 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 utils.check_val_not_in(f"{group_with_terms_name} [pending]", body)
 
                 # validate that group membership is no longer pending in the user's account page
+                utils.check_or_try_logout_user(self)
+                utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name,
+                                              use_ui_form_submit=True)
                 resp = utils.test_request(self, "GET", "/ui/users/current")
                 body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
                 utils.check_val_not_in(f"{group_with_terms_name} [pending]", body)
