@@ -853,6 +853,12 @@ class GroupInfoBodySchema(GroupBaseBodySchema):
 
 class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
     description = "Detailed information of the group obtained by specifically requesting it."
+    terms = colander.SchemaNode(
+        colander.String(),
+        name="terms",
+        description="Terms and conditions associated to the group.",
+        example="",
+        missing=colander.drop)
     member_count = colander.SchemaNode(
         colander.Integer(),
         description="Number of users member of the group.",
@@ -1915,9 +1921,13 @@ class UserPendingGroups_GET_RequestSchema(BaseRequestSchemaAPI):
     path = User_RequestPathSchema()
 
 
+class UserPendingGroups_GET_ResponseBodySchema(BaseResponseBodySchema):
+    pending_group_names = GroupNamesListSchema()
+
+
 class UserPendingGroups_GET_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Get user's pending groups successful."
-    body = UserGroups_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+    body = UserPendingGroups_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class UserGroups_POST_RequestBodySchema(colander.MappingSchema):
@@ -1952,7 +1962,7 @@ class UserGroups_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
 
 
 class UserGroups_POST_AcceptedResponseSchema(BaseResponseSchemaAPI):
-    description = "Accepted request to add user to the group. Group requires accepting terms and conditions." \
+    description = "Accepted request to add user to the group. Group requires accepting terms and conditions. " \
                   "Pending confirmation by the user."
     body = UserGroups_POST_ResponseBodySchema(code=HTTPAccepted.code, description=description)
 
@@ -2382,6 +2392,8 @@ class Groups_POST_RequestBodySchema(colander.MappingSchema):
                                       description="Description to apply to the created group.")
     discoverable = colander.SchemaNode(colander.Boolean(), default=False,
                                        description="Discoverability status of the created group.")
+    terms = colander.SchemaNode(colander.String(), default="",
+                                description="Terms and conditions of the created group.")
 
 
 class Groups_POST_RequestSchema(BaseRequestSchemaAPI):
@@ -2522,9 +2534,13 @@ class GroupPendingUsers_GET_RequestSchema(BaseRequestSchemaAPI):
     path = Group_RequestPathSchema()
 
 
+class GroupPendingUsers_GET_ResponseBodySchema(BaseResponseBodySchema):
+    pending_user_names = UserNamesListSchema()
+
+
 class GroupPendingUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Get group's pending user names successful."
-    body = GroupUsers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+    body = GroupPendingUsers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class GroupPendingUsers_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -3434,6 +3450,7 @@ UserPendingGroups_GET_responses = {
 }
 UserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
+    "202": UserGroups_POST_AcceptedResponseSchema(),
     "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
@@ -3589,6 +3606,7 @@ LoggedUserPendingGroups_GET_responses = {
 }
 LoggedUserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
+    "202": UserGroups_POST_AcceptedResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
@@ -3838,6 +3856,7 @@ RegisterGroup_GET_responses = {
 }
 RegisterGroup_POST_responses = {
     "201": RegisterGroup_POST_CreatedResponseSchema(),
+    "202": UserGroups_POST_AcceptedResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": RegisterGroup_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": RegisterGroup_NotFoundResponseSchema(),

@@ -124,7 +124,7 @@ def delete_user_view(request):
 @view_config(route_name=s.UserGroupsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_groups_view(request):
     """
-    List all groups a user belongs to.
+    List all groups a user belongs to. Any pending group is not included in this list.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     group_names = uu.get_user_groups_checked(user, request.db)

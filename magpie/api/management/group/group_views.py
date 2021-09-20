@@ -117,7 +117,7 @@ def delete_group_view(request):
 @view_config(route_name=s.GroupUsersAPI.name, request_method="GET")
 def get_group_users_view(request):
     """
-    List all user from a group.
+    List all users from a group. Any pending user is not included in this list.
     """
     group = ar.get_group_matchdict_checked(request)
     user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
