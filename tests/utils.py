@@ -698,8 +698,9 @@ def mocked_send_email(func):
     def wrapped(*_, **__):
         # mock both direct reference if imported and places that use it to globally mock email notifications
         with wrapped_call("magpie.api.management.register.register_utils.send_email", side_effect=no_email):
-            with wrapped_call("magpie.api.notifications.send_email", side_effect=no_email):
-                return func(*_, **__)
+            with wrapped_call("magpie.api.management.user.user_utils.send_email", side_effect=no_email):
+                with wrapped_call("magpie.api.notifications.send_email", side_effect=no_email):
+                    return func(*_, **__)
 
     return wrapped
 
