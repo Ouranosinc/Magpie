@@ -40,7 +40,6 @@ from magpie.services import service_factory
 from magpie.ui.utils import BaseViews
 from magpie.utils import get_logger, get_settings_from_config_ini
 
-
 LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
@@ -367,7 +366,8 @@ def handle_user_group_terms_confirmation(tmp_token, request):
 
     Generates the appropriate response that will be displayed to the user.
     """
-    LOGGER.info(f"User {tmp_token.user.user_name} approved terms and conditions of group {tmp_token.group.group_name}.")
+    LOGGER.info("User %s approved terms and conditions of group %s.",
+                tmp_token.user.user_name, tmp_token.group.group_name)
     assign_user_group(tmp_token.user, tmp_token.group, request.db)
 
     # notify the user of its successful T&C acceptation, and confirm the user has been added to the requested group
@@ -382,8 +382,8 @@ def handle_user_group_terms_confirmation(tmp_token, request):
     tmp_tokens = TemporaryToken.by_user(tmp_token.user)\
         .filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)\
         .filter(TemporaryToken.group == tmp_token.group)
-    for tmp_token in tmp_tokens:
-        request.db.delete(tmp_token)
+    for token in tmp_tokens:
+        request.db.delete(token)
 
     msg = cleandoc(f"""
         You have accepted the terms and conditions of the '{tmp_token.group.group_name}' group. 

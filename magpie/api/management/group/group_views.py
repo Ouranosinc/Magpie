@@ -1,4 +1,11 @@
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPForbidden,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk
+)
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService

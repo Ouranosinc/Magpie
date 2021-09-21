@@ -1,7 +1,7 @@
 """
 User Views, both for specific user-name provided as request path variable and special keyword for logged session user.
 """
-from pyramid.httpexceptions import HTTPBadRequest, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService

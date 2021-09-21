@@ -4107,7 +4107,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.check_UserGroupMembership(self, member=False)
 
         # Now test adding a new user to a group with terms upon user creation
-        new_user_name = 'new_usr_in_group_with_terms'
+        new_user_name = "new_usr_in_group_with_terms"
         utils.TestSetup.create_TestUser(self,
                                         override_user_name=new_user_name,
                                         override_group_name=self.test_group_name)
