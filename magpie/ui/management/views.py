@@ -112,6 +112,8 @@ class ManagementViews(AdminRequests, BaseViews):
     @view_config(route_name="edit_user", renderer="templates/edit_user.mako")
     def edit_user(self):
         """
+        Edit the fields of any referenced user profile by an administrator.
+
         .. seealso::
             - :meth:`magpie.ui.user.views.UserViews.edit_current_user` for corresponding operation by user self-update
         """

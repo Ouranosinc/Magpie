@@ -3,7 +3,7 @@
 #   docker run will need to override ini file with mounted volume
 #   using config 'twitcher.adapter = magpie.adapter.MagpieAdapter'
 #
-FROM birdhouse/twitcher:v0.5.5
+FROM birdhouse/twitcher:v0.5.6
 LABEL Description="Configures MagpieAdapter on top of Twitcher application."
 LABEL Maintainer="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
 LABEL Vendor="CRIM"

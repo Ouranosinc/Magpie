@@ -74,6 +74,8 @@ class UserViews(BaseViews):
     @view_config(route_name="edit_current_user", renderer="templates/edit_current_user.mako", permission=Authenticated)
     def edit_current_user(self):
         """
+        Edit the own fields of the current user profile (self-update information).
+
         .. seealso::
             - :meth:`magpie.ui.management.views.ManagementViews.edit_user` for corresponding operation by administrator
         """

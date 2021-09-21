@@ -129,6 +129,9 @@ linkcheck_ignore = [
     r"docs/\w+.rst",
     "https://pcmdi.llnl.gov/",  # works, but very often causes false-positive 'broken' links
 ]
+linkcheck_anchors_ignore = [
+    r".*issuecomment.*"   # github issue comment anchors not resolved
+]
 linkcheck_timeout = 20
 linkcheck_retries = 5
 

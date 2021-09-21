@@ -20,6 +20,17 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix HTTP ``Internal Server Error [500]`` on the page to edit a group when deleting the last ``user`` of a ``group``.
+* Pin ``sqlalchemy``, ``sqlalchemy_utils``, ``zope.sqlalchemy`` and ``ziggurat_foundations`` to specific package
+  versions to avoid underlying issues when combining dependencies with `Twitcher` (in ``Docker.adapter``).
+  Some definitions at lower level in ``ziggurat_foundations`` cause an issue when moving to ``sqlalchemy>=1.4``,
+  which was allowed since `Twitcher` ``v0.5.5``
+  (see `ergo/ziggurat_foundations#71 <https://github.com/ergo/ziggurat_foundations/issues/71>`_).
+  It is temporarily addressed by reducing requirements of `Twitcher`
+  (see `bird-house/twitcher#108 <https://github.com/bird-house/twitcher/pull/108>`_) and referencing its associated
+  release ``v0.5.6`` in the ``Docker.adapter``, which downgrades needed packages when extending it with `Magpie`.
+* Use ``pip`` legacy and faster resolver as per
+  `pypa/pip#9187 (comment) <https://github.com/pypa/pip/issues/9187#issuecomment-853091201>`_
+  since current one is endlessly failing to resolve development packages (linting tools from ``check`` targets).
 
 `3.15.0 <https://github.com/Ouranosinc/Magpie/tree/3.15.0>`_ (2021-08-11)
 ------------------------------------------------------------------------------------
