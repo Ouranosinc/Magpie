@@ -385,11 +385,11 @@ def handle_user_group_terms_confirmation(tmp_token, request):
     for token in tmp_tokens:
         request.db.delete(token)
 
-    msg = cleandoc(f"""
-        You have accepted the terms and conditions of the '{tmp_token.group.group_name}' group. 
+    msg = cleandoc("""
+        You have accepted the terms and conditions of the '{grp_name}' group. 
 
-        User '{tmp_token.user.user_name}' has now been successfully added to the '{tmp_token.group.group_name}' group. 
-        """)
+        User '{user_name}' has now been successfully added to the '{grp_name}' group. 
+        """.format(grp_name=tmp_token.group.group_name, user_name=tmp_token.user.user_name))
 
     return BaseViews(request).render("magpie.ui.home:templates/message.mako", {"message": msg})
 

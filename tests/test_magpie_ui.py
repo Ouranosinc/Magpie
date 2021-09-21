@@ -353,13 +353,13 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 path = "/ui/groups/{}/default".format(group_with_terms_name)
                 resp = utils.test_request(self, "GET", path)
                 body = utils.check_ui_response_basic_info(resp)
-                utils.check_val_is_in(f"{self.test_user_name} [pending]", body)
+                utils.check_val_is_in("{} [pending]".format(self.test_user_name), body)
 
                 # validate that pending group membership can be viewed in the edit user page
                 path = "/ui/users/{}/default".format(self.test_user_name)
                 resp = utils.test_request(self, "GET", path)
                 body = utils.check_ui_response_basic_info(resp)
-                utils.check_val_is_in(f"{group_with_terms_name} [pending]", body)
+                utils.check_val_is_in("{} [pending]".format(group_with_terms_name), body)
 
                 # validate that pending group membership can be viewed in the user's account page
                 utils.check_or_try_logout_user(self)
@@ -367,7 +367,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                               use_ui_form_submit=True)
                 resp = utils.test_request(self, "GET", "/ui/users/current")
                 body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
-                utils.check_val_is_in(f"{group_with_terms_name} [pending]", body)
+                utils.check_val_is_in("{} [pending]".format(group_with_terms_name), body)
 
                 # Validate the content of the email that would have been sent if not mocked
                 message = real_contents(*wrapped_contents.call_args.args, **wrapped_contents.call_args.kwargs)
@@ -408,13 +408,13 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 path = "/ui/groups/{}/default".format(group_with_terms_name)
                 resp = utils.test_request(self, "GET", path)
                 body = utils.check_ui_response_basic_info(resp)
-                utils.check_val_not_in(f"{self.test_user_name} [pending]", body)
+                utils.check_val_not_in("{} [pending]".format(self.test_user_name), body)
 
                 # validate that group membership is no longer pending in the edit user page
                 path = "/ui/users/{}/default".format(self.test_user_name)
                 resp = utils.test_request(self, "GET", path)
                 body = utils.check_ui_response_basic_info(resp)
-                utils.check_val_not_in(f"{group_with_terms_name} [pending]", body)
+                utils.check_val_not_in("{} [pending]".format(group_with_terms_name), body)
 
                 # validate that group membership is no longer pending in the user's account page
                 utils.check_or_try_logout_user(self)
@@ -422,7 +422,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                               use_ui_form_submit=True)
                 resp = utils.test_request(self, "GET", "/ui/users/current")
                 body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
-                utils.check_val_not_in(f"{group_with_terms_name} [pending]", body)
+                utils.check_val_not_in("{} [pending]".format(group_with_terms_name), body)
 
 
 @runner.MAGPIE_TEST_UI
