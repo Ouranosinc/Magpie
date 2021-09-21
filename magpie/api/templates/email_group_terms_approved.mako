@@ -8,7 +8,7 @@
     Additional variables available to build the content are:
 
         user:               User requested to join a group, with associated details.
-        group_name:         Name of the group the user has been requested to join
+        group_name:         Name of the group the user has been requested to join.
         email_user:         Value defined by MAGPIE_SMTP_USER to identify the sender of this email.
         email_from:         Value defined by MAGPIE_SMTP_FROM to identify the sender of this email.
         email_sender:       Resolved value between MAGPIE_SMTP_FROM or MAGPIE_SMTP_USER sending this email.
@@ -20,7 +20,7 @@
 
 From: ${email_sender}
 To: ${email_recipient}
-Subject: Magpie - User ${user.user_name} added to '${group_name}' Group
+Subject: Magpie - User ${user.user_name} added to '${group_name}' group
 Content-Type: text/plain; charset=UTF-8
 
 <%doc> === end of header === </%doc>

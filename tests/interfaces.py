@@ -4109,8 +4109,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # Now test adding a new user to a group with terms upon user creation
         new_user_name = "new_usr_in_group_with_terms"
         utils.TestSetup.create_TestUser(self,
-                                        override_user_name=new_user_name,
-                                        override_group_name=self.test_group_name)
+                                        override_user_name=new_user_name)
         utils.TestSetup.check_UserGroupMembership(self, override_user_name=new_user_name, member=False)
 
         # Check if both user memberships are pending

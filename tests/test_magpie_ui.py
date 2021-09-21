@@ -305,7 +305,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         utils.TestSetup.create_TestUser(self)
 
         terms = "Test terms and conditions."
-        group_with_terms_name = "unittest-user-auth_ui-group-with-terms-local"
+        group_with_terms_name = "unittest-admin-auth_ui-group-with-terms-local"
         utils.TestSetup.create_TestGroup(self, override_group_name=group_with_terms_name, override_discoverable=True,
                                          override_terms=terms)
 
@@ -337,7 +337,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                                           override_group_name=group_with_terms_name)
 
                 utils.check_val_equal(mocked_send.call_count, 2,
-                                      msg="Expected sent notification to user for an email confirmation "
+                                      msg="Expected sent notifications to user for an email confirmation "
                                           "of terms and conditions.")
 
                 # Check if the user's membership is pending
@@ -384,7 +384,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 
                 # Simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
                 resp = utils.test_request(self, "GET", urlparse(confirm_url).path)
-                body = utils.check_ui_response_basic_info(resp, 200)  # , expected_title="Magpie User Registration")
+                body = utils.check_ui_response_basic_info(resp, 200)
                 utils.check_val_is_in("accepted the terms and conditions", body)
 
                 utils.check_val_equal(mocked_send.call_count, 3,
