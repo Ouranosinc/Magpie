@@ -8,7 +8,7 @@
 
         user:               User requested to join a group, with associated details.
         group_name:         Name of the group the user has been requested to join
-        group_terms:        Text containing the group's Terms and Conditions
+        group_terms:        Text containing the group's terms and conditions
         email_user:         Value defined by MAGPIE_SMTP_USER to identify the sender of this email.
         email_from:         Value defined by MAGPIE_SMTP_FROM to identify the sender of this email.
         email_sender:       Resolved value between MAGPIE_SMTP_FROM or MAGPIE_SMTP_USER sending this email.
@@ -22,7 +22,7 @@
 
 From: ${email_sender}
 To: ${email_recipient}
-Subject: Magpie - '${group_name}' Group Terms and Conditions
+Subject: Magpie - '${group_name}' group terms and conditions
 Content-Type: text/html; charset=UTF-8
 
 <%doc> === end of header === </%doc>
@@ -36,7 +36,7 @@ Content-Type: text/html; charset=UTF-8
 
         <p>
         A request to ${magpie_url} has been submitted to join the '${group_name}' group.
-        Before you can be assigned to the group, we need your consent to the group's Terms and Conditions.
+        Before you can be assigned to the group, we need your consent to the group's terms and conditions.
         </p>
 
         <p style="font-weight: bold;">
@@ -47,7 +47,7 @@ Content-Type: text/html; charset=UTF-8
         </p>
 
         <p>
-        Please confirm agreeing to the group's Terms and Conditions by <a href="${confirm_url}">clicking this link</a>.
+        Please confirm agreeing to the group's terms and conditions by <a href="${confirm_url}">clicking this link</a>.
         </p>
 
         Regards,<br>

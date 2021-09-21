@@ -140,7 +140,7 @@ def get_user_groups_view(request):
 @view_config(route_name=s.UserPendingGroupsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
 def get_user_pending_groups_view(request):
     """
-    List all groups where the user's membership is pending, because of required Terms and Conditions acceptation.
+    List all groups where the user's membership is pending, because of required terms and conditions acceptation.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)

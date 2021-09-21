@@ -7,7 +7,20 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add new ``Terms and conditions`` field for ``group`` creation. When a request is made to assign a ``user`` to a
+  ``group`` with terms and conditions, an email is now sent to the ``user`` with the terms and conditions. The ``user``
+  is assigned to the ``group`` when receiving the ``user``'s approval of terms and conditions, and another email is
+  then sent to notify the ``user`` of the successful operation.
+* Add new requests under ``/groups/{group_name}/pending_users``, ``/users/current/pending_groups`` and
+  ``/users/{user_name}/pending_groups`` endpoints to get pending ``users`` or ``groups``. These routes are used to
+  display any pending ``users``/``groups`` on the UI.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix HTTP ``Internal Server Error [500]`` on the page to edit a group when deleting the last ``user`` of a ``group``.
+
 `3.15.0 <https://github.com/Ouranosinc/Magpie/tree/3.15.0>`_ (2021-08-11)
 ------------------------------------------------------------------------------------
 

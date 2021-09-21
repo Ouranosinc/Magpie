@@ -133,7 +133,7 @@ def get_group_users_view(request):
 def get_group_pending_users_view(request):
     """
     List all pending users from a group.
-    Pending users are users who requested to join a group but still need to accept Terms and Conditions.
+    Pending users are users who requested to join a group but still need to accept terms and conditions.
     """
     # Find the group associated with the request
     group_name = ar.get_value_matchdict_checked(request, "group_name")

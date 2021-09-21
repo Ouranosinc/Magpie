@@ -336,7 +336,7 @@ def send_group_terms_email(user, group, db_session):
     ax.evaluate_call(lambda: send_email(user.email, settings, template, params),
                      fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
                      msg_on_fail="Error occurred while adding user to a group when trying to send "
-                                 "email to user for requesting agreement of the group's Terms and Conditions.")
+                                 "email to user for requesting agreement of the group's terms and conditions.")
 
     return ax.valid_http(http_success=HTTPAccepted, detail=s.UserGroups_POST_AcceptedResponseSchema.description,
                          content={"user_name": user.user_name, "group_name": group.group_name})
@@ -367,7 +367,7 @@ def handle_user_group_terms_confirmation(tmp_token, request):
 
     Generates the appropriate response that will be displayed to the user.
     """
-    LOGGER.info(f"User {tmp_token.user.user_name} approved Terms and Conditions of group {tmp_token.group.group_name}.")
+    LOGGER.info(f"User {tmp_token.user.user_name} approved terms and conditions of group {tmp_token.group.group_name}.")
     assign_user_group(tmp_token.user, tmp_token.group, request.db)
 
     # notify the user of its successful T&C acceptation, and confirm the user has been added to the requested group
@@ -376,7 +376,7 @@ def handle_user_group_terms_confirmation(tmp_token, request):
     ax.evaluate_call(lambda: send_email(tmp_token.user.email, request, template, params),
                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                      msg_on_fail="Error occurred during group terms confirmation when trying to send "
-                                 "email to user for confirmation of the Terms and Conditions acceptation.")
+                                 "email to user for confirmation of the terms and conditions acceptation.")
 
     # Remove all group_accept_terms temporary tokens associated with the same user and group
     tmp_tokens = TemporaryToken.by_user(tmp_token.user)\
@@ -386,7 +386,7 @@ def handle_user_group_terms_confirmation(tmp_token, request):
         request.db.delete(tmp_token)
 
     msg = cleandoc(f"""
-        You have accepted the Terms and Conditions of the '{tmp_token.group.group_name}' group. 
+        You have accepted the terms and conditions of the '{tmp_token.group.group_name}' group. 
 
         User '{tmp_token.user.user_name}' has now been successfully added to the '{tmp_token.group.group_name}' group. 
         """)

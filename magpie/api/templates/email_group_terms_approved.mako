@@ -1,5 +1,5 @@
 <%doc>
-    This is the default notification message sent by email to the user to notify of accepted Terms and Conditions and
+    This is the default notification message sent by email to the user to notify of accepted terms and conditions and
     to confirm the user has been added to the requested group.
 
     It is formatted using the Mako template library (https://www.makotemplates.org/).
@@ -27,7 +27,7 @@ Content-Type: text/plain; charset=UTF-8
 
 Dear ${user.user_name},
 
-The request to join the '${group_name}' group at ${magpie_url} has been completed, following your agreement of the Terms and Conditions.
+The request to join the '${group_name}' group at ${magpie_url} has been completed, following your agreement of the terms and conditions.
 Your account has been successfully added to the '${group_name}' group.
 
 Regards,
