@@ -9,7 +9,7 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add new ``Terms and conditions`` field for ``group`` creation. When a request is made to assign a ``user`` to a
+* Add new `Terms and conditions` field for ``group`` creation. When a request is made to assign a ``user`` to a
   ``group`` with terms and conditions, an email is now sent to the ``user`` with the terms and conditions. The ``user``
   is assigned to the ``group`` when receiving the ``user``'s approval of terms and conditions, and another email is
   then sent to notify the ``user`` of the successful operation.

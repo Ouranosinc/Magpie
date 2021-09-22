@@ -172,7 +172,7 @@ def assign_user_group_view(request):
                              msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
     ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
-    return uu.request_assign_user_group(user, group, db_session=request.db)
+    return uu.create_pending_or_assign_user_group(user, group, db_session=request.db)
 
 
 @s.UserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema, tags=[s.UsersTag],

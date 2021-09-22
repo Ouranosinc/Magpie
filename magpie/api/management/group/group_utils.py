@@ -85,8 +85,7 @@ def create_group(group_name, description, discoverable, terms, db_session):
     group_content_error = {
         "group_name": str(group_name),
         "description": description,
-        "discoverable": discoverable,
-        "terms": terms
+        "discoverable": discoverable
     }
     ax.verify_param(group_name, matches=True, param_compare=ax.PARAM_REGEX, param_name="group_name",
                     http_error=HTTPBadRequest, content=group_content_error,

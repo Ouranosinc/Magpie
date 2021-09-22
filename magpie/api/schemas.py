@@ -858,7 +858,7 @@ class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
         name="terms",
         description="Terms and conditions associated to the group.",
         example="",
-        missing=colander.drop)
+        missing=colander.null)
     member_count = colander.SchemaNode(
         colander.Integer(),
         description="Number of users member of the group.",
@@ -1962,8 +1962,10 @@ class UserGroups_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
 
 
 class UserGroups_POST_AcceptedResponseSchema(BaseResponseSchemaAPI):
-    description = "Accepted request to add user to the group. Group requires accepting terms and conditions. " \
-                  "Pending confirmation by the user."
+    description = (
+        "Accepted request to add user to the group. Group requires accepting terms and conditions. "
+        "Pending confirmation by the user."
+    )
     body = UserGroups_POST_ResponseBodySchema(code=HTTPAccepted.code, description=description)
 
 

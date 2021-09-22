@@ -47,6 +47,8 @@ def get_email_template(template_constant, container=None):
 
     Allowed values of :paramref:`template_constant` are:
 
+        - :envvar:`MAGPIE_GROUP_TERMS_APPROVED_EMAIL_TEMPLATE`
+        - :envvar:`MAGPIE_GROUP_TERMS_SUBMISSION_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE`

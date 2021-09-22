@@ -147,11 +147,11 @@ def create_user(user_name,              # type: Str
 
     # Assign user to group
     new_user_groups = [group_name]
-    request_assign_user_group(new_user, group_checked, db_session)
+    create_pending_or_assign_user_group(new_user, group_checked, db_session)
     # Also add user to anonymous group if not already done
     anonym_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
     if group_checked.group_name != anonym_grp_name:
-        request_assign_user_group(new_user, _get_group(anonym_grp_name), db_session)
+        create_pending_or_assign_user_group(new_user, _get_group(anonym_grp_name), db_session)
         new_user_groups.append(anonym_grp_name)
 
     user_content = uf.format_user(new_user, new_user_groups)
@@ -341,12 +341,12 @@ def send_group_terms_email(user, group, db_session):
                          content={"user_name": user.user_name, "group_name": group.group_name})
 
 
-def request_assign_user_group(user, group, db_session):
+def create_pending_or_assign_user_group(user, group, db_session):
     # type: (models.User, models.Group, Session) -> None
     """
-    Requests the creation of a user-group relationship (user membership to a group).
-    Adds the user to a group if the group has no terms and conditions confirmation,
-    else, sends an email for terms and conditions confirmation.
+    Creates either a new user-group relationship (user membership to a group) or a pending terms and conditions
+    confirmation. If the group requires a T&C confirmation, sends an email for T&C confirmation,
+    else, the user is assigned directly to the group.
 
     :returns: valid HTTP response on successful operations.
     :raises HTTPError: corresponding error matching problem encountered.
@@ -366,8 +366,8 @@ def handle_user_group_terms_confirmation(tmp_token, request):
 
     Generates the appropriate response that will be displayed to the user.
     """
-    LOGGER.info("User %s approved terms and conditions of group %s.",
-                tmp_token.user.user_name, tmp_token.group.group_name)
+    LOGGER.info("User [%s:%s] approved terms and conditions of group [%s:%s].",
+                tmp_token.user.id, tmp_token.user.user_name, tmp_token.group.id, tmp_token.group.group_name)
     assign_user_group(tmp_token.user, tmp_token.group, request.db)
 
     # notify the user of its successful T&C acceptation, and confirm the user has been added to the requested group
@@ -379,9 +379,9 @@ def handle_user_group_terms_confirmation(tmp_token, request):
                                  "email to user for confirmation of the terms and conditions acceptation.")
 
     # Remove all group_accept_terms temporary tokens associated with the same user and group
-    tmp_tokens = TemporaryToken.by_user(tmp_token.user)\
-        .filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)\
-        .filter(TemporaryToken.group == tmp_token.group)
+    tmp_tokens = TemporaryToken.by_user(tmp_token.user)
+    tmp_tokens = tmp_tokens.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
+    tmp_tokens = tmp_tokens.filter(TemporaryToken.group == tmp_token.group)
     for token in tmp_tokens:
         request.db.delete(token)
 
