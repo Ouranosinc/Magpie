@@ -1268,3 +1268,9 @@ div.input-container {
     height: 100%;
     -webkit-box-sizing: border-box;
 }
+
+textarea {
+  resize: both;
+  font-size: 13.3333px;
+  font-family: Arial;
+}
