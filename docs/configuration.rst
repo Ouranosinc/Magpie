@@ -1259,6 +1259,45 @@ approval procedures.
 
     The default template provides details about available template arguments.
 
+.. _config_user_group_assignment:
+
+User-Group Assignment Configuration
+-----------------------------------
+
+.. versionadded:: 3.16
+
+Following are the full description of all configuration parameters employed by the :term:`User`-:term:`Group` assignment
+procedures, in the case of a :term:`Group` that requires terms and conditions validation by the :term:`User`.
+
+.. envvar:: MAGPIE_GROUP_TERMS_SUBMISSION_EMAIL_TEMPLATE
+
+    (Default: |email_uga_submission_mako|_)
+
+    .. versionadded:: 3.16
+
+    Path to a `Mako Template`_ file providing custom email format to send notification email to the :term:`User`
+    following submission of the :term:`User` assignment to a :term:`Group` that requires terms and conditions
+    acceptation.
+
+    When overridden with a custom email format, the contents should provide sufficient details indicating to the
+    :term:`User` that its acceptation of the :term:`Group`'s terms and conditions must be confirmed by visiting the link
+    contained in that email. The confirmation URL would validate that the :term:`User` accepts the terms and conditions,
+    and would proceed with the assignment of the :term:`User` to the :term:`Group`. The contents of the email should
+    also include the terms and conditions of the :term:`Group`.
+
+    The default template provides details about available template arguments.
+
+.. envvar:: MAGPIE_GROUP_TERMS_APPROVED_EMAIL_TEMPLATE
+
+    (Default: |email_uga_approved_mako|_)
+
+    .. versionadded:: 3.16
+
+    Path to a `Mako Template`_ file providing custom email format to send an email to the :term:`User` related to a
+    :term:`User`-:term:`Group` assignment to notify them that the terms and conditions acceptation was completed,
+    and that their account is now a member of the requested :term:`Group`.
+
+    The default template provides details about available template arguments.
 
 .. _config_webhook:
 
