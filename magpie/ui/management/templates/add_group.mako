@@ -76,7 +76,7 @@
             <td style="vertical-align: top">Terms and conditions:</td>
             <td colspan="2">
                 <label>
-                    <textarea rows="4" cols="50" style="min-width: 282px; min-height: 66px">${form_terms}</textarea>
+                    <textarea rows="4" cols="50" style="min-width: 282px; min-height: 66px" name="terms">${form_terms}</textarea>
                 </label>
             </td>
             <td style="vertical-align: top">
