@@ -13,8 +13,8 @@ Features / Changes
   ``group`` with terms and conditions, an email is now sent to the ``user`` with the terms and conditions. The ``user``
   is assigned to the ``group`` when receiving the ``user``'s approval of terms and conditions, and another email is
   then sent to notify the ``user`` of the successful operation.
-* Add new requests under ``/groups/{group_name}/pending_users``, ``/users/current/pending_groups`` and
-  ``/users/{user_name}/pending_groups`` endpoints to get pending ``users`` or ``groups``. These routes are used to
+* Changed ``/groups/{group_name}/users``, ``/users/current/groups`` and ``/users/{user_name}/groups`` endpoints with
+  a new parameter to either get active, pending or all ``users`` or ``groups``. This new parameter is useful to
   display any pending ``users``/``groups`` on the UI.
 
 Bug Fixes
