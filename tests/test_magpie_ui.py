@@ -442,8 +442,6 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
                 utils.check_val_not_in("{} [pending]".format(group_with_terms_name), body)
 
-            assert 0
-
 
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_LOCAL
