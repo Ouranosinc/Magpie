@@ -1270,7 +1270,7 @@ div.input-container {
 }
 
 textarea {
-  resize: both;
-  font-size: 13.3333px;
-  font-family: Arial;
+    resize: both;
+    font-size: 13.3333px;
+    font-family: arial, sans-serif;
 }

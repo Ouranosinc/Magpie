@@ -131,9 +131,9 @@ def get_user_groups_view(request):
 
     group_names = []
     member_group_names = uu.get_user_groups_checked(user, request.db)
-    if group_type == UserGroupType.ACTIVE_USERGROUPS.value or group_type == UserGroupType.ALL_USERGROUPS.value:
+    if group_type in [UserGroupType.ACTIVE_USERGROUPS.value, UserGroupType.ALL_USERGROUPS.value]:
         group_names += member_group_names
-    if group_type == UserGroupType.PENDING_USERGROUPS.value or group_type == UserGroupType.ALL_USERGROUPS.value:
+    if group_type in [UserGroupType.PENDING_USERGROUPS.value, UserGroupType.ALL_USERGROUPS.value]:
         tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
         pending_group_names = [tmp_token.group.group_name for tmp_token in tmp_tokens]
 

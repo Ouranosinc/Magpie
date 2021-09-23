@@ -1,11 +1,4 @@
-from pyramid.httpexceptions import (
-    HTTPBadRequest,
-    HTTPConflict,
-    HTTPForbidden,
-    HTTPInternalServerError,
-    HTTPNotFound,
-    HTTPOk
-)
+from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
@@ -133,9 +126,9 @@ def get_group_users_view(request):
     member_user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
                                          http_error=HTTPForbidden,
                                          msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
-    if user_type == UserGroupType.ACTIVE_USERGROUPS.value or user_type == UserGroupType.ALL_USERGROUPS.value:
+    if user_type in [UserGroupType.ACTIVE_USERGROUPS.value, UserGroupType.ALL_USERGROUPS.value]:
         user_names += member_user_names
-    if user_type == UserGroupType.PENDING_USERGROUPS.value or user_type == UserGroupType.ALL_USERGROUPS.value:
+    if user_type in [UserGroupType.PENDING_USERGROUPS.value, UserGroupType.ALL_USERGROUPS.value]:
         # Find all temporary tokens with requested group id that have a pending accept terms request
         tmp_tokens = request.db.query(TemporaryToken).filter(TemporaryToken.group_id == group.id)
         tmp_tokens = tmp_tokens.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
