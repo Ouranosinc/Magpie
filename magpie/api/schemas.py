@@ -110,9 +110,6 @@ UserAPI = Service(
 UserGroupsAPI = Service(
     path="/users/{user_name}/groups",
     name="UserGroups")
-UserPendingGroupsAPI = Service(
-    path="/users/{user_name}/pending_groups",
-    name="UserPendingGroups")
 UserGroupAPI = Service(
     path="/users/{user_name}/groups/{group_name}",
     name="UserGroup")
@@ -149,9 +146,6 @@ LoggedUserAPI = Service(
 LoggedUserGroupsAPI = Service(
     path=LoggedUserBase + "/groups",
     name="LoggedUserGroups")
-LoggedUserPendingGroupsAPI = Service(
-    path=LoggedUserBase + "/pending_groups",
-    name="LoggedUserPendingGroups")
 LoggedUserGroupAPI = Service(
     path=LoggedUserBase + "/groups/{group_name}",
     name="LoggedUserGroup")
@@ -188,9 +182,6 @@ GroupAPI = Service(
 GroupUsersAPI = Service(
     path="/groups/{group_name}/users",
     name="GroupUsers")
-GroupPendingUsersAPI = Service(
-    path="/groups/{group_name}/pending_users",
-    name="GroupPendingUsers")
 GroupServicesAPI = Service(
     path="/groups/{group_name}/services",
     name="GroupServices")
@@ -1917,19 +1908,6 @@ class UserGroups_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = UserGroups_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class UserPendingGroups_GET_RequestSchema(BaseRequestSchemaAPI):
-    path = User_RequestPathSchema()
-
-
-class UserPendingGroups_GET_ResponseBodySchema(BaseResponseBodySchema):
-    pending_group_names = GroupNamesListSchema()
-
-
-class UserPendingGroups_GET_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Get user's pending groups successful."
-    body = UserPendingGroups_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
-
-
 class UserGroups_POST_RequestBodySchema(colander.MappingSchema):
     group_name = colander.SchemaNode(
         colander.String(),
@@ -2529,24 +2507,6 @@ class GroupUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 class GroupUsers_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     description = "Failed to obtain group user names from db."
-    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
-
-
-class GroupPendingUsers_GET_RequestSchema(BaseRequestSchemaAPI):
-    path = Group_RequestPathSchema()
-
-
-class GroupPendingUsers_GET_ResponseBodySchema(BaseResponseBodySchema):
-    pending_user_names = UserNamesListSchema()
-
-
-class GroupPendingUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Get group's pending user names successful."
-    body = GroupPendingUsers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
-
-
-class GroupPendingUsers_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Failed to obtain the group's pending user names from db."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
@@ -3441,15 +3401,6 @@ UserGroups_GET_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-UserPendingGroups_GET_responses = {
-    "200": UserPendingGroups_GET_OkResponseSchema(),
-    "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
-    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
-    "404": User_CheckAnonymous_NotFoundResponseSchema(),
-    "406": NotAcceptableResponseSchema(),
-    "422": UnprocessableEntityResponseSchema(),
-    "500": InternalServerErrorResponseSchema(),
-}
 UserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
     "202": UserGroups_POST_AcceptedResponseSchema(),
@@ -3592,14 +3543,6 @@ LoggedUserResources_GET_responses = {
 }
 LoggedUserGroups_GET_responses = {
     "200": UserGroups_GET_OkResponseSchema(),
-    "403": User_CheckAnonymous_ForbiddenResponseSchema(),
-    "404": User_CheckAnonymous_NotFoundResponseSchema(),
-    "406": NotAcceptableResponseSchema(),
-    "422": UnprocessableEntityResponseSchema(),
-    "500": InternalServerErrorResponseSchema(),
-}
-LoggedUserPendingGroups_GET_responses = {
-    "200": UserPendingGroups_GET_OkResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
@@ -3749,15 +3692,6 @@ GroupUsers_GET_responses = {
     "200": GroupUsers_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": GroupUsers_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
-    "404": Group_MatchDictCheck_NotFoundResponseSchema(),
-    "406": NotAcceptableResponseSchema(),
-    "422": UnprocessableEntityResponseSchema(),
-    "500": InternalServerErrorResponseSchema(),
-}
-GroupPendingUsers_GET_responses = {
-    "200": GroupPendingUsers_GET_OkResponseSchema(),
-    "401": UnauthorizedResponseSchema(),
-    "403": GroupPendingUsers_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Group_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),

@@ -19,7 +19,7 @@ from magpie import __meta__
 from magpie.api import schemas as s
 from magpie.api.webhooks import webhook_update_error_status
 from magpie.constants import MAGPIE_ROOT, get_constant
-from magpie.models import RESOURCE_TYPE_DICT, Directory, Route, UserStatuses
+from magpie.models import RESOURCE_TYPE_DICT, Directory, Route, UserGroupType, UserStatuses
 from magpie.permissions import (
     PERMISSION_REASON_DEFAULT,
     PERMISSION_REASON_MULTIPLE,
@@ -4096,7 +4096,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.assign_TestUserGroup(self)
 
         path = "/users/{usr}/groups".format(usr=self.test_user_name)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+        data = {"group_type": UserGroupType.ACTIVE_USERGROUPS.value}
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, json=data,
                                   cookies=self.cookies, expect_errors=True)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("group_names", body)

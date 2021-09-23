@@ -21,6 +21,7 @@ from magpie.api import schemas
 from magpie.api.generic import get_exception_info, get_request_info
 from magpie.api.requests import get_logged_user
 from magpie.constants import get_constant
+from magpie.models import UserGroupType
 from magpie.security import mask_credentials
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_json, get_logger, get_magpie_url
 
@@ -316,18 +317,12 @@ class AdminRequests(BaseViews):
         return get_json(resp)["group"]
 
     @handle_errors
-    def get_group_users(self, group_name):
+    def get_group_users(self, group_name, user_type=UserGroupType.ACTIVE_USERGROUPS.value):
         path = schemas.GroupUsersAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path, "GET")
+        data = {"user_type": user_type}
+        resp = request_api(self.request, path, "GET", data=data)
         check_response(resp)
         return get_json(resp)["user_names"]
-
-    @handle_errors
-    def get_group_pending_users(self, group_name):
-        path = schemas.GroupPendingUsersAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path, "GET")
-        check_response(resp)
-        return get_json(resp)["pending_user_names"]
 
     @handle_errors
     def update_group_info(self, group_name, group_info):
@@ -344,18 +339,12 @@ class AdminRequests(BaseViews):
         return get_json(resp)
 
     @handle_errors
-    def get_user_groups(self, user_name):
+    def get_user_groups(self, user_name, group_type=UserGroupType.ACTIVE_USERGROUPS.value):
         path = schemas.UserGroupsAPI.path.format(user_name=user_name)
-        resp = request_api(self.request, path, "GET")
+        data = {"group_type": group_type}
+        resp = request_api(self.request, path, "GET", data=data)
         check_response(resp)
         return get_json(resp)["group_names"]
-
-    @handle_errors
-    def get_user_pending_groups(self, user_name):
-        path = schemas.UserPendingGroupsAPI.path.format(user_name=user_name)
-        resp = request_api(self.request, path, "GET")
-        check_response(resp)
-        return get_json(resp)["pending_group_names"]
 
     @handle_errors
     def get_user_names(self):

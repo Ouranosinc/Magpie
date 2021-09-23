@@ -16,7 +16,7 @@ from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
-from magpie.models import TemporaryToken, TokenOperation
+from magpie.models import TemporaryToken, TokenOperation, UserGroupType
 from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
@@ -127,32 +127,22 @@ def get_user_groups_view(request):
     List all groups a user belongs to. Any pending group is not included in this list.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    group_names = uu.get_user_groups_checked(user, request.db)
+    group_type = ar.get_multiformat_body(request, "group_type", default=UserGroupType.ACTIVE_USERGROUPS.value)
+
+    group_names = []
+    member_group_names = uu.get_user_groups_checked(user, request.db)
+    if group_type == UserGroupType.ACTIVE_USERGROUPS.value or group_type == UserGroupType.ALL_USERGROUPS.value:
+        group_names += member_group_names
+    if group_type == UserGroupType.PENDING_USERGROUPS.value or group_type == UserGroupType.ALL_USERGROUPS.value:
+        tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
+        pending_group_names = [tmp_token.group.group_name for tmp_token in tmp_tokens]
+
+        # Remove any group a user already belongs to, in case any tokens are irrelevant.
+        # Should not happen since related tokens are deleted upon T&C acceptation.
+        group_names += [grp for grp in pending_group_names if grp not in member_group_names]
+
     return ax.valid_http(http_success=HTTPOk, content={"group_names": group_names},
                          detail=s.UserGroups_GET_OkResponseSchema.description)
-
-
-@s.UserPendingGroupsAPI.get(schema=s.UserPendingGroups_GET_RequestSchema, tags=[s.UsersTag],
-                            response_schemas=s.UserPendingGroups_GET_responses, api_security=s.SecurityAuthenticatedAPI)
-@s.LoggedUserPendingGroupsAPI.get(schema=s.UserPendingGroups_GET_RequestSchema, tags=[s.LoggedUserTag],
-                                  response_schemas=s.LoggedUserPendingGroups_GET_responses,
-                                  api_security=s.SecurityAuthenticatedAPI)
-@view_config(route_name=s.UserPendingGroupsAPI.name, request_method="GET", permission=MAGPIE_CONTEXT_PERMISSION)
-def get_user_pending_groups_view(request):
-    """
-    List all groups where the user's membership is pending, because of required terms and conditions acceptation.
-    """
-    user = ar.get_user_matchdict_checked_or_logged(request)
-    tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
-    pending_group_names = [tmp_token.group.group_name for tmp_token in tmp_tokens]
-
-    # Remove any group a user already belongs to, in case any tokens are irrelevant.
-    # Should not happen since related tokens are deleted upon T&C acceptation.
-    member_group_names = uu.get_user_groups_checked(user, request.db)
-    pending_group_names = [grp for grp in pending_group_names if grp not in member_group_names]
-
-    return ax.valid_http(http_success=HTTPOk, content={"pending_group_names": pending_group_names},
-                         detail=s.UserPendingGroups_GET_OkResponseSchema.description)
 
 
 @s.UserGroupsAPI.post(schema=s.UserGroups_POST_RequestSchema, tags=[s.UsersTag],

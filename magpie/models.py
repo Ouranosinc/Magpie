@@ -101,6 +101,15 @@ class GroupPermission(GroupPermissionMixin, Base):
     pass
 
 
+class UserGroupType(ExtendedEnum):
+    """
+    Supported types of user-group relationships.
+    """
+    ALL_USERGROUPS = "all_usergroups"
+    ACTIVE_USERGROUPS = "active_usergroups"
+    PENDING_USERGROUPS = "pending_usergroups"
+
+
 class UserGroup(UserGroupMixin, Base):
     pass
 

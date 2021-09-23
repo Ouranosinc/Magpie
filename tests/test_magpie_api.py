@@ -14,7 +14,7 @@ import mock
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
 from magpie.constants import get_constant
-from magpie.models import UserStatuses
+from magpie.models import UserGroupType, UserStatuses
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils
 
@@ -109,13 +109,14 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
                                                   override_headers=self.json_headers, override_cookies=self.cookies)
 
         # Check if the user's membership is pending
-        path = "/users/{user_name}/pending_groups".format(user_name=self.test_user_name)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        path = "/users/{user_name}/groups".format(user_name=self.test_user_name)
+        data = {"group_type": UserGroupType.PENDING_USERGROUPS.value}
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, json=data, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
 
-        utils.check_val_is_in("pending_group_names", body)
-        utils.check_val_type(body["pending_group_names"], list)
-        utils.check_val_is_in(self.test_group_name, body["pending_group_names"])
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+        utils.check_val_is_in(self.test_group_name, body["group_names"])
 
 
 @runner.MAGPIE_TEST_API
@@ -233,14 +234,15 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         utils.TestSetup.check_UserGroupMembership(self, override_user_name=new_user_name, member=False)
 
         # Check if both user memberships are pending
-        path = "/groups/{grp}/pending_users".format(grp=self.test_group_name)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        path = "/groups/{grp}/users".format(grp=self.test_group_name)
+        data = {"user_type": UserGroupType.PENDING_USERGROUPS.value}
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, json=data, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
 
-        utils.check_val_is_in("pending_user_names", body)
-        utils.check_val_type(body["pending_user_names"], list)
-        utils.check_val_is_in(self.test_user_name, body["pending_user_names"])
-        utils.check_val_is_in(new_user_name, body["pending_user_names"])
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_val_is_in(self.test_user_name, body["user_names"])
+        utils.check_val_is_in(new_user_name, body["user_names"])
 
 
 @runner.MAGPIE_TEST_API

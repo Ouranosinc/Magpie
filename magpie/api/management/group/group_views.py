@@ -16,7 +16,7 @@ from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
 from magpie.api.management.group import group_utils as gu
 from magpie.constants import get_constant
-from magpie.models import TemporaryToken, TokenOperation
+from magpie.models import TemporaryToken, TokenOperation, UserGroupType
 
 
 @s.GroupsAPI.get(tags=[s.GroupsTag], response_schemas=s.Groups_GET_responses)
@@ -127,45 +127,27 @@ def get_group_users_view(request):
     List all users from a group. Any pending user is not included in this list.
     """
     group = ar.get_group_matchdict_checked(request)
-    user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
-                                  http_error=HTTPForbidden,
-                                  msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
-    return ax.valid_http(http_success=HTTPOk, detail=s.GroupUsers_GET_OkResponseSchema.description,
-                         content={"user_names": sorted(user_names)})
+    user_type = ar.get_multiformat_body(request, "user_type", default=UserGroupType.ACTIVE_USERGROUPS.value)
 
-
-@s.GroupPendingUsersAPI.get(schema=s.GroupPendingUsers_GET_RequestSchema, tags=[s.GroupsTag],
-                            response_schemas=s.GroupPendingUsers_GET_responses)
-@view_config(route_name=s.GroupPendingUsersAPI.name, request_method="GET")
-def get_group_pending_users_view(request):
-    """
-    List all pending users from a group.
-    Pending users are users who requested to join a group but still need to accept terms and conditions.
-    """
-    # Find the group associated with the request
-    group_name = ar.get_value_matchdict_checked(request, "group_name")
-    group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
-                             fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
-                             msg_on_fail=s.GroupPendingUsers_GET_ForbiddenResponseSchema.description)
-    ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
-                    msg_on_fail=s.Group_MatchDictCheck_NotFoundResponseSchema.description)
-
-    # Find all temporary tokens with requested group id that have a pending accept terms request
-    query = request.db.query(TemporaryToken).filter(TemporaryToken.group_id == group.id)
-    tmp_tokens = query.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
-
-    # Find and return all user names associated with the discovered tokens
-    pending_user_names = [tmp_token.user.user_name for tmp_token in tmp_tokens]
-
-    # Remove any user already belonging to the group, in case any tokens are irrelevant.
-    # Should not happen since related tokens are deleted upon T&C acceptation.
+    user_names = []
     member_user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
                                          http_error=HTTPForbidden,
                                          msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
-    pending_user_names = [usr for usr in pending_user_names if usr not in member_user_names]
+    if user_type == UserGroupType.ACTIVE_USERGROUPS.value or user_type == UserGroupType.ALL_USERGROUPS.value:
+        user_names += member_user_names
+    if user_type == UserGroupType.PENDING_USERGROUPS.value or user_type == UserGroupType.ALL_USERGROUPS.value:
+        # Find all temporary tokens with requested group id that have a pending accept terms request
+        tmp_tokens = request.db.query(TemporaryToken).filter(TemporaryToken.group_id == group.id)
+        tmp_tokens = tmp_tokens.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
 
-    return ax.valid_http(http_success=HTTPOk, detail=s.GroupPendingUsers_GET_OkResponseSchema.description,
-                         content={"pending_user_names": pending_user_names})
+        # Find and return all user names associated with the discovered tokens
+        pending_user_names = [tmp_token.user.user_name for tmp_token in tmp_tokens]
+
+        # Remove any user already belonging to the group, in case any tokens are irrelevant.
+        # Should not happen since related tokens are deleted upon T&C acceptation.
+        user_names += [usr for usr in pending_user_names if usr not in member_user_names]
+    return ax.valid_http(http_success=HTTPOk, detail=s.GroupUsers_GET_OkResponseSchema.description,
+                         content={"user_names": sorted(user_names)})
 
 
 @s.GroupServicesAPI.get(schema=s.GroupServices_GET_RequestSchema, tags=[s.GroupsTag],

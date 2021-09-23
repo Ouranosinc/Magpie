@@ -7,6 +7,7 @@ from pyramid.view import view_config
 
 from magpie.api import schemas
 from magpie.constants import get_constant
+from magpie.models import UserGroupType
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json
 
@@ -21,18 +22,12 @@ class UserViews(BaseViews):
         return super(UserViews, self).add_template_data(data)
 
     @handle_errors
-    def get_current_user_groups(self):
+    def get_current_user_groups(self, group_type=UserGroupType.ACTIVE_USERGROUPS.value):
         # type: () -> List[str]
-        resp = request_api(self.request, schemas.LoggedUserGroupsAPI.path, "GET")
+        data = {"group_type": group_type}
+        resp = request_api(self.request, schemas.LoggedUserGroupsAPI.path, "GET", data=data)
         check_response(resp)
         return get_json(resp)["group_names"]
-
-    @handle_errors
-    def get_current_user_pending_groups(self):
-        # type: () -> List[str]
-        resp = request_api(self.request, schemas.LoggedUserPendingGroupsAPI.path, "GET")
-        check_response(resp)
-        return get_json(resp)["pending_group_names"]
 
     @handle_errors
     def get_current_user_info(self):
@@ -80,7 +75,7 @@ class UserViews(BaseViews):
             - :meth:`magpie.ui.management.views.ManagementViews.edit_user` for corresponding operation by administrator
         """
         joined_groups = self.get_current_user_groups()
-        pending_groups = self.get_current_user_pending_groups()
+        pending_groups = self.get_current_user_groups(group_type=UserGroupType.PENDING_USERGROUPS.value)
         public_groups = self.get_discoverable_groups()
         user_info = self.get_current_user_info()
         user_info["edit_mode"] = "no_edit"
@@ -160,7 +155,8 @@ class UserViews(BaseViews):
                 for group in new_groups:
                     self.join_discoverable_group(group)
                 user_info["joined_groups"] = self.get_current_user_groups()
-                user_info["pending_groups"] = self.get_current_user_pending_groups()
+                user_info["pending_groups"] = self.get_current_user_groups(
+                    group_type=UserGroupType.PENDING_USERGROUPS.value)
 
         user_info.pop("password", None)  # always remove password from output
         return self.add_template_data(data=user_info)
