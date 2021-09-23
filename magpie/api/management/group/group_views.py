@@ -37,7 +37,7 @@ def create_group_view(request):
     Create a group.
     """
     group_name = ar.get_value_multiformat_body_checked(request, "group_name")
-    group_desc = ar.get_multiformat_body(request, "description", default="")
+    group_desc = ar.get_multiformat_body(request, "description", default=None)
     group_disc = asbool(ar.get_multiformat_body(request, "discoverable", default=False))
     group_terms = ar.get_multiformat_body(request, "terms", default=None)
     return gu.create_group(group_name, group_desc, group_disc, group_terms, request.db)
