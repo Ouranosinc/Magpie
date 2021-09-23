@@ -117,7 +117,8 @@ def delete_group_view(request):
 @view_config(route_name=s.GroupUsersAPI.name, request_method="GET")
 def get_group_users_view(request):
     """
-    List all users from a group. Any pending user is not included in this list.
+    List all users from a group.
+    Users can be of active or pending type, or include both types depending of input arguments.
     """
     group = ar.get_group_matchdict_checked(request)
     user_type = ar.get_multiformat_body(request, "user_type", default=UserGroupType.ACTIVE_USERGROUPS.value)
