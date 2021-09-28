@@ -9,17 +9,17 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add new `Terms and conditions` field for ``group`` creation. When a request is made to assign a ``user`` to a
-  ``group`` with terms and conditions, an email is now sent to the ``user`` with the terms and conditions. The ``user``
-  is assigned to the ``group`` when receiving the ``user``'s approval of terms and conditions, and another email is
-  then sent to notify the ``user`` of the successful operation.
+* Add new `Terms and conditions` field for ``Group`` creation. When a request is made to assign a ``User`` to a
+  ``Group`` with terms and conditions, an email is now sent to the ``User`` with the terms and conditions. The ``User``
+  is assigned to the ``Group`` when receiving the ``User``'s approval of terms and conditions, and another email is
+  then sent to notify the ``User`` of the successful operation.
 * Changed ``/groups/{group_name}/users``, ``/users/current/groups`` and ``/users/{user_name}/groups`` endpoints with
-  a new parameter to either get active, pending or all ``users`` or ``groups``. This new parameter is useful to
-  display any pending ``users``/``groups`` on the UI.
+  new query parameter `status` to either get active, pending or all ``Users`` or ``Groups``. This new parameter is
+  useful to display any pending ``Users``/``Groups`` on the UI.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix HTTP ``Internal Server Error [500]`` on the page to edit a group when deleting the last ``user`` of a ``group``.
+* Fix HTTP ``Internal Server Error [500]`` on the page to edit a ``Group`` when deleting the last ``User`` of a ``Group``.
 * Pin ``sqlalchemy``, ``sqlalchemy_utils``, ``zope.sqlalchemy`` and ``ziggurat_foundations`` to specific package
   versions to avoid underlying issues when combining dependencies with `Twitcher` (in ``Docker.adapter``).
   Some definitions at lower level in ``ziggurat_foundations`` cause an issue when moving to ``sqlalchemy>=1.4``,
