@@ -23,7 +23,7 @@ from magpie.cli import sync_resources
 from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
 # TODO: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
-from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupType, UserStatuses
+from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
 from magpie.permissions import PermissionSet
 from magpie.ui.utils import AdminRequests, BaseViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
@@ -122,7 +122,7 @@ class ManagementViews(AdminRequests, BaseViews):
         inherit_grp_perms = self.request.matchdict.get("inherit_groups_permissions", False)
 
         own_groups = self.get_user_groups(user_name)
-        pending_groups = self.get_user_groups(user_name, group_type=UserGroupType.PENDING_USERGROUPS.value)
+        pending_groups = self.get_user_groups(user_name, user_group_status=UserGroupStatus.PENDING.value)
         all_groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_USERS_GROUP", self.request))
 
         # TODO:
@@ -262,7 +262,7 @@ class ManagementViews(AdminRequests, BaseViews):
                     check_response(resp)
                 user_info["own_groups"] = self.get_user_groups(user_name)
                 user_info["pending_groups"] = self.get_user_groups(user_name,
-                                                                   group_type=UserGroupType.PENDING_USERGROUPS.value)
+                                                                   user_group_status=UserGroupStatus.PENDING.value)
 
         # display resources permissions per service type tab
         try:
@@ -627,7 +627,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
         group_info.update(self.get_group_info(group_name))
         group_info["members"] = group_info.pop("user_names")
-        group_info["pending_users"] = self.get_group_users(group_name, user_type=UserGroupType.PENDING_USERGROUPS.value)
+        group_info["pending_users"] = self.get_group_users(group_name, user_group_status=UserGroupStatus.PENDING.value)
         group_info["error_message"] = error_message
         group_info["ids_to_clean"] = ";".join(ids_to_clean)
         group_info["last_sync"] = last_sync_humanized

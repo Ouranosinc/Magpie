@@ -17,7 +17,7 @@ from six.moves.urllib.parse import urlparse
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
 from magpie.constants import get_constant
-from magpie.models import Route, UserGroupType
+from magpie.models import Route, UserGroupStatus
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
 from magpie.services import ServiceAPI, ServiceWPS
 from tests import runner, utils
@@ -322,7 +322,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
 
                 # Get current group's active members, for later checks
                 path = "/users/{user_name}/groups".format(user_name=self.test_user_name)
-                data = {"group_type": UserGroupType.ACTIVE_USERGROUPS.value}
+                data = {"group_type": UserGroupStatus.ACTIVE.value}
                 resp = utils.test_request(self, "GET", path, headers=self.json_headers, json=data, cookies=self.cookies)
                 body = utils.check_response_basic_info(resp, 200, expected_method="GET")
                 utils.check_val_is_in("group_names", body)
@@ -349,9 +349,9 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                                           "of terms and conditions.")
 
                 # Check if the user's membership is pending
-                path = "/users/{user_name}/groups".format(user_name=self.test_user_name)
-                data = {"group_type": UserGroupType.PENDING_USERGROUPS.value}
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, json=data, cookies=self.cookies)
+                path = "/users/{user_name}/groups?status={status}".format(user_name=self.test_user_name,
+                                                                          status=UserGroupStatus.PENDING.value)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
                 body = utils.check_response_basic_info(resp, 200, expected_method="GET")
 
                 utils.check_val_is_in("group_names", body)
@@ -360,9 +360,9 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 pending_members = body["group_names"]
 
                 # Check if getting all group's members finds both pending and active members
-                path = "/users/{user_name}/groups".format(user_name=self.test_user_name)
-                data = {"group_type": UserGroupType.ALL_USERGROUPS.value}
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, json=data, cookies=self.cookies)
+                path = "/users/{user_name}/groups?status={status}".format(user_name=self.test_user_name,
+                                                                          status=UserGroupStatus.ALL.value)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
                 body = utils.check_response_basic_info(resp, 200, expected_method="GET")
                 utils.check_val_is_in("group_names", body)
                 self.assertCountEqual(body["group_names"], pending_members + active_members)

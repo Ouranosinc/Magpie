@@ -26,7 +26,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 
 from magpie import __meta__
 from magpie.constants import get_constant
-from magpie.models import UserStatuses
+from magpie.models import UserGroupStatus, UserStatuses
 from magpie.permissions import Access, Permission, PermissionType, Scope
 from magpie.security import get_provider_names
 from magpie.utils import (
@@ -1895,8 +1895,25 @@ class User_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
+class UserGroup_Check_Status_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid 'status' value specified."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class UserGroupsQuery(QueryRequestSchemaAPI):
+    status = colander.SchemaNode(
+        colander.String(),
+        default=UserGroupStatus.ACTIVE,
+        missing=colander.drop,
+        description="Obtain the user-groups filtered by statuses [all, active, pending]. "
+                    "Returns active user-groups if not provided. ",
+        validator=colander.OneOf(UserGroupStatus.values())
+    )
+
+
 class UserGroups_GET_RequestSchema(BaseRequestSchemaAPI):
     path = User_RequestPathSchema()
+    querystring = UserGroupsQuery()
 
 
 class UserGroups_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -2494,6 +2511,7 @@ class Group_DELETE_ReservedKeyword_ForbiddenResponseSchema(BaseResponseSchemaAPI
 
 class GroupUsers_GET_RequestSchema(BaseRequestSchemaAPI):
     path = Group_RequestPathSchema()
+    querystring = UserGroupsQuery()
 
 
 class GroupUsers_GET_ResponseBodySchema(BaseResponseBodySchema):

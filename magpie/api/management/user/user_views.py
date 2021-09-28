@@ -16,7 +16,7 @@ from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
-from magpie.models import TemporaryToken, TokenOperation, UserGroupType
+from magpie.models import TemporaryToken, TokenOperation, UserGroupStatus
 from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
@@ -125,16 +125,19 @@ def delete_user_view(request):
 def get_user_groups_view(request):
     """
     List all groups a user belongs to.
-    Groups can be of active or pending type, or include both types depending of input arguments.
+    Groups can be filtered by status depending of input arguments.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    group_type = ar.get_multiformat_body(request, "group_type", default=UserGroupType.ACTIVE_USERGROUPS.value)
+    status = ar.get_query_param(request, "status", default=UserGroupStatus.ACTIVE.value)
+    ax.verify_param(status, is_in=True, param_compare=s.UserGroupStatus.values(), param_name="status",
+                    msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
+                    http_error=HTTPBadRequest)
 
     group_names = []
     member_group_names = uu.get_user_groups_checked(user, request.db)
-    if group_type in [UserGroupType.ACTIVE_USERGROUPS.value, UserGroupType.ALL_USERGROUPS.value]:
+    if status in [UserGroupStatus.ACTIVE.value, UserGroupStatus.ALL.value]:
         group_names += member_group_names
-    if group_type in [UserGroupType.PENDING_USERGROUPS.value, UserGroupType.ALL_USERGROUPS.value]:
+    if status in [UserGroupStatus.PENDING.value, UserGroupStatus.ALL.value]:
         tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
         pending_group_names = [tmp_token.group.group_name for tmp_token in tmp_tokens]
 

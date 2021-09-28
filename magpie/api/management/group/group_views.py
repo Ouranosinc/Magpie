@@ -9,7 +9,7 @@ from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
 from magpie.api.management.group import group_utils as gu
 from magpie.constants import get_constant
-from magpie.models import TemporaryToken, TokenOperation, UserGroupType
+from magpie.models import TemporaryToken, TokenOperation, UserGroupStatus
 
 
 @s.GroupsAPI.get(tags=[s.GroupsTag], response_schemas=s.Groups_GET_responses)
@@ -118,18 +118,21 @@ def delete_group_view(request):
 def get_group_users_view(request):
     """
     List all users from a group.
-    Users can be of active or pending type, or include both types depending of input arguments.
+    Users can be filtered by status depending of input arguments.
     """
     group = ar.get_group_matchdict_checked(request)
-    user_type = ar.get_multiformat_body(request, "user_type", default=UserGroupType.ACTIVE_USERGROUPS.value)
+    status = ar.get_query_param(request, "status", default=UserGroupStatus.ACTIVE.value)
+    ax.verify_param(status, is_in=True, param_compare=s.UserGroupStatus.values(), param_name="status",
+                    msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
+                    http_error=HTTPBadRequest)
 
     user_names = []
     member_user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
                                          http_error=HTTPForbidden,
                                          msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
-    if user_type in [UserGroupType.ACTIVE_USERGROUPS.value, UserGroupType.ALL_USERGROUPS.value]:
+    if status in [UserGroupStatus.ACTIVE.value, UserGroupStatus.ALL.value]:
         user_names += member_user_names
-    if user_type in [UserGroupType.PENDING_USERGROUPS.value, UserGroupType.ALL_USERGROUPS.value]:
+    if status in [UserGroupStatus.PENDING.value, UserGroupStatus.ALL.value]:
         # Find all temporary tokens with requested group id that have a pending accept terms request
         tmp_tokens = request.db.query(TemporaryToken).filter(TemporaryToken.group_id == group.id)
         tmp_tokens = tmp_tokens.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
