@@ -317,9 +317,10 @@ class AdminRequests(BaseViews):
         return get_json(resp)["group"]
 
     @handle_errors
-    def get_group_users(self, group_name, user_group_status=UserGroupStatus.ACTIVE.value):
+    def get_group_users(self, group_name, user_group_status=UserGroupStatus.ACTIVE):
+        # type: (UserGroupStatus) -> List[str]
         path = schemas.GroupUsersAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path + "?status={}".format(user_group_status), "GET")
+        resp = request_api(self.request, path + "?status={}".format(user_group_status.value), "GET")
         check_response(resp)
         return get_json(resp)["user_names"]
 
@@ -338,9 +339,10 @@ class AdminRequests(BaseViews):
         return get_json(resp)
 
     @handle_errors
-    def get_user_groups(self, user_name, user_group_status=UserGroupStatus.ACTIVE.value):
+    def get_user_groups(self, user_name, user_group_status=UserGroupStatus.ACTIVE):
+        # type: (UserGroupStatus) -> List[str]
         path = schemas.UserGroupsAPI.path.format(user_name=user_name)
-        resp = request_api(self.request, path + "?status={}".format(user_group_status), "GET")
+        resp = request_api(self.request, path + "?status={}".format(user_group_status.value), "GET")
         check_response(resp)
         return get_json(resp)["group_names"]
 

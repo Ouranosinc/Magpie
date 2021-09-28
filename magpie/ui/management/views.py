@@ -122,7 +122,7 @@ class ManagementViews(AdminRequests, BaseViews):
         inherit_grp_perms = self.request.matchdict.get("inherit_groups_permissions", False)
 
         own_groups = self.get_user_groups(user_name)
-        pending_groups = self.get_user_groups(user_name, user_group_status=UserGroupStatus.PENDING.value)
+        pending_groups = self.get_user_groups(user_name, user_group_status=UserGroupStatus.PENDING)
         all_groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_USERS_GROUP", self.request))
 
         # TODO:
@@ -261,8 +261,7 @@ class ManagementViews(AdminRequests, BaseViews):
                     resp = request_api(self.request, path, "POST", data=data)
                     check_response(resp)
                 user_info["own_groups"] = self.get_user_groups(user_name)
-                user_info["pending_groups"] = self.get_user_groups(user_name,
-                                                                   user_group_status=UserGroupStatus.PENDING.value)
+                user_info["pending_groups"] = self.get_user_groups(user_name, user_group_status=UserGroupStatus.PENDING)
 
         # display resources permissions per service type tab
         try:
@@ -627,7 +626,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
         group_info.update(self.get_group_info(group_name))
         group_info["members"] = group_info.pop("user_names")
-        group_info["pending_users"] = self.get_group_users(group_name, user_group_status=UserGroupStatus.PENDING.value)
+        group_info["pending_users"] = self.get_group_users(group_name, user_group_status=UserGroupStatus.PENDING)
         group_info["error_message"] = error_message
         group_info["ids_to_clean"] = ";".join(ids_to_clean)
         group_info["last_sync"] = last_sync_humanized

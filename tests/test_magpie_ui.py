@@ -321,9 +321,9 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 _, wrapped_contents, mocked_send = email_contexts
 
                 # Get current group's active members, for later checks
-                path = "/users/{user_name}/groups".format(user_name=self.test_user_name)
-                data = {"group_type": UserGroupStatus.ACTIVE.value}
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, json=data, cookies=self.cookies)
+                path = "/users/{user_name}/groups?status={status}".format(user_name=self.test_user_name,
+                                                                          status=UserGroupStatus.ACTIVE.value)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
                 body = utils.check_response_basic_info(resp, 200, expected_method="GET")
                 utils.check_val_is_in("group_names", body)
                 active_members = body["group_names"]

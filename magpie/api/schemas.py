@@ -1903,7 +1903,7 @@ class UserGroup_Check_Status_BadRequestResponseSchema(BaseResponseSchemaAPI):
 class UserGroupsQuery(QueryRequestSchemaAPI):
     status = colander.SchemaNode(
         colander.String(),
-        default=UserGroupStatus.ACTIVE,
+        default=UserGroupStatus.ACTIVE.value,
         missing=colander.drop,
         description="Obtain the user-groups filtered by statuses [all, active, pending]. "
                     "Returns active user-groups if not provided. ",
