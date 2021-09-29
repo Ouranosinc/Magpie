@@ -19,7 +19,7 @@ from magpie import __meta__
 from magpie.api import schemas as s
 from magpie.api.webhooks import webhook_update_error_status
 from magpie.constants import MAGPIE_ROOT, get_constant
-from magpie.models import RESOURCE_TYPE_DICT, Directory, Route, UserGroupStatus, UserStatuses
+from magpie.models import RESOURCE_TYPE_DICT, Directory, Route, UserStatuses
 from magpie.permissions import (
     PERMISSION_REASON_DEFAULT,
     PERMISSION_REASON_MULTIPLE,
