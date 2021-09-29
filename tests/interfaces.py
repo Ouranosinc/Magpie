@@ -4089,12 +4089,33 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                              override_headers=self.json_headers, override_cookies=self.cookies)
 
     @runner.MAGPIE_TEST_USERS
+    @utils.mocked_send_email
     def test_GetUserGroups(self):
         users_group = get_constant("MAGPIE_USERS_GROUP")
         utils.TestSetup.create_TestUser(self, override_group_name=users_group)
-        utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.assign_TestUserGroup(self)
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
 
+        # Request adding the user to test group
+        path = "/users/{usr}/groups".format(usr=self.test_user_name)
+        data = {"group_name": self.test_group_name}
+        resp = utils.test_request(self, "POST", path, json=data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 202, expected_method="POST")
+
+        # Check 'pending' group case
+        path = "/users/{usr}/groups?status={status}".format(usr=self.test_user_name,
+                                                            status=UserGroupStatus.PENDING.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+                                  cookies=self.cookies, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+
+        expected_pending_groups = {self.test_group_name}
+        utils.check_all_equal(body["group_names"], expected_pending_groups, any_order=True)
+
+        # Check 'active' group case
         path = "/users/{usr}/groups?status={status}".format(usr=self.test_user_name,
                                                             status=UserGroupStatus.ACTIVE.value)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers,
@@ -4102,10 +4123,32 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("group_names", body)
         utils.check_val_type(body["group_names"], list)
-        expected_groups = {self.test_group_name, users_group}
+
+        expected_active_groups = {users_group}
         if TestVersion(self.version) >= TestVersion("1.4.0"):
-            expected_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
-        utils.check_all_equal(body["group_names"], expected_groups, any_order=True)
+            expected_active_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.check_all_equal(body["group_names"], expected_active_groups, any_order=True)
+
+        # Check unspecified status group case (should default to active status)
+        path = "/users/{usr}/groups".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+                                  cookies=self.cookies, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+        utils.check_all_equal(body["group_names"], expected_active_groups, any_order=True)
+
+        # Check 'all' group case
+        path = "/users/{usr}/groups?status={status}".format(usr=self.test_user_name,
+                                                            status=UserGroupStatus.ALL.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+                                  cookies=self.cookies, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+        utils.check_all_equal(body["group_names"],
+                              expected_active_groups.union(expected_pending_groups),
+                              any_order=True)
 
     @runner.MAGPIE_TEST_USERS
     def test_DeleteUser_DeleteSelf(self):
@@ -4473,13 +4516,85 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupUsers(self):
-        path = "/groups/{grp}/users".format(grp=get_constant("MAGPIE_ADMIN_GROUP"))
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+
+        #custom app settings, smtp_host must exist when getting configs, but not used because email mocked
+        settings = {"magpie.smtp_host": "example.com",
+                    # for testing, ignore any 'from' and 'password' arguments that could be found in the .ini file
+                    "magpie.smtp_from": "",
+                    "magpie.smtp_password": ""}
+
+        from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
+        with utils.mocked_get_settings(settings=settings):
+            with utils.mock_send_email("magpie.api.management.user.user_utils.send_email") as email_contexts:
+                _, wrapped_contents, mocked_send = email_contexts
+
+                # Add admin user to group and accept T&C terms to make the user 'active'
+                path = "/users/{usr}/groups".format(usr=self.usr)
+                data = {"group_name": self.test_group_name}
+                resp = utils.test_request(self, "POST", path, json=data,
+                                          headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 202, expected_method="POST")
+                utils.check_val_equal(mocked_send.call_count, 1,
+                                      msg="Expected sent notifications to user for an email confirmation "
+                                          "of terms and conditions.")
+
+                # Simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
+                confirm_url = wrapped_contents.call_args.args[-1].get("confirm_url")
+                resp = utils.test_request(self, "GET", urlparse(confirm_url).path)
+                body = utils.check_ui_response_basic_info(resp, 200)
+                utils.check_val_is_in("accepted the terms and conditions", body)
+
+                utils.check_val_equal(mocked_send.call_count, 2,
+                                      msg="Expected sent notification to user for an email confirmation of user added "
+                                          "to requested group, following terms and conditions acceptation.")
+
+                # Create test user and request adding the user to test group, but leave him as 'pending'
+                utils.TestSetup.create_TestUser(self)
+
+        # Check 'pending' user case
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.PENDING.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+                                  cookies=self.cookies, expect_errors=True)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_is_in("user_names", body)
         utils.check_val_type(body["user_names"], list)
-        utils.check_val_is_in(get_constant("MAGPIE_ADMIN_USER"), body["user_names"])
-        utils.check_val_is_in(self.usr, body["user_names"])
+
+        expected_pending_users = {self.test_user_name}
+        utils.check_all_equal(body["user_names"], expected_pending_users, any_order=True)
+
+        # Check 'active' user case
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.ACTIVE.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+                                  cookies=self.cookies, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+
+        expected_active_users = {self.usr}
+        utils.check_all_equal(body["user_names"], expected_active_users, any_order=True)
+
+        # Check unspecified status user case (should default to active status)
+        path = "/groups/{grp}/users".format(grp=self.test_group_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+                                  cookies=self.cookies, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_all_equal(body["user_names"], expected_active_users, any_order=True)
+
+        # Check 'all' user case
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.ALL.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+                                  cookies=self.cookies, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_all_equal(body["user_names"], expected_active_users.union(expected_pending_users), any_order=True)
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupUsers_not_found(self):
