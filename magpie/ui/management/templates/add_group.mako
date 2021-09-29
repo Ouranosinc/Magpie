@@ -35,7 +35,7 @@
         <tr>
             <td>Description:</td>
             <!-- Input text box cell requires a fixed width, to avoid being resized upon T&C textarea resizing -->
-            <td width="179px">
+            <td class="add-group-fixed-width">
                 <label>
                     <input type="text" name="description" value="${form_description}" />
                 </label>
@@ -73,13 +73,13 @@
             </td>
         </tr>
         <tr>
-            <td style="vertical-align: top">Terms and conditions:</td>
+            <td class="top-align">Terms and conditions:</td>
             <td colspan="2">
                 <label>
-                    <textarea rows="4" cols="50" style="min-width: 282px; min-height: 66px" name="terms">${form_terms}</textarea>
+                    <textarea rows="5" cols="50" name="terms">${form_terms}</textarea>
                 </label>
             </td>
-            <td style="vertical-align: top">
+            <td class="top">
                 %if not invalid_terms:
                 (optional)
                 %else:

@@ -222,6 +222,14 @@ table thead {
     vertical-align: middle;
 }
 
+textarea {
+    resize: both;
+    font-size: 13.3333px;
+    font-family: inherit;
+    min-width: 21em;
+    min-height: 5em;
+}
+
 /* --- Panel Information Box --- */
 
 .panel-body {
@@ -1243,6 +1251,14 @@ table.fields-table td.centered {
     text-align: center;
 }
 
+table.fields-table td.top-align {
+    vertical-align: top
+}
+
+table.fields-table td.add-group-fixed-width {
+    width: 11.1875em
+}
+
 table.fields-table input[type="radio"] {
     margin-left: 2em;
 }
@@ -1267,10 +1283,4 @@ div.input-container {
     width: 100%;
     height: 100%;
     -webkit-box-sizing: border-box;
-}
-
-textarea {
-    resize: both;
-    font-size: 13.3333px;
-    font-family: arial, sans-serif;
 }
