@@ -1252,11 +1252,11 @@ table.fields-table td.centered {
 }
 
 table.fields-table td.top-align {
-    vertical-align: top
+    vertical-align: top;
 }
 
 table.fields-table td.add-group-fixed-width {
-    width: 11.1875em
+    width: 11.1875em;
 }
 
 table.fields-table input[type="radio"] {

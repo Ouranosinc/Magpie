@@ -4519,13 +4519,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         terms = "Test terms and conditions."
         utils.TestSetup.create_TestGroup(self, override_terms=terms)
 
-        #custom app settings, smtp_host must exist when getting configs, but not used because email mocked
+        # custom app settings, smtp_host must exist when getting configs, but not used because email mocked
         settings = {"magpie.smtp_host": "example.com",
                     # for testing, ignore any 'from' and 'password' arguments that could be found in the .ini file
                     "magpie.smtp_from": "",
                     "magpie.smtp_password": ""}
 
-        from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
         with utils.mocked_get_settings(settings=settings):
             with utils.mock_send_email("magpie.api.management.user.user_utils.send_email") as email_contexts:
                 _, wrapped_contents, mocked_send = email_contexts
