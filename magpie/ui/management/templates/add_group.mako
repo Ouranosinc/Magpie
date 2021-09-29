@@ -79,7 +79,7 @@
                     <textarea rows="5" cols="50" name="terms">${form_terms}</textarea>
                 </label>
             </td>
-            <td class="top">
+            <td class="top-align">
                 %if not invalid_terms:
                 (optional)
                 %else:
