@@ -126,23 +126,24 @@ def get_group_users_view(request):
                     msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
                     http_error=HTTPBadRequest)
 
-    user_names = []
-    member_user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
+    user_names = set()
+    member_user_names = ax.evaluate_call(lambda: set(user.user_name for user in group.users),
                                          http_error=HTTPForbidden,
                                          msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
     if status in [UserGroupStatus.ACTIVE.value, UserGroupStatus.ALL.value]:
-        user_names += member_user_names
+        user_names = user_names.union(member_user_names)
     if status in [UserGroupStatus.PENDING.value, UserGroupStatus.ALL.value]:
         # Find all temporary tokens with requested group id that have a pending accept terms request
         tmp_tokens = request.db.query(TemporaryToken).filter(TemporaryToken.group_id == group.id)
         tmp_tokens = tmp_tokens.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
 
         # Find and return all user names associated with the discovered tokens
-        pending_user_names = [tmp_token.user.user_name for tmp_token in tmp_tokens]
+        pending_user_names = set(tmp_token.user.user_name for tmp_token in tmp_tokens)
 
         # Remove any user already belonging to the group, in case any tokens are irrelevant.
         # Should not happen since related tokens are deleted upon T&C acceptation.
-        user_names += [usr for usr in pending_user_names if usr not in member_user_names]
+        pending_user_names = pending_user_names - member_user_names
+        user_names = user_names.union(pending_user_names)
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupUsers_GET_OkResponseSchema.description,
                          content={"user_names": sorted(user_names)})
 

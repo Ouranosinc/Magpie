@@ -133,19 +133,20 @@ def get_user_groups_view(request):
                     msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
                     http_error=HTTPBadRequest)
 
-    group_names = []
-    member_group_names = uu.get_user_groups_checked(user, request.db)
+    group_names = set()
+    member_group_names = set(uu.get_user_groups_checked(user, request.db))
     if status in [UserGroupStatus.ACTIVE.value, UserGroupStatus.ALL.value]:
-        group_names += member_group_names
+        group_names = group_names.union(member_group_names)
     if status in [UserGroupStatus.PENDING.value, UserGroupStatus.ALL.value]:
         tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
-        pending_group_names = [tmp_token.group.group_name for tmp_token in tmp_tokens]
+        pending_group_names = set(tmp_token.group.group_name for tmp_token in tmp_tokens)
 
         # Remove any group a user already belongs to, in case any tokens are irrelevant.
         # Should not happen since related tokens are deleted upon T&C acceptation.
-        group_names += [grp for grp in pending_group_names if grp not in member_group_names]
+        pending_group_names = pending_group_names - member_group_names
+        group_names = group_names.union(pending_group_names)
 
-    return ax.valid_http(http_success=HTTPOk, content={"group_names": group_names},
+    return ax.valid_http(http_success=HTTPOk, content={"group_names": sorted(group_names)},
                          detail=s.UserGroups_GET_OkResponseSchema.description)
 
 
