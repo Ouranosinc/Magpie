@@ -105,7 +105,7 @@ class GroupResourcePermission(GroupResourcePermissionMixin, Base):
 class Resource(ResourceMixin, Base):
     # required resource type identifier (unique)
     resource_type_name = None       # type: Str
-
+    permissions = []                # type: List[Permission]
     child_resource_allowed = True
     resource_display_name = sa.Column(sa.Unicode(100), nullable=True)
 
@@ -131,6 +131,9 @@ class Resource(ResourceMixin, Base):
             acl.append((Allow, "group:%s" % self.owner_group_id, ALL_PERMISSIONS))
         return acl
 
+    def __str__(self):
+        return "<Resource: name={} type={} id={}>".format(self.resource_name, self.resource_type, self.resource_id)
+
 
 class UserPermission(UserPermissionMixin, Base):
     pass
@@ -142,7 +145,7 @@ class UserResourcePermission(UserResourcePermissionMixin, Base):
 
 class User(UserMixin, Base):
     def __str__(self):
-        return "<User: %s, %s>" % (self.id, self.user_name)
+        return "<User: name={} id={}>".format(self.user_name, self.id)
 
 
 class UserPending(Base):

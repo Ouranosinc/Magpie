@@ -168,6 +168,7 @@ def get_service_or_resource_types(service_or_resource):
     """
     Obtain the `service` or `resource` class and a corresponding ``"service"`` or ``"resource"`` type identifier.
     """
+    svc_res_type_cls = svc_res_type_str = None
     if isinstance(service_or_resource, models.Service):
         svc_res_type_cls = SERVICE_TYPE_DICT[service_or_resource.type]
         svc_res_type_str = "service"

@@ -407,9 +407,7 @@ def get_user_resource_permissions_response(user, resource, request,
     db_session = request.db
 
     def get_usr_res_perms():
-        perm_type = None
         perm_unique = True
-        res_perm_list = []
         if resource.owner_user_id == user.id:
             # FIXME: no 'magpie.models.Resource.permissions' - ok for now because no owner handling...
             perm_type = PermissionType.OWNED

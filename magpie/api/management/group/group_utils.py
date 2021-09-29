@@ -176,7 +176,9 @@ def create_group_resource_permission_response(group, resource, permission, db_se
                         msg_on_fail=s.GroupResourcePermissions_POST_ConflictResponseSchema.description)
 
     new_perm = ax.evaluate_call(
-        lambda: models.GroupResourcePermission(resource_id=resource_id, group_id=group.id, perm_name=str(permission)),
+        lambda: models.GroupResourcePermission().populate_obj(
+            dict(resource_id=resource_id, group_id=group.id, perm_name=str(permission))
+        ),
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden, content=perm_content,
         msg_on_fail=s.GroupResourcePermissions_POST_ForbiddenCreateResponseSchema.description)
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),

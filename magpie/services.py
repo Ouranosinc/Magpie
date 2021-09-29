@@ -78,6 +78,11 @@ class ServiceInterface(object):
         self.request = request          # type: Request
         self._flag_acl_cached = {}      # type: Dict[Tuple[Str, Str, Str, Optional[int]], bool]
 
+    def __str__(self):
+        return "<Service [{}] name={} type={} id={}>".format(
+            type(self).__name__, self.service_type, self.service.resource_name, self.service.resource_id
+        )
+
     @abc.abstractmethod
     def permission_requested(self):
         # type: () -> Optional[Union[Permission, Collection[Permission]]]
@@ -293,11 +298,15 @@ class ServiceInterface(object):
         requested_perms = set(permissions)  # type: Set[Permission]
         effective_perms = dict()            # type: Dict[Permission, PermissionSet]
 
+        LOGGER.debug("Resolving effective permission for: [user: %s, resource: %s, permissions: %s, match: %s]",
+                     user, resource, list(permissions), allow_match)
+
         # immediately return all permissions if user is an admin
         db_session = self.request.db
         admin_group = get_constant("MAGPIE_ADMIN_GROUP", self.request)
         admin_group = GroupService.by_group_name(admin_group, db_session=db_session)
         if admin_group in user.groups:  # noqa
+            LOGGER.debug("Resolved by early detection of admin group membership. Full access granted.")
             return [
                 PermissionSet(perm, access=Access.ALLOW, scope=Scope.MATCH,
                               typ=PermissionType.EFFECTIVE, reason=PERMISSION_REASON_ADMIN)
@@ -311,17 +320,19 @@ class ServiceInterface(object):
         full_break = False
         # current and parent resource(s) recursive-scope
         while resource is not None and not full_break:  # bottom-up until service is reached
+            LOGGER.debug("Resolving for (sub-)resource: [%s]", resource)
 
             # reconnect resource reference to active database session if it is detached
             #   This can happen during mismatching sources of cached objects for service/ACL combinations,
-            #   where service-resource data is available from cache but not associated with the session state.
+            #   where service/resource data is available from cache but not associated with the session state.
             #   Since this operation is being computed, ACL is not yet cached (or was reset before service cache was).
-            #   The service must be refreshed regardless of cache to resolve it with other object references.
+            #   The service/resource must be refreshed regardless of cache to resolve it with other object references.
             if get_db_session(session=None, obj=resource) is None:
-                LOGGER.debug("Reconnect cached resource (id=%s, name=%s, type=%s) with active session state.",
-                             resource.resource_id, resource.resource_name, resource.resource_type)
+                LOGGER.debug("Reconnect cached resource [%s] with active session state.", resource)
                 resource = ResourceService.by_resource_id(resource.resource_id, db_session=db_session)
                 if resource is None:
+                    LOGGER.warning("Reconnect cached resource to active session failed!")
+                    LOGGER.debug("Session: %s, Resource: %s", db_session, resource)
                     break
 
             # include both permissions set in database as well as defined directly on resource
@@ -362,6 +373,7 @@ class ServiceInterface(object):
                     prev_perm = effective_perms.get(perm_name)
                     scope_level = effective_level.get(perm_name)
                     if not prev_perm:
+                        LOGGER.debug("Found permission [level=%s]: %r (first occurrence)", current_level, perm_set)
                         effective_perms[perm_name] = perm_set
                         effective_level[perm_name] = current_level
                         continue
@@ -373,6 +385,7 @@ class ServiceInterface(object):
                         # - since there can't be more than one user permission-name per resource on a given level,
                         #   scope resolution is done after applying this *closest* permission, ignore higher level ones
                         if prev_perm.type == PermissionType.INHERITED or not scope_level:
+                            LOGGER.debug("Found permission [level=%s]: %r", current_level, perm_set)
                             effective_perms[perm_name] = perm_set
                             effective_level[perm_name] = current_level
                         continue  # final decision for this user, skip any group permissions
@@ -388,6 +401,7 @@ class ServiceInterface(object):
                         # - If no permission was defined at all (first occurrence), also set it using current permission
                         if scope_level in [None, current_level]:
                             resolved_perm = PermissionSet.resolve(perm_set, prev_perm, context=PermissionType.EFFECTIVE)
+                            LOGGER.debug("Found permission [level=%s]: %r", current_level, resolved_perm)
                             effective_perms[perm_name] = resolved_perm
                             effective_level[perm_name] = current_level
                         # - If new permission is at *different* tree-level, it applies only if the group has higher
@@ -397,6 +411,7 @@ class ServiceInterface(object):
                         #   that could be processed in next iteration can be compared against it, to resolve 'access'
                         #   priority between them.
                         elif perm_set.group_priority > prev_perm.group_priority:
+                            LOGGER.debug("Found permission [level=%s]: %r (higher priority)", current_level, perm_set)
                             effective_perms[perm_name] = perm_set
                             effective_level[perm_name] = current_level
 
@@ -405,6 +420,7 @@ class ServiceInterface(object):
             #   if any found permission is group inherited, higher level user permission could still override it
             if (len(effective_perms) == len(requested_perms) and
                     all(perm.type == PermissionType.DIRECT for perm in effective_perms.values())):
+                LOGGER.debug("Found permission has highest possible priority. Stopping search.")
                 break
             # otherwise, move to parent if any available, since we are not done rewinding the resource tree
             allow_match = False  # reset match not applicable anymore for following parent resources
@@ -412,21 +428,28 @@ class ServiceInterface(object):
             if resource.parent_id:
                 resource = ResourceService.by_resource_id(resource.parent_id, db_session=db_session)
             else:
+                LOGGER.debug("No more children resources to process. Stopping search.")
                 resource = None
 
         # set deny for all still unresolved permissions from requested ones
         resolved_perms = set(effective_perms)
         missing_perms = set(permissions) - resolved_perms
-        final_perms = set(effective_perms.values())  # type: Set[PermissionSet]
+        final_perms = set(effective_perms.values())
         for perm_name in missing_perms:
             perm = PermissionSet(perm_name, access=Access.DENY, scope=Scope.MATCH,
                                  typ=PermissionType.EFFECTIVE, reason=PERMISSION_REASON_DEFAULT)
+            LOGGER.debug("Adding missing permission: %s (requested)", perm)
             final_perms.add(perm)
+        final_perms = list(final_perms)
+        LOGGER.debug("Resolved applied permissions: %s", final_perms)
+
         # enforce type and scope (use MATCH to make it explicit that it applies specifically for this resource)
         for perm in final_perms:
             perm.type = PermissionType.EFFECTIVE
             perm.scope = Scope.MATCH
-        return list(final_perms)
+
+        LOGGER.debug("Resolved effective permissions: %s", final_perms)
+        return final_perms
 
 
 class ServiceOWS(ServiceInterface):
