@@ -12,8 +12,6 @@ Features / Changes
 * Add multiple new log entries during ``Permission`` effective resolution and ``Service`` retrieval
   within ``MagpieAdapter`` to debug procedure and attempt identifying any problem with it when caching is involved
   (relates to `#466 <https://github.com/Ouranosinc/Magpie/issues/466>`_).
-* Adjust ``sqlalchemy`` object instantiation flagged by some IDE linting due to unrecognized arguments.
-  Method ``populate_obj`` is employed to generate the equivalent object from input data.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

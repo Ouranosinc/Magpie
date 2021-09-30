@@ -493,14 +493,14 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
             print_log("Skipping service [{svc}] (conflict)" .format(svc=svc_name), logger=LOGGER)
         else:
             print_log("Adding service [{svc}]".format(svc=svc_name), logger=LOGGER)
-            svc = models.Service().populate_obj(dict(
+            svc = models.Service(
                 resource_name=svc_name,
                 resource_type=models.Service.resource_type_name,
                 url=svc_new_url,
                 type=svc_type,
                 configuration=svc_config,
                 sync_type=svc_sync_type
-            ))
+            )
             db_session.add(svc)
 
         getcap_perm = Permission.GET_CAPABILITIES
@@ -517,11 +517,11 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
             )
             if svc_perm_getcapabilities is None:
                 print_log("Adding '{}' permission to anonymous user.".format(getcap_perm.value), logger=LOGGER)
-                svc_perm_getcapabilities = models.UserResourcePermission().populate_obj(dict(
+                svc_perm_getcapabilities = models.UserResourcePermission(
                     user_id=anonymous_user.id,
                     perm_name=getcap_perm.value,
                     resource_id=svc.resource_id
-                ))
+                )
                 db_session.add(svc_perm_getcapabilities)
 
     transaction.commit()

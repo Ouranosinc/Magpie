@@ -63,10 +63,17 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             - :meth:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity.get_service`
             - :meth:`magpie.adapter.magpieservice.MagpieServiceStore.fetch_by_name`
         """
-        service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=self.request.db),
+        session = self.request.db
+        service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=session),
                                 http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
         verify_param(service, not_none=True, param_name="service_name",
                      http_error=HTTPNotFound, msg_on_fail="Service name not found.")
+        #
+        if cache_regions["service"]["enabled"]:
+            #session.expire(service)
+            #session.refresh(service)
+            session.expunge(service)
+
         # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
         service_impl = service_factory(service, self.request)
         service_data = dict(service.get_appstruct())
@@ -87,6 +94,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         if "service" not in cache_regions:
             cache_regions["service"] = {"enabled": False}
         if self.request.headers.get("Cache-Control") == "no-cache":
+            LOGGER.debug("Cache invalidation requested. Removing items from service region: [%s]", service_name)
             invalidate_service(service_name)
 
         # retrieve the implementation and the service data contained in the database entry

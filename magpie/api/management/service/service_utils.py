@@ -77,11 +77,12 @@ def create_service(service_name, service_type, service_url, service_push, servic
                         http_error=HTTPUnprocessableEntity,
                         msg_on_fail=s.Service_CheckConfig_UnprocessableEntityResponseSchema.description)
     service = ax.evaluate_call(
-        lambda: models.Service().populate_obj(dict(
+        lambda: models.Service(
             resource_name=str(service_name),
             resource_type=models.Service.resource_type_name,
             configuration=service_config,
-            url=str(service_url), type=str(service_type))
+            url=str(service_url),
+            type=str(service_type)
         ),
         fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
         msg_on_fail=s.Services_POST_UnprocessableEntityResponseSchema.description,

@@ -174,8 +174,10 @@ class ServiceInterface(object):
             cache_regions["acl"] = {"enabled": False}
         user_id = None if self.request.user is None else self.request.user.id
         cache_keys = (self.service.resource_name, self.request.method, self.request.path_qs, user_id)
-        self._flag_acl_cached[cache_keys] = True
+        LOGGER.debug("Cache keys: %s", list(cache_keys))
+        self._flag_acl_cached[cache_keys] = True  # remains true if not reset by run '_get_acl_cached', hence cached
         if self.request.headers.get("Cache-Control") == "no-cache":
+            LOGGER.debug("Cache invalidation requested. Removing items from ACL region: %s", list(cache_keys))
             region_invalidate(self._get_acl_cached, "acl", *cache_keys)
         acl = self._get_acl_cached(*cache_keys)
         if self._flag_acl_cached[cache_keys]:
