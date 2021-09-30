@@ -181,6 +181,7 @@ class BaseViews(object):
     MAGPIE_FIXED_USERS = []
     MAGPIE_USER_PWD_LOCKED = []
     MAGPIE_USER_PWD_DISABLED = []
+    MAGPIE_ANONYMOUS_GROUP = None
 
     def __init__(self, request):
         self.request = request
@@ -202,6 +203,7 @@ class BaseViews(object):
             get_constant("MAGPIE_USER_REGISTRATION_ENABLED", self.request,
                          default_value=False, print_missing=True, raise_missing=False, raise_not_set=False)
         )
+        self.__class__.MAGPIE_ANONYMOUS_GROUP = anonym_grp
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
@@ -225,6 +227,7 @@ class BaseViews(object):
         all_data.setdefault("MAGPIE_USER_PWD_LOCKED", self.MAGPIE_USER_PWD_LOCKED)
         all_data.setdefault("MAGPIE_USER_PWD_DISABLED", self.MAGPIE_USER_PWD_DISABLED)
         all_data.setdefault("MAGPIE_USER_REGISTRATION_ENABLED", self.MAGPIE_USER_REGISTRATION_ENABLED)
+        all_data.setdefault("MAGPIE_ANONYMOUS_GROUP", self.MAGPIE_ANONYMOUS_GROUP)
         if self.logged_user:
             all_data.update({"MAGPIE_LOGGED_USER": self.logged_user.user_name})
         return all_data

@@ -254,12 +254,15 @@
                 <input type="hidden" value="True" name="inherit_groups_permissions"/>
             %endif
             <span class="option-text">
-            View inherited group permissions and effective user permissions.
+                View ${perm("inherited")} group permissions
+                and ${perm("effective")} user permissions.
             </span>
             </label>
         </form>
     </div>
+
     %if inherit_groups_permissions:
+
     <div class="clear"></div>
     <div class="option-section">
         <div class="alert-note alert-visible">
@@ -268,14 +271,20 @@
             <meta name="source" content="https://commons.wikimedia.org/wiki/File:Infobox_info_icon.svg">
             <div class="alert-note-text">
                 <p>
-                    Individual resources can be tested for effective access using the
-                    <input type="button" value="?" class="permission-effective-button button-no-click">
+                    Individual resources can be tested for ${perm("effective")} access using
+                    the
+                    <input type="button" value="?"
+                           class="permission-effective-button permission-effective-example button-no-click"
+                    >
                     <span>button next to the corresponding permission.</span>
-                    <br>Displayed permissions combine user direct permissions and inherited group permissions.
+                    <br>
+                    Displayed permissions combine user ${perm("direct")} permissions
+                    and ${perm("inherited")} group permissions.
                 </p>
             </div>
         </div>
     </div>
+
     <div class="clear"></div>
     <div class="option-section">
         <div class="alert-note alert-visible">
@@ -283,15 +292,42 @@
                  alt="WARNING" class="icon-warning" title="Administrators effective permission resolution." />
             <div class="alert-note-text">
                 <p>
-                    Users member of the administrative group have full effective access regardless of permissions.
+                    When displaying ${perm("inherited")} permissions,
+                    only the highest priority item is displayed when more than one permission applies
+                    for the corresponding resource.
+                    <br>
+                    Priority of ${perm("inherited")} permission is as follows (highest first):
+                </p>
+                <ol>
+                    <li>User [deny]</li>
+                    <li>User [allow]</li>
+                    <li>Group (generic) [deny]</li>
+                    <li>Group (generic) [allow]</li>
+                    <li>Group (${MAGPIE_ANONYMOUS_GROUP}}) [deny]</li>
+                    <li>Group (${MAGPIE_ANONYMOUS_GROUP}) [allow]</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="clear"></div>
+    <div class="option-section">
+        <div class="alert-note alert-visible">
+            <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
+                 alt="WARNING" class="icon-warning" title="Administrators effective permission resolution." />
+            <div class="alert-note-text">
+                <p>
+                    Users member of the administrative group have
+                    full ${perm("effective")}
+                    access regardless of permissions.
                 </p>
             </div>
         </div>
     </div>
     %endif
 </div>
-<div class="clear"></div>
 
+<div class="clear"></div>
 <div class="tabs-panel">
     ${panel.render_tab_selector(cur_svc_type, [
         (svc_type, request.route_url("edit_user", user_name=user_name, cur_svc_type=svc_type))
@@ -308,3 +344,11 @@
         ${tree.render_resource_permission_tree(resources, permissions)}
     </div>
 </div>
+
+<!-- perm_type must be one of [direct, inherited, effective] -->
+<%def name="perm(perm_type)">
+<span class="perm-info-text">
+    <a href="https://pavics-magpie.readthedocs.io/en/latest/glossary.html#term-${perm_type.capitalize()}-Permissions"
+    >${perm_type.lower()}</a>  <!-- spacing important -->
+</span>
+</%def>
