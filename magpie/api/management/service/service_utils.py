@@ -76,16 +76,21 @@ def create_service(service_name, service_type, service_url, service_push, servic
         ax.verify_param(service_config, param_name="configuration", param_compare=dict, is_type=True,
                         http_error=HTTPUnprocessableEntity,
                         msg_on_fail=s.Service_CheckConfig_UnprocessableEntityResponseSchema.description)
-    service = ax.evaluate_call(lambda: models.Service(resource_name=str(service_name),
-                                                      resource_type=models.Service.resource_type_name,
-                                                      configuration=service_config,
-                                                      url=str(service_url), type=str(service_type)),  # noqa
-                               fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
-                               msg_on_fail=s.Services_POST_UnprocessableEntityResponseSchema.description,
-                               content={"service_name": str(service_name),
-                                        "resource_type": models.Service.resource_type_name,
-                                        "service_url": str(service_url), "service_type": str(service_type)})
-
+    service = ax.evaluate_call(
+        lambda: models.Service(
+            resource_name=str(service_name),
+            resource_type=models.Service.resource_type_name,
+            configuration=service_config,
+            url=str(service_url),
+            type=str(service_type)
+        ),
+        fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
+        msg_on_fail=s.Services_POST_UnprocessableEntityResponseSchema.description,
+        content={"service_name": str(service_name),
+                 "resource_type": models.Service.resource_type_name,
+                 "service_url": str(service_url),
+                 "service_type": str(service_type)}
+    )
     service = ax.evaluate_call(lambda: _add_service_magpie_and_phoenix(service, service_push, db_session),
                                fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                                msg_on_fail=s.Services_POST_ForbiddenResponseSchema.description,

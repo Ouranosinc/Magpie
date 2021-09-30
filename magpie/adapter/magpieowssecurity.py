@@ -63,10 +63,12 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             - :meth:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity.get_service`
             - :meth:`magpie.adapter.magpieservice.MagpieServiceStore.fetch_by_name`
         """
-        service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=self.request.db),
+        session = self.request.db
+        service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=session),
                                 http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
         verify_param(service, not_none=True, param_name="service_name",
                      http_error=HTTPNotFound, msg_on_fail="Service name not found.")
+
         # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
         service_impl = service_factory(service, self.request)
         service_data = dict(service.get_appstruct())
@@ -87,9 +89,11 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         if "service" not in cache_regions:
             cache_regions["service"] = {"enabled": False}
         if self.request.headers.get("Cache-Control") == "no-cache":
+            LOGGER.debug("Cache invalidation requested. Removing items from service region: [%s]", service_name)
             invalidate_service(service_name)
 
         # retrieve the implementation and the service data contained in the database entry
+        LOGGER.debug("Retrieving service [%s]", service_name)
         service_impl, service_data = self._get_service_cached(service_name)
 
         # because the database service *could* be linked to cached item, expired session creates unbound object
@@ -127,14 +131,17 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         if request.path.startswith(self.twitcher_protected_path):
             # each service implementation defines their ACL and permission resolution using request definition
             service_impl = self.get_service(request)
+            LOGGER.debug("Using service: [%s]", service_impl)
 
             perm_exc = None
             try:
+                LOGGER.debug("Resolving requested permission based on parsing implementation of service...")
                 # parse request (GET/POST) to get the permission requested for that service
                 permission_requested = service_impl.permission_requested()
                 # convert permission enum to str for comparison
                 permission_requested = Permission.get(permission_requested).value if permission_requested else None
             except HTTPBadRequest as exc:
+                LOGGER.debug("Error raised when parsing requested permission based request and service implementation.")
                 perm_exc = exc
                 # if special case of HTTPBadRequest was raised, attempt providing a better description of the error
                 # otherwise, Twitcher will capture other exceptions and re-raise them as generic OWSException
@@ -155,7 +162,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                                  service_impl.service.resource_name, type(perm_exc).__name__, perm_exc)
 
             if permission_requested:
-                LOGGER.info("'%s' request '%s' permission on '%s'", request.user, permission_requested, request.path)
+                LOGGER.info("User %s is requesting '%s' permission on [%s]",
+                            request.user, permission_requested, request.path)
                 self.update_request_cookies(request)
                 authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
                 authz_policy = request.registry.queryUtility(IAuthorizationPolicy)   # noqa
@@ -168,8 +176,13 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                     for attr_name in base_attr:
                         LOGGER.debug("  %s: %s", attr_name, getattr(authn_policy.cookie, attr_name))
 
+                LOGGER.info("User %s resolved with %s '%s' access to [%s]",
+                            request.user, "allowed" if has_permission else "denied",
+                            permission_requested, request.path)
                 if has_permission:
                     return  # allowed
+            else:
+                LOGGER.debug("No permission requested. Request could not be mapped to any permission for service.")
 
             if request.user is None:
                 error_base = HTTPUnauthorized

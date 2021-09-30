@@ -7,6 +7,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add multiple new log entries during ``Permission`` effective resolution and ``Service`` retrieval
+  within ``MagpieAdapter`` to debug procedure and attempt identifying any problem with it when caching is involved
+  (relates to `#466 <https://github.com/Ouranosinc/Magpie/issues/466>`_).
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Pin ``sqlalchemy``, ``sqlalchemy_utils``, ``zope.sqlalchemy`` and ``ziggurat_foundations`` to specific package
@@ -20,6 +26,9 @@ Bug Fixes
 * Use ``pip`` legacy and faster resolver as per
   `pypa/pip#9187 (comment) <https://github.com/pypa/pip/issues/9187#issuecomment-853091201>`_
   since current one is endlessly failing to resolve development packages (linting tools from ``check`` targets).
+* Add possible detached ``Resource`` reconnection (``merge``) to active session during ``Permission`` effective
+  resolution with mixed caching state between `ACL` and `Service` regions in case they mismatch
+  (potential fix to `#466 <https://github.com/Ouranosinc/Magpie/issues/466>`_).
 
 `3.15.0 <https://github.com/Ouranosinc/Magpie/tree/3.15.0>`_ (2021-08-11)
 ------------------------------------------------------------------------------------

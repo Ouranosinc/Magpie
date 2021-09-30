@@ -227,9 +227,10 @@ class PermissionSet(object):
         """
         Obtains the visual representation of the :class:`PermissionSet`.
         """
-        perm_repr_template = "PermissionSet(name={}, access={}, scope={}, type={})"
+        perm_repr_template = "PermissionSet(name={}, access={}, scope={}, type={}{})"
         perm_type = self.type.value if self.type is not None else None
-        return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type)
+        perm_reason = ", reason={}".format(self.reason) if self.reason else ""
+        return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type, perm_reason)
 
     def like(self, other):
         """
