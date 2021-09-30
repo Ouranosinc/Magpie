@@ -68,11 +68,6 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                                 http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
         verify_param(service, not_none=True, param_name="service_name",
                      http_error=HTTPNotFound, msg_on_fail="Service name not found.")
-        #
-        if cache_regions["service"]["enabled"]:
-            #session.expire(service)
-            #session.refresh(service)
-            session.expunge(service)
 
         # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
         service_impl = service_factory(service, self.request)
@@ -186,6 +181,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
                             permission_requested, request.path)
                 if has_permission:
                     return  # allowed
+            else:
+                LOGGER.debug("No permission requested. Request could not be mapped to any permission for service.")
 
             if request.user is None:
                 error_base = HTTPUnauthorized

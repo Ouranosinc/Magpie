@@ -6,6 +6,7 @@ import six
 from beaker.cache import Cache, cache_region, cache_regions, region_invalidate
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotImplemented
 from pyramid.security import ALL_PERMISSIONS, DENY_ALL
+from sqlalchemy.inspection import inspect as sa_inspect
 from ziggurat_foundations.models.base import get_db_session
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -330,12 +331,15 @@ class ServiceInterface(object):
             #   Since this operation is being computed, ACL is not yet cached (or was reset before service cache was).
             #   The service/resource must be refreshed regardless of cache to resolve it with other object references.
             if get_db_session(session=None, obj=resource) is None:
-                LOGGER.debug("Reconnect cached resource [%s] with active session state.", resource)
+                LOGGER.debug("Reconnect cached resource [%s] with active request session (no session).", resource)
                 resource = ResourceService.by_resource_id(resource.resource_id, db_session=db_session)
                 if resource is None:
                     LOGGER.warning("Reconnect cached resource to active session failed!")
                     LOGGER.debug("Session: %s, Resource: %s", db_session, resource)
                     break
+            if sa_inspect(resource).detached:
+                LOGGER.debug("Reconnect cached resource [%s] with active request session (detached).", resource)
+                resource = db_session.merge(resource)
 
             # include both permissions set in database as well as defined directly on resource
             cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=db_session)
