@@ -164,7 +164,7 @@ class PermissionSet(object):
         (to protect the :term:`Resource`), and :attr:`Scope.MATCH` is *closer* to the actual :term:`Resource` than
         :attr:`Scope.RECURSIVE` permission received from a *farther* parent in the hierarchy.
 
-        Explicitly, sorted explicit string representation becomes::
+        Sorted explicit string representation becomes::
 
             [name1]-[allow]-[match]
             [name1]-[allow]-[recursive]

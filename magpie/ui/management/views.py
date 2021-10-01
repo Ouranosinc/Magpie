@@ -465,7 +465,7 @@ class ManagementViews(AdminRequests, BaseViews):
               or :term:`Group` accordingly to specified arguments.
         """
         if is_user:
-            query = "?inherited=true" if is_inherit_groups_permissions else ""
+            query = "?inherited=true&resolve=true" if is_inherit_groups_permissions else ""
             path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name) + query
         else:
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)

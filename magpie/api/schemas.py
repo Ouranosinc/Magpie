@@ -479,13 +479,15 @@ QueryEffectivePermissions = colander.SchemaNode(
 QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), name="inherited", default=False, missing=colander.drop,
     description="Include the user's groups memberships inheritance to retrieve all possible permissions. "
-                "(Note: Duplicate, redundant or conflicting permissions can be obtained considering applied group"
-                " permissions individually. See 'combined' query parameter to resolve such cases.)")
-QueryCombinedGroupsPermissions = colander.SchemaNode(
-    colander.Boolean(), name="combined", default=False, missing=colander.drop,
-    description="Combines corresponding user and groups inherited permissions into one, and locally resolves "
-                "for every resource the applicable permission modifiers considering group precedence. "
-                "(Note: Group inheritance is enforced regardless of 'inherited' query parameter.)")
+                "(Note: Duplicate, redundant and even conflicting permissions can be obtained when considering "
+                "multiple applied permissions individually applied fro different group memberships or for the user "
+                "itself. See 'resolve' query parameter to reduce the set into a single highest priority permission).")
+QueryResolvedUserGroupsPermissions = colander.SchemaNode(
+    colander.Boolean(), name="resolve", default=False, missing=colander.drop,
+    description="Combines corresponding direct user and groups inherited permissions into one, and locally resolves "
+                "for every resource the applicable permission modifiers considering group precedence and priorities. "
+                "(Note: Group permissions retrieval is enforced when using this option regardless of 'inherited' query "
+                "parameter since they are required to perform resolution).")
 QueryFilterResources = colander.SchemaNode(
     colander.Boolean(), name="filtered", default=False, missing=colander.drop,
     description="Filter returned resources only where user has permissions on, either directly or inherited by groups "
@@ -2012,7 +2014,7 @@ class UserGroup_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
 
 class UserResources_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
-    combined = QueryCombinedGroupsPermissions
+    resolve = QueryResolvedUserGroupsPermissions
     filtered = QueryFilterResources
     svc_type = QueryFilterServiceType
 
@@ -2058,7 +2060,7 @@ class UserResourcePermissions_Check_ErrorResponseSchema(BaseResponseSchemaAPI):
 
 class UserResourcePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
-    combined = QueryCombinedGroupsPermissions
+    resolve = QueryResolvedUserGroupsPermissions
     effective = QueryEffectivePermissions
 
 
@@ -2231,7 +2233,7 @@ class UserServiceResources_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 class UserServiceResources_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
-    combined = QueryCombinedGroupsPermissions
+    resolve = QueryResolvedUserGroupsPermissions
 
 
 class UserServiceResources_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2296,7 +2298,7 @@ class UserServices_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 class UserServicePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
-    combined = QueryCombinedGroupsPermissions
+    resolve = QueryResolvedUserGroupsPermissions
 
 
 class UserServicePermissions_GET_RequestSchema(BaseRequestSchemaAPI):
