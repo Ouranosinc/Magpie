@@ -470,7 +470,7 @@ class ManagementViews(AdminRequests, BaseViews):
         else:
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)
 
-        path += "type={}".format(service_type)  # try to limit results for faster processing time
+        path += "?type={}".format(service_type)  # try to limit results for faster processing time
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         body = get_json(resp)

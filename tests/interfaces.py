@@ -3569,6 +3569,52 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_val_not_in("children", svc)
 
     @runner.MAGPIE_TEST_USERS
+    def test_GetUserServices_FilteredServiceTypes(self):
+        """
+        Validate user services returned as subset filtered by specified service-types.
+        """
+        utils.warn_version(self, "user service-type filter query", "3.16.0", skip=True)
+        self.setup_GetUserServices()  # all services are API
+        resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_true(len(body["services"][self.test_service_type]), msg="Other services types needed to test")
+
+        svc_type1 = ServiceTHREDDS.service_type
+        svc_type1_exist = body["services"][svc_type1]
+        svc_type1 = ServiceNCWMS2.service_type
+        svc_type2_exist = body["services"][svc_type2]
+
+        new_test_svc = [
+            ("test-get-user-service1", svc_type1),
+            ("test-get-user-service2", svc_type1),
+            ("test-get-user-service3", svc_type2),
+        ]
+        for svc_name, svc_type in new_test_svc:
+            utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+
+        path = "/users/{}/services?type={}".format(self.test_user_name, svc_type1)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("services", body)
+        utils.check_val_type(body["services"], dict)
+        utils.check_val_equal(len(body["services"]), 1, msg="Only single service type requested should be returned")
+        utils.check_val_is_in(svc_type1, body["services"])
+        svc_type1_items = body["services"][svc_type1]
+        utils.check_val_equal(set(svc_type1_items) - set(svc_type1_exist), {new_test_svc[0][0], new_test_svc[1][0]})
+
+        path = "/users/{}/services?type={},{}".format(self.test_user_name, svc_type2, svc_type1)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("services", body)
+        utils.check_val_type(body["services"], dict)
+        utils.check_val_equal(len(body["services"]), 2, msg="Only two service type requested should be returned")
+        utils.check_val_is_in(svc_type1, body["services"])
+        svc_type1_items = body["services"][svc_type1]
+        svc_type2_items = body["services"][svc_type1]
+        utils.check_val_equal(set(svc_type1_items) - set(svc_type1_exist), {new_test_svc[0][0], new_test_svc[1][0]})
+        utils.check_val_equal(set(svc_type2_items) - set(svc_type2_exist), {new_test_svc[2][0]})
+
+    @runner.MAGPIE_TEST_USERS
     def test_GetUserServiceResources_format(self):
         utils.TestSetup.create_TestService(self)
         utils.TestSetup.create_TestServiceResource(self)

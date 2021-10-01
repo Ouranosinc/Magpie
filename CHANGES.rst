@@ -10,10 +10,11 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``type`` query parameter to multiple requests returning ``Services`` or ``Resources`` regrouped by ``ServiceType``
-  to limit listing in responses and optimise some operations where only a subset of details are needed. Using this
-  feature, some ``Permissions`` listing in UI pages are faster because ``Services`` not required since they are not
-  being displayed are skipped entirely, removing the need to compute their underlying ``Resource`` and ``Permissions``
-  tree hierarchy.
+  for a given ``User`` or ``Group`` in order to limit listing in responses and optimise some operations where only a
+  subset of details are needed.
+* Using new ``type`` query to filter ``ServiceType``, improve ``Permissions`` listing in UI pages with faster processing
+  because ``Services`` that are not required (since they are not currently being displayed by the tab-panel view) can
+  be skipped entirely, removing the need to compute their underlying ``Resource`` and ``Permissions`` tree hierarchy.
 
 `3.15.1 <https://github.com/Ouranosinc/Magpie/tree/3.15.1>`_ (2021-09-29)
 ------------------------------------------------------------------------------------

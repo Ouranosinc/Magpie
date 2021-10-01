@@ -505,8 +505,8 @@ QueryFlattenServices = colander.SchemaNode(
 QueryFilterServiceType = colander.SchemaNode(
     colander.String(), name="type", missing=colander.drop,
     example="api,thredds",
-    description="Comma-separated list of service-type for which to obtain descriptions instead of all available ones. "
-                "Provided types are case insensitive. Unknown types are ignored.")
+    description="Comma-separated list of service-type for which to filter retrieved descriptions instead of all "
+                "available ones. Provided types matching is case insensitive. Unknown types are ignored.")
 
 
 class PhoenixServicePushOption(colander.SchemaNode):
@@ -2277,6 +2277,7 @@ class UserServices_GET_QuerySchema(QueryRequestSchemaAPI):
     cascade = QueryCascadeResourcesPermissions
     inherit = QueryInheritGroupsPermissions
     flatten = QueryFlattenServices
+    svc_type = QueryFilterServiceType
 
 
 class UserServices_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2499,8 +2500,13 @@ class GroupUsers_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
+class GroupServices_GET_QuerySchema(QueryRequestSchemaAPI):
+    svc_type = QueryFilterServiceType
+
+
 class GroupServices_GET_RequestSchema(BaseRequestSchemaAPI):
     path = Group_RequestPathSchema()
+    querystring = GroupServices_GET_QuerySchema()
 
 
 class GroupServices_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -2667,8 +2673,13 @@ class GroupResourcePermissions_InternalServerErrorResponseSchema(BaseResponseSch
         code=HTTPInternalServerError.code, description=description)
 
 
+class GroupResources_GET_QuerySchema(QueryRequestSchemaAPI):
+    svc_type = QueryFilterServiceType
+
+
 class GroupResources_GET_RequestSchema(BaseRequestSchemaAPI):
     path = Group_RequestPathSchema()
+    querystring = GroupResources_GET_QuerySchema()
 
 
 class GroupResources_GET_ResponseBodySchema(BaseResponseBodySchema):
