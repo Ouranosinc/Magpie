@@ -3581,7 +3581,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         svc_type1 = ServiceTHREDDS.service_type
         svc_type1_exist = body["services"][svc_type1]
-        svc_type1 = ServiceNCWMS2.service_type
+        svc_type2 = ServiceNCWMS2.service_type
         svc_type2_exist = body["services"][svc_type2]
 
         new_test_svc = [
