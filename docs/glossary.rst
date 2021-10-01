@@ -41,7 +41,10 @@ Glossary
 
     Authentication
         Process of identifying one-self using credentials in order to login into `Magpie`, or retrieving connected
-        session :term:`User` during an HTTP request using supported methods. See also :ref:`auth_methods`.
+        session :term:`User` during an HTTP request using supported methods.
+
+        .. seealso::
+            :ref:`auth_methods` section for details.
 
     Authorization
         Process of allowing or denying access to a :term:`Resource` or :term:`Service` according to :term:`Logged User`
@@ -52,8 +55,10 @@ Glossary
     Context User
         Specific :term:`User` that is being targeted by a request from specified value for the ``{user_name}`` request
         path variable. The contextual :term:`User` of the request *could* correspond to the :term:`Logged User` if the
-        reference resolves to itself, but this is not necessarily the case. See further details and examples provided
-        in section :ref:`Route Access`.
+        reference resolves to itself, but this is not necessarily the case.
+
+        .. seealso::
+            :ref:`Route Access` for further details and examples provided.
 
     Cookies
         Set of :term:`Authentication` identifiers primarily employed by `Magpie` HTTP requests to determine the
@@ -128,8 +133,10 @@ Glossary
 
     Pending User
         Account that is pending for validation or approval following self-registration when the application is
-        configured to provide that functionality (see :envvar:`MAGPIE_USER_REGISTRATION_ENABLED`).
-        See section :ref:`user_registration` for further details about the self-registration procedure.
+        configured to provide that functionality.
+
+        .. seealso::
+            :ref:`user_registration` section for further details about the self-registration procedure.
 
     Permission
         Element that defines which rules are applicable for a given combination of :term:`User` and/or :term:`Group`
@@ -157,7 +164,10 @@ Glossary
 
     Provider
         Corresponds to the reference user-identity to employ in order to attempt :term:`Authentication`.
-        See also :term:`Internal Providers`, :term:`External Providers` and section :ref:`Authentication Providers`.
+        Identities are regrouped either as :term:`Internal Providers` or :term:`External Providers`.
+
+        .. seealso::
+            ref:`authn_providers` section for details.
 
     Proxy
         Sibling service (typically `Twitcher`_) that employs `Magpie` as access management of :term:`User`,
@@ -166,8 +176,10 @@ Glossary
 
     Public
         Refers to a :term:`Permission` applied on a :term:`Service` or :term:`Resource` to special elements in order
-        to make them available to anyone including even unauthenticated sessions. See also :ref:`Public Access` section
-        for implementation details to achieve this result.
+        to make them available to anyone including even unauthenticated sessions.
+
+        .. seealso::
+            :ref:`Public Access` section for implementation details to achieve this result.
 
     Request User
         Active HTTP request session :term:`User` that can be retrieved by calling ``request.user`` with resolution of
@@ -175,7 +187,10 @@ Glossary
         i.e.: :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`). This is not the same as the :term:`Context User`
         extracted from ``{user_name}`` path variable, except for the special case covered by :term:`Logged User`'s
         definition. The request :term:`User` could send request that work on another :term:`Context User` than itself
-        if sufficient :term:`Access Permission` is granted. See also :ref:`Route Access` for further details.
+        if sufficient :term:`Access Permission` is granted.
+
+        .. seealso::
+            :ref:`Route Access` for further details.
 
     Resource
         Entity on which :term:`User` and :term:`Group` can be associated to applicable :term:`Permission` respectively
@@ -198,4 +213,6 @@ Glossary
 
     Webhook
         Subscribable events handlers to send HTTP(S) requests following the occurrence of a given `Magpie` action.
-        See :ref:`config_webhook` and :ref:`config_file` sections for details.
+
+        .. seealso::
+            :ref:`config_webhook` and :ref:`config_file` sections for details.
