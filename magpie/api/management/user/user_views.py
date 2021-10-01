@@ -197,7 +197,7 @@ def get_user_resources_view(request):
         json_res = {}
         perm_type = PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT
         services = ResourceService.all(models.Service, db_session=db)
-        services = services.filter(models.Service.type.in_(service_types))
+        services = services.filter(models.Service.type.in_(service_types))  # pylint: disable=E1101,no-member
         # add service-types so they are ordered and listed if no service of that type was defined
         for svc_type in sorted(service_types):
             json_res[svc_type] = {}
