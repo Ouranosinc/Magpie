@@ -16,6 +16,16 @@ Features / Changes
   because ``Services`` that are not required (since they are not currently being displayed by the tab-panel view) can
   be skipped entirely, removing the need to compute their underlying ``Resource`` and ``Permissions`` tree hierarchy.
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Replace invalid schema definitions using old ``combined`` query parameter by ``resolve`` query parameter actually
+  employed by request views.
+* Apply ``resolve=true`` query parameter to UI page sub-request when resolving inherited user/group permissions in
+  order to display the highest priority ``Permission`` for each corresponding ``Resource`` in the tree hierarchy.
+  Without this option, the first permission was displayed based on naming ordering methodology, which made it more
+  confusing for administrators to understand how effective permissions could be obtained
+  (fixes `#463 <https://github.com/Ouranosinc/Magpie/issues/463>`_).
+
 `3.15.1 <https://github.com/Ouranosinc/Magpie/tree/3.15.1>`_ (2021-09-29)
 ------------------------------------------------------------------------------------
 

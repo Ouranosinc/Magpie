@@ -465,6 +465,8 @@ class ManagementViews(AdminRequests, BaseViews):
               or :term:`Group` accordingly to specified arguments.
         """
         if is_user:
+            # because page can only show a single permission (per name/resource) at a time, apply resolution
+            # on top of inheritance in order to display the highest priority permission in the tree hierarchy
             query = "?inherited=true&resolve=true" if is_inherit_groups_permissions else ""
             path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name) + query
         else:
