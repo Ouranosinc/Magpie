@@ -32,7 +32,7 @@ from magpie.api.webhooks import (
 )
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
-from magpie.services import service_factory
+from magpie.services import SERVICE_TYPE_DICT, service_factory
 from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -439,8 +439,8 @@ def get_user_resource_permissions_response(user, resource, request,
 
 
 def get_user_services(user, request, cascade_resources=False, format_as_list=False,
-                      inherit_groups_permissions=False, resolve_groups_permissions=False):
-    # type: (models.User, Request, bool, bool, bool, bool) -> UserServicesType
+                      inherit_groups_permissions=False, resolve_groups_permissions=False, service_types=None):
+    # type: (models.User, Request, bool, bool, bool, bool, Optional[List[Str]]) -> UserServicesType
     """
     Returns services by type with corresponding services by name containing sub-dict information.
 
@@ -461,7 +461,9 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
     :param resolve_groups_permissions:
         Whether to combine :term:`Direct Permissions` and :term:`Inherited Permissions` for respective resources or not.
     :param format_as_list:
-        returns as list of service dict information (not grouped by type and by name)
+        Returns as list of service dict information (not grouped by type and by name)
+    :param service_types:
+        Filter list of service types for which to return details. All service types are used if omitted.
     :return:
         Only services which the user as :term:`Direct Permissions` or considering all tree hierarchy,
         and for each case, either considering only user permissions or every :term:`Inherited Permissions`,
@@ -477,6 +479,8 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
                                                         resolve_groups_permissions=resolve_groups_permissions)
     perm_type = PermissionType.INHERITED if inherit_groups_permissions else PermissionType.DIRECT
     services = {}
+    if service_types is None:
+        service_types = list(SERVICE_TYPE_DICT)
     for resource_id, perms in res_perm_dict.items():
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
         is_service = resource.resource_type == models.Service.resource_type_name
@@ -489,6 +493,8 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
             perms = []
 
         svc = ru.get_resource_root_service_impl(resource, request)
+        if svc.service_type not in service_types:
+            continue
         if svc.service_type not in services:
             services[svc.service_type] = {}
         svc_name = svc.service.resource_name

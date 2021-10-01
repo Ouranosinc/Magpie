@@ -502,6 +502,11 @@ QueryFlattenServices = colander.SchemaNode(
     description="Return elements as a flattened list of JSON objects instead of default response format. "
                 "Default is a nested JSON of service-type keys with children service-name keys, each containing "
                 "their respective service definition as JSON object.")
+QueryFilterServiceType = colander.SchemaNode(
+    colander.String(), name="type", missing=colander.drop,
+    example="api,thredds",
+    description="Comma-separated list of service-type for which to obtain descriptions instead of all available ones. "
+                "Provided types are case insensitive. Unknown types are ignored.")
 
 
 class PhoenixServicePushOption(colander.SchemaNode):
@@ -2009,6 +2014,7 @@ class UserResources_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
     combined = QueryCombinedGroupsPermissions
     filtered = QueryFilterResources
+    svc_type = QueryFilterServiceType
 
 
 class UserResources_GET_RequestSchema(BaseRequestSchemaAPI):

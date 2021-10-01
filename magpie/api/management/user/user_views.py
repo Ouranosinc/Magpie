@@ -12,12 +12,12 @@ from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.service.service_formats import format_service_resources
+from magpie.api.management.service.service_utils import filter_service_types
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
 from magpie.permissions import PermissionType, format_permissions
-from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -182,6 +182,8 @@ def get_user_resources_view(request):
     inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
     resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
     filtered_perms = asbool(ar.get_query_param(request, ["filter", "filtered"]))
+    service_types = ar.get_query_param(request, ["type", "types"], default="")
+    service_types = filter_service_types(service_types)
     user = ar.get_user_matchdict_checked_or_logged(request)
     db = request.db
 
@@ -195,8 +197,9 @@ def get_user_resources_view(request):
         json_res = {}
         perm_type = PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT
         services = ResourceService.all(models.Service, db_session=db)
+        services = services.filter(models.Service.type.in_(service_types))
         # add service-types so they are ordered and listed if no service of that type was defined
-        for svc_type in sorted(SERVICE_TYPE_DICT):
+        for svc_type in sorted(service_types):
             json_res[svc_type] = {}
         for svc in services:
             svc_perms = uu.get_user_service_permissions(
@@ -337,12 +340,15 @@ def get_user_services_view(request):
     inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
     resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
     format_as_list = asbool(ar.get_query_param(request, "flatten"))
+    service_types = ar.get_query_param(request, ["type", "types"], default="")
+    service_types = filter_service_types(service_types)
 
     svc_json = uu.get_user_services(user, request=request,
                                     cascade_resources=cascade_resources,
                                     inherit_groups_permissions=inherit_groups_perms,
                                     resolve_groups_permissions=resolve_groups_perms,
-                                    format_as_list=format_as_list)
+                                    format_as_list=format_as_list,
+                                    service_types=service_types)
     return ax.valid_http(http_success=HTTPOk, content={"services": svc_json},
                          detail=s.UserServices_GET_OkResponseSchema.description)
 
