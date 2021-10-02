@@ -15,16 +15,23 @@ Features / Changes
 * Using new ``type`` query to filter ``ServiceType``, improve ``Permissions`` listing in UI pages with faster processing
   because ``Services`` that are not required (since they are not currently being displayed by the tab-panel view) can
   be skipped entirely, removing the need to compute their underlying ``Resource`` and ``Permissions`` tree hierarchy.
+* Add various test utility improvements to parse and retrieve ``Permissions`` from HTML pages combo-boxes to facilitate
+  development and increase validation of UI functionalities.
+  This will also help for futures tests (relates to `#193 <https://github.com/Ouranosinc/Magpie/issues/193>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Replace invalid schema definitions using old ``combined`` query parameter by ``resolve`` query parameter actually
-  employed by request views.
+  employed by request views in order to properly report this query parameter in the `OpenAPI` specification.
 * Apply ``resolve=true`` query parameter to UI page sub-request when resolving inherited user/group permissions in
   order to display the highest priority ``Permission`` for each corresponding ``Resource`` in the tree hierarchy.
   Without this option, the first permission was displayed based on naming ordering methodology, which made it more
   confusing for administrators to understand how effective permissions could be obtained
   (fixes `#463 <https://github.com/Ouranosinc/Magpie/issues/463>`_).
+* Fix a situation where the response from the API for ``GET /users/{}/resources`` endpoint would not correctly
+  list `Resolved Permissions` only for the top-most ``Resource`` in the hierarchy (i.e.: ``Service``) due to different
+  resolution methodologies applied between both types. This does **NOT** affect `Effective Resolution` which has its
+  own algorithm for access resolution to ``Resources``.
 
 `3.15.1 <https://github.com/Ouranosinc/Magpie/tree/3.15.1>`_ (2021-09-29)
 ------------------------------------------------------------------------------------

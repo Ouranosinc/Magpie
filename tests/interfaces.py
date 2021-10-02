@@ -3577,7 +3577,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         self.setup_GetUserServices()  # all services are API
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
-        utils.check_val_true(len(body["services"][self.test_service_type]), msg="Other services types needed to test")
+        utils.check_val_true(bool(len(body["services"][self.test_service_type])), msg="Other services needed to test")
 
         svc_type1 = ServiceTHREDDS.service_type
         svc_type1_exist = body["services"][svc_type1]
@@ -5934,6 +5934,87 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestUser(self)
         path = "/ui/users/{}/default".format(self.test_user_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_EditUser_DisplayedInheritedPermissionPriority(self):
+        """
+        Evaluate displayed permission when inherited option is selected to make sure highest priority are shown.
+
+        .. seealso::
+            - Issue `#463 <https://github.com/Ouranosinc/Magpie/issues/463>`_
+        """
+        # setup test data
+        svc_id, res1_id, res2_id = utils.TestSetup.create_TestServiceResourceTree(
+            self, override_resource_names=["res1", "res2"], resource_depth=2
+        )
+        res3_info = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id, override_resource_name="res3")
+        res3_id = res3_info["resource"]["resource_id"]
+        res4_info = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id, override_resource_name="res4")
+        res4_id = res4_info["resource"]["resource_id"]
+        res5_info = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id, override_resource_name="res5")
+        res5_id = res5_info["resource"]["resource_id"]
+        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        grp1_info = utils.TestSetup.create_TestGroup(self, self.test_group_name + "-1", override_exist=True)
+        grp2_info = utils.TestSetup.create_TestGroup(self, self.test_group_name + "-2", override_exist=True)
+        grp1_name = grp1_info["group"]["group_name"]
+        grp2_name = grp2_info["group"]["group_name"]
+        usr_info = utils.TestSetup.create_TestUser(self, override_group_name=anonymous)
+        usr_name = usr_info["user"]["user_name"]
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=usr_name, override_group_name=grp1_name)
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=usr_name, override_group_name=grp2_name)
+
+        # setup test permissions
+        #                 | User  | Group1 | Group2 | Anonymous |  Inherited Priority [from] <priority reason>
+        # ----------------+-------+--------+--------+-----------+------------------------------------------------------
+        #   [svc]         |       |        | r-A-R  | r-D-R     |  r-A-R [Group2] any group > anonymous (even if deny)
+        #      [res1]     | r-A-R | r-D-R  |        | r-A-R     |  r-A-R [User]   user > any group (even if deny)
+        #         [res2]  |       | r-D-R  | r-A-R  |           |  r-D-R [Group2] deny > allow for equal priority groups
+        #         [res3]  | r-D-M |        |        | r-A-R     |  r-D-M [User]   user > any group (match not important)
+        #         [res4]  |       |        |        | r-A-R     |  r-A-R [Anonym] only available one
+        #         [res5]  | r-A-R |        |        | r-D-M     |  r-A-R [User] user > any group (even if deny / match)
+        perm = Permission.READ
+        rAR = PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE)  # noqa
+        rDR = PermissionSet(perm, Access.DENY, Scope.RECURSIVE)   # noqa
+        rDM = PermissionSet(perm, Access.DENY, Scope.MATCH)       # noqa
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=svc_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=svc_id, override_permission=rDR)
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=usr_name, override_resource_id=res1_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp1_name, override_resource_id=res1_id, override_permission=rDR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res1_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp1_name, override_resource_id=res2_id, override_permission=rDR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=res2_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=usr_name, override_resource_id=res3_id, override_permission=rDM)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res3_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res4_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=usr_name, override_resource_id=res5_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res5_id, override_permission=rDM)
+
+        # test with display option activated for inherited permissions
+        path = "/ui/users/{}/{}".format(usr_name, self.test_service_type)
+        data = {"inherit_groups_permissions": True}
+        resp = utils.TestSetup.check_FormSubmit(self, form_match="toggle_visible_perms", form_data=data, path=path)
+        # find displayed resources/permissions in hierarchy
+        hierarchy = {svc_id: {res1_id: {res2_id: {}, res3_id: {}, res4_id: {}, res5_id: {}}}}
+        res_perms = utils.find_html_resource_tree_permissions(resp, perm, hierarchy)
+
+        utils.check_val_equal(res_perms[svc_id], rAR)
+        utils.check_val_equal(res_perms[res1_id], rAR)
+        utils.check_val_equal(res_perms[res2_id], rDR)
+        utils.check_val_equal(res_perms[res3_id], rDM)
+        utils.check_val_equal(res_perms[res4_id], rAR)
+        utils.check_val_equal(res_perms[res5_id], rAR)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUserService_PageStatus(self):

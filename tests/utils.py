@@ -1423,16 +1423,33 @@ def find_html_body_contents(response_or_body, html_search=None):
 
     :param response_or_body: Magpie UI HTML response to search for contents, or directly an HTML content object.
     :param html_search:
-        Optional nested definitions (css-class, name, index) to filter final content, retrieving matching sub-elements.
+        Optional nested CSS definitions identifiers (class, name, index, id, attribute) to filter final content,
+        retrieving matching sub-elements.
 
-        Definitions must be a list of dict. First level list are the nested depth-wise elements to search for, and
-        each dictionary can have ``class``, ``name`` definitions to match against the body elements for retrieval.
-        If provided, definition ``class`` must be a list of strings defining possible matches.
-        If provided, definition ``name`` must be a single string matching exactly the HTML element (e.g.: "div").
+        Definitions must be a list of dict. Each item in that list does a nested search to move deeper within the HTML.
+        For each item, at least one item between (class, name, id) must be provided to search. If more than one
+        are provided at the same time for a same-level search, lookup will consider each definition as OR conditions to
+        match potential contents.
+
+        The first list items (all except last) represent the nested depth-wise elements to search for. Each of those
+        searches must yield exactly one matched element, according to specified match type. Search fails otherwise.
+
+        If provided, definition ``class`` must be a list of strings defining possible CSS class matches.
+        If provided, definition ``name`` must be a single string matching an exact HTML element (e.g.: "div" for <div>).
+        If provided, definition ``id`` must be a single string matching exactly the HTML element (e.g.: id="some-item").
+
+        On top of the above definitions, fields ``index`` and ``attribute`` (whichever comes first) can be also be
+        provided within the same level-search to distinguish between multiple matches to pick a single one.
+
+        If provided, definition ``index`` must be an integer corresponding to the item to pick within a set.
+        When using ``index``, the HTML items to pick from do not need to be represent similar sub-contents.
+        If provided, definition ``attribute`` must be a string corresponding to an HTML attribute that is contained
+        by only one item within multiple matches.
 
         Only the last nested element can return multiple matches (list of elements), intermediate elements must all be
         unique in order to search deeper in the nested definitions. If multiple intermediate elements can be matched,
-        a specific one must be requested by ``index`` in the corresponding search to determine where to continue search.
+        a specific one must be requested by ``index`` or ``attribute`` in the corresponding search to determine where
+        to continue search.
 
         By default (when not provided), uses only ``class: "content"`` to return the top-level HTML body contents.
     :returns: matched element(s) as :mod:`BeautifulSoup` definition.
@@ -1441,8 +1458,8 @@ def find_html_body_contents(response_or_body, html_search=None):
         body = response_or_body.html.contents[2].contents[3]  # html->body
     else:
         body = response_or_body
-    main_body = {"class": ["content"]}
     if not html_search:
+        main_body = {"class": ["content"]}
         html_search = [main_body]  # type: HTMLSearch
 
     for i, search_element in enumerate(html_search):
@@ -1454,17 +1471,23 @@ def find_html_body_contents(response_or_body, html_search=None):
             hasattr(item, "attrs") and
             # filter by class names, any one matched if element as any
             (len(item.attrs.get("class", [])) and
-             any(cls in search_element.get("class", []) for cls in item.attrs.get("class", []))) or
+             any(str(css_cls) in search_element.get("class", []) for css_cls in item.attrs.get("class", []))) or
             # filter by html element name
-            (search_element.get("name", "") != "" and search_element.get("name") == item.name)
+            (search_element.get("name", "") != "" and str(search_element.get("name")) == item.name) or
+            # filter by html element id
+            (search_element.get("id", "") != "" and str(search_element.get("id")) == item.attrs.get("id", ""))
         ]
         if i + 1 != len(html_search):
-            msg_err = "Could not retrieve filtered HTML contents matching classes {}.".format(search_element)
             elem_idx = search_element.get("index")
-            if len(parts) > 1 and isinstance(elem_idx, int):
-                parts = [parts[elem_idx]]
-            else:
-                check_val_equal(len(parts), 1, msg=msg_err)
+            elem_attr = search_element.get("attribute")
+            if len(parts) > 1 and (isinstance(elem_idx, int) or isinstance(elem_attr, str)):
+                if elem_idx is not None:
+                    parts = [parts[elem_idx]]
+                else:
+                    parts = [elem for elem in parts if elem_attr in elem.attrs]
+            check_val_equal(len(parts), 1, msg=(
+                "Cannot retrieve filtered HTML contents matching only one element in: {}.".format(search_element)
+            ))
             body = parts[0]  # move to next child element to search
         # otherwise, search is done, return found item or list of elements
         elif len(parts) == 1:
@@ -1474,6 +1497,10 @@ def find_html_body_contents(response_or_body, html_search=None):
             elem_idx = search_element.get("index")
             if elem_idx is not None:
                 return parts[elem_idx]
+            elem_attr = search_element.get("attribute")
+            if elem_attr is not None:
+                parts = [elem for elem in parts if elem_attr in elem.attrs]
+                return parts
             return parts
 
 
@@ -1506,6 +1533,75 @@ def find_html_form(forms, form_match):
                 form = f
                 break
     return form
+
+
+def find_html_resource_tree_permissions(response_or_body,   # type: Union[TestResponse, BeautifulSoup]
+                                        permission,         # type: AnyPermissionType
+                                        resource_tree,      # type: JSON
+                                        ):                  # type: (...) -> Dict[int, Optional[PermissionSet]]
+    """
+    Retrieves all displayed permissions within combo-boxes of a resource-tree Magpie UI HTML page.
+
+    The function only searches for items specified in the :paramref:`resource_tree` and assumes the structure is known
+    by the calling method. This function only simplifies the definition needed to avoid redefining the complicated HTML
+    selections and parsing operation that have to be accomplished to find elements. Resources are expected as follows:
+
+    .. code-block:: python
+
+        # top-level 'service' ID=1, with 2 resources ID=2 and ID=3, and resource ID=3 has a children resource ID=4
+        resource_tree = { 1: { 2: {  }, 3: { 4: { } } }
+
+    .. note::
+        The function assumes that only a single resource (row) / permission-name (column) combination can be displayed
+        at the same time. Any multi-select values in combo-boxes are raised as invalid parsing or erroneous rendering.
+        Multiple selections should never occur since permissions can only be displayed in the UI pages either for a
+        single Group, a single User, or unique resolved inherited User permissions.
+
+    :param response_or_body: Magpie UI HTML response to search for contents, or directly an HTML content object.
+    :param permission: permission (column name) to obtain from the page. Can be any permission type to extract the name.
+    :param resource_tree: dictionary of expected tree hierarchy of nested resource IDs to extract.
+    :return: flat dictionary of resource IDs to displayed permission (or empty string if no permission displayed) .
+    """
+    # find resources/permissions hierarchy container
+    perm_name = PermissionSet(permission).name.value
+    perm_form = find_html_body_contents(response_or_body, [
+        {"class": ["content"]}, {"class": ["tabs-panel"]},
+        {"class": ["current-tab-panel"]}, {"id": "resources_permissions"}
+    ])
+    # find column for which test permissions are displayed
+    perm_header = find_html_body_contents(perm_form, [
+        {"class": ["tree-header"]}, {"class": ["tree-item"]}, {"class": ["permission-title"]}
+    ])
+    perm_titles = [perm.text for perm in perm_header]
+    perm_index = perm_titles.index(perm_name)
+
+    found_res_perms = {}
+
+    def find_level_perm(sub_tree_html, sub_tree_res, level=0):
+        res_level = find_html_body_contents(sub_tree_html, [{"class": ["tree-level-{}".format(level)]}])
+        if not res_level:
+            return
+        for res_id in sub_tree_res:
+            # find permission values in combo-box
+            res_line = find_html_body_contents(res_level, [{"id": str(res_id)}])
+            res_combo_perm = find_html_body_contents(res_line, [
+                {"class": ["tree-line"]}, {"class": ["tree-item"]},
+                {"class": ["permission-entry"], "index": perm_index},
+                {"name": "label"}, {"name": "select"},
+                {"name": "option", "attribute": "selected"}
+            ])
+            check_val_is_in(len(res_combo_perm), [0, 1],
+                            msg="Expected to have exactly [0,1] permission selected in combobox. Cannot have multiple.")
+            if res_combo_perm:
+                combo_perm_name = res_combo_perm[0].attrs["value"]  # explicit format: "[name]-[access]-[scope]"
+                found_res_perms[int(res_id)] = PermissionSet(combo_perm_name)
+            else:
+                found_res_perms[int(res_id)] = None
+            find_level_perm(res_line, sub_tree_res[res_id], level + 1)  # search deeper
+
+    perm_tree = find_html_body_contents(perm_form, [{"class": ["tree"]}])
+    find_level_perm(perm_tree, resource_tree)
+    return found_res_perms
 
 
 class TestSetup(object):
@@ -2462,6 +2558,7 @@ class TestSetup(object):
                         override_group_name=null,   # type: Optional[Str]
                         override_headers=null,      # type: Optional[HeadersType]
                         override_cookies=null,      # type: Optional[CookiesType]
+                        override_exist=False,       # type: bool
                         pending=False,              # type: bool
                         ):                          # type: (...) -> JSON
         """
@@ -2483,9 +2580,27 @@ class TestSetup(object):
         usr_name = (data or {}).get("user_name")
         if usr_name:
             test_case.extra_user_names.add(usr_name)  # indicate potential removal at a later point
-        resp = test_request(app_or_url, "POST", "/register/users" if pending else "/users", json=data,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        override_headers = override_headers if override_headers is not null else test_case.json_headers
+        override_cookies = override_cookies if override_cookies is not null else test_case.cookies
+        path = "/register/users" if pending else "/users"
+        resp = test_request(app_or_url, "POST", path, json=data, expect_errors=override_exist,
+                            headers=override_headers, cookies=override_cookies)
+        if resp.status_code == 409 and override_exist and usr_name:
+            TestSetup.delete_TestUser(test_case,
+                                      override_user_name=usr_name,
+                                      override_headers=override_headers,
+                                      override_cookies=override_cookies,
+                                      pending=pending)
+            return TestSetup.create_TestUser(test_case,
+                                             override_data=override_data,
+                                             override_user_name=override_user_name,
+                                             override_email=override_email,
+                                             override_password=override_password,
+                                             override_group_name=override_group_name,
+                                             override_headers=override_headers,
+                                             override_cookies=override_cookies,
+                                             override_exist=False,
+                                             pending=pending)
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
@@ -2693,6 +2808,7 @@ class TestSetup(object):
                          override_data=null,            # type: Optional[JSON]
                          override_headers=null,         # type: Optional[HeadersType]
                          override_cookies=null,         # type: Optional[CookiesType]
+                         override_exist=False,          # type: bool
                          ):                             # type: (...) -> JSON
         """
         Create the test group.
@@ -2709,9 +2825,21 @@ class TestSetup(object):
         grp_name = (data or {}).get("group_name")
         if grp_name:
             test_case.extra_group_names.add(grp_name)  # indicate potential removal at a later point
-        resp = test_request(app_or_url, "POST", "/groups", json=data,
+        resp = test_request(app_or_url, "POST", "/groups", json=data, expect_errors=override_exist,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        if resp.status_code == 409 and override_exist:
+            TestSetup.delete_TestGroup(test_case,
+                                       override_group_name=override_group_name,
+                                       override_headers=override_headers,
+                                       override_cookies=override_cookies)
+            return TestSetup.create_TestGroup(test_case,
+                                              override_group_name=override_group_name,
+                                              override_discoverable=override_discoverable,
+                                              override_data=override_data,
+                                              override_headers=override_headers,
+                                              override_cookies=override_cookies,
+                                              override_exist=False)
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
