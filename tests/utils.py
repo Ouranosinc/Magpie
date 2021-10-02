@@ -2048,6 +2048,7 @@ class TestSetup(object):
                                        override_resource_types=null,    # type: Optional[List[Str]]
                                        override_headers=null,           # type: Optional[HeadersType]
                                        override_cookies=null,           # type: Optional[CookiesType]
+                                       override_exist=False,            # type: bool
                                        ):                               # type: (...) -> List[int]
         """
         Creates a :term:`Service` and nested N-depth :term:`Resource` hierarchy.
@@ -2084,7 +2085,8 @@ class TestSetup(object):
             res_type = [res_type]
         body = TestSetup.create_TestService(test_case,
                                             override_service_name=svc_name, override_service_type=svc_type,
-                                            override_headers=override_headers, override_cookies=override_cookies)
+                                            override_headers=override_headers, override_cookies=override_cookies,
+                                            override_exist=override_exist)
         info = TestSetup.get_ResourceInfo(test_case, override_body=body,
                                           override_headers=override_headers, override_cookies=override_cookies)
         parent_id = info["resource_id"]
@@ -2399,6 +2401,7 @@ class TestSetup(object):
                            override_service_type=null,  # type: Optional[Str]
                            override_headers=null,       # type: Optional[HeadersType]
                            override_cookies=null,       # type: Optional[CookiesType]
+                           override_exist=null,         # type: Optional[bool]
                            ):                           # type: (...) -> JSON
         """
         Creates the test service.
@@ -2410,6 +2413,8 @@ class TestSetup(object):
         app_or_url = get_app_or_url(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
         svc_type = override_service_type if override_service_type is not null else test_case.test_service_type
+        override_headers = override_headers if override_headers is not null else test_case.json_headers
+        override_cookies = override_cookies if override_cookies is not null else test_case.cookies
         data = {
             "service_name": svc_name,
             "service_type": svc_type,
@@ -2417,20 +2422,28 @@ class TestSetup(object):
         }
         if svc_name:
             test_case.extra_service_names.add(svc_name)  # indicate potential removal at a later point
-        resp = test_request(app_or_url, "POST", "/services", json=data,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies,
-                            expect_errors=True)
+        resp = test_request(app_or_url, "POST", "/services", json=data, expect_errors=True,
+                            headers=override_headers, cookies=override_cookies)
         if resp.status_code == 409:
-            path = "/services/{svc}".format(svc=svc_name)
-            resp = test_request(app_or_url, "GET", path,
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
-            body = check_response_basic_info(resp, 200, expected_method="GET")
-            if TestVersion(test_case.version) < TestVersion("0.9.1"):
-                body.update({"service": body[svc_name]})
-                body.pop(svc_name)
-            return body
+            if override_exist is not null and override_exist:
+                TestSetup.delete_TestService(test_case,
+                                             override_service_name=override_service_name,
+                                             override_headers=override_headers,
+                                             override_cookies=override_cookies)
+                return TestSetup.create_TestService(test_case,
+                                                    override_service_name=override_service_name,
+                                                    override_service_type=override_service_type,
+                                                    override_headers=override_headers,
+                                                    override_cookies=override_cookies,
+                                                    override_exist=False)
+            elif override_exist is null:
+                path = "/services/{svc}".format(svc=svc_name)
+                resp = test_request(app_or_url, "GET", path, headers=override_headers, cookies=override_cookies)
+                body = check_response_basic_info(resp, 200, expected_method="GET")
+                if TestVersion(test_case.version) < TestVersion("0.9.1"):
+                    body.update({"service": body[svc_name]})
+                    body.pop(svc_name)
+                return body
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
