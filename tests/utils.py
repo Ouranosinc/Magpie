@@ -2436,7 +2436,7 @@ class TestSetup(object):
                                                     override_headers=override_headers,
                                                     override_cookies=override_cookies,
                                                     override_exist=False)
-            elif override_exist is null:
+            if override_exist is null:
                 path = "/services/{svc}".format(svc=svc_name)
                 resp = test_request(app_or_url, "GET", path, headers=override_headers, cookies=override_cookies)
                 body = check_response_basic_info(resp, 200, expected_method="GET")
@@ -2938,3 +2938,35 @@ class TestSetup(object):
         if not ignore_missing:
             check_val_equal(result["code"], 200)
         return result
+
+    @staticmethod
+    def check_GetUserResourcePermissions(test_case, user_name, resource_id, query=None):
+        # type: (AnyMagpieTestCaseType, Str, int, Optional[Str]) -> JSON
+        query = "?{}".format(query) if query else ""
+        path = "/users/{usr}/resources/{res}/permissions{q}".format(usr=user_name, res=resource_id, q=query)
+        resp = test_request(test_case, "GET", path, headers=test_case.json_headers, cookies=test_case.cookies)
+        body = check_response_basic_info(resp, 200, expected_method="GET")
+        check_val_is_in("permission_names", body)
+        check_val_type(body["permission_names"], list)
+        return body
+
+    @staticmethod
+    def check_GetUserResourcesOrService(test_case, user_name, service_or_resource_path, query=None):
+        # type: (AnyMagpieTestCaseType, Str, Str, Optional[Str]) -> JSON
+        query = "?{}".format(query) if query else ""
+        path = "/users/{usr}/{sr}{q}".format(usr=user_name, sr=service_or_resource_path, q=query)
+        resp = test_request(test_case, "GET", path, headers=test_case.json_headers, cookies=test_case.cookies)
+        body = check_response_basic_info(resp, 200, expected_method="GET")
+        check_val_is_in("resources", body)
+        check_val_type(body["resources"], dict)
+        return body
+
+    @staticmethod
+    def check_GetUserServices(test_case, user_name, query=None):
+        # type: (AnyMagpieTestCaseType, Str, Optional[Str]) -> JSON
+        return TestSetup.check_GetUserResourcesOrService(test_case, user_name, "services", query=query)
+
+    @staticmethod
+    def check_GetUserResources(test_case, user_name, query=None):
+        # type: (AnyMagpieTestCaseType, Str, Optional[Str]) -> JSON
+        return TestSetup.check_GetUserResourcesOrService(test_case, user_name, "resources", query=query)
