@@ -1124,6 +1124,47 @@ def check_or_try_logout_user(test_item, msg=None):
     raise Exception("logout did not succeed" + msg)
 
 
+def create_or_assign_user_group_with_terms(test_case,       # type: AnyMagpieTestCaseType
+                                           path,            # type: Str
+                                           data,            # type: Union[JSON, Str]
+                                           headers,         # type: HeadersType
+                                           cookies,         # type: CookiesType
+                                           accept_terms     # type: bool
+                                           ):
+    """
+    Executes a request to create or assign a user to a group with terms and conditions, and accepts the terms and
+    conditions automatically if enabled.
+    Returns the input query's response.
+    """
+    # custom app settings, smtp_host must exist when getting configs, but not used because email mocked
+    settings = {"magpie.smtp_host": "example.com",
+                # for testing, ignore any 'from' and 'password' arguments
+                # that could be found in the .ini file
+                "magpie.smtp_from": "",
+                "magpie.smtp_password": ""}
+
+    with mocked_get_settings(settings=settings):
+        with mock_send_email("magpie.api.management.user.user_utils.send_email") as email_contexts:
+            _, wrapped_contents, mocked_send = email_contexts
+            query_resp = test_request(test_case, "POST", path, json=data, headers=headers, cookies=cookies)
+            check_val_equal(mocked_send.call_count, 1,
+                            msg="Expected sent notifications to user for an email confirmation "
+                                "of terms and conditions.")
+            if accept_terms:
+                # Simulate user clicking the confirmation link in 'sent' email
+                # (external operation from Magpie)
+                confirm_url = wrapped_contents.call_args.args[-1].get("confirm_url")
+                resp = test_request(test_case, "GET", urlparse(confirm_url).path)
+                body = check_ui_response_basic_info(resp, 200)
+                check_val_is_in("accepted the terms and conditions", body)
+
+                check_val_equal(mocked_send.call_count, 2,
+                                msg="Expected sent notification to user for an email confirmation of "
+                                    "user added to requested group, following terms and conditions "
+                                    "acceptation.")
+    return query_resp
+
+
 def visual_repr(item):
     # type: (Any) -> Str
     try:
@@ -2465,6 +2506,7 @@ class TestSetup(object):
                         override_headers=null,      # type: Optional[HeadersType]
                         override_cookies=null,      # type: Optional[CookiesType]
                         pending=False,              # type: bool
+                        accept_terms=True,          # type: bool
                         ):                          # type: (...) -> JSON
         """
         Creates the test user.
@@ -2483,12 +2525,39 @@ class TestSetup(object):
             }
             data["email"] = override_email if override_email is not null else "{}@mail.com".format(data["user_name"])
         usr_name = (data or {}).get("user_name")
+        grp_name = (data or {}).get("group_name")
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
         if usr_name:
             test_case.extra_user_names.add(usr_name)  # indicate potential removal at a later point
-        resp = test_request(app_or_url, "POST", "/register/users" if pending else "/users", json=data,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
-        return check_response_basic_info(resp, 201, expected_method="POST")
+
+        # Prepare request to create user
+        path = "/register/users" if pending else "/users"
+
+        is_member = True  # Default expected test result
+
+        if grp_name:
+            # Get group info
+            grp_info_path = "/groups/{grp}".format(grp=grp_name)
+            resp = test_request(app_or_url, "GET", grp_info_path, headers=headers, cookies=cookies)
+            body = check_response_basic_info(resp, 200, expected_method="GET")
+            check_val_is_in("group", body)
+            group_info = body["group"]
+
+            if group_info.get("terms"):
+                is_member = accept_terms  # Expected test result, should be false if terms are not accepted
+                create_user_resp = create_or_assign_user_group_with_terms(test_case=test_case, path=path, data=data,
+                                                                          headers=headers, cookies=cookies,
+                                                                          accept_terms=accept_terms)
+            else:
+                create_user_resp = test_request(app_or_url, "POST", path, json=data, headers=headers, cookies=cookies)
+
+            TestSetup.check_UserGroupMembership(test_case, override_user_name=usr_name, override_group_name=grp_name,
+                                                override_headers=headers, override_cookies=cookies, member=is_member)
+        else:
+            create_user_resp = test_request(app_or_url, "POST", path, json=data, headers=headers, cookies=cookies)
+
+        return check_response_basic_info(create_user_resp, 201, expected_method="POST")
 
     @staticmethod
     def delete_TestUser(test_case,                  # type: AnyMagpieTestCaseType
@@ -2634,31 +2703,52 @@ class TestSetup(object):
                              override_group_name=null,  # type: Optional[Str]
                              override_headers=null,     # type: Optional[HeadersType]
                              override_cookies=null,     # type: Optional[CookiesType]
+                             accept_terms=True,         # type: bool
                              ):                         # type: (...) -> None
         """
         Ensures that the test user is a member of the test group, adding him to the group as needed.
-        Note that it will not work with a group that has terms and conditions,
-        since it requires a confirmation by a user.
+        Also works for a group that has terms and conditions, either completing the T&C confirmation if the
+        `accept_terms` parameter is enabled, or leaving the user as pending.
 
         :raises AssertionError: if any request response does not match successful validation or assignation to group.
         """
         app_or_url = get_app_or_url(test_case)
         usr_name = override_user_name if override_user_name is not null else test_case.test_user_name
         grp_name = override_group_name if override_group_name is not null else test_case.test_group_name
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+
+        # Check if the user is already in the group
         path = "/groups/{grp}/users".format(grp=grp_name)
-        resp = test_request(app_or_url, "GET", path,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        resp = test_request(app_or_url, "GET", path, headers=headers, cookies=cookies)
         body = check_response_basic_info(resp, 200, expected_method="GET")
+
+        is_member = True  # Default expected test result
+
         if usr_name not in body["user_names"]:
+            # Get group info
+            path = "/groups/{grp}".format(grp=grp_name)
+            resp = test_request(app_or_url, "GET", path, headers=headers, cookies=cookies)
+            body = check_response_basic_info(resp, 200, expected_method="GET")
+            check_val_is_in("group", body)
+            group_info = body["group"]
+
+            # Prepare request to add user to group with terms
             path = "/users/{usr}/groups".format(usr=usr_name)
             data = {"group_name": grp_name}
-            resp = test_request(app_or_url, "POST", path, json=data,
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
-            check_response_basic_info(resp, 201, expected_method="POST")
+
+            if group_info.get("terms"):
+                is_member = accept_terms  # Expected test result, should be false if terms are not accepted
+                assign_user_resp = create_or_assign_user_group_with_terms(test_case=test_case, path=path,
+                                                                          data=data, headers=headers, cookies=cookies,
+                                                                          accept_terms=accept_terms)
+                check_response_basic_info(assign_user_resp, 202, expected_method="POST")
+            else:
+                resp = test_request(self, "POST", path, json=data, headers=headers, cookies=cookies)
+                # User should have been assigned to the group directly if no terms and conditions were found.
+                check_response_basic_info(resp, 201, expected_method="POST")
         TestSetup.check_UserGroupMembership(test_case, override_user_name=usr_name, override_group_name=grp_name,
-                                            override_headers=override_headers, override_cookies=override_cookies)
+                                            override_headers=headers, override_cookies=cookies, member=is_member)
 
     @staticmethod
     def get_RegisteredGroupsList(test_case, only_discoverable=False, override_headers=null, override_cookies=null):
