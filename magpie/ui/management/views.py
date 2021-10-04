@@ -464,11 +464,17 @@ class ManagementViews(AdminRequests, BaseViews):
               or :term:`Group` accordingly to specified arguments.
         """
         if is_user:
-            query = "?inherited=true" if is_inherit_groups_permissions else ""
-            path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name) + query
+            # because page can only show a single permission (per name/resource) at a time, apply resolution
+            # on top of inheritance in order to display the highest priority permission in the tree hierarchy
+            query = "inherited=true&resolve=true" if is_inherit_groups_permissions else ""
+            path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name)
         else:
+            query = ""
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)
 
+        query_type = "type={}".format(service_type)  # try to limit results for faster processing time
+        query_sep = "&" if query else ""
+        path += "?{}{}{}".format(query, query_sep, query_type)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         body = get_json(resp)

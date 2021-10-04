@@ -32,14 +32,14 @@ from magpie.api.webhooks import (
 )
 from magpie.constants import get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
-from magpie.services import service_factory
+from magpie.services import SERVICE_TYPE_DICT, service_factory
 from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Iterable, List, Optional
+    from typing import Any, Iterable, List, Optional, Tuple
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
@@ -393,13 +393,50 @@ def get_similar_user_resource_permission(user, resource, permission, db_session)
     return found_perm
 
 
+def get_user_resource_permissions(user,             # type: models.User
+                                  resource,         # type: models.Resource
+                                  db_session,       # type: Session
+                                  inherit=False,    # type: bool
+                                  resolve=False,    # type: bool
+                                  ):                # type: (...) -> Tuple[List[PermissionSet], PermissionType, bool]
+    """
+    Retrieves user resource permissions applied directly, with inherited group permissions, or resolve between them.
+
+    :param user: user for which to retrieve permissions for the resource, and optionally its groups as well.
+    :param resource: resource for which permissions to retrieve are applied on.
+    :param db_session: database session
+    :param inherit: obtain permissions with user's group inheritance (duplicate permissions possible across user/groups)
+    :param resolve: resolve permissions across user/groups to obtain a single highest priority permission on resource.
+    """
+    perm_unique = True
+    if inherit or resolve:
+        perm_unique = resolve  # allow duplicates name/access/scope from distinct groups if not resolved
+        res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
+        res_perm_list = regroup_permissions_by_resource(res_perm_list, resolve=resolve)
+        res_perm_list = res_perm_list.get(resource.resource_id, [])
+        perm_type = PermissionType.INHERITED
+    else:
+        res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
+        perm_type = PermissionType.DIRECT
+    return res_perm_list, perm_type, perm_unique
+
+
 def get_user_resource_permissions_response(user, resource, request,
-                                           inherit_groups_permissions=True, resolve_groups_permissions=False,
+                                           inherit_groups_permissions=True,
+                                           resolve_groups_permissions=False,
                                            effective_permissions=False):
     # type: (models.User, ServiceOrResourceType, Request, bool, bool, bool) -> HTTPException
     """
-    Retrieves user resource permissions with or without inherited group permissions. Alternatively retrieves the
-    effective user resource permissions, where group permissions are implied as `True`.
+    Retrieves user resource permissions with or without inherited group permissions.
+
+    Alternatively retrieves the effective user resource permissions, where group permissions are implied as `True`.
+
+    .. warning::
+        Does not consider direct :term:`Resource` ownership.
+
+    .. seealso::
+        - :func:`get_direct_inherited_resolved_resource_permissions`
+        - :func:`get_user_service_permissions`
 
     :returns: valid HTTP response on successful operations.
     :raises HTTPException: error HTTP response of corresponding situation.
@@ -418,15 +455,9 @@ def get_user_resource_permissions_response(user, resource, request,
                 res_perm_list = svc.effective_permissions(user, resource)
                 perm_type = PermissionType.EFFECTIVE
             else:
-                if inherit_groups_permissions or resolve_groups_permissions:
-                    perm_unique = resolve_groups_permissions  # allow duplicates from distinct groups if not resolved
-                    res_perm_list = ResourceService.perms_for_user(resource, user, db_session=db_session)
-                    res_perm_list = regroup_permissions_by_resource(res_perm_list, resolve=resolve_groups_permissions)
-                    res_perm_list = res_perm_list.get(resource.resource_id, [])
-                    perm_type = PermissionType.INHERITED
-                else:
-                    res_perm_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
-                    perm_type = PermissionType.DIRECT
+                res_perm_list, perm_type, perm_unique = get_user_resource_permissions(
+                    user, resource, db_session, inherit=inherit_groups_permissions, resolve=resolve_groups_permissions
+                )
         return format_permissions(res_perm_list, perm_type, force_unique=perm_unique)
 
     permissions = ax.evaluate_call(
@@ -439,8 +470,8 @@ def get_user_resource_permissions_response(user, resource, request,
 
 
 def get_user_services(user, request, cascade_resources=False, format_as_list=False,
-                      inherit_groups_permissions=False, resolve_groups_permissions=False):
-    # type: (models.User, Request, bool, bool, bool, bool) -> UserServicesType
+                      inherit_groups_permissions=False, resolve_groups_permissions=False, service_types=None):
+    # type: (models.User, Request, bool, bool, bool, bool, Optional[List[Str]]) -> UserServicesType
     """
     Returns services by type with corresponding services by name containing sub-dict information.
 
@@ -461,7 +492,9 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
     :param resolve_groups_permissions:
         Whether to combine :term:`Direct Permissions` and :term:`Inherited Permissions` for respective resources or not.
     :param format_as_list:
-        returns as list of service dict information (not grouped by type and by name)
+        Returns as list of service dict information (not grouped by type and by name)
+    :param service_types:
+        Filter list of service types for which to return details. All service types are used if omitted.
     :return:
         Only services which the user as :term:`Direct Permissions` or considering all tree hierarchy,
         and for each case, either considering only user permissions or every :term:`Inherited Permissions`,
@@ -477,6 +510,10 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
                                                         resolve_groups_permissions=resolve_groups_permissions)
     perm_type = PermissionType.INHERITED if inherit_groups_permissions else PermissionType.DIRECT
     services = {}
+    force_service_types = True
+    if service_types is None:
+        force_service_types = False
+        service_types = list(SERVICE_TYPE_DICT)
     for resource_id, perms in res_perm_dict.items():
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
         is_service = resource.resource_type == models.Service.resource_type_name
@@ -489,6 +526,8 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
             perms = []
 
         svc = ru.get_resource_root_service_impl(resource, request)
+        if svc.service_type not in service_types:
+            continue
         if svc.service_type not in services:
             services[svc.service_type] = {}
         svc_name = svc.service.resource_name
@@ -500,6 +539,12 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
             svc_json = format_service(svc.service, perms, perm_type, show_private_url=False)
             services[svc_type][svc_name] = svc_json
 
+    # explicitly requested service types will have empty sections if none apply (to make it explicit there is nothing)
+    if force_service_types:
+        for svc_type in service_types:
+            services.setdefault(svc_type, {})
+
+    services = {svc_type: dict(sorted(svc_items.items())) for svc_type, svc_items in sorted(services.items())}
     if not format_as_list:
         return services
 
@@ -513,17 +558,25 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
 def get_user_service_permissions(user, service, request,
                                  inherit_groups_permissions=True, resolve_groups_permissions=False):
     # type: (models.User, models.Service, Request, bool, bool) -> List[PermissionSet]
+    """
+    Retrieve the permissions the user has directly on a service or inherited permissions by its group memberships.
+
+    .. warning::
+        - Does not consider :term:`Effective Permissions` ownership.
+        - Considers direct :term:`Service` ownership, but not implemented everywhere (not operational).
+
+    .. seealso::
+        - :func:`get_user_resource_permissions`
+        - :func:`get_user_resource_permissions_response`
+    """
     if service.owner_user_id == user.id:
         perm_type = PermissionType.OWNED
         usr_svc_perms = service_factory(service, request).permissions
     else:
-        if inherit_groups_permissions or resolve_groups_permissions:
-            perm_type = PermissionType.INHERITED
-            usr_svc_perms = ResourceService.perms_for_user(service, user, db_session=request.db)
-        else:
-            perm_type = PermissionType.DIRECT
-            usr_svc_perms = ResourceService.direct_perms_for_user(service, user, db_session=request.db)
-    return [PermissionSet(p, typ=perm_type) for p in usr_svc_perms]
+        usr_svc_perms, perm_type, _ = get_user_resource_permissions(
+            user, service, request.db, inherit=inherit_groups_permissions, resolve=resolve_groups_permissions
+        )
+    return [PermissionSet(perm, typ=perm_type) for perm in usr_svc_perms]
 
 
 def filter_user_permission(resource_permission_list, user):

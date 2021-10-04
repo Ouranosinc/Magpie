@@ -11,13 +11,13 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
-from magpie.api.management.service.service_formats import format_service_resources
+from magpie.api.management.service import service_formats as sf
+from magpie.api.management.service import service_utils as su
 from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
 from magpie.permissions import PermissionType, format_permissions
-from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -182,6 +182,8 @@ def get_user_resources_view(request):
     inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
     resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
     filtered_perms = asbool(ar.get_query_param(request, ["filter", "filtered"]))
+    service_types = ar.get_query_param(request, ["type", "types"], default="")
+    service_types = su.filter_service_types(service_types, default_services=True)
     user = ar.get_user_matchdict_checked_or_logged(request)
     db = request.db
 
@@ -195,8 +197,9 @@ def get_user_resources_view(request):
         json_res = {}
         perm_type = PermissionType.INHERITED if inherit_groups_perms else PermissionType.DIRECT
         services = ResourceService.all(models.Service, db_session=db)
+        services = services.filter(models.Service.type.in_(service_types))  # pylint: disable=E1101,no-member
         # add service-types so they are ordered and listed if no service of that type was defined
-        for svc_type in sorted(SERVICE_TYPE_DICT):
+        for svc_type in sorted(service_types):
             json_res[svc_type] = {}
         for svc in services:
             svc_perms = uu.get_user_service_permissions(
@@ -208,7 +211,7 @@ def get_user_resources_view(request):
             # always allow admin to view full resource tree, unless explicitly requested to be filtered
             # otherwise (non-admin), only add details if there is at least one resource permission (any level)
             if (is_admin and not filtered_perms) or (svc_perms or res_perms_dict):
-                json_res[svc.type][svc.resource_name] = format_service_resources(
+                json_res[svc.type][svc.resource_name] = sf.format_service_resources(
                     svc,
                     db_session=db,
                     service_perms=svc_perms,
@@ -336,13 +339,16 @@ def get_user_services_view(request):
     cascade_resources = asbool(ar.get_query_param(request, "cascade"))
     inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
     resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
-    format_as_list = asbool(ar.get_query_param(request, "flatten"))
+    format_as_list = asbool(ar.get_query_param(request, ["flatten", "list"]))
+    service_types = ar.get_query_param(request, ["type", "types"], default="")
+    service_types = su.filter_service_types(service_types)  # don't use default service types to populate response
 
     svc_json = uu.get_user_services(user, request=request,
                                     cascade_resources=cascade_resources,
                                     inherit_groups_permissions=inherit_groups_perms,
                                     resolve_groups_permissions=resolve_groups_perms,
-                                    format_as_list=format_as_list)
+                                    format_as_list=format_as_list,
+                                    service_types=service_types)
     return ax.valid_http(http_success=HTTPOk, content={"services": svc_json},
                          detail=s.UserServices_GET_OkResponseSchema.description)
 
@@ -466,7 +472,7 @@ def get_user_service_resources_view(request):
         user, service, request=request,
         inherit_groups_permissions=inherit_groups_perms,
         resolve_groups_permissions=resolve_groups_perms)
-    user_svc_res_json = format_service_resources(
+    user_svc_res_json = sf.format_service_resources(
         service=service,
         db_session=request.db,
         service_perms=service_perms,

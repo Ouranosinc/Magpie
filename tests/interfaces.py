@@ -1920,16 +1920,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in(get_constant("MAGPIE_ANONYMOUS_USER"), users)
         utils.check_val_is_in(get_constant("MAGPIE_ADMIN_USER"), users)
 
-    @classmethod
-    def check_GetUserResourcePermissions(cls, user_name, resource_id, query=None):
-        query = "?{}".format(query) if query else ""
-        path = "/users/{usr}/resources/{res}/permissions{q}".format(res=resource_id, usr=user_name, q=query)
-        resp = utils.test_request(cls, "GET", path, headers=cls.json_headers, cookies=cls.cookies)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_is_in("permission_names", body)
-        utils.check_val_type(body["permission_names"], list)
-        return body
-
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_GetLoggedUser(self):
@@ -1954,7 +1944,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
         res_id = body["resource"]["resource_id"]
-        self.check_GetUserResourcePermissions(get_constant("MAGPIE_LOGGED_USER"), res_id)
+        utils.TestSetup.check_GetUserResourcePermissions(self, get_constant("MAGPIE_LOGGED_USER"), res_id)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -1984,85 +1974,85 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         #   |- test-resource (parent)    |            | r-m         |             |
         #       |- test-resource (child) |            |             | r-m         |
         body = utils.TestSetup.create_TestService(self, override_service_type=ServiceAPI.service_type)
-        test_svc_res_id = body["service"]["resource_id"]
-        test_res_type = Route.resource_type_name
-        body = utils.TestSetup.create_TestServiceResource(self, override_resource_type=test_res_type)
-        test_parent_res_id = body["resource"]["resource_id"]
+        svc_res_id = body["service"]["resource_id"]
+        res_type = Route.resource_type_name
+        body = utils.TestSetup.create_TestServiceResource(self, override_resource_type=res_type)
+        p_res_id = body["resource"]["resource_id"]  # parent
         child_resource_name = self.test_resource_name + "-child"
         override_data = {
             "resource_name": child_resource_name,
-            "resource_type": test_res_type,
-            "parent_id": test_parent_res_id
+            "resource_type": res_type,
+            "parent_id": p_res_id
         }
         body = utils.TestSetup.create_TestServiceResource(self, override_data=override_data)
-        test_child_res_id = body["resource"]["resource_id"]
-        anonym_usr = get_constant("MAGPIE_ANONYMOUS_USER")
-        anonym_grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        c_res_id = body["resource"]["resource_id"]
+        usr_anon = get_constant("MAGPIE_ANONYMOUS_USER")
+        grp_anon = get_constant("MAGPIE_ANONYMOUS_GROUP")
 
         perm_recur = Permission.READ.value
         perm_match = "read-match"  # backward compatibility
         data_recur = {"permission_name": perm_recur}
         data_match = {"permission_name": perm_match}
-        path = "/users/{usr}/resources/{res}/permissions".format(res=test_svc_res_id, usr=self.usr)
+        path = "/users/{usr}/resources/{res}/permissions".format(res=svc_res_id, usr=self.usr)
         utils.test_request(self, "POST", path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
-        path = "/groups/{grp}/resources/{res}/permissions".format(res=test_svc_res_id, grp=self.grp)
+        path = "/groups/{grp}/resources/{res}/permissions".format(res=svc_res_id, grp=self.grp)
         utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
-        path = "/groups/{grp}/resources/{res}/permissions".format(res=test_parent_res_id, grp=self.grp)
+        path = "/groups/{grp}/resources/{res}/permissions".format(res=p_res_id, grp=self.grp)
         utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
-        path = "/users/{usr}/resources/{res}/permissions".format(res=test_child_res_id, usr=anonym_usr)
+        path = "/users/{usr}/resources/{res}/permissions".format(res=c_res_id, usr=usr_anon)
         utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
-        path = "/groups/{grp}/resources/{res}/permissions".format(res=test_svc_res_id, grp=anonym_grp)
+        path = "/groups/{grp}/resources/{res}/permissions".format(res=svc_res_id, grp=grp_anon)
         utils.test_request(self, "POST", path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
 
         expect_perm_match = utils.TestSetup.get_PermissionNames(self, perm_match)
         expect_perm_recur = utils.TestSetup.get_PermissionNames(self, perm_recur)
 
         # tests
-        q_groups = "inherit=true"  # note: 'inherit' is old name, official is 'inherited', but backward supported
-        q_effect = "effective=true"
+        q_is = "inherit=true"  # note: 'inherit' is old name, official is 'inherited', but backward supported
+        q_e = "effective=true"
         test_effective = TestVersion(self.version) < TestVersion("3.0")
-        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_child_res_id, query=None)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=c_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_child_res_id, query=q_groups)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=c_res_id, query=q_is)
         utils.check_val_equal(body["permission_names"], [])
         if test_effective:
-            body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_child_res_id, query=q_effect)
+            body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=c_res_id, query=q_e)
             utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
-        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_parent_res_id, query=None)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=p_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_parent_res_id, query=q_groups)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=p_res_id, query=q_is)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
         if test_effective:
-            body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_parent_res_id, query=q_effect)
+            body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=p_res_id, query=q_e)
             utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_svc_res_id, query=None)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=svc_res_id, query=None)
         utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
-        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_svc_res_id, query=q_groups)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=svc_res_id, query=q_is)
         utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
         if test_effective:
-            body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_svc_res_id, query=q_effect)
+            body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=svc_res_id, query=q_e)
             utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
 
-        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_child_res_id, query=None)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=c_res_id, query=None)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_child_res_id, query=q_groups)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=c_res_id, query=q_is)
         utils.check_all_equal(body["permission_names"], expect_perm_match, any_order=True)
         if test_effective:
-            body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_child_res_id, query=q_effect)
+            body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=c_res_id, query=q_e)
             utils.check_all_equal(body["permission_names"], expect_perm_recur + expect_perm_match, any_order=True)
-        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_parent_res_id, query=None)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=p_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_parent_res_id, query=q_groups)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=p_res_id, query=q_is)
         utils.check_val_equal(body["permission_names"], [])
         if test_effective:
-            body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_parent_res_id, query=q_effect)
+            body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=p_res_id, query=q_e)
             utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
-        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_svc_res_id, query=None)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=svc_res_id, query=None)
         utils.check_val_equal(body["permission_names"], [])
-        body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_svc_res_id, query=q_groups)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=svc_res_id, query=q_is)
         utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
         if test_effective:
-            body = self.check_GetUserResourcePermissions(anonym_usr, resource_id=test_svc_res_id, query=q_effect)
+            body = utils.TestSetup.check_GetUserResourcePermissions(self, usr_anon, resource_id=svc_res_id, query=q_e)
             utils.check_all_equal(body["permission_names"], expect_perm_recur, any_order=True)
 
     @runner.MAGPIE_TEST_USERS
@@ -2071,7 +2061,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_GetUserResourcesPermissions(self):
         utils.TestSetup.create_TestService(self)
         body = utils.TestSetup.create_TestServiceResource(self)
-        self.check_GetUserResourcePermissions(self.usr, body["resource"]["resource_id"])
+        utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, body["resource"]["resource_id"])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
@@ -2109,7 +2099,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/users/{usr}/resources/{res}/permissions".format(res=test_res_id, usr=self.usr)
         data = {"permission_name": self.test_resource_perm_name}
         utils.test_request(self, "POST", path, data=data, headers=self.json_headers, cookies=self.cookies)
-        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_res_id)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=test_res_id)
         utils.check_val_is_in(self.test_resource_perm_name, body["permission_names"],
                               msg="Can't test for conflicting permissions if it doesn't exist first.")
 
@@ -2148,7 +2138,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # first request creates the permission when it doesn't exist, PUT works exactly as POST does without problem
         resp = utils.test_request(self, "PUT", path, data=data, headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 201, expected_method="PUT")  # created, http code indicates new entity
-        body = self.check_GetUserResourcePermissions(self.usr, resource_id=test_res_id)
+        body = utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, resource_id=test_res_id)
         perm = PermissionSet(data["permission"])
         utils.check_val_is_in("permission_names", body)
         utils.check_val_is_in(str(perm), body["permission_names"],
@@ -3238,6 +3228,270 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 res = svc["resources"][str(res_id)]  # type: JSON
                 utils.check_all_equal(res["permission_names"], res_perms, any_order=True)
 
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_GetUserResources_ServicePermissionsResolved(self):
+        """
+        Validate fix of incorrect resolved permissions on top-most resource (aka service) over multiple groups.
+
+        Multiple permissions over groups where all returned instead of being combined as specified by ``resolve`` query.
+        For sanity check, also validate similar resolved permissions are reported correctly for children resource.
+
+        Finally, validate that both endpoints ``GET /users/{}/resources`` (full hierarchy)
+        and ``GET /users/{}/resources/{}/permissions`` (individual entries) report equivalent results
+        for respective services and resources.
+
+        .. seealso::
+            - :meth:`test_GetUserServices_ServicePermissionsResolved`
+              (similar result, but without nested resource tree, only service-level returned)
+        """
+        utils.warn_version(self, "user service resources permissions resolved fix", "3.16.0", skip=True)
+
+        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        grp1_info = utils.TestSetup.create_TestGroup(self, self.test_group_name + "-1", override_exist=True)
+        grp2_info = utils.TestSetup.create_TestGroup(self, self.test_group_name + "-2", override_exist=True)
+        grp1_name = grp1_info["group"]["group_name"]
+        grp2_name = grp2_info["group"]["group_name"]
+        user_info = utils.TestSetup.create_TestUser(self, override_group_name=anonymous, override_exist=True)
+        user_name = user_info["user"]["user_name"]
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=user_name, override_group_name=grp1_name)
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=user_name, override_group_name=grp2_name)
+
+        svc1_name = "test-service-1"
+        svc1_id, res1_id = utils.TestSetup.create_TestServiceResourceTree(
+            self, override_service_name=svc1_name, resource_depth=1, override_exist=True
+        )
+        svc2_name = "test-service-2"
+        svc2_id, res2_id = utils.TestSetup.create_TestServiceResourceTree(
+            self, override_service_name=svc2_name, resource_depth=1, override_exist=True
+        )
+        svc3_name = "test-service-3"
+        svc3_id, res3_id = utils.TestSetup.create_TestServiceResourceTree(
+            self, override_service_name=svc3_name, resource_depth=1, override_exist=True
+        )
+
+        # setup test permissions
+        #                 | User  | Group1 | Group2 | Anonymous | Resolved (reason)
+        # ----------------+-------+--------+--------+-----------+-------------------
+        #   [svc1]        | r-A-R |        | r-A-R  | r-D-R     | r-A-R (user)
+        #      [res1]     | r-A-R |        | r-D-R  | r-D-R     | r-A-R (user)
+        #   [svc2]        |       |        | r-A-R  | r-D-R     | r-A-R (group2)
+        #      [res2]     |       |        | r-D-R  | r-A-R     | r-D-R (group2)
+        #   [svc3]        |       | r-A-R  | r-D-R  |           | r-D-R (group2)
+        #      [res3]     |       | r-D-R  | r-A-R  |           | r-D-R (group1)
+        perm = Permission.READ
+        rAR = PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE)  # noqa
+        rDR = PermissionSet(perm, Access.DENY, Scope.RECURSIVE)   # noqa
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=user_name, override_resource_id=svc1_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=svc1_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=svc1_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=user_name, override_resource_id=res1_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=res1_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res1_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=svc2_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=svc2_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=res2_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res2_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp1_name, override_resource_id=svc3_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=svc3_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp1_name, override_resource_id=res3_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=res3_id, override_permission=rAR
+        )
+
+        rAR_direct = PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT)      # noqa
+        rAR_inherit = PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE, PermissionType.INHERITED)  # noqa
+        rDR_inherit = PermissionSet(perm, Access.DENY, Scope.RECURSIVE, PermissionType.INHERITED)   # noqa
+
+        # verify equal but also matching reasons to ensure resolution is not just by chance of duplicate permissions
+        def check_equal_perms(perm_resp_json, perm_test, reason_info):
+            # type: (JSON, PermissionSet, JSON) -> JSON
+            utils.check_val_equal(len(perm_resp_json["permissions"]), 1)
+            perm_resp_json = perm_resp_json["permissions"][0]
+            reason_type = "user" if perm_test.type == PermissionType.DIRECT else "group"
+            reason_name = reason_info[reason_type]["{}_name".format(reason_type)]
+            reason_id = reason_info[reason_type]["{}_id".format(reason_type)]
+            perm_test.reason = "{}:{}:{}".format(reason_type, reason_id, reason_name)
+            utils.check_val_equal(perm_resp_json, perm_test.json())
+            return perm_resp_json
+
+        resolve_query = "resolve=true"
+        svc1_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, svc1_id, query=resolve_query)
+        svc1_perm_json = check_equal_perms(svc1_perm_body, rAR_direct, user_info)
+        res1_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, res1_id, query=resolve_query)
+        res1_perm_json = check_equal_perms(res1_perm_body, rAR_direct, user_info)
+        svc1_tree_body = utils.TestSetup.check_GetUserResources(self, user_name, query=resolve_query)
+        svc1_tree_body = svc1_tree_body["resources"][self.test_service_type][svc1_name]  # noqa  # type: JSON
+        svc1_tree_json = check_equal_perms(svc1_tree_body, rAR_direct, user_info)  # noqa
+        res1_tree_body = svc1_tree_body["resources"][str(res1_id)]  # noqa  # type: JSON
+        res1_tree_json = check_equal_perms(res1_tree_body, rAR_direct, user_info)  # noqa
+        utils.check_val_equal(svc1_perm_json, svc1_tree_json)
+        utils.check_val_equal(res1_perm_json, res1_tree_json)
+
+        svc2_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, svc2_id, query=resolve_query)
+        svc2_perm_json = check_equal_perms(svc2_perm_body, rAR_inherit, grp2_info)
+        res2_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, res2_id, query=resolve_query)
+        res2_perm_json = check_equal_perms(res2_perm_body, rDR_inherit, grp2_info)
+        svc2_tree_body = utils.TestSetup.check_GetUserResources(self, user_name, query=resolve_query)
+        svc2_tree_body = svc2_tree_body["resources"][self.test_service_type][svc2_name]  # noqa  # type: JSON
+        svc2_tree_json = check_equal_perms(svc2_tree_body, rAR_inherit, grp2_info)  # noqa
+        res2_tree_body = svc2_tree_body["resources"][str(res2_id)]  # noqa  # type: JSON
+        res2_tree_json = check_equal_perms(res2_tree_body, rDR_inherit, grp2_info)  # noqa
+        utils.check_val_equal(svc2_perm_json, svc2_tree_json)
+        utils.check_val_equal(res2_perm_json, res2_tree_json)
+
+        svc3_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, svc3_id, query=resolve_query)
+        svc3_perm_json = check_equal_perms(svc3_perm_body, rDR_inherit, grp2_info)
+        res3_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, res3_id, query=resolve_query)
+        res3_perm_json = check_equal_perms(res3_perm_body, rDR_inherit, grp1_info)
+        svc3_tree_body = utils.TestSetup.check_GetUserResources(self, user_name, query=resolve_query)
+        svc3_tree_body = svc3_tree_body["resources"][self.test_service_type][svc3_name]  # noqa  # type: JSON
+        svc3_tree_json = check_equal_perms(svc3_tree_body, rDR_inherit, grp2_info)  # noqa
+        res3_tree_body = svc3_tree_body["resources"][str(res3_id)]  # noqa  # type: JSON
+        res3_tree_json = check_equal_perms(res3_tree_body, rDR_inherit, grp1_info)  # noqa
+        utils.check_val_equal(svc3_perm_json, svc3_tree_json)
+        utils.check_val_equal(res3_perm_json, res3_tree_json)
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_GetUserResources_FilteredServiceTypes(self):
+        """
+        Validate only service types the user has permissions on underlying resources are listed.
+
+        Contrary to ``GET /users/{}/services`` endpoint, where only service-types where some permissions exist are
+        listed, ``GET /users/{}/resources`` always return all available services for all types with limited public
+        information by default.
+
+        When requesting ``type``, only requested types will be listed instead of all possible ones, but all existing
+        resources (services) for each requested type will all be listed, since applied permissions are returned.
+
+        .. seealso::
+            :meth:`test_GetUserServices_FilteredServiceTypes`
+        """
+        utils.warn_version(self, "user service-type filter query", "3.16.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self)
+        user_body = utils.TestSetup.create_TestUser(self, override_exist=True)
+        user_info = utils.TestSetup.get_UserInfo(self, user_body)
+        svc1_type = ServiceAPI.service_type
+        svc1_name = "test-service-1"
+        svc2_type = ServiceTHREDDS.service_type
+        svc2_name = "test-service-2"
+        svc3_type = ServiceNCWMS2.service_type
+        svc3_name = "test-service-3"
+
+        path = "/services/types/{}".format(svc1_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        all_svc1_names = set(body["services"][svc1_type])
+        path = "/services/types/{}".format(svc2_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        all_svc2_names = set(body["services"][svc2_type])
+        path = "/services/types/{}".format(svc3_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        all_svc3_names = set(body["services"][svc3_type])
+
+        utils.TestSetup.create_TestService(
+            self, override_exist=True, override_service_name=svc1_name, override_service_type=svc1_type
+        )
+        body = utils.TestSetup.create_TestService(
+            self, override_exist=True, override_service_name=svc2_name, override_service_type=svc2_type
+        )
+        svc2_id = utils.TestSetup.get_ResourceInfo(self, body)["resource_id"]
+        svc2_perm_name = Permission.BROWSE
+        body = utils.TestSetup.create_TestService(
+            self, override_exist=True, override_service_name=svc3_name, override_service_type=svc3_type
+        )
+        svc3_id = utils.TestSetup.get_ResourceInfo(self, body)["resource_id"]
+        svc3_perm_name = Permission.GET_CAPABILITIES
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_resource_id=svc2_id, override_permission=svc2_perm_name
+        )
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_resource_id=svc3_id, override_permission=svc3_perm_name
+        )
+
+        reason = "user:{user_id}:{user_name}".format(**user_info)
+        svc2_perm = PermissionSet(svc2_perm_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT, reason=reason)
+
+        svc3_perm = PermissionSet(svc3_perm_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT, reason=reason)
+
+        path = "/users/{}/resources?type={}".format(self.test_user_name, svc1_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(set(body["resources"][svc1_type]) - all_svc1_names, {svc1_name})
+        utils.check_val_not_in(svc2_type, body["resources"], msg="Service type not added since not requested.")
+        utils.check_val_not_in(svc3_type, body["resources"], msg="Service type not added since not requested.")
+        utils.check_val_equal(body["resources"][svc1_type][svc1_name]["permissions"], [])  # noqa
+
+        path = "/users/{}/resources?type={}".format(self.test_user_name, svc2_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_not_in(svc1_type, body["resources"], msg="Service type not added since not requested.")
+        utils.check_val_equal(set(body["resources"][svc2_type]) - all_svc2_names, {svc2_name})
+        utils.check_val_not_in(svc3_type, body["resources"], msg="Service type not added since not requested.")
+        svc2_perm_json = body["resources"][svc2_type][svc2_name]["permissions"]  # noqa
+        utils.check_val_equal(len(svc2_perm_json), 1)
+        utils.check_val_equal(svc2_perm_json[0], svc2_perm.json())
+
+        path = "/users/{}/resources?type={},{}".format(self.test_user_name, svc2_type, svc3_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_not_in(svc1_type, body["resources"], msg="Service type not added since not requested.")
+        utils.check_val_equal(set(body["resources"][svc2_type]) - all_svc2_names, {svc2_name})
+        utils.check_val_equal(set(body["resources"][svc3_type]) - all_svc3_names, {svc3_name})
+        svc2_perm_json = body["resources"][svc2_type][svc2_name]["permissions"]  # noqa
+        svc3_perm_json = body["resources"][svc3_type][svc3_name]["permissions"]  # noqa
+        utils.check_val_equal(len(svc2_perm_json), 1)
+        utils.check_val_equal(svc2_perm_json[0], svc2_perm.json())
+        utils.check_val_equal(len(svc3_perm_json), 1)
+        utils.check_val_equal(svc3_perm_json[0], svc3_perm.json())
+
+        path = "/users/{}/resources?type={},{},{}".format(self.test_user_name, svc1_type, svc2_type, svc3_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(set(body["resources"][svc1_type]) - all_svc1_names, {svc1_name})
+        utils.check_val_equal(set(body["resources"][svc2_type]) - all_svc2_names, {svc2_name})
+        utils.check_val_equal(set(body["resources"][svc3_type]) - all_svc3_names, {svc3_name})
+        svc1_perm_json = body["resources"][svc1_type][svc1_name]["permissions"]  # noqa
+        svc2_perm_json = body["resources"][svc2_type][svc2_name]["permissions"]  # noqa
+        svc3_perm_json = body["resources"][svc3_type][svc3_name]["permissions"]  # noqa
+        utils.check_val_equal(len(svc1_perm_json), 0)
+        utils.check_val_equal(len(svc2_perm_json), 1)
+        utils.check_val_equal(svc2_perm_json[0], svc2_perm.json())
+        utils.check_val_equal(len(svc3_perm_json), 1)
+        utils.check_val_equal(svc3_perm_json[0], svc3_perm.json())
+
     def setup_GetUserServices(self):
         # type: () -> Dict[Str, Union[Str, List[Str], JSON]]
         """
@@ -3567,6 +3821,191 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             # no sub resource should be indicated, only that user has permission "somewhere in the hierarchy"
             utils.check_val_not_in("resources", svc)
             utils.check_val_not_in("children", svc)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUserServices_FilteredServiceTypes(self):
+        """
+        Validate user services returned as subset filtered by specified service-types.
+
+        Only service-types where some permissions for an underlying service exist for the user are listed.
+        Empty service-type sections are dropped, unless explicitly requested by ``type`` query parameter.
+
+        .. seealso::
+            :meth:`test_GetUserResources_FilteredServiceTypes`
+        """
+        utils.warn_version(self, "user service-type filter query", "3.16.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestService(self, override_exist=True)  # service type API
+        resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_true(bool(len(body["services"][self.test_service_type])), msg="Other services needed to test")
+
+        svc_type1 = ServiceTHREDDS.service_type
+        svc_type1_exist = body["services"][svc_type1]
+        svc_type2 = ServiceNCWMS2.service_type
+        svc_type2_exist = body["services"][svc_type2]
+
+        new_test_svc = [
+            ("test-get-user-service1", svc_type1, Permission.BROWSE),
+            ("test-get-user-service2", svc_type1, Permission.BROWSE),
+            ("test-get-user-service3", svc_type2, Permission.GET_CAPABILITIES),
+        ]
+        for svc_name, svc_type, svc_perm in new_test_svc:
+            body = utils.TestSetup.create_TestService(
+                self, override_service_name=svc_name, override_service_type=svc_type, override_exist=True
+            )
+            info = utils.TestSetup.get_ResourceInfo(self, body)
+            svc_id = info["resource_id"]
+            # set some permissions on services so they become available in listing
+            utils.TestSetup.create_TestUserResourcePermission(
+                self, override_resource_id=svc_id, override_permission=svc_perm
+            )
+        expect_svc1_names = {new_test_svc[0][0], new_test_svc[1][0]}
+        expect_svc2_names = {new_test_svc[2][0]}
+
+        # by default (no type filter), above service with permission should be returned
+        # service types that the user has not any permission on (e.g.: API) should not be present
+        path = "/users/{}/services".format(self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_not_in(self.test_service_type, body["services"])
+        utils.check_val_equal(len(body["services"][svc_type1]), 2)
+        utils.check_val_equal(len(body["services"][svc_type2]), 1)
+
+        # now test with filter, only requested type should be returned regardless if other had permissions
+        path = "/users/{}/services?type={}".format(self.test_user_name, svc_type1)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(len(body["services"]), 1, msg="Only single service type requested should be returned")
+        utils.check_val_is_in(svc_type1, body["services"])
+        svc_type1_items = body["services"][svc_type1]
+        utils.check_val_equal(set(svc_type1_items) - set(svc_type1_exist), expect_svc1_names)
+
+        # verify comma-separated list of filter types
+        path = "/users/{}/services?type={},{}".format(self.test_user_name, svc_type2, svc_type1)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(len(body["services"]), 2, msg="Only two service type requested should be returned")
+        utils.check_val_is_in(svc_type1, body["services"])
+        utils.check_val_is_in(svc_type2, body["services"])
+        utils.check_val_equal(set(body["services"][svc_type1]) - set(svc_type1_exist), expect_svc1_names)
+        utils.check_val_equal(set(body["services"][svc_type2]) - set(svc_type2_exist), expect_svc2_names)
+
+        # verify that adding explicit type in filter creates the section even when there are no service to return
+        # service type sections without permissions must be empty
+        path = "/users/{}/services?type={},{}".format(self.test_user_name, svc_type1, self.test_service_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(len(body["services"]), 2, msg="Both service types requested should be returned")
+        utils.check_val_is_in(svc_type1, body["services"])
+        utils.check_val_equal(set(body["services"][svc_type1]) - set(svc_type1_exist), expect_svc1_names)
+        utils.check_val_equal(body["services"][self.test_service_type], {})
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_GetUserServices_ServicePermissionsResolved(self):
+        """
+        Validate fix of incorrect resolved permissions on top-most resource (aka service) over multiple groups.
+
+        Multiple permissions over groups where all returned instead of being combined as specified by ``resolve`` query.
+
+        .. seealso::
+            - :meth:`test_GetUserResources_ServicePermissionsResolved`
+              (similar result, but provide more detailed nested resource tree with all corresponding permissions)
+        """
+        utils.warn_version(self, "user service resources permissions resolved fix", "3.16.0", skip=True)
+
+        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        grp1_info = utils.TestSetup.create_TestGroup(self, self.test_group_name + "-1", override_exist=True)
+        grp2_info = utils.TestSetup.create_TestGroup(self, self.test_group_name + "-2", override_exist=True)
+        grp1_name = grp1_info["group"]["group_name"]
+        grp2_name = grp2_info["group"]["group_name"]
+        user_info = utils.TestSetup.create_TestUser(self, override_group_name=anonymous, override_exist=True)
+        user_name = user_info["user"]["user_name"]
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=user_name, override_group_name=grp1_name)
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=user_name, override_group_name=grp2_name)
+
+        svc1_name = "test-service-1"
+        svc1_info = utils.TestSetup.create_TestService(self, override_service_name=svc1_name, override_exist=True)
+        svc1_id = utils.TestSetup.get_ResourceInfo(self, override_body=svc1_info)["resource_id"]
+        svc2_name = "test-service-2"
+        svc2_info = utils.TestSetup.create_TestService(self, override_service_name=svc2_name, override_exist=True)
+        svc2_id = utils.TestSetup.get_ResourceInfo(self, override_body=svc2_info)["resource_id"]
+        svc3_name = "test-service-3"
+        svc3_info = utils.TestSetup.create_TestService(self, override_service_name=svc3_name, override_exist=True)
+        svc3_id = utils.TestSetup.get_ResourceInfo(self, override_body=svc3_info)["resource_id"]
+
+        # setup test permissions
+        #                 | User  | Group1 | Group2 | Anonymous | Resolved (reason)
+        # ----------------+-------+--------+--------+-----------+-------------------
+        #   [svc1]        | r-A-R |        | r-A-R  | r-D-R     | r-A-R (user)
+        #   [svc2]        |       |        | r-A-R  | r-D-R     | r-A-R (group2)
+        #   [svc3]        |       | r-A-R  | r-D-R  |           | r-D-R (group2)
+        perm = Permission.READ
+        rAR = PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE)  # noqa
+        rDR = PermissionSet(perm, Access.DENY, Scope.RECURSIVE)   # noqa
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=user_name, override_resource_id=svc1_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=svc1_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=svc1_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=svc2_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=svc2_id, override_permission=rDR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp1_name, override_resource_id=svc3_id, override_permission=rAR
+        )
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=svc3_id, override_permission=rDR
+        )
+
+        rAR_direct = PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT)      # noqa
+        rAR_inherit = PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE, PermissionType.INHERITED)  # noqa
+        rDR_inherit = PermissionSet(perm, Access.DENY, Scope.RECURSIVE, PermissionType.INHERITED)   # noqa
+
+        # verify equal but also matching reasons to ensure resolution is not just by chance of duplicate permissions
+        def check_equal_perms(perm_resp_json, perm_test, reason_info):
+            # type: (JSON, PermissionSet, JSON) -> JSON
+            utils.check_val_equal(len(perm_resp_json["permissions"]), 1)
+            perm_resp_json = perm_resp_json["permissions"][0]
+            reason_type = "user" if perm_test.type == PermissionType.DIRECT else "group"
+            reason_name = reason_info[reason_type]["{}_name".format(reason_type)]
+            reason_id = reason_info[reason_type]["{}_id".format(reason_type)]
+            perm_test.reason = "{}:{}:{}".format(reason_type, reason_id, reason_name)
+            utils.check_val_equal(perm_resp_json, perm_test.json())
+            return perm_resp_json
+
+        resolve_query = "resolve=true"
+        svc1_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, svc1_id, query=resolve_query)
+        svc1_perm_json = check_equal_perms(svc1_perm_body, rAR_direct, user_info)
+        svc1_tree_body = utils.TestSetup.check_GetUserResources(self, user_name, query=resolve_query)
+        svc1_tree_body = svc1_tree_body["resources"][self.test_service_type][svc1_name]  # noqa  # type: JSON
+        svc1_tree_json = check_equal_perms(svc1_tree_body, rAR_direct, user_info)  # noqa
+        utils.check_val_equal(svc1_perm_json, svc1_tree_json)
+
+        svc2_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, svc2_id, query=resolve_query)
+        svc2_perm_json = check_equal_perms(svc2_perm_body, rAR_inherit, grp2_info)
+        svc2_tree_body = utils.TestSetup.check_GetUserResources(self, user_name, query=resolve_query)
+        svc2_tree_body = svc2_tree_body["resources"][self.test_service_type][svc2_name]  # noqa  # type: JSON
+        svc2_tree_json = check_equal_perms(svc2_tree_body, rAR_inherit, grp2_info)  # noqa
+        utils.check_val_equal(svc2_perm_json, svc2_tree_json)
+
+        svc3_perm_body = utils.TestSetup.check_GetUserResourcePermissions(self, user_name, svc3_id, query=resolve_query)
+        svc3_perm_json = check_equal_perms(svc3_perm_body, rDR_inherit, grp2_info)
+        svc3_tree_body = utils.TestSetup.check_GetUserResources(self, user_name, query=resolve_query)
+        svc3_tree_body = svc3_tree_body["resources"][self.test_service_type][svc3_name]  # noqa  # type: JSON
+        svc3_tree_json = check_equal_perms(svc3_tree_body, rDR_inherit, grp2_info)  # noqa
+        utils.check_val_equal(svc3_perm_json, svc3_tree_json)
 
     @runner.MAGPIE_TEST_USERS
     def test_GetUserServiceResources_format(self):
@@ -5888,6 +6327,87 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestUser(self)
         path = "/ui/users/{}/default".format(self.test_user_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_EditUser_DisplayedInheritedPermissionPriority(self):
+        """
+        Evaluate displayed permission when inherited option is selected to make sure highest priority are shown.
+
+        .. seealso::
+            - Issue `#463 <https://github.com/Ouranosinc/Magpie/issues/463>`_
+        """
+        # setup test data
+        svc_id, res1_id, res2_id = utils.TestSetup.create_TestServiceResourceTree(
+            self, override_resource_names=["res1", "res2"], resource_depth=2
+        )
+        res3_info = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id, override_resource_name="res3")
+        res3_id = res3_info["resource"]["resource_id"]
+        res4_info = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id, override_resource_name="res4")
+        res4_id = res4_info["resource"]["resource_id"]
+        res5_info = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id, override_resource_name="res5")
+        res5_id = res5_info["resource"]["resource_id"]
+        anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
+        grp1_info = utils.TestSetup.create_TestGroup(self, self.test_group_name + "-1", override_exist=True)
+        grp2_info = utils.TestSetup.create_TestGroup(self, self.test_group_name + "-2", override_exist=True)
+        grp1_name = grp1_info["group"]["group_name"]
+        grp2_name = grp2_info["group"]["group_name"]
+        usr_info = utils.TestSetup.create_TestUser(self, override_group_name=anonymous)
+        usr_name = usr_info["user"]["user_name"]
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=usr_name, override_group_name=grp1_name)
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=usr_name, override_group_name=grp2_name)
+
+        # setup test permissions
+        #                 | User  | Group1 | Group2 | Anonymous | Inherited Priority [from] <priority reason>
+        # ----------------+-------+--------+--------+-----------+------------------------------------------------------
+        #   [svc]         |       |        | r-A-R  | r-D-R     | r-A-R [Group2] any group > anonymous (even if deny)
+        #      [res1]     | r-A-R | r-D-R  |        | r-A-R     | r-A-R [User]   user > any group (even if deny)
+        #         [res2]  |       | r-D-R  | r-A-R  |           | r-D-R [Group2] deny > allow for equal priority groups
+        #         [res3]  | r-D-M |        |        | r-A-R     | r-D-M [User]   user > any group (match not important)
+        #         [res4]  |       |        |        | r-A-R     | r-A-R [Anonym] only available one
+        #         [res5]  | r-A-R |        |        | r-D-M     | r-A-R [User] user > any group (even if deny / match)
+        perm = Permission.READ
+        rAR = PermissionSet(perm, Access.ALLOW, Scope.RECURSIVE)  # noqa
+        rDR = PermissionSet(perm, Access.DENY, Scope.RECURSIVE)   # noqa
+        rDM = PermissionSet(perm, Access.DENY, Scope.MATCH)       # noqa
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=svc_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=svc_id, override_permission=rDR)
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=usr_name, override_resource_id=res1_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp1_name, override_resource_id=res1_id, override_permission=rDR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res1_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp1_name, override_resource_id=res2_id, override_permission=rDR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=grp2_name, override_resource_id=res2_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=usr_name, override_resource_id=res3_id, override_permission=rDM)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res3_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res4_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_user_name=usr_name, override_resource_id=res5_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_group_name=anonymous, override_resource_id=res5_id, override_permission=rDM)
+
+        # test with display option activated for inherited permissions
+        path = "/ui/users/{}/{}".format(usr_name, self.test_service_type)
+        data = {"inherit_groups_permissions": True}
+        resp = utils.TestSetup.check_FormSubmit(self, form_match="toggle_visible_perms", form_data=data, path=path)
+        # find displayed resources/permissions in hierarchy
+        hierarchy = {svc_id: {res1_id: {res2_id: {}, res3_id: {}, res4_id: {}, res5_id: {}}}}
+        res_perms = utils.find_html_resource_tree_permissions(resp, perm, hierarchy)
+
+        utils.check_val_equal(res_perms[svc_id], rAR)
+        utils.check_val_equal(res_perms[res1_id], rAR)
+        utils.check_val_equal(res_perms[res2_id], rDR)
+        utils.check_val_equal(res_perms[res3_id], rDM)
+        utils.check_val_equal(res_perms[res4_id], rAR)
+        utils.check_val_equal(res_perms[res5_id], rAR)
 
     @runner.MAGPIE_TEST_STATUS
     def test_EditUserService_PageStatus(self):

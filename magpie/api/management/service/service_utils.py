@@ -25,7 +25,7 @@ from magpie.utils import get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Iterable, Optional
+    from typing import Iterable, List, Optional
 
     from pyramid.httpexceptions import HTTPException
     from sqlalchemy.orm.session import Session
@@ -120,3 +120,23 @@ def add_service_getcapabilities_perms(service, db_session, group_name=None):
                                                            Permission.GET_CAPABILITIES.value, db_session)
         if perm is None:  # not set, create it
             create_group_resource_permission_response(group, service, Permission.GET_CAPABILITIES.value, db_session)
+
+
+def filter_service_types(service_query, default_services=False):
+    # type: (Optional[Str], bool) -> Optional[List[Str]]
+    """
+    Obtains all valid case-insensitive service-type names from a filtered comma-separated list.
+
+    :param service_query: query string or service type(s) comma-separated to parse.
+    :param default_services: specify if the complete list of known service-types must be returned if no query to parse.
+    :returns: parsed service-types if query was provided, or None by default, or all known service-types if requested.
+    """
+    if service_query:
+        service_types = [
+            svc_type.lower() for svc_type in service_query.split(",")
+            if svc_type.strip() and svc_type.lower() in SERVICE_TYPE_DICT
+        ]
+        return service_types
+    if default_services:
+        return list(SERVICE_TYPE_DICT)
+    return None
