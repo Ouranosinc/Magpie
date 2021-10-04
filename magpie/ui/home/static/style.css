@@ -12,6 +12,40 @@ body {
     font-family: "Open Sans", sans-serif;
 }
 
+table,
+textarea,
+input[type="text"],
+.panel-line {
+    font-family: arial, sans-serif;
+}
+
+textarea,
+input[type="text"] {
+    font-size: 13.3333px;
+}
+
+textarea {
+    resize: both;
+    min-width: 21em;
+    min-height: 5em;
+}
+
+table {
+    border-collapse: collapse;
+    width: auto;
+}
+
+td,
+th {
+    border: 1px solid #DDDDDD;
+    padding: 0.5em;
+}
+
+table thead {
+    color: white;
+    font-weight: bold;
+}
+
 .content {
     margin: 5em;
 }
@@ -186,23 +220,6 @@ input[type="submit"] {
     height: 1.5em;
 }
 
-table {
-    font-family: arial, sans-serif;
-    border-collapse: collapse;
-    width: auto;
-}
-
-td,
-th {
-    border: 1px solid #DDDDDD;
-    padding: 0.5em;
-}
-
-table thead {
-    color: white;
-    font-weight: bold;
-}
-
 .checkbox-align label {
     display: block;
 
@@ -220,14 +237,6 @@ table thead {
 
 .checkbox-align label span {
     vertical-align: middle;
-}
-
-textarea {
-    resize: both;
-    font-size: 13.3333px;
-    font-family: inherit;
-    min-width: 21em;
-    min-height: 5em;
 }
 
 /* --- Panel Information Box --- */
@@ -287,7 +296,6 @@ textarea {
 
 .panel-line {
     margin: 0.25em 0.5em;
-    font-family: arial, sans-serif;  /* same as table to ensure they match when table is not actually used */
 }
 
 table.panel-line {
