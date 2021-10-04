@@ -77,11 +77,11 @@ Installation for Twitcher
 -------------------------
 
 If you are planning on using `Magpie` as an adapter to `Twitcher`_ :term:`Proxy`, please employ the |twitcher_0_5_x|_.
-Earlier version (e.g.: ``0.6.0``) broke compatibility to load the :class:`magpie.adapter.MagpieAdapter`` class to make
+Earlier version (e.g.: ``0.6.0``) broke compatibility to load the :class:`magpie.adapter.MagpieAdapter` class to make
 them work together.
 
 .. seealso::
     Refer to :ref:`authz_protected_resources` to learn more about `Twitcher`_ and its interaction with `Magpie`.
 
-.. |twitcher_0_5_x| repalce:: Twitcher 0.5.x branch
+.. |twitcher_0_5_x| replace:: Twitcher 0.5.x branch
 .. _twitcher_0_5_x: https://github.com/bird-house/twitcher/tree/0.5.x
