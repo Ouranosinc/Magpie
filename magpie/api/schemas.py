@@ -480,7 +480,7 @@ QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), name="inherited", default=False, missing=colander.drop,
     description="Include the user's groups memberships inheritance to retrieve all possible permissions. "
                 "(Note: Duplicate, redundant and even conflicting permissions can be obtained when considering "
-                "multiple applied permissions individually applied fro different group memberships or for the user "
+                "multiple applied permissions individually applied from different group memberships or for the user "
                 "itself. See 'resolve' query parameter to reduce the set into a single highest priority permission).")
 QueryResolvedUserGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), name="resolve", default=False, missing=colander.drop,
