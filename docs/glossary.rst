@@ -28,15 +28,23 @@ Glossary
         Formed of multiple :term:`ACE`.
 
     Allowed Permissions
-        Set of applicable :term:`Permission` values onto an element. See :ref:`Allowed Permissions` section.
+        Set of applicable :term:`Permission` values onto an element.
+
+        .. seealso::
+            :ref:`Allowed Permissions <allowed-permissions>` section for details.
 
     Applied Permissions
         An active :term:`Permission` for a given :term:`User` or :term:`Group` depending on context.
-        See also :ref:`Applied Permissions` details.
+
+        .. seealso::
+            :ref:`Applied Permissions <applied-permissions>` section for details.
 
     Authentication
         Process of identifying one-self using credentials in order to login into `Magpie`, or retrieving connected
-        session :term:`User` during an HTTP request using supported methods. See also :ref:`auth_methods`.
+        session :term:`User` during an HTTP request using supported methods.
+
+        .. seealso::
+            :ref:`auth_methods` section for details.
 
     Authorization
         Process of allowing or denying access to a :term:`Resource` or :term:`Service` according to :term:`Logged User`
@@ -47,8 +55,10 @@ Glossary
     Context User
         Specific :term:`User` that is being targeted by a request from specified value for the ``{user_name}`` request
         path variable. The contextual :term:`User` of the request *could* correspond to the :term:`Logged User` if the
-        reference resolves to itself, but this is not necessarily the case. See further details and examples provided
-        in section :ref:`Route Access`.
+        reference resolves to itself, but this is not necessarily the case.
+
+        .. seealso::
+            :ref:`Route Access` for further details and examples provided.
 
     Cookies
         Set of :term:`Authentication` identifiers primarily employed by `Magpie` HTTP requests to determine the
@@ -56,7 +66,10 @@ Glossary
 
     Direct Permissions
         Describes a :term:`Permission` that is given to a :term:`User` explicitly, rather than one of its :term:`Group`
-        memberships. See also :ref:`Direct Permissions` details.
+        memberships.
+
+        .. seealso::
+            :ref:`Direct Permissions <direct_permissions>` section for details.
 
     Discoverable Group
         :term:`Group` that has property ``discoverable=True``, making it publicly viewable to any-level user.
@@ -64,12 +77,17 @@ Glossary
 
     Effective Permissions
         A :term:`Permission` that has been completely resolved according to all applicable contexts, that indicates
-        the final granted or denied result. See also :ref:`Effective Permissions` section.
+        the final granted or denied result.
+
+        .. seealso::
+            :ref:`Effective Permissions <effective_permissions>` section for details.
 
     External Providers
         Set of all known user-identity :term:`Provider` defined externally to `Magpie`. Each of these :term:`Provider`
         require specific connection methodologies, as configured in :mod:`magpie.security`.
-        See also :ref:`Authentication Providers` section for details.
+
+        .. seealso::
+            :ref:`authn_providers` section for details.
 
     Group
         Entity on which :term:`Permission` over a :term:`Service` or :term:`Resource` can be applied. Any :term:`User`
@@ -80,9 +98,14 @@ Glossary
         Describes a :term:`Permission` that originates directly and only from a :term:`Service`.
         This is referenced in only a few use-cases, notably for :ref:`Finding User Permissions`.
 
+        .. seealso::
+            :ref:`Immediate Permissions <immediate_permissions>` section for details.
+
     Inherited Permissions
         Describes a :term:`Permission` that includes both :term:`User` and :term:`Group` contexts simultaneously.
-        See :ref:`Inherited Permissions` details.
+
+        .. seealso::
+            :ref:`Inherited Permissions <inherited_permissions>` section for details.
 
     Internal Providers
         Represents all the :term:`Provider` that are known for *local* (instead of *external*)
@@ -110,17 +133,19 @@ Glossary
 
     Pending User
         Account that is pending for validation or approval following self-registration when the application is
-        configured to provide that functionality (see :envvar:`MAGPIE_USER_REGISTRATION_ENABLED`).
-        See section :ref:`user_registration` for further details about the self-registration procedure.
+        configured to provide that functionality.
+
+        .. seealso::
+            :ref:`user_registration` section for further details about the self-registration procedure.
 
     Permission
         Element that defines which rules are applicable for a given combination of :term:`User` and/or :term:`Group`
         against one or many :term:`Service` and/or :term:`Resource`, depending of the many contexts for which they
         can apply. Applicable values are generally defined by enum :py:class:`magpie.permissions.Permission`.
 
-        .. note::
-            See :ref:`permissions` chapter for more exhaustive details, including contextual comparisons for all other
-            *Permission*-related terms presented here.
+        .. seealso::
+            :ref:`permissions` chapter provides more exhaustive details,
+            including contextual comparisons for all other *Permission*-related terms presented here.
 
     Policy Decision Point
     PDP
@@ -139,7 +164,10 @@ Glossary
 
     Provider
         Corresponds to the reference user-identity to employ in order to attempt :term:`Authentication`.
-        See also :term:`Internal Providers`, :term:`External Providers` and section :ref:`Authentication Providers`.
+        Identities are regrouped either as :term:`Internal Providers` or :term:`External Providers`.
+
+        .. seealso::
+            ref:`authn_providers` section for details.
 
     Proxy
         Sibling service (typically `Twitcher`_) that employs `Magpie` as access management of :term:`User`,
@@ -148,8 +176,10 @@ Glossary
 
     Public
         Refers to a :term:`Permission` applied on a :term:`Service` or :term:`Resource` to special elements in order
-        to make them available to anyone including even unauthenticated sessions. See also :ref:`Public Access` section
-        for implementation details to achieve this result.
+        to make them available to anyone including even unauthenticated sessions.
+
+        .. seealso::
+            :ref:`Public Access` section for implementation details to achieve this result.
 
     Request User
         Active HTTP request session :term:`User` that can be retrieved by calling ``request.user`` with resolution of
@@ -157,7 +187,10 @@ Glossary
         i.e.: :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`). This is not the same as the :term:`Context User`
         extracted from ``{user_name}`` path variable, except for the special case covered by :term:`Logged User`'s
         definition. The request :term:`User` could send request that work on another :term:`Context User` than itself
-        if sufficient :term:`Access Permission` is granted. See also :ref:`Route Access` for further details.
+        if sufficient :term:`Access Permission` is granted.
+
+        .. seealso::
+            :ref:`Route Access` for further details.
 
     Resource
         Entity on which :term:`User` and :term:`Group` can be associated to applicable :term:`Permission` respectively
@@ -180,4 +213,6 @@ Glossary
 
     Webhook
         Subscribable events handlers to send HTTP(S) requests following the occurrence of a given `Magpie` action.
-        See :ref:`config_webhook` and :ref:`config_file` sections for details.
+
+        .. seealso::
+            :ref:`config_webhook` and :ref:`config_file` sections for details.

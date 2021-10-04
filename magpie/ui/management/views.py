@@ -94,7 +94,7 @@ class ManagementViews(AdminRequests, BaseViews):
         .. seealso::
             :meth:`magpie.ui.login.views.LoginViews.register_user`
         """
-        groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_ANONYMOUS_GROUP", self.request))
+        groups = self.get_all_groups(first_default_group=self.MAGPIE_ANONYMOUS_GROUP)
         return_data = {"user_groups": groups, "is_registration": False}
         return_data = self.create_user_default_template_data(return_data)
 
@@ -245,9 +245,8 @@ class ManagementViews(AdminRequests, BaseViews):
 
             # edits to groups checkboxes
             if is_edit_group_membership:
-                anonymous_group = get_constant("MAGPIE_ANONYMOUS_GROUP", self.request)
                 selected_groups = self.request.POST.getall("member")
-                removed_groups = list(set(own_groups) - set(selected_groups) - {anonymous_group})
+                removed_groups = list(set(own_groups) - set(selected_groups) - {self.MAGPIE_ANONYMOUS_GROUP})
                 new_groups = list(set(selected_groups) - set(own_groups))
                 for group in removed_groups:
                     path = schemas.UserGroupAPI.path.format(user_name=user_name, group_name=group)

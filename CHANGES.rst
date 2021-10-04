@@ -38,6 +38,15 @@ Bug Fixes
   list `Resolved Permissions` only for the top-most ``Resource`` in the hierarchy (i.e.: ``Service``) due to different
   resolution methodologies applied between both types. This does **NOT** affect `Effective Resolution` which has its
   own algorithm for access resolution to ``Resources``.
+* Add links to `Magpie's ReadTheDocs Terms <https://pavics-magpie.readthedocs.io/en/latest/glossary.html>`_ for
+  all corresponding ``Permissions`` definitions rendered in information note within the UI ``User`` edit page.
+  Notes indicate the resolution priority and methodology from the documentation to remind the administrator about what
+  is being displayed according to applied options.
+* Replace all instances to any variation of `Permissions` mention
+  within `Magpie's ReadTheDocs Permissions <https://pavics-magpie.readthedocs.io/en/latest/permissions.html>`_ page
+  from a ``term`` glossary reference to corresponding detailed section reference in `Types of Permissions` chapter
+  to avoid back and forth redirects between the `Permissions` page and their generic term glossary.
+* Fix incorrectly generated references from `Permissions` terms in glossary to detailed descriptions in `ReadTheDocs`.
 
 `3.15.1 <https://github.com/Ouranosinc/Magpie/tree/3.15.1>`_ (2021-09-29)
 ------------------------------------------------------------------------------------

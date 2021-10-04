@@ -324,7 +324,7 @@ table.panel-line td {
 }
 
 .panel-form-lock {
-    margin-top: 0.1;
+    margin-top: 0.1em;
 }
 
 .panel-line input[type="button"],
@@ -664,6 +664,12 @@ table.panel-line td {
     display: inline-flex;
 }
 
+.perm-info-text {
+    font-style: italic;
+    font-weight: bold;
+    font-variant-caps: small-caps;
+}
+
 .success {
     color: #2C8F30;
 }
@@ -703,6 +709,10 @@ input[type="button"].button-no-click:hover {
     border-style: solid;
     color: #377739;
     cursor: default;
+}
+
+input[type="button"].permission-effective-example {
+    margin: 0;  /* reset for within text paragraph */
 }
 
 /* --- View users & groups pages  --- */
