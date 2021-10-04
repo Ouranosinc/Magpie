@@ -67,18 +67,24 @@ def get_services_runner(request):
     and query parameters.
     """
     service_type_filter = request.matchdict.get("service_type")  # no check because None/empty is for 'all services'
-    services_as_list = asbool(ar.get_query_param(request, "flatten", False))
+    services_as_list = asbool(ar.get_query_param(request, ["flatten", "list"], False))
+    known_service_types = list(SERVICE_TYPE_DICT)
 
+    # using '/services?type={}' query (allow many, no error if unknown)
     if not service_type_filter:
-        service_types = SERVICE_TYPE_DICT.keys()
+        service_types = ar.get_query_param(request, ["type", "types"], default="")
+        service_types = su.filter_service_types(service_types, default_services=True)
+    # using '/services/types/{}' path (error if unknown)
     else:
-        ax.verify_param(service_type_filter, param_compare=SERVICE_TYPE_DICT.keys(), is_in=True,
+        ax.verify_param(service_type_filter, param_compare=known_service_types, is_in=True,
                         http_error=HTTPBadRequest, msg_on_fail=s.Services_GET_BadRequestResponseSchema.description,
                         content={"service_type": str(service_type_filter)}, content_type=CONTENT_TYPE_JSON)
         service_types = [service_type_filter]
 
     svc_content = [] if services_as_list else {}  # type: Union[List[JSON], JSON]
     for service_type in service_types:
+        if service_type not in known_service_types:
+            continue
         services = su.get_services_by_type(service_type, db_session=request.db)
         if not services_as_list:
             svc_content[service_type] = {}
@@ -88,6 +94,12 @@ def get_services_runner(request):
                 svc_content.append(svc_fmt)  # pylint: disable=E1101
             else:
                 svc_content[service_type][service.resource_name] = svc_fmt
+
+    # sort result
+    if services_as_list:
+        svc_content = list(sorted(svc_content, key=lambda svc: svc["service_name"]))
+    else:
+        svc_content = {svc_type: dict(sorted(svc_items.items())) for svc_type, svc_items in sorted(svc_content.items())}
 
     return ax.valid_http(http_success=HTTPOk, content={"services": svc_content},
                          detail=s.Services_GET_OkResponseSchema.description)

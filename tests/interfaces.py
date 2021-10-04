@@ -3379,6 +3379,119 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(svc3_perm_json, svc3_tree_json)
         utils.check_val_equal(res3_perm_json, res3_tree_json)
 
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_GetUserResources_FilteredServiceTypes(self):
+        """
+        Validate only service types the user has permissions on underlying resources are listed.
+
+        Contrary to ``GET /users/{}/services`` endpoint, where only service-types where some permissions exist are
+        listed, ``GET /users/{}/resources`` always return all available services for all types with limited public
+        information by default.
+
+        When requesting ``type``, only requested types will be listed instead of all possible ones, but all existing
+        resources (services) for each requested type will all be listed, since applied permissions are returned.
+
+        .. seealso::
+            :meth:`test_GetUserServices_FilteredServiceTypes`
+        """
+        utils.warn_version(self, "user service-type filter query", "3.16.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self)
+        user_body = utils.TestSetup.create_TestUser(self, override_exist=True)
+        user_info = utils.TestSetup.get_UserInfo(self, user_body)
+        svc1_type = ServiceAPI.service_type
+        svc1_name = "test-service-1"
+        svc2_type = ServiceTHREDDS.service_type
+        svc2_name = "test-service-2"
+        svc3_type = ServiceNCWMS2.service_type
+        svc3_name = "test-service-3"
+
+        path = "/services/types/{}".format(svc1_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        all_svc1_names = set(body["services"][svc1_type])
+        path = "/services/types/{}".format(svc2_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        all_svc2_names = set(body["services"][svc2_type])
+        path = "/services/types/{}".format(svc3_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        all_svc3_names = set(body["services"][svc3_type])
+
+        utils.TestSetup.create_TestService(
+            self, override_exist=True, override_service_name=svc1_name, override_service_type=svc1_type
+        )
+        body = utils.TestSetup.create_TestService(
+            self, override_exist=True, override_service_name=svc2_name, override_service_type=svc2_type
+        )
+        svc2_id = utils.TestSetup.get_ResourceInfo(self, body)["resource_id"]
+        svc2_perm_name = Permission.BROWSE
+        body = utils.TestSetup.create_TestService(
+            self, override_exist=True, override_service_name=svc3_name, override_service_type=svc3_type
+        )
+        svc3_id = utils.TestSetup.get_ResourceInfo(self, body)["resource_id"]
+        svc3_perm_name = Permission.GET_CAPABILITIES
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_resource_id=svc2_id, override_permission=svc2_perm_name
+        )
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, override_resource_id=svc3_id, override_permission=svc3_perm_name
+        )
+
+        reason = "user:{user_id}:{user_name}".format(**user_info)
+        svc2_perm = PermissionSet(svc2_perm_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT, reason=reason)
+
+        svc3_perm = PermissionSet(svc3_perm_name, Access.ALLOW, Scope.RECURSIVE, PermissionType.DIRECT, reason=reason)
+
+        path = "/users/{}/resources?type={}".format(self.test_user_name, svc1_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(set(body["resources"][svc1_type]) - all_svc1_names, {svc1_name})
+        utils.check_val_not_in(svc2_type, body["resources"], msg="Service type not added since not requested.")
+        utils.check_val_not_in(svc3_type, body["resources"], msg="Service type not added since not requested.")
+        utils.check_val_equal(body["resources"][svc1_type][svc1_name]["permissions"], [])  # noqa
+
+        path = "/users/{}/resources?type={}".format(self.test_user_name, svc2_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_not_in(svc1_type, body["resources"], msg="Service type not added since not requested.")
+        utils.check_val_equal(set(body["resources"][svc2_type]) - all_svc2_names, {svc2_name})
+        utils.check_val_not_in(svc3_type, body["resources"], msg="Service type not added since not requested.")
+        svc2_perm_json = body["resources"][svc2_type][svc2_name]["permissions"]  # noqa
+        utils.check_val_equal(len(svc2_perm_json), 1)
+        utils.check_val_equal(svc2_perm_json[0], svc2_perm.json())
+
+        path = "/users/{}/resources?type={},{}".format(self.test_user_name, svc2_type, svc3_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_not_in(svc1_type, body["resources"], msg="Service type not added since not requested.")
+        utils.check_val_equal(set(body["resources"][svc2_type]) - all_svc2_names, {svc2_name})
+        utils.check_val_equal(set(body["resources"][svc3_type]) - all_svc3_names, {svc3_name})
+        svc2_perm_json = body["resources"][svc2_type][svc2_name]["permissions"]  # noqa
+        svc3_perm_json = body["resources"][svc3_type][svc3_name]["permissions"]  # noqa
+        utils.check_val_equal(len(svc2_perm_json), 1)
+        utils.check_val_equal(svc2_perm_json[0], svc2_perm.json())
+        utils.check_val_equal(len(svc3_perm_json), 1)
+        utils.check_val_equal(svc3_perm_json[0], svc3_perm.json())
+
+        path = "/users/{}/resources?type={},{},{}".format(self.test_user_name, svc1_type, svc2_type, svc3_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(set(body["resources"][svc1_type]) - all_svc1_names, {svc1_name})
+        utils.check_val_equal(set(body["resources"][svc2_type]) - all_svc2_names, {svc2_name})
+        utils.check_val_equal(set(body["resources"][svc3_type]) - all_svc3_names, {svc3_name})
+        svc1_perm_json = body["resources"][svc1_type][svc1_name]["permissions"]  # noqa
+        svc2_perm_json = body["resources"][svc2_type][svc2_name]["permissions"]  # noqa
+        svc3_perm_json = body["resources"][svc3_type][svc3_name]["permissions"]  # noqa
+        utils.check_val_equal(len(svc1_perm_json), 0)
+        utils.check_val_equal(len(svc2_perm_json), 1)
+        utils.check_val_equal(svc2_perm_json[0], svc2_perm.json())
+        utils.check_val_equal(len(svc3_perm_json), 1)
+        utils.check_val_equal(svc3_perm_json[0], svc3_perm.json())
+
     def setup_GetUserServices(self):
         # type: () -> Dict[Str, Union[Str, List[Str], JSON]]
         """
@@ -3713,9 +3826,18 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     def test_GetUserServices_FilteredServiceTypes(self):
         """
         Validate user services returned as subset filtered by specified service-types.
+
+        Only service-types where some permissions for an underlying service exist for the user are listed.
+        Empty service-type sections are dropped, unless explicitly requested by ``type`` query parameter.
+
+        .. seealso::
+            :meth:`test_GetUserResources_FilteredServiceTypes`
         """
         utils.warn_version(self, "user service-type filter query", "3.16.0", skip=True)
-        self.setup_GetUserServices()  # all services are API
+
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestService(self, override_exist=True)  # service type API
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_true(bool(len(body["services"][self.test_service_type])), msg="Other services needed to test")
@@ -3726,34 +3848,60 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         svc_type2_exist = body["services"][svc_type2]
 
         new_test_svc = [
-            ("test-get-user-service1", svc_type1),
-            ("test-get-user-service2", svc_type1),
-            ("test-get-user-service3", svc_type2),
+            ("test-get-user-service1", svc_type1, Permission.BROWSE),
+            ("test-get-user-service2", svc_type1, Permission.BROWSE),
+            ("test-get-user-service3", svc_type2, Permission.GET_CAPABILITIES),
         ]
-        for svc_name, svc_type in new_test_svc:
-            utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+        for svc_name, svc_type, svc_perm in new_test_svc:
+            body = utils.TestSetup.create_TestService(
+                self, override_service_name=svc_name, override_service_type=svc_type, override_exist=True
+            )
+            info = utils.TestSetup.get_ResourceInfo(self, body)
+            svc_id = info["resource_id"]
+            # set some permissions on services so they become available in listing
+            utils.TestSetup.create_TestUserResourcePermission(
+                self, override_resource_id=svc_id, override_permission=svc_perm
+            )
+        expect_svc1_names = {new_test_svc[0][0], new_test_svc[1][0]}
+        expect_svc2_names = {new_test_svc[2][0]}
 
+        # by default (no type filter), above service with permission should be returned
+        # service types that the user has not any permission on (e.g.: API) should not be present
+        path = "/users/{}/services".format(self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_not_in(self.test_service_type, body["services"])
+        utils.check_val_equal(len(body["services"][svc_type1]), 2)
+        utils.check_val_equal(len(body["services"][svc_type2]), 1)
+
+        # now test with filter, only requested type should be returned regardless if other had permissions
         path = "/users/{}/services?type={}".format(self.test_user_name, svc_type1)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_is_in("services", body)
-        utils.check_val_type(body["services"], dict)
         utils.check_val_equal(len(body["services"]), 1, msg="Only single service type requested should be returned")
         utils.check_val_is_in(svc_type1, body["services"])
         svc_type1_items = body["services"][svc_type1]
-        utils.check_val_equal(set(svc_type1_items) - set(svc_type1_exist), {new_test_svc[0][0], new_test_svc[1][0]})
+        utils.check_val_equal(set(svc_type1_items) - set(svc_type1_exist), expect_svc1_names)
 
+        # verify comma-separated list of filter types
         path = "/users/{}/services?type={},{}".format(self.test_user_name, svc_type2, svc_type1)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_is_in("services", body)
-        utils.check_val_type(body["services"], dict)
         utils.check_val_equal(len(body["services"]), 2, msg="Only two service type requested should be returned")
         utils.check_val_is_in(svc_type1, body["services"])
-        svc_type1_items = body["services"][svc_type1]
-        svc_type2_items = body["services"][svc_type1]
-        utils.check_val_equal(set(svc_type1_items) - set(svc_type1_exist), {new_test_svc[0][0], new_test_svc[1][0]})
-        utils.check_val_equal(set(svc_type2_items) - set(svc_type2_exist), {new_test_svc[2][0]})
+        utils.check_val_is_in(svc_type2, body["services"])
+        utils.check_val_equal(set(body["services"][svc_type1]) - set(svc_type1_exist), expect_svc1_names)
+        utils.check_val_equal(set(body["services"][svc_type2]) - set(svc_type2_exist), expect_svc2_names)
+
+        # verify that adding explicit type in filter creates the section even when there are no service to return
+        # service type sections without permissions must be empty
+        path = "/users/{}/services?type={},{}".format(self.test_user_name, svc_type1, self.test_service_type)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_equal(len(body["services"]), 2, msg="Both service types requested should be returned")
+        utils.check_val_is_in(svc_type1, body["services"])
+        utils.check_val_equal(set(body["services"][svc_type1]) - set(svc_type1_exist), expect_svc1_names)
+        utils.check_val_equal(body["services"][self.test_service_type], {})
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_SERVICES

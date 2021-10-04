@@ -1333,7 +1333,13 @@ class Service_CheckConfig_UnprocessableEntityResponseSchema(BaseResponseSchemaAP
     body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
 
 
-Services_GET_RequestSchema = ServiceTypes_GET_RequestSchema
+class ServicesQuerySchema(QueryRequestSchemaAPI):
+    flatten = QueryFlattenServices
+    svc_type = QueryFilterServiceType
+
+
+class Services_GET_RequestSchema(BaseRequestSchemaAPI):
+    querystring = ServicesQuerySchema()
 
 
 class Service_GET_RequestSchema(BaseRequestSchemaAPI):

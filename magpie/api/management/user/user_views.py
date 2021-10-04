@@ -183,7 +183,7 @@ def get_user_resources_view(request):
     resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
     filtered_perms = asbool(ar.get_query_param(request, ["filter", "filtered"]))
     service_types = ar.get_query_param(request, ["type", "types"], default="")
-    service_types = su.filter_service_types(service_types)
+    service_types = su.filter_service_types(service_types, default_services=True)
     user = ar.get_user_matchdict_checked_or_logged(request)
     db = request.db
 
@@ -339,9 +339,9 @@ def get_user_services_view(request):
     cascade_resources = asbool(ar.get_query_param(request, "cascade"))
     inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
     resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
-    format_as_list = asbool(ar.get_query_param(request, "flatten"))
+    format_as_list = asbool(ar.get_query_param(request, ["flatten", "list"]))
     service_types = ar.get_query_param(request, ["type", "types"], default="")
-    service_types = su.filter_service_types(service_types)
+    service_types = su.filter_service_types(service_types)  # don't use default service types to populate response
 
     svc_json = uu.get_user_services(user, request=request,
                                     cascade_resources=cascade_resources,

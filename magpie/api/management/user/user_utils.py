@@ -510,7 +510,9 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
                                                         resolve_groups_permissions=resolve_groups_permissions)
     perm_type = PermissionType.INHERITED if inherit_groups_permissions else PermissionType.DIRECT
     services = {}
+    force_service_types = True
     if service_types is None:
+        force_service_types = False
         service_types = list(SERVICE_TYPE_DICT)
     for resource_id, perms in res_perm_dict.items():
         resource = ResourceService.by_resource_id(resource_id=resource_id, db_session=db_session)
@@ -537,6 +539,12 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
             svc_json = format_service(svc.service, perms, perm_type, show_private_url=False)
             services[svc_type][svc_name] = svc_json
 
+    # explicitly requested service types will have empty sections if none apply (to make it explicit there is nothing)
+    if force_service_types:
+        for svc_type in service_types:
+            services.setdefault(svc_type, {})
+
+    services = {svc_type: dict(sorted(svc_items.items())) for svc_type, svc_items in sorted(services.items())}
     if not format_as_list:
         return services
 
