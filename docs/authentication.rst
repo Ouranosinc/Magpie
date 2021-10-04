@@ -249,10 +249,12 @@ When a :term:`Logged User` has sufficient :term:`Permission`, it will be allowed
 operate onto `Magpie` API paths. The specific requirements for each case are extensively presented in section
 :ref:`perm_route_access`.
 
+.. _authz_protected_resources:
+
 Access to Protected Resources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When sending requests to the :term:`Policy Enforcement Point` (e.g.: `Twitcher`_ :term:`Proxy`),
+When sending requests to the :term:`Policy Enforcement Point` (PEP) (e.g.: `Twitcher`_ :term:`Proxy`),
 appropriate ``Cookie`` headers must be defined for it to identify the :term:`Logged User` and resolve its
 :term:`Effective Permissions` accordingly. Not providing those tokens will default to using
 :envvar:`MAGPIE_ANONYMOUS_USER`, which will result into either one of HTTP ``Unauthorized [401]`` or
