@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.16.0 <https://github.com/Ouranosinc/Magpie/tree/3.16.0>`_ (2021-10-05)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``type`` query parameter to multiple requests returning ``Services`` or ``Resources`` regrouped
