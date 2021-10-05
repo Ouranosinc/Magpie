@@ -22,7 +22,8 @@ To install as an external package, you can clone and install from the directory 
     repository has been cloned, or select another method below.
 
 Alternatively, the package can be installed directly from the repository with the following command.
-This is recommended if you only want to employ `Magpie` (as CLI or WebApp) but not develop with it directly.
+This is recommended if you only want to employ `Magpie` (as :ref:`usage_cli` or :ref:`usage_webapp`) but not develop
+with it directly.
 
 .. code-block:: console
 
@@ -77,8 +78,15 @@ Installation for Twitcher
 -------------------------
 
 If you are planning on using `Magpie` as an adapter to `Twitcher`_ :term:`Proxy`, please employ the |twitcher_0_5_x|_.
-Earlier version (e.g.: ``0.6.0``) broke compatibility to load the :class:`magpie.adapter.MagpieAdapter` class to make
-them work together.
+More recent versions (e.g.: ``0.6.0``) broke compatibility to load the :class:`magpie.adapter.MagpieAdapter` class to
+make them work together.
+
+.. note::
+    When running `Twitcher`_ with `Magpie` adapter, it is expected that the adapter will be able to connect to
+    the `Magpie` database with all relevant :term:`User`, :term:`Service`, etc. definitions. To make sure schemas
+    and tables are generated and updated appropriately, it is recommended to start `Magpie` once to run the database
+    migration mechanism. This can be accomplished both directly with the :ref:`usage_cli` (``run_database_migration``)
+    or the :ref:`usage_webapp` (automatic on startup).
 
 .. seealso::
     Refer to :ref:`authz_protected_resources` to learn more about `Twitcher`_ and its interaction with `Magpie`.
