@@ -10,7 +10,6 @@ Tests for :mod:`magpie.api` module.
 import unittest
 
 import mock
-from six.moves.urllib.parse import urlparse
 
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti

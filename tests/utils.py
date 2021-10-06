@@ -2871,7 +2871,7 @@ class TestSetup(object):
                                                                           accept_terms=accept_terms)
                 check_response_basic_info(assign_user_resp, 202, expected_method="POST")
             else:
-                resp = test_request(self, "POST", path, json=data, headers=headers, cookies=cookies)
+                resp = test_request(app_or_url, "POST", path, json=data, headers=headers, cookies=cookies)
                 # User should have been assigned to the group directly if no terms and conditions were found.
                 check_response_basic_info(resp, 201, expected_method="POST")
         TestSetup.check_UserGroupMembership(test_case, override_user_name=usr_name, override_group_name=grp_name,
