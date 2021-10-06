@@ -5,15 +5,15 @@
 Authentication and Authorization
 ==========================================
 
-In order to perform :term:`Authentication` in `Magpie`, multiple :term:`Providers` and methods are supported.
+In order to perform :term:`Authentication` in `Magpie`, multiple :term:`Provider` and methods are supported.
 By default, the :term:`Internal Provider` named ``ziggurat`` is employed, which corresponds to the package used
 internally to manage all `Magpie` elements. Login procedure is covered in :ref:`Authentication Requests` section.
 
 Supported :term:`External Providers` are presented in the table below in section :ref:`authn_providers`, although more
 could be added later on.
 
-.. note::
-    Terms :term:`Authentication` :term:`Providers`, :term:`External Providers` and :term:`External Providers` in this
+.. warning::
+    Terms :term:`Authentication` :term:`Provider`, :term:`External Providers` and :term:`External Providers` in this
     chapter must not be confused with ``providers`` employed in :ref:`config_providers`. In this chapter, providers
     refer to user-identity resolvers, in contrast to :term:`Service` definitions from the configuration files.
 
@@ -245,14 +245,16 @@ definitions.
 Access to Magpie Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When a :term:`Logged User` has sufficient :term:`Permissions`, it will be allowed different levels of access to
+When a :term:`Logged User` has sufficient :term:`Permission`, it will be allowed different levels of access to
 operate onto `Magpie` API paths. The specific requirements for each case are extensively presented in section
 :ref:`perm_route_access`.
+
+.. _authz_protected_resources:
 
 Access to Protected Resources
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When sending requests to the :term:`Policy Enforcement Point` (e.g.: `Twitcher`_ :term:`Proxy`),
+When sending requests to the :term:`Policy Enforcement Point` (PEP) (e.g.: `Twitcher`_ :term:`Proxy`),
 appropriate ``Cookie`` headers must be defined for it to identify the :term:`Logged User` and resolve its
 :term:`Effective Permissions` accordingly. Not providing those tokens will default to using
 :envvar:`MAGPIE_ANONYMOUS_USER`, which will result into either one of HTTP ``Unauthorized [401]`` or

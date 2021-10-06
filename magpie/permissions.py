@@ -164,7 +164,7 @@ class PermissionSet(object):
         (to protect the :term:`Resource`), and :attr:`Scope.MATCH` is *closer* to the actual :term:`Resource` than
         :attr:`Scope.RECURSIVE` permission received from a *farther* parent in the hierarchy.
 
-        Explicitly, sorted explicit string representation becomes::
+        Sorted explicit string representation becomes::
 
             [name1]-[allow]-[match]
             [name1]-[allow]-[recursive]
@@ -227,9 +227,10 @@ class PermissionSet(object):
         """
         Obtains the visual representation of the :class:`PermissionSet`.
         """
-        perm_repr_template = "PermissionSet(name={}, access={}, scope={}, type={})"
+        perm_repr_template = "PermissionSet(name={}, access={}, scope={}, type={}{})"
         perm_type = self.type.value if self.type is not None else None
-        return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type)
+        perm_reason = ", reason={}".format(self.reason) if self.reason else ""
+        return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type, perm_reason)
 
     def like(self, other):
         """

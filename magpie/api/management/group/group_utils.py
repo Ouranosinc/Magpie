@@ -20,7 +20,7 @@ from magpie.api import schemas as s
 from magpie.api.management.group.group_formats import format_group
 from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
-from magpie.api.management.service.service_formats import format_service, format_service_resources
+from magpie.api.management.service import service_formats as sf
 from magpie.api.webhooks import WebhookAction, get_permission_update_params, process_webhook_requests
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
@@ -46,20 +46,24 @@ def get_all_group_names(db_session):
     return group_names
 
 
-def get_group_resources(group, db_session):
-    # type: (models.Group, Session) -> JSON
+def get_group_resources(group, db_session, service_types=None):
+    # type: (models.Group, Session, Optional[List[Str]]) -> JSON
     """
     Get formatted JSON body describing all service resources the ``group`` as permissions on.
     """
     json_response = {}
+    if service_types is None:
+        service_types = list(SERVICE_TYPE_DICT)
     for svc in list(ResourceService.all(models.Service, db_session=db_session)):
+        svc_type = str(svc.type)
+        if svc_type not in service_types:
+            continue
         svc_perms = get_group_service_permissions(group=group, service=svc, db_session=db_session)
         svc_name = str(svc.resource_name)
-        svc_type = str(svc.type)
         if svc_type not in json_response:
             json_response[svc_type] = {}
         res_perm_dict = get_group_service_resources_permissions_dict(group=group, service=svc, db_session=db_session)
-        json_response[svc_type][svc_name] = format_service_resources(
+        json_response[svc_type][svc_name] = sf.format_service_resources(
             svc,
             db_session=db_session,
             service_perms=svc_perms,
@@ -278,24 +282,28 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupServicePermission_DELETE_OkResponseSchema.description)
 
 
-def get_group_services(resources_permissions_dict, db_session):
-    # type: (JSON, Session) -> JSON
+def get_group_services(resources_permissions_dict, db_session, service_types=None):
+    # type: (JSON, Session, Optional[List[Str]]) -> JSON
     """
     Nest and regroup the resource permissions under corresponding root service types.
     """
     grp_svc_dict = {}
+    if service_types is None:
+        service_types = list(SERVICE_TYPE_DICT)
     for res_id, perms in resources_permissions_dict.items():
         svc = ResourceService.by_resource_id(resource_id=res_id, db_session=db_session)
         svc_type = str(svc.type)
+        if svc_type not in service_types:
+            continue
         svc_name = str(svc.resource_name)
         if svc_type not in grp_svc_dict:
             grp_svc_dict[svc_type] = {}
-        grp_svc_dict[svc_type][svc_name] = format_service(svc, perms, show_private_url=False)
+        grp_svc_dict[svc_type][svc_name] = sf.format_service(svc, perms, show_private_url=False)
     return grp_svc_dict
 
 
-def get_group_services_response(group, db_session):
-    # type: (models.Group, Session) -> HTTPException
+def get_group_services_response(group, db_session, service_types=None):
+    # type: (models.Group, Session, Optional[List[Str]]) -> HTTPException
     """
     Get validated response of services the group has permissions on.
 
@@ -305,7 +313,7 @@ def get_group_services_response(group, db_session):
     res_perm_dict = get_group_resources_permissions_dict(group,
                                                          resource_types=[models.Service.resource_type_name],
                                                          db_session=db_session)
-    grp_svc_json = ax.evaluate_call(lambda: get_group_services(res_perm_dict, db_session),
+    grp_svc_json = ax.evaluate_call(lambda: get_group_services(res_perm_dict, db_session, service_types=service_types),
                                     http_error=HTTPInternalServerError,
                                     msg_on_fail=s.GroupServices_InternalServerErrorResponseSchema.description,
                                     content={"group": format_group(group, basic_info=True)})
@@ -347,7 +355,7 @@ def get_group_service_permissions_response(group, service, db_session):
         lambda: format_permissions(get_group_service_permissions(group, service, db_session), PermissionType.APPLIED),
         http_error=HTTPInternalServerError,
         msg_on_fail=s.GroupServicePermissions_GET_InternalServerErrorResponseSchema.description,
-        content={"group": format_group(group, basic_info=True), "service": format_service(service)})
+        content={"group": format_group(group, basic_info=True), "service": sf.format_service(service)})
     return ax.valid_http(http_success=HTTPOk, content=svc_perms_found,
                          detail=s.GroupServicePermissions_GET_OkResponseSchema.description)
 
@@ -373,7 +381,7 @@ def get_group_service_resources_response(group, service, db_session):
     """
     svc_perms = get_group_service_permissions(group=group, service=service, db_session=db_session)
     res_perms = get_group_service_resources_permissions_dict(group=group, service=service, db_session=db_session)
-    svc_res_json = format_service_resources(
+    svc_res_json = sf.format_service_resources(
         service=service,
         db_session=db_session,
         service_perms=svc_perms,

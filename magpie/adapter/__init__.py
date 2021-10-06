@@ -101,11 +101,11 @@ def get_user(request):
     :return: the authenticated user if parameters were valid (good credentials, not expired, etc.) or ``None``.
     """
     user_id = request.unauthenticated_userid
-    LOGGER.debug("Current user id is '%s'", user_id)
+    LOGGER.debug("Current user ID is '%s', attempt resolving user...", user_id)
 
     if user_id is not None:
         user = UserService.by_id(user_id, db_session=request.db)
-        LOGGER.debug("Current user has been resolved has '%s'", user)
+        LOGGER.debug("Current user has been resolved as '%s'", user)
         return user
     if LOGGER.isEnabledFor(logging.DEBUG):
         debug_cookie_identify(request)

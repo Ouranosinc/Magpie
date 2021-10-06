@@ -8,10 +8,10 @@
     <ul class="tree-level-${level}">
     %for key in tree:
         %if tree[key]["children"]:
-        <li class="collapsible expanded">
+        <li class="collapsible expanded" id="${tree[key]['id']}">
         <div class="collapsible-marker"></div>
         %else:
-        <li class="no-child">
+        <li class="no-child" id="${tree[key]['id']}">
         %endif
             <div class="tree-line">
                 <div class="tree-key">

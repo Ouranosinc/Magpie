@@ -8,6 +8,7 @@ from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
 from magpie.api.management.group import group_utils as gu
+from magpie.api.management.service import service_utils as su
 from magpie.constants import get_constant
 from magpie.models import TemporaryToken, TokenOperation, UserGroupStatus
 
@@ -156,7 +157,9 @@ def get_group_services_view(request):
     List all services a group has permission on.
     """
     group = ar.get_group_matchdict_checked(request)
-    return gu.get_group_services_response(group, request.db)
+    service_types = ar.get_query_param(request, ["type", "types"], default="")
+    service_types = su.filter_service_types(service_types)
+    return gu.get_group_services_response(group, request.db, service_types=service_types)
 
 
 @s.GroupServicePermissionsAPI.get(schema=s.GroupServicePermissions_GET_RequestSchema,
@@ -238,7 +241,9 @@ def get_group_resources_view(request):
     List all resources a group has permission on.
     """
     group = ar.get_group_matchdict_checked(request)
-    grp_res_json = ax.evaluate_call(lambda: gu.get_group_resources(group, request.db),
+    service_types = ar.get_query_param(request, ["type", "types"], default="")
+    service_types = su.filter_service_types(service_types)
+    grp_res_json = ax.evaluate_call(lambda: gu.get_group_resources(group, request.db, service_types=service_types),
                                     fallback=lambda: request.db.rollback(),
                                     http_error=HTTPInternalServerError, content={"group": repr(group)},
                                     msg_on_fail=s.GroupResources_GET_InternalServerErrorResponseSchema.description)

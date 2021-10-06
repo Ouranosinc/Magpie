@@ -480,13 +480,15 @@ QueryEffectivePermissions = colander.SchemaNode(
 QueryInheritGroupsPermissions = colander.SchemaNode(
     colander.Boolean(), name="inherited", default=False, missing=colander.drop,
     description="Include the user's groups memberships inheritance to retrieve all possible permissions. "
-                "(Note: Duplicate, redundant or conflicting permissions can be obtained considering applied group"
-                " permissions individually. See 'combined' query parameter to resolve such cases.)")
-QueryCombinedGroupsPermissions = colander.SchemaNode(
-    colander.Boolean(), name="combined", default=False, missing=colander.drop,
-    description="Combines corresponding user and groups inherited permissions into one, and locally resolves "
-                "for every resource the applicable permission modifiers considering group precedence. "
-                "(Note: Group inheritance is enforced regardless of 'inherited' query parameter.)")
+                "(Note: Duplicate, redundant and even conflicting permissions can be obtained when considering "
+                "multiple applied permissions individually applied from different group memberships or for the user "
+                "itself. See 'resolve' query parameter to reduce the set into a single highest priority permission).")
+QueryResolvedUserGroupsPermissions = colander.SchemaNode(
+    colander.Boolean(), name="resolve", default=False, missing=colander.drop,
+    description="Combines corresponding direct user and groups inherited permissions into one, and locally resolves "
+                "for every resource the applicable permission modifiers considering group precedence and priorities. "
+                "(Note: Group permissions retrieval is enforced when using this option regardless of 'inherited' query "
+                "parameter since they are required to perform resolution).")
 QueryFilterResources = colander.SchemaNode(
     colander.Boolean(), name="filtered", default=False, missing=colander.drop,
     description="Filter returned resources only where user has permissions on, either directly or inherited by groups "
@@ -503,6 +505,11 @@ QueryFlattenServices = colander.SchemaNode(
     description="Return elements as a flattened list of JSON objects instead of default response format. "
                 "Default is a nested JSON of service-type keys with children service-name keys, each containing "
                 "their respective service definition as JSON object.")
+QueryFilterServiceType = colander.SchemaNode(
+    colander.String(), name="type", missing=colander.drop,
+    example="api,thredds",
+    description="Comma-separated list of service-type for which to filter retrieved descriptions instead of all "
+                "available ones. Provided types matching is case insensitive. Unknown types are ignored.")
 
 
 class PhoenixServicePushOption(colander.SchemaNode):
@@ -1333,7 +1340,13 @@ class Service_CheckConfig_UnprocessableEntityResponseSchema(BaseResponseSchemaAP
     body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
 
 
-Services_GET_RequestSchema = ServiceTypes_GET_RequestSchema
+class ServicesQuerySchema(QueryRequestSchemaAPI):
+    flatten = QueryFlattenServices
+    svc_type = QueryFilterServiceType
+
+
+class Services_GET_RequestSchema(BaseRequestSchemaAPI):
+    querystring = ServicesQuerySchema()
 
 
 class Service_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2039,8 +2052,9 @@ class UserGroup_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
 
 class UserResources_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
-    combined = QueryCombinedGroupsPermissions
+    resolve = QueryResolvedUserGroupsPermissions
     filtered = QueryFilterResources
+    svc_type = QueryFilterServiceType
 
 
 class UserResources_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2084,7 +2098,7 @@ class UserResourcePermissions_Check_ErrorResponseSchema(BaseResponseSchemaAPI):
 
 class UserResourcePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
-    combined = QueryCombinedGroupsPermissions
+    resolve = QueryResolvedUserGroupsPermissions
     effective = QueryEffectivePermissions
 
 
@@ -2257,7 +2271,7 @@ class UserServiceResources_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 class UserServiceResources_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
-    combined = QueryCombinedGroupsPermissions
+    resolve = QueryResolvedUserGroupsPermissions
 
 
 class UserServiceResources_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2303,6 +2317,7 @@ class UserServices_GET_QuerySchema(QueryRequestSchemaAPI):
     cascade = QueryCascadeResourcesPermissions
     inherit = QueryInheritGroupsPermissions
     flatten = QueryFlattenServices
+    svc_type = QueryFilterServiceType
 
 
 class UserServices_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2321,7 +2336,7 @@ class UserServices_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 class UserServicePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
     inherited = QueryInheritGroupsPermissions
-    combined = QueryCombinedGroupsPermissions
+    resolve = QueryResolvedUserGroupsPermissions
 
 
 class UserServicePermissions_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2528,8 +2543,13 @@ class GroupUsers_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
+class GroupServices_GET_QuerySchema(QueryRequestSchemaAPI):
+    svc_type = QueryFilterServiceType
+
+
 class GroupServices_GET_RequestSchema(BaseRequestSchemaAPI):
     path = Group_RequestPathSchema()
+    querystring = GroupServices_GET_QuerySchema()
 
 
 class GroupServices_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -2696,8 +2716,13 @@ class GroupResourcePermissions_InternalServerErrorResponseSchema(BaseResponseSch
         code=HTTPInternalServerError.code, description=description)
 
 
+class GroupResources_GET_QuerySchema(QueryRequestSchemaAPI):
+    svc_type = QueryFilterServiceType
+
+
 class GroupResources_GET_RequestSchema(BaseRequestSchemaAPI):
     path = Group_RequestPathSchema()
+    querystring = GroupResources_GET_QuerySchema()
 
 
 class GroupResources_GET_ResponseBodySchema(BaseResponseBodySchema):

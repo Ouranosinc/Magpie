@@ -95,7 +95,7 @@ class ManagementViews(AdminRequests, BaseViews):
         .. seealso::
             :meth:`magpie.ui.login.views.LoginViews.register_user`
         """
-        groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_ANONYMOUS_GROUP", self.request))
+        groups = self.get_all_groups(first_default_group=self.MAGPIE_ANONYMOUS_GROUP)
         return_data = {"user_groups": groups, "is_registration": False}
         return_data = self.create_user_default_template_data(return_data)
 
@@ -248,9 +248,8 @@ class ManagementViews(AdminRequests, BaseViews):
 
             # edits to groups checkboxes
             if is_edit_group_membership:
-                anonymous_group = get_constant("MAGPIE_ANONYMOUS_GROUP", self.request)
                 selected_groups = self.request.POST.getall("member")
-                removed_groups = list(set(own_groups) - set(selected_groups) - {anonymous_group})
+                removed_groups = list(set(own_groups) - set(selected_groups) - {self.MAGPIE_ANONYMOUS_GROUP})
                 new_groups = list(set(selected_groups) - set(own_groups))
                 for group in removed_groups:
                     path = schemas.UserGroupAPI.path.format(user_name=user_name, group_name=group)
@@ -499,11 +498,17 @@ class ManagementViews(AdminRequests, BaseViews):
               or :term:`Group` accordingly to specified arguments.
         """
         if is_user:
-            query = "?inherited=true" if is_inherit_groups_permissions else ""
-            path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name) + query
+            # because page can only show a single permission (per name/resource) at a time, apply resolution
+            # on top of inheritance in order to display the highest priority permission in the tree hierarchy
+            query = "inherited=true&resolve=true" if is_inherit_groups_permissions else ""
+            path = schemas.UserResourcesAPI.path.format(user_name=user_or_group_name)
         else:
+            query = ""
             path = schemas.GroupResourcesAPI.path.format(group_name=user_or_group_name)
 
+        query_type = "type={}".format(service_type)  # try to limit results for faster processing time
+        query_sep = "&" if query else ""
+        path += "?{}{}{}".format(query, query_sep, query_type)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
         body = get_json(resp)

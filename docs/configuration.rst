@@ -254,7 +254,7 @@ These settings can be used to specify where to find other settings through custo
 
     .. note::
         If a directory path is specified, the order of loaded configuration files is alphabetical.
-        Matching :term:`Services` will be overridden by files loaded last.
+        Matching :term:`Service` will be overridden by files loaded last.
 
     .. versionchanged:: 1.7.4
 
@@ -622,7 +622,7 @@ remain available as described at the start of the :ref:`Configuration` section.
     from updated configuration values. Note also that modifying the value in the configuration without restarting the
     application so that the administrator user entry in the database can also be updated could cause other operations
     to fail drastically since this special user would be output of sync when employed by other `Magpie` operations such
-    as :ref:`Service Synchronization` and :term:`Permissions` setup during the application startup.
+    as :ref:`Service Synchronization` and :term:`Permission` setup during the application startup.
 
     .. versionchanged:: 2.0
         Prior to this version, a default value was employed if this setting was not provided. Later `Magpie` version
@@ -1264,7 +1264,7 @@ approval procedures.
 User-Group Assignment Configuration
 -----------------------------------
 
-.. versionadded:: 3.16
+.. versionadded:: 3.17
 
 Following are the full description of all configuration parameters employed by the :term:`User`-:term:`Group` assignment
 procedures, in the case of a :term:`Group` that requires terms and conditions validation by the :term:`User`.
@@ -1273,7 +1273,7 @@ procedures, in the case of a :term:`Group` that requires terms and conditions va
 
     (Default: |email_uga_submission_mako|_)
 
-    .. versionadded:: 3.16
+    .. versionadded:: 3.17
 
     Path to a `Mako Template`_ file providing custom email format to send notification email to the :term:`User`
     following submission of the :term:`User` assignment to a :term:`Group` that requires accepting terms and conditions.
@@ -1290,7 +1290,7 @@ procedures, in the case of a :term:`Group` that requires terms and conditions va
 
     (Default: |email_uga_approved_mako|_)
 
-    .. versionadded:: 3.16
+    .. versionadded:: 3.17
 
     Path to a `Mako Template`_ file providing custom email format to send an email to the :term:`User` related to a
     :term:`User`-:term:`Group` assignment to notify them that the terms and conditions were accepted, and that their

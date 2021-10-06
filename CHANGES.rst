@@ -20,6 +20,62 @@ Features / Changes
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix HTTP ``Internal Server Error [500]`` on the page to edit a ``Group`` when deleting the last ``User`` of a ``Group``.
+
+`3.16.0 <https://github.com/Ouranosinc/Magpie/tree/3.16.0>`_ (2021-10-05)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``type`` query parameter to multiple requests returning ``Services`` or ``Resources`` regrouped
+  by ``ServiceType``, either in general or for a given ``User`` or ``Group`` in order to limit listing in responses
+  and optimise some operations where only a subset of details are needed.
+* When requesting specific ``type`` with new query parameters, the relevant sections will always be added to the
+  response content, even when no ``Service`` are to be returned when ``User`` as no `Direct` or `Inherited` permissions
+  on it. This is to better illustrate that ``type`` was properly interpreted and indicate that nothing was found.
+* Using new ``type`` query to filter ``ServiceType``, improve ``Permissions`` listing in UI pages with faster processing
+  because ``Services`` that are not required (since they are not currently being displayed by the tab-panel view) can
+  be skipped entirely, removing the need to compute their underlying ``Resource`` and ``Permissions`` tree hierarchy.
+* Add various test utility improvements to parse and retrieve ``Permissions`` from HTML pages combo-boxes to facilitate
+  development and increase validation of UI functionalities.
+  This will also help for futures tests (relates to `#193 <https://github.com/Ouranosinc/Magpie/issues/193>`_).
+* Reapply ``list`` (prior name in ``2.x`` releases) as permitted alternative query parameter name to official
+  query parameter ``flatten`` for requests that support it.
+* Sort items by type and name for better readability of returned content by the various ``Service`` endpoints.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Replace invalid schema definitions using old ``combined`` query parameter by ``resolve`` query parameter actually
+  employed by request views in order to properly report this query parameter in the `OpenAPI` specification.
+* Apply ``resolve=true`` query parameter to UI page sub-request when resolving inherited user/group permissions in
+  order to display the highest priority ``Permission`` for each corresponding ``Resource`` in the tree hierarchy.
+  Without this option, the first permission was displayed based on naming ordering methodology, which made it more
+  confusing for administrators to understand how effective permissions could be obtained
+  (fixes `#463 <https://github.com/Ouranosinc/Magpie/issues/463>`_).
+* Fix a situation where the response from the API for ``GET /users/{}/resources`` endpoint would not correctly
+  list `Resolved Permissions` only for the top-most ``Resource`` in the hierarchy (i.e.: ``Service``) due to different
+  resolution methodologies applied between both types. This does **NOT** affect `Effective Resolution` which has its
+  own algorithm for access resolution to ``Resources``.
+* Add links to `Magpie's ReadTheDocs Terms <https://pavics-magpie.readthedocs.io/en/latest/glossary.html>`_ for
+  all corresponding ``Permissions`` definitions rendered in information note within the UI ``User`` edit page.
+  Notes indicate the resolution priority and methodology from the documentation to remind the administrator about what
+  is being displayed according to applied options.
+* Replace all instances to any variation of `Permissions` mention
+  within `Magpie's ReadTheDocs Permissions <https://pavics-magpie.readthedocs.io/en/latest/permissions.html>`_ page
+  from a ``term`` glossary reference to corresponding detailed section reference in `Types of Permissions` chapter
+  to avoid back and forth redirects between the `Permissions` page and their generic term glossary.
+* Fix incorrectly generated references from `Permissions` terms in glossary to detailed descriptions in `ReadTheDocs`.
+
+`3.15.1 <https://github.com/Ouranosinc/Magpie/tree/3.15.1>`_ (2021-09-29)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add multiple new log entries during ``Permission`` effective resolution and ``Service`` retrieval
+  within ``MagpieAdapter`` to debug procedure and attempt identifying any problem with it when caching is involved
+  (relates to `#466 <https://github.com/Ouranosinc/Magpie/issues/466>`_).
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
 * Pin ``sqlalchemy``, ``sqlalchemy_utils``, ``zope.sqlalchemy`` and ``ziggurat_foundations`` to specific package
   versions to avoid underlying issues when combining dependencies with `Twitcher` (in ``Docker.adapter``).
   Some definitions at lower level in ``ziggurat_foundations`` cause an issue when moving to ``sqlalchemy>=1.4``,
@@ -31,6 +87,9 @@ Bug Fixes
 * Use ``pip`` legacy and faster resolver as per
   `pypa/pip#9187 (comment) <https://github.com/pypa/pip/issues/9187#issuecomment-853091201>`_
   since current one is endlessly failing to resolve development packages (linting tools from ``check`` targets).
+* Add possible detached ``Resource`` reconnection (``merge``) to active session during ``Permission`` effective
+  resolution with mixed caching state between `ACL` and `Service` regions in case they mismatch
+  (potential fix to `#466 <https://github.com/Ouranosinc/Magpie/issues/466>`_).
 
 `3.15.0 <https://github.com/Ouranosinc/Magpie/tree/3.15.0>`_ (2021-08-11)
 ------------------------------------------------------------------------------------

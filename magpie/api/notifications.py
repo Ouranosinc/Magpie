@@ -144,13 +144,15 @@ def make_email_contents(config, settings, template, parameters=None):
     """
     # add defaults parameters always offered to all templates
     magpie_url = get_magpie_url(settings)
+    iso_dt = datetime.utcnow().isoformat(" ")  # "YYYY-MM-DD HH:mm:ss.ffffff UTC"
+    iso_dt = iso_dt.split(".")[0]
     params = {
         "magpie_url": magpie_url,
         "login_url": "{}/ui/login".format(magpie_url),
         "email_sender": config["sender"],
         "email_user": config["user"],
         "email_from": config["from"],
-        "email_datetime": datetime.utcnow().isoformat(" ", "seconds") + " UTC"  # "YYYY-MM-DD HH:mm:ss UTC"
+        "email_datetime": iso_dt
     }
     params.update(parameters or {})
     contents = template.render(**params)
