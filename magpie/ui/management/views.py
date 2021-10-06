@@ -256,7 +256,7 @@ class ManagementViews(AdminRequests, BaseViews):
                     resp = request_api(self.request, path, "DELETE")
                     check_response(resp)
 
-                user_info["edit_membership_new_grp_error"] = set()
+                user_info["edit_new_membership_error"] = set()
                 successful_new_groups = set()
                 for group in new_groups:
                     try:
@@ -267,13 +267,13 @@ class ManagementViews(AdminRequests, BaseViews):
                     except HTTPException as exc:
                         detail = "{} ({}), {!s}".format(type(exc).__name__, exc.code, exc)
                         LOGGER.error("Unexpected API error under UI operation. [%s]", detail)
-                        user_info["edit_membership_new_grp_error"].add(group)
+                        user_info["edit_new_membership_error"].add(group)
                     else:
                         successful_new_groups.add(group)
                 user_info["own_groups"] = self.get_user_groups(user_name)
                 user_info["pending_groups"] = self.get_user_groups(user_name, user_group_status=UserGroupStatus.PENDING)
 
-                user_info["edit_membership_pending_grp_success"] = \
+                user_info["edit_membership_pending_success"] = \
                     successful_new_groups & set(user_info["pending_groups"])
 
         # display resources permissions per service type tab
@@ -435,8 +435,9 @@ class ManagementViews(AdminRequests, BaseViews):
             path = schemas.UserGroupAPI.path.format(user_name=user_name, group_name=group_name)
             resp = request_api(self.request, path, "DELETE")
             check_response(resp)
-        report_info = {"edit_membership_new_usr_success": set(),
-                       "edit_membership_new_usr_error": set()}
+
+        report_info = {"edit_new_membership_success": set(),
+                       "edit_new_membership_error": set()}
         for user_name in new_members:
             try:
                 path = schemas.UserGroupsAPI.path.format(user_name=user_name)
@@ -446,9 +447,9 @@ class ManagementViews(AdminRequests, BaseViews):
             except HTTPException as exc:
                 detail = "{} ({}), {!s}".format(type(exc).__name__, exc.code, exc)
                 LOGGER.error("Unexpected API error under UI operation. [%s]", detail)
-                report_info["edit_membership_new_usr_error"].add(user_name)
+                report_info["edit_new_membership_error"].add(user_name)
             else:
-                report_info["edit_membership_new_usr_success"].add(user_name)
+                report_info["edit_new_membership_success"].add(user_name)
         return report_info
 
     def edit_user_or_group_resource_permissions(self, user_or_group_name, is_user=False):
@@ -669,9 +670,9 @@ class ManagementViews(AdminRequests, BaseViews):
         group_info["permissions"] = res_perm_names
 
         if edit_group_users_info:
-            group_info["edit_membership_pending_usr_success"] = \
-                edit_group_users_info["edit_membership_new_usr_success"] & set(group_info["pending_users"])
-            group_info["edit_membership_new_usr_error"] = edit_group_users_info["edit_membership_new_usr_error"]
+            group_info["edit_membership_pending_success"] = \
+                edit_group_users_info["edit_new_membership_success"] & set(group_info["pending_users"])
+            group_info["edit_new_membership_error"] = edit_group_users_info["edit_new_membership_error"]
         return self.add_template_data(data=group_info)
 
     @staticmethod

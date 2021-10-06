@@ -154,7 +154,7 @@ class UserViews(BaseViews):
                 for group in removed_groups:
                     self.leave_discoverable_group(group)
 
-                user_info["edit_membership_new_grp_error"] = set()
+                user_info["edit_new_membership_error"] = set()
                 successful_new_groups = set()
                 for group in new_groups:
                     try:
@@ -162,7 +162,7 @@ class UserViews(BaseViews):
                     except HTTPException as exc:
                         detail = "{} ({}), {!s}".format(type(exc).__name__, exc.code, exc)
                         LOGGER.error("Unexpected API error under UI operation. [%s]", detail)
-                        user_info["edit_membership_new_grp_error"].add(group)
+                        user_info["edit_new_membership_error"].add(group)
                     else:
                         successful_new_groups.add(group)
 
@@ -170,7 +170,7 @@ class UserViews(BaseViews):
                 user_info["pending_groups"] = self.get_current_user_groups(
                     user_group_status=UserGroupStatus.PENDING)
 
-                user_info["edit_membership_pending_grp_success"] = \
+                user_info["edit_membership_pending_success"] = \
                     successful_new_groups & set(user_info["pending_groups"])
 
         user_info.pop("password", None)  # always remove password from output
