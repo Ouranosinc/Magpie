@@ -123,17 +123,18 @@ def get_group_users_view(request):
     """
     group = ar.get_group_matchdict_checked(request)
     status = ar.get_query_param(request, "status", default=UserGroupStatus.ACTIVE.value)
-    ax.verify_param(status, is_in=True, param_compare=s.UserGroupStatus.values(), param_name="status",
+    ax.verify_param(status, is_in=True, param_compare=UserGroupStatus.values(), param_name="status",
                     msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
                     http_error=HTTPBadRequest)
+    status = UserGroupStatus.get(status)
 
     user_names = set()
     member_user_names = ax.evaluate_call(lambda: set(user.user_name for user in group.users),
                                          http_error=HTTPForbidden,
                                          msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
-    if status in [UserGroupStatus.ACTIVE.value, UserGroupStatus.ALL.value]:
+    if status in [UserGroupStatus.ACTIVE, UserGroupStatus.ALL]:
         user_names = user_names.union(member_user_names)
-    if status in [UserGroupStatus.PENDING.value, UserGroupStatus.ALL.value]:
+    if status in [UserGroupStatus.PENDING, UserGroupStatus.ALL]:
         # Find all temporary tokens with requested group id that have a pending accept terms request
         tmp_tokens = request.db.query(TemporaryToken).filter(TemporaryToken.group_id == group.id)
         tmp_tokens = tmp_tokens.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)

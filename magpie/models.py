@@ -101,13 +101,24 @@ class GroupPermission(GroupPermissionMixin, Base):
     pass
 
 
-class UserGroupStatus(ExtendedEnum):
+class UserGroupStatus(FlexibleNameEnum):
     """
     Supported statuses of user-group relationships.
     """
     ALL = "all"
     ACTIVE = "active"
     PENDING = "pending"
+
+    @classmethod
+    def allowed(cls):
+        # type: () -> List[Str]
+        """
+        Returns all supported representation values that can be mapped to a valid status.
+        """
+        names = cls.names()
+        allowed = names
+        allowed.extend([name.lower() for name in names])
+        return allowed
 
 
 class UserGroup(UserGroupMixin, Base):

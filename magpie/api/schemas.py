@@ -1920,7 +1920,7 @@ class UserGroupsQuery(QueryRequestSchemaAPI):
         missing=colander.drop,
         description="Obtain the user-groups filtered by statuses [all, active, pending]. "
                     "Returns active user-groups if not provided. ",
-        validator=colander.OneOf(UserGroupStatus.values())
+        validator=colander.OneOf(UserGroupStatus.allowed())
     )
 
 

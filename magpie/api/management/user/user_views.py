@@ -129,15 +129,16 @@ def get_user_groups_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     status = ar.get_query_param(request, "status", default=UserGroupStatus.ACTIVE.value)
-    ax.verify_param(status, is_in=True, param_compare=s.UserGroupStatus.values(), param_name="status",
+    ax.verify_param(status, is_in=True, param_compare=UserGroupStatus.values(), param_name="status",
                     msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
                     http_error=HTTPBadRequest)
+    status = UserGroupStatus.get(status)
 
     group_names = set()
     member_group_names = set(uu.get_user_groups_checked(user, request.db))
-    if status in [UserGroupStatus.ACTIVE.value, UserGroupStatus.ALL.value]:
+    if status in [UserGroupStatus.ACTIVE, UserGroupStatus.ALL]:
         group_names = group_names.union(member_group_names)
-    if status in [UserGroupStatus.PENDING.value, UserGroupStatus.ALL.value]:
+    if status in [UserGroupStatus.PENDING, UserGroupStatus.ALL]:
         tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
         pending_group_names = set(tmp_token.group.group_name for tmp_token in tmp_tokens)
 
