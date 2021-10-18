@@ -17,7 +17,7 @@ from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
-from magpie.models import TemporaryToken, TokenOperation, UserGroupStatus
+from magpie.models import UserGroupStatus
 from magpie.permissions import PermissionType, format_permissions
 from magpie.utils import get_logger
 
@@ -90,7 +90,13 @@ def get_user_view(request):
     Get user information by name.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    return ax.valid_http(http_success=HTTPOk, content={"user": uf.format_user(user)},
+    user_info = uf.format_user(user)
+
+    # indicate if user has any pending T&C groups
+    group_names = uu.get_user_groups(user, UserGroupStatus.PENDING, request.db)
+    user_info["has_pending_group"] = bool(group_names)
+
+    return ax.valid_http(http_success=HTTPOk, content={"user": user_info},
                          detail=s.User_GET_OkResponseSchema.description)
 
 
@@ -133,19 +139,7 @@ def get_user_groups_view(request):
                     msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
                     http_error=HTTPBadRequest)
     status = UserGroupStatus.get(status)
-
-    group_names = set()
-    member_group_names = set(uu.get_user_groups_checked(user, request.db))
-    if status in [UserGroupStatus.ACTIVE, UserGroupStatus.ALL]:
-        group_names = group_names.union(member_group_names)
-    if status in [UserGroupStatus.PENDING, UserGroupStatus.ALL]:
-        tmp_tokens = TemporaryToken.by_user(user).filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
-        pending_group_names = set(tmp_token.group.group_name for tmp_token in tmp_tokens)
-
-        # Remove any group a user already belongs to, in case any tokens are irrelevant.
-        # Should not happen since related tokens are deleted upon T&C acceptation.
-        pending_group_names = pending_group_names - member_group_names
-        group_names = group_names.union(pending_group_names)
+    group_names = uu.get_user_groups(user, status, request.db)
 
     return ax.valid_http(http_success=HTTPOk, content={"group_names": sorted(group_names)},
                          detail=s.UserGroups_GET_OkResponseSchema.description)

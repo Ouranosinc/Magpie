@@ -277,6 +277,33 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         utils.check_all_equal(body["user_names"], {self.usr, self.test_user_name}, any_order=True)
 
     @runner.MAGPIE_TEST_GROUPS
+    def test_GetUserInfo_PendingGroups(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Add user to users group
+        users_group = get_constant("MAGPIE_USERS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=users_group)
+
+        # Check if user info displays no current pending group
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user", body)
+        utils.check_val_is_in("has_pending_group", body["user"])
+        utils.check_val_false(body["user"]["has_pending_group"])
+
+        # add user to test group and leave him as pending
+        utils.TestSetup.assign_TestUserGroup(self, accept_terms=False)
+
+        # Check if user info displays having a pending group
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user", body)
+        utils.check_val_is_in("has_pending_group", body["user"])
+        utils.check_val_true(body["user"]["has_pending_group"])
+
+    @runner.MAGPIE_TEST_GROUPS
     def test_GetUserGroups_Pending(self):
         terms = "Test terms and conditions."
         utils.TestSetup.create_TestGroup(self, override_terms=terms)

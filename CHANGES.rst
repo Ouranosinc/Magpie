@@ -16,6 +16,8 @@ Features / Changes
 * Changed ``/groups/{group_name}/users``, ``/users/current/groups`` and ``/users/{user_name}/groups`` endpoints with
   new query parameter `status` to either get active, pending or all ``Users`` or ``Groups``. This new parameter is
   useful to display any pending ``Users``/``Groups`` on the UI.
+* Added new field `has_pending_group` in the user info returned by ``/users/{user_name}`` endpoint, indicating if
+  the user has any pending group.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
