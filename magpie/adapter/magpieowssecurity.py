@@ -1,4 +1,5 @@
 import logging
+from copy import copy
 from typing import TYPE_CHECKING
 
 import requests
@@ -27,7 +28,7 @@ from twitcher.owsexceptions import OWSAccessForbidden, OWSInvalidParameterValue,
 from twitcher.owssecurity import OWSSecurityInterface  # noqa
 from twitcher.utils import parse_service_name  # noqa
 
-LOGGER = get_logger("TWITCHER")
+LOGGER = get_logger("TWITCHER|{}".format(__name__))
 if TYPE_CHECKING:
     from typing import Dict, NoReturn, Optional, Tuple
 
@@ -96,7 +97,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         LOGGER.debug("Retrieving service [%s]", service_name)
         service_impl, service_data = self._get_service_cached(service_name)
 
-        # because the database service *could* be linked to cached item, expired session creates unbound object
+        # Because the database service *could* be linked to cached item, expired session creates unbound object
         # - rebuild the service from cached data such that following operations can retrieve details as needed
         #   (this avoids SQLAlchemy running lazy-loading of pre-fetched data, since it is readily available)
         # - reapply the request which contains the methods to retrieve database session and request user from it
@@ -108,6 +109,17 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             service_impl.service = service_cached
             service_impl.request = request
 
+        # Create a shallow copy of the service implementation to mitigate session handling by distinct requests.
+        # - Because multiple threads/workers can retrieve the (same) cached definition from memory during concurrent
+        #   requests, any modification to underlying session object references (session state in 'service_impl.service'
+        #   and session reference in 'service_impl.request.db') could modify them across parallel worker operations.
+        #   Returning the same cached object can cause a request fully cached (service+acl) that finishes quickly to
+        #   close a connection or transaction while another only partially cached (service only, acl to compute) still
+        #   uses it and expects it to be open, causing unexpected lost of session/transaction midway.
+        # - See also scoped-session employed in 'get_session_factory' that should generate different thread-local
+        #   sessions to try minimizing this from happening across concurrent requests (default session not thread safe).
+        #   (https://docs.sqlalchemy.org/en/13/orm/contextual.html#contextual-thread-local-sessions)
+        service_impl = copy(service_impl)
         return service_impl
 
     def check_request(self, request):
