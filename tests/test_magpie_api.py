@@ -425,6 +425,32 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         utils.check_val_is_in(self.test_user_name, body["user_names"])
         utils.check_val_is_in(new_user_name, body["user_names"])
 
+    @runner.MAGPIE_TEST_GROUPS
+    def test_PostUserGroupWithTerms_Fail(self):
+        utils.TestSetup.create_TestUser(self, override_group_name=None)
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+
+        # Use empty settings dictionary, not assigning the MAGPIE_SMTP_HOST variable in the settings will
+        # trigger a fail when assigning the user to the group with terms
+        with utils.mocked_get_settings(settings={}):
+            with utils.mock_send_email("magpie.api.management.user.user_utils.send_email"):
+                path = "/users/{usr}/groups".format(usr=self.test_user_name)
+                data = {"group_name": self.test_group_name}
+                resp = utils.test_request(self, "POST", path, json=data, expect_errors=True,
+                                                headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 500, expected_method="POST")
+
+        # Check that the user membership has not been updated as pending or as active
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.ALL.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_val_not_in(self.test_user_name, body["user_names"])
+
 
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL
