@@ -273,8 +273,7 @@ class ManagementViews(AdminRequests, BaseViews):
                 user_info["own_groups"] = self.get_user_groups(user_name)
                 user_info["pending_groups"] = self.get_user_groups(user_name, user_group_status=UserGroupStatus.PENDING)
 
-                user_info["edit_membership_pending_success"] = \
-                    successful_new_groups & set(user_info["pending_groups"])
+                user_info["edit_membership_pending_success"] = successful_new_groups & set(user_info["pending_groups"])
 
         # display resources permissions per service type tab
         try:
@@ -570,7 +569,7 @@ class ManagementViews(AdminRequests, BaseViews):
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         group_info = {"edit_mode": "no_edit", "group_name": group_name, "cur_svc_type": cur_svc_type}
         error_message = ""
-        edit_group_users_info = {}
+        edit_grp_usrs_info = {}
 
         # TODO:
         #   Until the api is modified to make it possible to request from the RemoteResource table,
@@ -636,7 +635,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
             # edits to group members checkboxes
             if is_edit_group_members:
-                edit_group_users_info = self.edit_group_users(group_name)
+                edit_grp_usrs_info = self.edit_group_users(group_name)
 
         # display resources permissions per service type tab
         try:
@@ -669,10 +668,10 @@ class ManagementViews(AdminRequests, BaseViews):
         group_info["resources"] = res_perms
         group_info["permissions"] = res_perm_names
 
-        if edit_group_users_info:
-            group_info["edit_membership_pending_success"] = \
-                edit_group_users_info["edit_new_membership_success"] & set(group_info["pending_users"])
-            group_info["edit_new_membership_error"] = edit_group_users_info["edit_new_membership_error"]
+        if edit_grp_usrs_info:
+            new_usrs_from_pending = edit_grp_usrs_info["edit_new_membership_success"] & set(group_info["pending_users"])
+            group_info["edit_membership_pending_success"] = new_usrs_from_pending
+            group_info["edit_new_membership_error"] = edit_grp_usrs_info["edit_new_membership_error"]
         return self.add_template_data(data=group_info)
 
     @staticmethod

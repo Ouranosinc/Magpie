@@ -76,7 +76,7 @@ def get_group_resources(group, db_session, service_types=None):
 
 
 def create_group(group_name, description, discoverable, terms, db_session):
-    # type: (Str, Str, bool, Session) -> HTTPException
+    # type: (Str, Str, bool, Str, Session) -> HTTPException
     """
     Creates a group if it is permitted and not conflicting.
 

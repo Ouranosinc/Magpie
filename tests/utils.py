@@ -1131,7 +1131,7 @@ def create_or_assign_user_group_with_terms(test_case,               # type: AnyM
                                            cookies,                 # type: CookiesType
                                            accept_terms,            # type: bool
                                            expect_errors=False      # type: bool
-                                           ):
+                                           ):                       # type: (...) -> AnyResponseType
     """
     Executes a request to create or assign a user to a group with terms and conditions, and accepts the terms and
     conditions automatically if enabled.
@@ -2835,7 +2835,7 @@ class TestSetup(object):
         """
         Ensures that the test user is a member of the test group, adding him to the group as needed.
         Also works for a group that has terms and conditions, either completing the T&C confirmation if the
-        `accept_terms` parameter is enabled, or leaving the user as pending.
+        :paramref:`accept_terms` parameter is enabled, or leaving the user as pending.
 
         :raises AssertionError: if any request response does not match successful validation or assignation to group.
         """
