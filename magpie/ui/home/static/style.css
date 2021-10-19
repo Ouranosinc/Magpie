@@ -21,7 +21,7 @@ input[type="text"],
 
 textarea,
 input[type="text"] {
-    font-size: 13.3333px;
+    font-size: 0.8333em
 }
 
 textarea {
@@ -409,6 +409,10 @@ table.panel-line td {
     margin-left: 0.5em;
 }
 
+.italic-text {
+    font-style: italic;
+}
+
 /* --- Labels --- */
 
 .label {
@@ -629,9 +633,9 @@ table.panel-line td {
     margin-left: 0.5em;
 }
 
-.icon-color-invert {
-    filter: saturate(0) invert(100%);
-    -webkit-filter: saturate(0) invert(100%);
+.icon-color-white {
+    filter: brightness(0) invert(1);
+    -webkit-filter: brightness(0) invert(1);
 }
 
 .status-container {

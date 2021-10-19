@@ -153,7 +153,7 @@
                 %if terms:
                     ${terms}
                 %else:
-                    <i>No terms and conditions for this group.</i>
+                    <span class="italic-text">No terms and conditions for this group.</span>
                 %endif
             </div>
         </div>
