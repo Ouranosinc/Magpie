@@ -94,7 +94,11 @@ def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
 
 
 def get_session_factory(engine):
-    return sessionmaker(bind=engine)
+    """
+    Create a new session with integrated thread-local scope for safe handling across application workers.
+    """
+    session_factory = sessionmaker(bind=engine)
+    return scoped_session(session_factory)
 
 
 def get_tm_session(session_factory, transaction_manager):
@@ -123,8 +127,7 @@ def get_tm_session(session_factory, transaction_manager):
 
 
 def get_session_from_other(db_session):
-    session_factory = get_session_factory(db_session.bind)
-    return scoped_session(session_factory)
+    return get_session_factory(db_session.bind)
 
 
 def get_db_session_from_settings(settings=None, **kwargs):

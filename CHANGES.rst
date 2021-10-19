@@ -23,6 +23,25 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix HTTP ``Internal Server Error [500]`` on the page to edit a ``Group`` when deleting the last ``User`` of a ``Group``.
 
+`3.16.1 <https://github.com/Ouranosinc/Magpie/tree/3.16.1>`_ (2021-10-18)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* N/A
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``scoped_session`` directly within the ``get_session_factory`` creating the default session and transaction
+  objects for all requests in order to better separate their execution across worker/thredds
+  (address errors identified by issue `#466 <https://github.com/Ouranosinc/Magpie/issues/466>`_).
+* Add more fallback operations to detect invalid database ``Session`` objects when caching is involved and attempt
+  fixing their references such that ``Service`` and ``Resources`` can use them during following `ACL` resolution
+  (address errors identified by issue `#466 <https://github.com/Ouranosinc/Magpie/issues/466>`_).
+* Add more logging entries to identify specific cases where ``Session`` objects are invalid.
+* Add more specific ``TWITCHER``-prefixed names with specific modules where loggers employed within ``MagpieAdapter``
+  are defined in order to better identify which log entries are called (code lines) when resolving `ACL`.
+
 `3.16.0 <https://github.com/Ouranosinc/Magpie/tree/3.16.0>`_ (2021-10-05)
 ------------------------------------------------------------------------------------
 

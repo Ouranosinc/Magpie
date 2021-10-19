@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
     from twitcher.store import AccessTokenStoreInterface  # noqa
 
-LOGGER = get_logger("TWITCHER")
+LOGGER = get_logger("TWITCHER|{}".format(__name__))
 
 
 def debug_cookie_identify(request):

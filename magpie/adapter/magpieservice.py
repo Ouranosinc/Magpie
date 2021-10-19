@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from magpie.typedefs import Str
 
-LOGGER = get_logger("TWITCHER")
+LOGGER = get_logger("TWITCHER|{}".format(__name__))
 
 
 class MagpieServiceStore(ServiceStoreInterface):

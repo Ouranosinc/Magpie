@@ -16,6 +16,7 @@ from ziggurat_foundations.permissions import permission_to_pyramid_acls
 from magpie import models
 from magpie.api import exception as ax
 from magpie.constants import get_constant
+from magpie.db import get_session_from_other
 from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import (
     PERMISSION_REASON_ADMIN,
@@ -231,6 +232,56 @@ class ServiceInterface(object):
         permissions = self.effective_permissions(user, resource, permissions, allow_match)
         return [perm.ace(self.request.user) for perm in permissions]
 
+    def _get_connected_resource(self, resource):
+        # type: (ServiceOrResourceType) -> Optional[ServiceOrResourceType]
+        """
+        Retrieve the resource with an active session and attached state by refreshing connection with request session.
+
+        This operation is required mostly in cases of mismatching references between cached and active objects obtained
+        according to timing of requests and whether caching took placed between them, and for different caching region
+        levels (service, ACL or both). It also attempts to correct and encountered problems due to concurrent requests.
+        """
+        # This is the only session reference we can trust to be fresh because it is
+        # forcefully generated for each request, regardless if any caching took place.
+        db_session = self.request.db
+
+        # If the session connection or transaction was closed somehow by incorrectly passed around reference
+        # (concurrent request), reconnect with new scoped session.
+        if not db_session.is_active:
+            LOGGER.debug("Session [%s] was inactive, creating new scoped session for resource.", db_session)
+            db_session = get_session_from_other(db_session)
+            LOGGER.debug("Session [%s] created.", db_session)
+
+        # Reconnect resource reference to active database session if it is detached or inactive.
+        # - This can happen during mismatching sources of cached objects for service/ACL combinations,
+        #   where service/resource data is available from cache but not associated with an appropriate session state.
+        # - Since this operation is being computed, ACL is not yet cached (or was reset before service cache was).
+        #   The service/resource must be refreshed regardless of cache to resolve it with other object references.
+        # In case the DB session was inactive and a new one was recreated above, also ensure that the resource did not
+        # already have an handle referring to the old session.
+        res_session = get_db_session(session=None, obj=resource)
+        if res_session is None or not res_session.is_active:
+            if res_session is None:
+                LOGGER.debug("Reconnect cached resource [%s] with active request session (missing session).", resource)
+            else:
+                LOGGER.debug("Reconnect cached resource [%s] with active request session (inactive session).", resource)
+            resource = ResourceService.by_resource_id(resource.resource_id, db_session=db_session)
+            if resource is None:
+                LOGGER.warning("Reconnect cached resource to active session failed!")
+                LOGGER.debug("Session: %s, Resource: %s", db_session, resource)
+                return None
+        # Merge retrieved resource to the active session if not already attached.
+        state = sa_inspect(resource)
+        if state.detached:
+            LOGGER.debug("Reconnect cached resource [%s] with active request session (detached state).", resource)
+            resource = db_session.merge(resource)
+            state = sa_inspect(resource)
+
+        LOGGER.debug("Resource [%s] is [%s] %s session [%s, active=%s, id=%s].",
+                     resource, "detached" if state.detached else "attached", "from" if state.detached else "to",
+                     state.session, state.session.is_active, state.session_id)
+        return resource
+
     def _get_request_path_parts(self):
         # type: () -> Optional[List[Str]]
         """
@@ -324,22 +375,10 @@ class ServiceInterface(object):
         # current and parent resource(s) recursive-scope
         while resource is not None and not full_break:  # bottom-up until service is reached
             LOGGER.debug("Resolving for (sub-)resource: [%s]", resource)
-
-            # reconnect resource reference to active database session if it is detached
-            #   This can happen during mismatching sources of cached objects for service/ACL combinations,
-            #   where service/resource data is available from cache but not associated with the session state.
-            #   Since this operation is being computed, ACL is not yet cached (or was reset before service cache was).
-            #   The service/resource must be refreshed regardless of cache to resolve it with other object references.
-            if get_db_session(session=None, obj=resource) is None:
-                LOGGER.debug("Reconnect cached resource [%s] with active request session (no session).", resource)
-                resource = ResourceService.by_resource_id(resource.resource_id, db_session=db_session)
-                if resource is None:
-                    LOGGER.warning("Reconnect cached resource to active session failed!")
-                    LOGGER.debug("Session: %s, Resource: %s", db_session, resource)
-                    break
-            if sa_inspect(resource).detached:
-                LOGGER.debug("Reconnect cached resource [%s] with active request session (detached).", resource)
-                resource = db_session.merge(resource)
+            resource = self._get_connected_resource(resource)
+            if resource is None:
+                LOGGER.warning("Resource 'None' after reconnection attempt. Early stop effective resolution loop.")
+                break
 
             # include both permissions set in database as well as defined directly on resource
             cur_res_perms = ResourceService.perms_for_user(resource, user, db_session=db_session)

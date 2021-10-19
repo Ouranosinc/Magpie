@@ -383,10 +383,12 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
 
         def run_check(test_requests_set, cached):
             _cached = " (cached)" if cached else ""
-            for _allowed, _request in test_requests_set:
+            for i, (_allowed, _request) in enumerate(test_requests_set):
                 _cookie = _request.cookies[token]
                 _user = self.test_user_name if _cookie == user_cookies[token] else "admin"
-                _msg = "Using [{}, {}]{} with user [{}]".format(_request.method, _request.path_qs, _cached, _user)
+                _msg = "Using ({}) [{}, {}]{} with user [{}]".format(
+                    i, _request.method, _request.path_qs, _cached, _user
+                )
                 if not cached:
                     _request.headers.update(no_cache_header)
                 else:
