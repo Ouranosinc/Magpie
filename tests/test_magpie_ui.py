@@ -427,12 +427,14 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 resp = utils.test_request(self, "GET", path)
                 body = utils.check_ui_response_basic_info(resp)
                 utils.check_val_not_in("{} [pending]".format(self.test_user_name), body)
+                utils.check_val_is_in(self.test_user_name, body)
 
                 # validate that group membership is no longer pending in the edit user page
                 path = "/ui/users/{}/default".format(self.test_user_name)
                 resp = utils.test_request(self, "GET", path)
                 body = utils.check_ui_response_basic_info(resp)
                 utils.check_val_not_in("{} [pending]".format(group_with_terms_name), body)
+                utils.check_val_is_in(group_with_terms_name, body)
 
                 # validate that group membership is no longer pending in the user's account page
                 utils.check_or_try_logout_user(self)
@@ -441,6 +443,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
                 resp = utils.test_request(self, "GET", "/ui/users/current")
                 body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
                 utils.check_val_not_in("{} [pending]".format(group_with_terms_name), body)
+                utils.check_val_is_in(group_with_terms_name, body)
 
 
 @runner.MAGPIE_TEST_UI
