@@ -10,6 +10,16 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add support of `Twitcher` ``0.6.x`` branch for ``MagpieAdapter``.
+* Add ``tm.annotate_user = False`` in settings to limit chances of sporadic errors
+  (``sqlalchemy.orm.exc.DetachedInstanceError``, ``transaction.interfaces.NoTransaction``) that are observed
+  when different session/transaction scopes are handling the user attached to the request
+  (relates to
+  `Pylons/pyramid_tm#75 <https://github.com/Pylons/pyramid_tm/issues/74>`_,
+  `Ouranosinc/Magpie#466 <https://github.com/Ouranosinc/Magpie/issues/466>`_,
+  `Ouranosinc/Magpie#473 <https://github.com/Ouranosinc/Magpie/pull/473>`_,
+  see also
+  `Avoid Accessing the Authentication Policy
+  <https://docs.pylonsproject.org/projects/pyramid_tm/en/latest/#avoid-accessing-the-authentication-policy>`_).
 
 `3.16.1 <https://github.com/Ouranosinc/Magpie/tree/3.16.1>`_ (2021-10-18)
 ------------------------------------------------------------------------------------
