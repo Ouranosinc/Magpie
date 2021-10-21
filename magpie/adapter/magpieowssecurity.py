@@ -1,5 +1,6 @@
 import logging
 from copy import copy
+from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import requests
@@ -24,9 +25,19 @@ from magpie.utils import CONTENT_TYPE_JSON, get_authenticate_headers, get_logger
 #   Twitcher available only when this module is imported from it.
 #   It is installed during tests for evaluation.
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
-from twitcher.owsexceptions import OWSAccessForbidden, OWSInvalidParameterValue, OWSMissingParameterValue  # noqa
-from twitcher.owssecurity import OWSSecurityInterface  # noqa
+from twitcher.__version__ import __version__ as twitcher_version  # noqa
+from twitcher.owsexceptions import (  # noqa
+    OWSAccessForbidden,               # noqa
+    OWSException,                     # noqa
+    OWSInvalidParameterValue,         # noqa
+    OWSMissingParameterValue          # noqa
+)
 from twitcher.utils import parse_service_name  # noqa
+
+if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
+    from twitcher.interface import OWSSecurityInterface  # noqa
+else:
+    from twitcher.owssecurity import OWSSecurityInterface  # noqa
 
 LOGGER = get_logger("TWITCHER|{}".format(__name__))
 if TYPE_CHECKING:
@@ -121,6 +132,23 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         #   (https://docs.sqlalchemy.org/en/13/orm/contextual.html#contextual-thread-local-sessions)
         service_impl = copy(service_impl)
         return service_impl
+
+    def verify_request(self, request):
+        # type: (Request) -> bool
+        """
+        Verify that the service request is allowed.
+
+        .. versionadded:: 3.18
+            Available only in ``Twitcher >= 0.6.x``.
+        """
+        try:
+            result = self.check_request(request)
+            return result is None
+        except OWSException:
+            return False
+        except Exception as exc:
+            LOGGER.error("Unhandled exception. Derived OWSException is expected for unauthorized access.", exc_info=exc)
+            return False
 
     def check_request(self, request):
         # type: (Request) -> Optional[NoReturn]

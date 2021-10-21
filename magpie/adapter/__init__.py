@@ -182,23 +182,33 @@ class MagpieAdapter(AdapterInterface):
     def tokenstore_factory(self, request):
         # type: (Request) -> AccessTokenStoreInterface
         """
-        .. note::
+        Unused token store implementation.
+
+        .. versionchanged:: 3.18
             Available only in ``Twitcher <= 0.5.x``.
         """
         raise NotImplementedError
 
     def owsregistry_factory(self, request):
-        # type: (Request) -> OWSRegistryInterface
+        # type: (Request) -> OWSRegistry
         """
-        .. note::
+        Creates the :class:`OWSRegistry` implementation derived from :class:`MagpieServiceStore`.
+
+        .. versionadded:: 3.18
             Available only in ``Twitcher >= 0.6.x``.
         """
-        raise OWSRegistry(self.servicestore_factory(request))
+        return OWSRegistry(self.servicestore_factory(request))
 
-    def owssecurity_factory(self, request):
-        # type: (AnySettingsContainer) -> MagpieOWSSecurity
+    def owssecurity_factory(self, request=None):
+        # type: (Optional[AnySettingsContainer]) -> MagpieOWSSecurity
+        """
+        Creates the :class:`OWSSecurity` implementation derived from :class:`MagpieOWSSecurity`.
+
+        .. versionchanged:: 3.18
+            Method :paramref:`request` does not exist starting in ``Twitcher >= 0.6.x``.
+        """
         if self._owssecurity is None:
-            self._owssecurity = MagpieOWSSecurity(request)
+            self._owssecurity = MagpieOWSSecurity(request or self.settings)
         return self._owssecurity
 
     def owsproxy_config(self, container):
