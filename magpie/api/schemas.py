@@ -2409,11 +2409,11 @@ class Groups_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 class Groups_POST_RequestBodySchema(colander.MappingSchema):
     group_name = colander.SchemaNode(colander.String(), description="Name of the group to create.")
     description = colander.SchemaNode(colander.String(), default="",
-                                      description="Description to apply to the created group.")
+                                      description="Description to apply to the group to create.")
     discoverable = colander.SchemaNode(colander.Boolean(), default=False,
-                                       description="Discoverability status of the created group.")
+                                       description="Discoverability status of the group to create.")
     terms = colander.SchemaNode(colander.String(), default="",
-                                description="Terms and conditions of the created group.")
+                                description="Terms and conditions of the group to create.")
 
 
 class Groups_POST_RequestSchema(BaseRequestSchemaAPI):
