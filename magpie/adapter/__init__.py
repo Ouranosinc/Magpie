@@ -209,6 +209,8 @@ class MagpieAdapter(AdapterInterface):
 
     def configurator_factory(self, container):  # noqa: N805, R0201
         # type: (AnySettingsContainer) -> Configurator
+        LOGGER.debug("Preparing database session.")
+
         settings = get_settings(container)
         setup_cache_settings(settings)  # default 'cache=off' if missing since 'pyramid_beaker' enables it otherwise
         set_cache_regions_from_settings(settings)  # parse/convert cache settings into regions understood by beaker
@@ -216,7 +218,7 @@ class MagpieAdapter(AdapterInterface):
         # disable rpcinterface which is conflicting with postgres db
         settings["twitcher.rpcinterface"] = False
 
-        LOGGER.info("Loading MagpieAdapter config")
+        LOGGER.info("Loading Magpie AuthN/AuthZ configuration for adapter.")
         config = get_auth_config(container)
         config.include("pyramid_beaker")
 
