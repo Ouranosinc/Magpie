@@ -1,6 +1,7 @@
 """
 Store adapters to read data from magpie.
 """
+from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import requests
@@ -17,9 +18,19 @@ from magpie.utils import CONTENT_TYPE_JSON, get_admin_cookies, get_logger, get_m
 #   Twitcher available only when this module is imported from it.
 #   It is installed during tests for evaluation.
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
-from twitcher.datatype import Service as TwitcherService  # noqa
+from twitcher.__version__ import __version__ as twitcher_version  # noqa
 from twitcher.exceptions import ServiceNotFound  # noqa
-from twitcher.store import ServiceStoreInterface  # noqa
+
+if LooseVersion(twitcher_version) > LooseVersion("0.6.0"):
+    from twitcher.models import Service as TwitcherService  # noqa
+    from twitcher.store import ServiceStoreInterface  # noqa
+elif LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
+    class ServiceStoreInterface(object):  # was removed on initial 0.6.0 version
+        def __init__(self, request):
+            self.request = request
+else:
+    from twitcher.datatype import Service as TwitcherService  # noqa
+    from twitcher.store import ServiceStoreInterface  # noqa
 
 if TYPE_CHECKING:
     from pyramid.request import Request
@@ -46,21 +57,38 @@ class MagpieServiceStore(ServiceStoreInterface):
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.magpie_admin_token = get_admin_cookies(self.settings, self.twitcher_ssl_verify)
 
-    def save_service(self, service, overwrite=True, request=None):
+    def save_service(self, service=None, name=None, url=None, overwrite=True, request=None):
         """
-        Magpie store is read-only, use magpie api to add services.
+        Store is read-only, use `Magpie` :term:`API` to add services.
+
+        .. note::
+            Multiple redundant parameters are applied to support different `Twitcher` versions.
+
+            - ``Twitcher <=0.5.x`` uses ``(service, *args, **kwargs)``
+            - ``Twitcher >=0.6.x`` uses ``(name, url, *args, **kwargs)``
+            - Some alternate interfaces also provided extra parameters at some point.
         """
-        raise NotImplementedError
+        msg = (
+            "MagpieAdapter does not support 'MagpieServiceStore.save_service' operation. "
+            "Use Magpie API or UI for service registration."
+        )
+        LOGGER.error(msg)
+        raise NotImplementedError(msg)
 
     def delete_service(self, name, request=None):
         """
-        Magpie store is read-only, use magpie api to delete services.
+        Store is read-only, use :mod:`Magpie` :term:`API` to delete services.
         """
-        raise NotImplementedError
+        msg = (
+            "MagpieAdapter does not support 'MagpieServiceStore.delete_service' operation. "
+            "Use Magpie API or UI for service removal."
+        )
+        LOGGER.error(msg)
+        raise NotImplementedError(msg)
 
     def list_services(self, request=None):  # noqa: F811
         """
-        Lists all services registered in magpie.
+        Lists all services registered in `Magpie`.
         """
         # obtain admin access since 'service_url' is only provided on admin routes
         services = []

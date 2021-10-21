@@ -1,5 +1,7 @@
 import logging
 import time
+import warnings
+from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import requests
@@ -9,7 +11,7 @@ from pyramid.httpexceptions import HTTPForbidden, HTTPOk
 from pyramid_beaker import set_cache_regions_from_settings
 from ziggurat_foundations.models.services.user import UserService
 
-from magpie import __meta__
+from magpie.__meta__ import __version__ as magpie_version
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
 from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.api.exception import raise_http, valid_http
@@ -29,8 +31,26 @@ from magpie.utils import (
 #   Twitcher available only when this module is imported from it.
 #   It is installed during tests for evaluation.
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
+from twitcher.__version__ import __version__ as twitcher_version  # noqa
 from twitcher.adapter.base import AdapterInterface  # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
+from twitcher.exceptions import ServiceNotFound  # noqa
+
+if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
+    from twitcher.owsregistry import OWSRegistry  # noqa
+
+if LooseVersion(twitcher_version) > LooseVersion("0.6.0") and LooseVersion(magpie_version) < LooseVersion("3.18"):
+    warnings.warn(
+        "Twitcher 0.6.x compatibility with versions lower than Magpie 3.18 is not guanranteed to work. "
+        "Current module versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
+        ImportWarning
+    )
+if LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
+    warnings.warn(
+        "Twitcher 0.6.0 exact version is not very well supported by MagpieAdapter. "
+        "It is recommended to either revert to Twitcher 0.5.x or use an higher 0.6.x version.",
+        ImportWarning
+    )
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -151,7 +171,7 @@ class MagpieAdapter(AdapterInterface):
 
     def describe_adapter(self):
         # type: () -> JSON
-        return {"name": self.name, "version": __meta__.__version__}
+        return {"name": self.name, "version": magpie_version}
 
     def servicestore_factory(self, request):
         # type: (Request) -> MagpieServiceStore
@@ -161,7 +181,19 @@ class MagpieAdapter(AdapterInterface):
 
     def tokenstore_factory(self, request):
         # type: (Request) -> AccessTokenStoreInterface
+        """
+        .. note::
+            Available only in ``Twitcher <= 0.5.x``.
+        """
         raise NotImplementedError
+
+    def owsregistry_factory(self, request):
+        # type: (Request) -> OWSRegistryInterface
+        """
+        .. note::
+            Available only in ``Twitcher >= 0.6.x``.
+        """
+        raise OWSRegistry(self.servicestore_factory(request))
 
     def owssecurity_factory(self, request):
         # type: (AnySettingsContainer) -> MagpieOWSSecurity
