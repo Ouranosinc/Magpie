@@ -29,17 +29,17 @@ from twitcher.__version__ import __version__ as twitcher_version  # noqa
 from twitcher.exceptions import ServiceNotFound  # noqa
 
 if LooseVersion(twitcher_version) > LooseVersion("0.6.0"):
-    from twitcher.models import Service as TwitcherService  # noqa
-    from twitcher.store import ServiceStoreInterface  # noqa
+    from twitcher.models import Service as TwitcherService  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.0
+    from twitcher.store import ServiceStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher > 0.6.0
 elif LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
-    from twitcher.models import Service as TwitcherService  # noqa
+    from twitcher.models import Service as TwitcherService  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.0
 
     class ServiceStoreInterface(object):  # was removed on initial 0.6.0 version
         def __init__(self, request):
             self.request = request
 else:
     from twitcher.datatype import Service as TwitcherService  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
-    from twitcher.store import ServiceStoreInterface  # noqa
+    from twitcher.store import ServiceStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
 
 if TYPE_CHECKING:
     from pyramid.request import Request

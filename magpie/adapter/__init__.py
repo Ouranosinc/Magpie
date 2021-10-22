@@ -36,7 +36,7 @@ from twitcher.adapter.base import AdapterInterface  # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 
 if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
-    from twitcher.owsregistry import OWSRegistry  # noqa
+    from twitcher.owsregistry import OWSRegistry  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.x
 
 if LooseVersion(twitcher_version) > LooseVersion("0.6.0") and LooseVersion(magpie_version) < LooseVersion("3.18"):
     warnings.warn(

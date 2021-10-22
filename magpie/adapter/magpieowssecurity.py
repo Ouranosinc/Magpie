@@ -35,7 +35,7 @@ from twitcher.owsexceptions import (  # noqa
 from twitcher.utils import parse_service_name  # noqa
 
 if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
-    from twitcher.interface import OWSSecurityInterface  # noqa
+    from twitcher.interface import OWSSecurityInterface  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.x
 else:
     from twitcher.owssecurity import OWSSecurityInterface  # noqa
 
