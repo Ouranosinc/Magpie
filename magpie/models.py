@@ -4,7 +4,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
-from pyramid.httpexceptions import HTTPInternalServerError
+from pyramid.httpexceptions import HTTPForbidden, HTTPInternalServerError, HTTPNotFound
 from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated, Everyone
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
@@ -29,13 +29,14 @@ from ziggurat_foundations.models.user_resource_permission import UserResourcePer
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
 from magpie.api import exception as ax
+from magpie.api import schemas as s
 from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.utils import ExtendedEnum, FlexibleNameEnum, decompose_enum_flags, get_logger, get_magpie_url
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, Iterable, List, Optional, Type, Union
+    from typing import Dict, Iterable, List, Optional, Set, Type, Union
 
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session
@@ -173,6 +174,42 @@ class UserResourcePermission(UserResourcePermissionMixin, Base):
 class User(UserMixin, Base):
     def __str__(self):
         return "<User: name={} id={}>".format(self.user_name, self.id)
+
+    def get_user_groups_by_status(self, status, db_session=None):
+        # type: (UserGroupStatus, Session) -> Set[Str]
+        """
+        List all groups a user belongs to, filtered by UserGroup status type.
+        """
+        cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
+
+        group_names = set()
+        member_group_names = set(self.get_user_groups_checked(cur_session))
+        if status in [UserGroupStatus.ACTIVE, UserGroupStatus.ALL]:
+            group_names = group_names.union(member_group_names)
+        if status in [UserGroupStatus.PENDING, UserGroupStatus.ALL]:
+            tmp_tokens = TemporaryToken.by_user(self).filter(
+                TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
+            pending_group_names = set(tmp_token.group.group_name for tmp_token in tmp_tokens)
+
+            # Remove any group a user already belongs to, in case any tokens are irrelevant.
+            # Should not happen since related tokens are deleted upon T&C acceptation.
+            pending_group_names = pending_group_names - member_group_names
+            group_names = group_names.union(pending_group_names)
+        return group_names
+
+    def get_user_groups_checked(self, db_session=None):
+        # type: (Session) -> List[Str]
+        """
+        Obtains the validated list of group names from a pre-validated user.
+        """
+        cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
+
+        ax.verify_param(self, not_none=True, http_error=HTTPNotFound,
+                        msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
+        group_names = ax.evaluate_call(lambda: [group.group_name for group in self.groups],  # noqa
+                                       fallback=lambda: cur_session.rollback(), http_error=HTTPForbidden,
+                                       msg_on_fail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
+        return sorted(group_names)
 
 
 class UserPending(Base):

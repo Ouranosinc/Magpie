@@ -90,13 +90,7 @@ def get_user_view(request):
     Get user information by name.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    user_info = uf.format_user(user)
-
-    # indicate if user has any pending T&C groups
-    group_names = uu.get_user_groups(user, UserGroupStatus.PENDING, request.db)
-    user_info["has_pending_group"] = bool(group_names)
-
-    return ax.valid_http(http_success=HTTPOk, content={"user": user_info},
+    return ax.valid_http(http_success=HTTPOk, content={"user": uf.format_user(user)},
                          detail=s.User_GET_OkResponseSchema.description)
 
 
@@ -139,7 +133,7 @@ def get_user_groups_view(request):
                     msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
                     http_error=HTTPBadRequest)
     status = UserGroupStatus.get(status)
-    group_names = uu.get_user_groups(user, status, request.db)
+    group_names = user.get_user_groups_by_status(status, request.db)
 
     return ax.valid_http(http_success=HTTPOk, content={"group_names": sorted(group_names)},
                          detail=s.UserGroups_GET_OkResponseSchema.description)

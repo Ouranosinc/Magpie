@@ -205,7 +205,7 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
         if update_email_admin_only and not (update_username or update_status):
             err_msg = "User email update not permitted by non-administrators when email registration is enabled."
         ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP", request), is_in=True,
-                        param_compare=get_user_groups_checked(request.user, request.db), with_param=False,
+                        param_compare=request.user.get_user_groups_checked(request.db), with_param=False,
                         http_error=HTTPForbidden, msg_on_fail=err_msg)
 
     # logged user updating itself is forbidden if it corresponds to special users
@@ -871,37 +871,3 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(group_name, matches=True, param_name="group_name", param_compare=ax.PARAM_REGEX,
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
-
-
-def get_user_groups(user, status, db_session):
-    # type: (models.User, models.UserGroupStatus, Session) -> List[Str]
-    """
-    List all groups a user belongs to, filtered by UserGroup status type.
-    """
-    group_names = set()
-    member_group_names = set(get_user_groups_checked(user, db_session))
-    if status in [UserGroupStatus.ACTIVE, UserGroupStatus.ALL]:
-        group_names = group_names.union(member_group_names)
-    if status in [UserGroupStatus.PENDING, UserGroupStatus.ALL]:
-        tmp_tokens = TemporaryToken.by_user(user).filter(
-            TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
-        pending_group_names = set(tmp_token.group.group_name for tmp_token in tmp_tokens)
-
-        # Remove any group a user already belongs to, in case any tokens are irrelevant.
-        # Should not happen since related tokens are deleted upon T&C acceptation.
-        pending_group_names = pending_group_names - member_group_names
-        group_names = group_names.union(pending_group_names)
-    return group_names
-
-
-def get_user_groups_checked(user, db_session):
-    # type: (models.User, Session) -> List[Str]
-    """
-    Obtains the validated list of group names from a pre-validated user.
-    """
-    ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
-                    msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
-    group_names = ax.evaluate_call(lambda: [group.group_name for group in user.groups],  # noqa
-                                   fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
-                                   msg_on_fail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
-    return sorted(group_names)
