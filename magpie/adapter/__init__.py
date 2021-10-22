@@ -34,14 +34,13 @@ from magpie.utils import (
 from twitcher.__version__ import __version__ as twitcher_version  # noqa
 from twitcher.adapter.base import AdapterInterface  # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
-from twitcher.exceptions import ServiceNotFound  # noqa
 
 if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
     from twitcher.owsregistry import OWSRegistry  # noqa
 
 if LooseVersion(twitcher_version) > LooseVersion("0.6.0") and LooseVersion(magpie_version) < LooseVersion("3.18"):
     warnings.warn(
-        "Twitcher 0.6.x compatibility with versions lower than Magpie 3.18 is not guanranteed to work. "
+        "Twitcher 0.6.x compatibility with versions lower than Magpie 3.18 is not guaranteed to work. "
         "Current module versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
         ImportWarning
     )
@@ -53,7 +52,6 @@ if LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
     )
 
 if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
     from typing import Optional
 
     from pyramid.config import Configurator
@@ -63,7 +61,7 @@ if TYPE_CHECKING:
     from magpie.models import User
     from magpie.typedefs import JSON, AnySettingsContainer, Str
 
-    from twitcher.store import AccessTokenStoreInterface  # noqa
+    from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
 
 LOGGER = get_logger("TWITCHER|{}".format(__name__))
 
@@ -199,7 +197,7 @@ class MagpieAdapter(AdapterInterface):
         """
         return OWSRegistry(self.servicestore_factory(request))
 
-    def owssecurity_factory(self, request=None):
+    def owssecurity_factory(self, request=None):  # noqa  # pylint: disable=W0221  # diff between Twitcher 0.5.x/0.6.x
         # type: (Optional[AnySettingsContainer]) -> MagpieOWSSecurity
         """
         Creates the :class:`OWSSecurity` implementation derived from :class:`MagpieOWSSecurity`.

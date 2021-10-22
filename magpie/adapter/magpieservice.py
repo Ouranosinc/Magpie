@@ -38,7 +38,7 @@ elif LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
         def __init__(self, request):
             self.request = request
 else:
-    from twitcher.datatype import Service as TwitcherService  # noqa
+    from twitcher.datatype import Service as TwitcherService  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
     from twitcher.store import ServiceStoreInterface  # noqa
 
 if TYPE_CHECKING:

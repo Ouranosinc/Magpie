@@ -41,7 +41,7 @@ else:
 
 LOGGER = get_logger("TWITCHER|{}".format(__name__))
 if TYPE_CHECKING:
-    from typing import Dict, NoReturn, Optional, Tuple
+    from typing import Dict, Tuple
 
     from pyramid.request import Request
 
@@ -142,8 +142,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             Available only in ``Twitcher >= 0.6.x``.
         """
         try:
-            result = self.check_request(request)
-            return result is None
+            self.check_request(request)
+            return True
         except OWSException:
             return False
         except Exception as exc:
@@ -151,7 +151,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             return False
 
     def check_request(self, request):
-        # type: (Request) -> Optional[NoReturn]
+        # type: (Request) -> None
         """
         Verifies if the request user has access to the targeted resource according to parent service and permissions.
 
@@ -159,14 +159,20 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         Otherwise, ignore request access validation.
 
         In the case `Twitcher` proxy path is matched, the :term:`Logged User` **MUST** be allowed access following
-        :term:`Effective Permissions` resolution via :term:`ACL`. Otherwise, :exception:`OWSForbidden` is raised.
+        :term:`Effective Permissions` resolution via :term:`ACL`.
+        Otherwise, :exception:`OWSAccessForbidden` is raised.
 
         Failing to parse the request or any underlying component that raises an exception will be left up to the
         parent caller to handle the exception. In most typical use case, this means `Twitcher` will raise a
-        generic :exception:`OWSException` with ``NoApplicableCode``, unless the exception was .
+        generic :exception:`OWSException` with ``NoApplicableCode``, unless the exception was more specifically handled.
 
-        :raises OWSForbidden: if user does not have access to the targeted resource under the service.
-        :returns: nothing if user has access.
+        :raises OWSAccessForbidden:
+            If the user does not have access to the targeted resource under the service.
+        :raises HTTPBadRequest:
+            If a request parsing error was detected when trying to resolve the permission based on the service/resource.
+        :raises Exception:
+            Any derived exception that was not explicitly handled is re-raised directly after logging the event.
+        :returns: Nothing if user has access.
         """
         if request.path.startswith(self.twitcher_protected_path):
             # each service implementation defines their ACL and permission resolution using request definition
