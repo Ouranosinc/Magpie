@@ -2,7 +2,7 @@
 add group terms
 
 Revision ID: cb92ff1f81bb
-Revises: 954a9d7fe740
+Revises: 35e98bdc8aed
 Create Date: 2021-06-09 14:18:32.777082
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "cb92ff1f81bb"
-down_revision = "954a9d7fe740"
+down_revision = "35e98bdc8aed"
 branch_labels = None
 depends_on = None
 
