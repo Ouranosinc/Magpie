@@ -34,7 +34,7 @@ from magpie.api.webhooks import (
     process_webhook_requests
 )
 from magpie.constants import get_constant
-from magpie.models import TemporaryToken, TokenOperation, UserGroupStatus
+from magpie.models import TemporaryToken, TokenOperation
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT, service_factory
 from magpie.ui.utils import BaseViews

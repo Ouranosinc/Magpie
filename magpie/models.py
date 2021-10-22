@@ -29,7 +29,6 @@ from ziggurat_foundations.models.user_resource_permission import UserResourcePer
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
 
 from magpie.api import exception as ax
-from magpie.api import schemas as s
 from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.utils import ExtendedEnum, FlexibleNameEnum, decompose_enum_flags, get_logger, get_magpie_url
@@ -202,11 +201,12 @@ class User(UserMixin, Base):
         """
         Obtains the validated list of group names from a pre-validated user.
         """
+        from magpie.api import schemas as s
         cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
 
         ax.verify_param(self, not_none=True, http_error=HTTPNotFound,
                         msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
-        group_names = ax.evaluate_call(lambda: [group.group_name for group in self.groups],  # noqa
+        group_names = ax.evaluate_call(lambda: [group.group_name for group in self.groups],  # pylint: disable=E1101,no-member
                                        fallback=lambda: cur_session.rollback(), http_error=HTTPForbidden,
                                        msg_on_fail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
         return sorted(group_names)
