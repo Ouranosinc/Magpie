@@ -817,10 +817,7 @@ class UserBodySchema(RegisteredUserInfoSchema):
     group_names = GroupNamesListSchema(
         example=["administrators", "users"]
     )
-
-
-class UserBodyPendingGroupsSchema(UserBodySchema):
-    has_pending_groups = colander.SchemaNode(
+    has_pending_group = colander.SchemaNode(
         colander.Bool(),
         description="Indicates if the user has any pending group requiring terms and conditions validation.",
         example=False
@@ -1868,7 +1865,7 @@ class User_GET_RequestSchema(BaseRequestSchemaAPI):
 
 
 class User_GET_ResponseBodySchema(BaseResponseBodySchema):
-    user = UserBodyPendingGroupsSchema()
+    user = UserBodySchema()
 
 
 class User_GET_OkResponseSchema(BaseResponseSchemaAPI):

@@ -278,7 +278,8 @@ class UserPending(Base):
         """
         Pending user is not a member of any group.
 
-        Avoid error in case this field gets accessed when simultaneously handling :class:`User` and :class`UserPending`.
+        Avoid error in case this method gets accessed when simultaneously
+        handling :class:`User` and :class`UserPending`.
         """
         return []
 
