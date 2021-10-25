@@ -9,7 +9,8 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add support of `Twitcher` ``0.6.x`` branch for ``MagpieAdapter``.
+* Add support of `Twitcher` ``0.6.x`` branch for ``MagpieAdapter``
+  (relates to `bird-house/twitcher#110 <https://github.com/bird-house/twitcher/pull/110>`_).
 * Add ``tm.annotate_user = False`` in settings to limit chances of sporadic errors
   (``sqlalchemy.orm.exc.DetachedInstanceError``, ``transaction.interfaces.NoTransaction``) that are observed
   when different session/transaction scopes are handling the user attached to the request
