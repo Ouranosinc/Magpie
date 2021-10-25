@@ -38,16 +38,20 @@ from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
     from twitcher.owsregistry import OWSRegistry  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.x
 
-if LooseVersion(twitcher_version) > LooseVersion("0.6.0") and LooseVersion(magpie_version) < LooseVersion("3.18"):
+if LooseVersion(twitcher_version) < LooseVersion("0.6.0"):
     warnings.warn(
-        "Twitcher 0.6.x compatibility with versions lower than Magpie 3.18 is not guaranteed to work. "
-        "Current module versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
+        "Magpie version is not guaranteed to work with versions prior to Twitcher 0.6.x. "
+        "It is recommended to either use more recent Twitcher 0.6.x version or revert back "
+        "to older Magpie < 3.18 in order to use Twitcher 0.5.x versions. "
+        "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
         ImportWarning
     )
 if LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
     warnings.warn(
-        "Twitcher 0.6.0 exact version is not very well supported by MagpieAdapter. "
-        "It is recommended to either revert to Twitcher 0.5.x or use an higher 0.6.x version.",
+        "Twitcher 0.6.0 exact version does not have complete compatibility support for MagpieAdapter. "
+        "It is recommended to either revert to Twitcher 0.5.x and previous Magpie < 3.18 version, "
+        "or use an higher Twitcher 0.6.x version. "
+        "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
         ImportWarning
     )
 
