@@ -274,6 +274,14 @@ class UserPending(Base):
         """
         return []
 
+    def get_user_groups_by_status(self, status, db_session=None):
+        """
+        Pending user is not a member of any group.
+
+        Avoid error in case this field gets accessed when simultaneously handling :class:`User` and :class`UserPending`.
+        """
+        return []
+
     def upgrade(self, db_session=None):
         # type: (Optional[Session]) -> User
         """
