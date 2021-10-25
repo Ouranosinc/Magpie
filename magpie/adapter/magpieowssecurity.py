@@ -26,12 +26,10 @@ from magpie.utils import CONTENT_TYPE_JSON, get_authenticate_headers, get_logger
 #   It is installed during tests for evaluation.
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
 from twitcher.__version__ import __version__ as twitcher_version  # noqa
-from twitcher.owsexceptions import (  # noqa
-    OWSAccessForbidden,               # noqa
-    OWSException,                     # noqa
-    OWSInvalidParameterValue,         # noqa
-    OWSMissingParameterValue          # noqa
-)
+from twitcher.owsexceptions import OWSAccessForbidden  # noqa; noqa
+from twitcher.owsexceptions import OWSException  # noqa
+from twitcher.owsexceptions import OWSInvalidParameterValue  # noqa
+from twitcher.owsexceptions import OWSMissingParameterValue  # noqa
 from twitcher.utils import parse_service_name  # noqa
 
 if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):

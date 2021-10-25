@@ -17,8 +17,8 @@ from magpie.utils import (
     get_admin_cookies,
     get_logger,
     get_magpie_url,
-    get_twitcher_url,
-    get_settings
+    get_settings,
+    get_twitcher_url
 )
 
 # WARNING:
