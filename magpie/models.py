@@ -4,7 +4,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
-from pyramid.httpexceptions import HTTPForbidden, HTTPInternalServerError, HTTPNotFound
+from pyramid.httpexceptions import HTTPInternalServerError
 from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated, Everyone
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
