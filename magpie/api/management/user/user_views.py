@@ -133,7 +133,7 @@ def get_user_groups_view(request):
                     msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
                     http_error=HTTPBadRequest)
     status = UserGroupStatus.get(status)
-    group_names = user.get_user_groups_by_status(status, request.db)
+    group_names = user.get_groups_by_status(status, request.db)
 
     return ax.valid_http(http_success=HTTPOk, content={"group_names": sorted(group_names)},
                          detail=s.UserGroups_GET_OkResponseSchema.description)

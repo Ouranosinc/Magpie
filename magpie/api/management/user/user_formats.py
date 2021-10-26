@@ -44,7 +44,7 @@ def format_user(user, group_names=None, basic_info=False, dotted=False):
             user_info["group_names"] = list(sorted(grp_names))
 
             # indicate if user has any pending T&C groups
-            user_info["has_pending_group"] = bool(user.get_user_groups_by_status(UserGroupStatus.PENDING))
+            user_info["has_pending_group"] = bool(user.get_groups_by_status(UserGroupStatus.PENDING))
 
         # special users not meant to be used as valid "accounts" marked as without an ID
         if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER") and status != UserStatuses.Pending:

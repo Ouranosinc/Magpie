@@ -174,7 +174,7 @@ class User(UserMixin, Base):
     def __str__(self):
         return "<User: name={} id={}>".format(self.user_name, self.id)
 
-    def get_user_groups_by_status(self, status, db_session=None):
+    def get_groups_by_status(self, status, db_session=None):
         # type: (UserGroupStatus, Session) -> Set[Str]
         """
         List all groups a user belongs to, filtered by UserGroup status type.
@@ -274,7 +274,7 @@ class UserPending(Base):
         """
         return []
 
-    def get_user_groups_by_status(self, status, db_session=None):
+    def get_groups_by_status(self, status, db_session=None):
         """
         Pending user is not a member of any group.
 
