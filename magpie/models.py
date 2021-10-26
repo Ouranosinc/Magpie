@@ -179,10 +179,12 @@ class User(UserMixin, Base):
         """
         List all groups a user belongs to, filtered by UserGroup status type.
         """
+        from magpie.api.management.user.user_utils import get_user_groups_checked
+
         cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
 
         group_names = set()
-        member_group_names = set(self.get_user_groups_checked(cur_session))
+        member_group_names = set(get_user_groups_checked(self, cur_session))
         if status in [UserGroupStatus.ACTIVE, UserGroupStatus.ALL]:
             group_names = group_names.union(member_group_names)
         if status in [UserGroupStatus.PENDING, UserGroupStatus.ALL]:
@@ -195,21 +197,6 @@ class User(UserMixin, Base):
             pending_group_names = pending_group_names - member_group_names
             group_names = group_names.union(pending_group_names)
         return group_names
-
-    def get_user_groups_checked(self, db_session=None):
-        # type: (Session) -> List[Str]
-        """
-        Obtains the validated list of group names from a pre-validated user.
-        """
-        from magpie.api import schemas as s
-        cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
-
-        ax.verify_param(self, not_none=True, http_error=HTTPNotFound,
-                        msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
-        group_names = ax.evaluate_call(lambda: [group.group_name for group in self.groups],  # pylint: disable=E1101,no-member
-                                       fallback=lambda: cur_session.rollback(), http_error=HTTPForbidden,
-                                       msg_on_fail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
-        return sorted(group_names)
 
 
 class UserPending(Base):

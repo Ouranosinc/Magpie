@@ -205,7 +205,7 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
         if update_email_admin_only and not (update_username or update_status):
             err_msg = "User email update not permitted by non-administrators when email registration is enabled."
         ax.verify_param(get_constant("MAGPIE_ADMIN_GROUP", request), is_in=True,
-                        param_compare=request.user.get_user_groups_checked(request.db), with_param=False,
+                        param_compare=get_user_groups_checked(request.user, request.db), with_param=False,
                         http_error=HTTPForbidden, msg_on_fail=err_msg)
 
     # logged user updating itself is forbidden if it corresponds to special users
@@ -871,3 +871,16 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(group_name, matches=True, param_name="group_name", param_compare=ax.PARAM_REGEX,
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
+
+
+def get_user_groups_checked(user, db_session):
+    # type: (models.User, Session) -> List[Str]
+    """
+    Obtains the validated list of group names from a pre-validated user.
+    """
+    ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
+                    msg_on_fail=s.Groups_CheckInfo_NotFoundResponseSchema.description)
+    group_names = ax.evaluate_call(lambda: [group.group_name for group in user.groups],  # noqa
+                                   fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
+                                   msg_on_fail=s.Groups_CheckInfo_ForbiddenResponseSchema.description)
+    return sorted(group_names)
