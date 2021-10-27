@@ -1,9 +1,11 @@
+from inspect import cleandoc
 from secrets import compare_digest
 from typing import TYPE_CHECKING
 
 import six
 import transaction
 from pyramid.httpexceptions import (
+    HTTPAccepted,
     HTTPBadRequest,
     HTTPConflict,
     HTTPCreated,
@@ -24,6 +26,7 @@ from magpie.api import schemas as s
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user import user_formats as uf
+from magpie.api.notifications import get_email_template, send_email
 from magpie.api.webhooks import (
     WebhookAction,
     generate_callback_url,
@@ -31,9 +34,11 @@ from magpie.api.webhooks import (
     process_webhook_requests
 )
 from magpie.constants import get_constant
+from magpie.models import TemporaryToken, TokenOperation
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT, service_factory
-from magpie.utils import get_logger
+from magpie.ui.utils import BaseViews
+from magpie.utils import get_logger, get_settings_from_config_ini
 
 LOGGER = get_logger(__name__)
 
@@ -43,6 +48,7 @@ if TYPE_CHECKING:
 
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
+    from pyramid.response import Response
     from sqlalchemy.orm.session import Session
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
@@ -139,19 +145,13 @@ def create_user(user_name,              # type: Str
                                 http_error=HTTPForbidden,
                                 msg_on_fail=s.UserNew_POST_ForbiddenResponseSchema.description)
 
-    def _add_to_group(usr, grp):
-        # type: (models.User, models.Group) -> None
-        group_entry = models.UserGroup(group_id=grp.id, user_id=usr.id)  # noqa
-        ax.evaluate_call(lambda: db_session.add(group_entry), fallback=lambda: db_session.rollback(),
-                         http_error=HTTPForbidden, msg_on_fail=s.UserGroup_GET_ForbiddenResponseSchema.description)
-
     # Assign user to group
     new_user_groups = [group_name]
-    _add_to_group(new_user, group_checked)
+    create_pending_or_assign_user_group(new_user, group_checked, db_session)
     # Also add user to anonymous group if not already done
     anonym_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
     if group_checked.group_name != anonym_grp_name:
-        _add_to_group(new_user, _get_group(anonym_grp_name))
+        create_pending_or_assign_user_group(new_user, _get_group(anonym_grp_name), db_session)
         new_user_groups.append(anonym_grp_name)
 
     user_content = uf.format_user(new_user, new_user_groups)
@@ -309,6 +309,89 @@ def assign_user_group(user, group, db_session):
                      fallback=lambda: db_session.rollback(), http_error=HTTPForbidden,
                      msg_on_fail=s.UserGroups_POST_RelationshipForbiddenResponseSchema.description,
                      content={"user_name": user.user_name, "group_name": group.group_name})
+
+
+def send_group_terms_email(user, group, db_session):
+    # type: (models.User, models.Group, Session) -> None
+    """
+    Sends an email for terms and conditions confirmation, in the case of a request for the creation of
+    a user-group relationship where the group requires a terms and conditions confirmation.
+
+    :returns: valid HTTP response on successful operations.
+    :raises HTTPError: corresponding error matching problem encountered.
+    """
+    confirmation_url = generate_callback_url(models.TokenOperation.GROUP_ACCEPT_TERMS,
+                                             db_session,
+                                             user=user,
+                                             group=group)
+    params = {
+        "user": user,
+        "group_name": group.group_name,
+        "group_terms": group.terms,
+        "confirm_url": confirmation_url
+    }
+    settings = get_settings_from_config_ini(get_constant("MAGPIE_INI_FILE_PATH"))
+    template = get_email_template("MAGPIE_GROUP_TERMS_SUBMISSION_EMAIL_TEMPLATE", settings)
+    ax.evaluate_call(lambda: send_email(user.email, settings, template, params),
+                     fallback=lambda: db_session.rollback(), http_error=HTTPInternalServerError,
+                     msg_on_fail="Error occurred while adding user to a group when trying to send "
+                                 "email to user for requesting agreement of the group's terms and conditions.")
+
+    return ax.valid_http(http_success=HTTPAccepted, detail=s.UserGroups_POST_AcceptedResponseSchema.description,
+                         content={"user_name": user.user_name, "group_name": group.group_name})
+
+
+def create_pending_or_assign_user_group(user, group, db_session):
+    # type: (models.User, models.Group, Session) -> None
+    """
+    Creates either a new user-group relationship (user membership to a group) or a pending terms and conditions
+    confirmation. If the group requires a T&C confirmation, sends an email for T&C confirmation,
+    else, the user is assigned directly to the group.
+
+    :returns: valid HTTP response on successful operations.
+    :raises HTTPError: corresponding error matching problem encountered.
+    """
+    if group.terms:
+        return send_group_terms_email(user, group, db_session)
+
+    assign_user_group(user, group, db_session=db_session)
+    return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
+                         content={"user_name": user.user_name, "group_name": group.group_name})
+
+
+def handle_user_group_terms_confirmation(tmp_token, request):
+    # type: (models.TemporaryToken, Request) -> Response
+    """
+    Handles the confirmation of a user to accept the terms and conditions of a group.
+
+    Generates the appropriate response that will be displayed to the user.
+    """
+    LOGGER.info("User [%s:%s] approved terms and conditions of group [%s:%s].",
+                tmp_token.user.id, tmp_token.user.user_name, tmp_token.group.id, tmp_token.group.group_name)
+    assign_user_group(tmp_token.user, tmp_token.group, request.db)
+
+    # notify the user of its successful T&C acceptation, and confirm the user has been added to the requested group
+    params = {"user": tmp_token.user, "group_name": tmp_token.group.group_name}
+    template = get_email_template("MAGPIE_GROUP_TERMS_APPROVED_EMAIL_TEMPLATE", request)
+    ax.evaluate_call(lambda: send_email(tmp_token.user.email, request, template, params),
+                     fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                     msg_on_fail="Error occurred during group terms confirmation when trying to send "
+                                 "email to user for confirmation of the terms and conditions acceptation.")
+
+    # Remove all group_accept_terms temporary tokens associated with the same user and group
+    tmp_tokens = TemporaryToken.by_user(tmp_token.user)
+    tmp_tokens = tmp_tokens.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
+    tmp_tokens = tmp_tokens.filter(TemporaryToken.group == tmp_token.group)
+    for token in tmp_tokens:
+        request.db.delete(token)
+
+    msg = cleandoc("""
+        You have accepted the terms and conditions of the '{grp_name}' group. 
+
+        User '{user_name}' has now been successfully added to the '{grp_name}' group. 
+        """.format(grp_name=tmp_token.group.group_name, user_name=tmp_token.user.user_name))
+
+    return BaseViews(request).render("magpie.ui.home:templates/message.mako", {"message": msg})
 
 
 def delete_user_group(user, group, db_session):

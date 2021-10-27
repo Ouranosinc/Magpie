@@ -22,6 +22,25 @@ Features / Changes
   `Avoid Accessing the Authentication Policy
   <https://docs.pylonsproject.org/projects/pyramid_tm/en/latest/#avoid-accessing-the-authentication-policy>`_).
 
+`3.17.0 <https://github.com/Ouranosinc/Magpie/tree/3.17.0>`_ (2021-10-27)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add new `Terms and conditions` field for ``Group`` creation. When a request is made to assign a ``User`` to a
+  ``Group`` with terms and conditions, an email is now sent to the ``User`` with the terms and conditions. The ``User``
+  is assigned to the ``Group`` when receiving the ``User``'s approval of terms and conditions, and another email is
+  then sent to notify the ``User`` of the successful operation.
+* Changed ``/groups/{group_name}/users``, ``/users/current/groups`` and ``/users/{user_name}/groups`` endpoints with
+  new query parameter `status` to either get active, pending or all ``Users`` or ``Groups``. This new parameter is
+  useful to display any pending ``Users``/``Groups`` on the UI.
+* Added new field `has_pending_group` in the user info returned by ``/users/{user_name}`` endpoint, indicating if
+  the user has any pending group.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix HTTP ``Internal Server Error [500]`` on the page to edit a ``Group`` when deleting the last ``User`` of a ``Group``.
+
 `3.16.1 <https://github.com/Ouranosinc/Magpie/tree/3.16.1>`_ (2021-10-18)
 ------------------------------------------------------------------------------------
 

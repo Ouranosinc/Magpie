@@ -34,7 +34,8 @@
         </tr>
         <tr>
             <td>Description:</td>
-            <td>
+            <!-- Input text box cell requires a fixed width, to avoid being resized upon T&C textarea resizing -->
+            <td class="add-group-fixed-width">
                 <label>
                     <input type="text" name="description" value="${form_description}" />
                 </label>
@@ -69,6 +70,31 @@
                 </label>
             </td>
             <td>
+            </td>
+        </tr>
+        <tr>
+            <td class="top-align">Terms and conditions:</td>
+            <td colspan="2">
+                <label>
+                    <textarea rows="5" cols="50" name="terms">${form_terms}</textarea>
+                </label>
+            </td>
+            <td class="top-align">
+                %if not invalid_terms:
+                (optional)
+                %else:
+                <div class="alert-form-error"
+                    %if not invalid_terms:
+                        style="visibility: hidden"
+                    %endif
+                >
+                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                             alt="ERROR" class="icon-error" />
+                    <div class="alert-form-text alert-form-text-error">
+                        ${reason_terms}
+                    </div>
+                </div>
+                %endif
             </td>
         </tr>
         <tr>

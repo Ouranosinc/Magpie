@@ -10,6 +10,7 @@ from magpie.api.management.group import group_formats as gf
 from magpie.api.management.group import group_utils as gu
 from magpie.api.management.service import service_utils as su
 from magpie.constants import get_constant
+from magpie.models import TemporaryToken, TokenOperation, UserGroupStatus
 
 
 @s.GroupsAPI.get(tags=[s.GroupsTag], response_schemas=s.Groups_GET_responses)
@@ -30,9 +31,10 @@ def create_group_view(request):
     Create a group.
     """
     group_name = ar.get_value_multiformat_body_checked(request, "group_name")
-    group_desc = ar.get_multiformat_body(request, "description", default="")
+    group_desc = ar.get_multiformat_body(request, "description", default=None)
     group_disc = asbool(ar.get_multiformat_body(request, "discoverable", default=False))
-    return gu.create_group(group_name, group_desc, group_disc, request.db)
+    group_terms = ar.get_multiformat_body(request, "terms", default=None)
+    return gu.create_group(group_name, group_desc, group_disc, group_terms, request.db)
 
 
 @s.GroupAPI.get(schema=s.Group_GET_RequestSchema, tags=[s.GroupsTag], response_schemas=s.Group_GET_responses)
@@ -116,12 +118,34 @@ def delete_group_view(request):
 @view_config(route_name=s.GroupUsersAPI.name, request_method="GET")
 def get_group_users_view(request):
     """
-    List all user from a group.
+    List all users from a group.
+    Users can be filtered by status depending of input arguments.
     """
     group = ar.get_group_matchdict_checked(request)
-    user_names = ax.evaluate_call(lambda: [user.user_name for user in group.users],
-                                  http_error=HTTPForbidden,
-                                  msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
+    status = ar.get_query_param(request, "status", default=UserGroupStatus.ACTIVE.value)
+    ax.verify_param(status, is_in=True, param_compare=UserGroupStatus.values(), param_name="status",
+                    msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
+                    http_error=HTTPBadRequest)
+    status = UserGroupStatus.get(status)
+
+    user_names = set()
+    member_user_names = ax.evaluate_call(lambda: set(user.user_name for user in group.users),
+                                         http_error=HTTPForbidden,
+                                         msg_on_fail=s.GroupUsers_GET_ForbiddenResponseSchema.description)
+    if status in [UserGroupStatus.ACTIVE, UserGroupStatus.ALL]:
+        user_names = user_names.union(member_user_names)
+    if status in [UserGroupStatus.PENDING, UserGroupStatus.ALL]:
+        # Find all temporary tokens with requested group id that have a pending accept terms request
+        tmp_tokens = request.db.query(TemporaryToken).filter(TemporaryToken.group_id == group.id)
+        tmp_tokens = tmp_tokens.filter(TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
+
+        # Find and return all user names associated with the discovered tokens
+        pending_user_names = set(tmp_token.user.user_name for tmp_token in tmp_tokens)
+
+        # Remove any user already belonging to the group, in case any tokens are irrelevant.
+        # Should not happen since related tokens are deleted upon T&C acceptation.
+        pending_user_names = pending_user_names - member_user_names
+        user_names = user_names.union(pending_user_names)
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupUsers_GET_OkResponseSchema.description,
                          content={"user_names": sorted(user_names)})
 

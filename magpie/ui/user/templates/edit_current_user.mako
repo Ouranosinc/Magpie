@@ -1,4 +1,5 @@
 <%inherit file="magpie.ui.home:templates/template.mako"/>
+<%namespace name="membership_alerts" file="magpie.ui.management:templates/membership_alerts.mako"/>
 
 <%block name="breadcrumb">
     <li><a href="${request.route_url('home')}">Home</a></li>
@@ -10,7 +11,7 @@
     <h3 class="alert-title-warning">Warning</h3>
     <div class="alert-text-container alert-warning">
         <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
-             alt="" class="icon-warning icon-color-invert" />
+             alt="" class="icon-warning icon-color-white" />
         <div class="alert-text">
         Update User Information Failed
         </div>
@@ -35,7 +36,7 @@
     <div class="alert-danger">
         <div class="alert-text">
             <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
-                 alt="" class="icon-error icon-color-invert"/>
+                 alt="" class="icon-error icon-color-white"/>
             &nbsp;Delete your account?
         </div>
     </div>
@@ -224,6 +225,7 @@
 
 
 <h3>Public Groups Membership</h3>
+${membership_alerts.edit_membership_alerts()}
 
 <form id="edit_membership" action="${request.path}" method="post">
     <input type="hidden" value="True" name="edit_group_membership"/>
@@ -242,7 +244,13 @@
                                onchange="document.getElementById('edit_membership').submit()"
                             %endif
                         >
-                        ${group}
+                        %if group in pending_groups:
+                            <!-- checkbox is not checked or disabled for pending groups
+                                 so additional requests and emails can still be sent if needed -->
+                            ${group} [pending]
+                        %else:
+                            ${group}
+                        %endif
                     </label>
                 </td>
             </tr>

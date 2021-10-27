@@ -23,6 +23,10 @@ LOGGER = get_logger(__name__)
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 DEFAULT_TEMPLATE_MAPPING = {
+    "MAGPIE_GROUP_TERMS_APPROVED_EMAIL_TEMPLATE":
+        os.path.join(TEMPLATE_DIR, "email_group_terms_approved.mako"),
+    "MAGPIE_GROUP_TERMS_SUBMISSION_EMAIL_TEMPLATE":
+        os.path.join(TEMPLATE_DIR, "email_group_terms_submission.mako"),
     "MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE":
         os.path.join(TEMPLATE_DIR, "email_user_registration_submission.mako"),
     "MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE":
@@ -43,6 +47,8 @@ def get_email_template(template_constant, container=None):
 
     Allowed values of :paramref:`template_constant` are:
 
+        - :envvar:`MAGPIE_GROUP_TERMS_APPROVED_EMAIL_TEMPLATE`
+        - :envvar:`MAGPIE_GROUP_TERMS_SUBMISSION_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_USER_REGISTRATION_SUBMISSION_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_USER_REGISTRATION_APPROVAL_EMAIL_TEMPLATE`
         - :envvar:`MAGPIE_USER_REGISTRATION_APPROVED_EMAIL_TEMPLATE`

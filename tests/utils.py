@@ -698,14 +698,15 @@ def mocked_send_email(func):
     def wrapped(*_, **__):
         # mock both direct reference if imported and places that use it to globally mock email notifications
         with wrapped_call("magpie.api.management.register.register_utils.send_email", side_effect=no_email):
-            with wrapped_call("magpie.api.notifications.send_email", side_effect=no_email):
-                return func(*_, **__)
+            with wrapped_call("magpie.api.management.user.user_utils.send_email", side_effect=no_email):
+                with wrapped_call("magpie.api.notifications.send_email", side_effect=no_email):
+                    return func(*_, **__)
 
     return wrapped
 
 
 @contextlib.contextmanager
-def mock_send_email():
+def mock_send_email(target):
     """
     Context that mocks :func:`magpie.api.notifications.send_email` steps and returns email contents and call parameters.
 
@@ -713,7 +714,7 @@ def mock_send_email():
 
     .. code-block:: python
 
-        with mock_send_email() as email_mocks:
+        with mock_send_email("magpie.api.management.register.register_utils.send_email") as email_mocks:
             mocked_connect, mocked_contents, mocked_send = email_mocks
             # run tests with mock contexts
             # ex: mocked_contents.call_args == ...
@@ -729,6 +730,8 @@ def mock_send_email():
     The context references returned can be used to test each part of the email process, once during connection to the
     SMTP server, another for the email contents generation and finally, the simulated expedition of the generated email.
     Using those, it is possible to retrieve all calls and arguments that were passed to individual steps.
+
+    :param target: Target function which will be replaced by a mocked send_email function.
     """
 
     # Employ the function that builds the SMTP connection to raise an error midway to skip sending the email.
@@ -771,8 +774,7 @@ def mock_send_email():
     # Run the test - full user registration procedure!
     with wrapped_call("magpie.api.notifications.get_smtp_server_connection", side_effect=fake_connect) as wrapped_conn:
         with wrapped_call("magpie.api.notifications.make_email_contents") as wrapped_contents:
-            with wrapped_call("magpie.api.management.register.register_utils.send_email",
-                              side_effect=fake_email) as mocked_email:
+            with wrapped_call(target, side_effect=fake_email) as mocked_email:
                 yield wrapped_conn, wrapped_contents, mocked_email
 
 
@@ -1120,6 +1122,52 @@ def check_or_try_logout_user(test_item, msg=None):
     if _is_logged_out():
         return
     raise Exception("logout did not succeed" + msg)
+
+
+def create_or_assign_user_group_with_terms(test_case,               # type: AnyMagpieTestCaseType
+                                           path,                    # type: Str
+                                           data,                    # type: Union[JSON, Str]
+                                           headers,                 # type: HeadersType
+                                           cookies,                 # type: CookiesType
+                                           accept_terms,            # type: bool
+                                           expect_errors=False      # type: bool
+                                           ):                       # type: (...) -> AnyResponseType
+    """
+    Executes a request to create or assign a user to a group with terms and conditions, and accepts the terms and
+    conditions automatically if enabled.
+    Returns the input query's response.
+    """
+    # custom app settings, smtp_host must exist when getting configs, but not used because email mocked
+    settings = {"magpie.smtp_host": "example.com",
+                # for testing, ignore any 'from' and 'password' arguments
+                # that could be found in the .ini file
+                "magpie.smtp_from": "",
+                "magpie.smtp_password": ""}
+
+    with mocked_get_settings(settings=settings):
+        with mock_send_email("magpie.api.management.user.user_utils.send_email") as email_contexts:
+            _, wrapped_contents, mocked_send = email_contexts
+            query_resp = test_request(test_case, "POST", path, json=data, expect_errors=expect_errors,
+                                      headers=headers, cookies=cookies)
+
+            if query_resp.status_code == 409 and expect_errors:
+                return query_resp
+            check_val_equal(mocked_send.call_count, 1,
+                            msg="Expected sent notifications to user for an email confirmation "
+                                "of terms and conditions.")
+            if accept_terms:
+                # Simulate user clicking the confirmation link in 'sent' email
+                # (external operation from Magpie)
+                confirm_url = wrapped_contents.call_args.args[-1].get("confirm_url")
+                resp = test_request(test_case, "GET", urlparse(confirm_url).path)
+                body = check_ui_response_basic_info(resp, 200)
+                check_val_is_in("accepted the terms and conditions", body)
+
+                check_val_equal(mocked_send.call_count, 2,
+                                msg="Expected sent notification to user for an email confirmation of "
+                                    "user added to requested group, following terms and conditions "
+                                    "acceptation.")
+    return query_resp
 
 
 def visual_repr(item):
@@ -2573,6 +2621,7 @@ class TestSetup(object):
                         override_cookies=null,      # type: Optional[CookiesType]
                         override_exist=False,       # type: bool
                         pending=False,              # type: bool
+                        accept_terms=True,          # type: bool
                         ):                          # type: (...) -> JSON
         """
         Creates the test user.
@@ -2591,18 +2640,38 @@ class TestSetup(object):
             }
             data["email"] = override_email if override_email is not null else "{}@mail.com".format(data["user_name"])
         usr_name = (data or {}).get("user_name")
+        grp_name = (data or {}).get("group_name")
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
         if usr_name:
             test_case.extra_user_names.add(usr_name)  # indicate potential removal at a later point
-        override_headers = override_headers if override_headers is not null else test_case.json_headers
-        override_cookies = override_cookies if override_cookies is not null else test_case.cookies
+
+        # Prepare request to create user
         path = "/register/users" if pending else "/users"
-        resp = test_request(app_or_url, "POST", path, json=data, expect_errors=override_exist,
-                            headers=override_headers, cookies=override_cookies)
-        if resp.status_code == 409 and override_exist and usr_name:
+
+        grp_terms = ""
+        if grp_name:
+            # Get group info
+            grp_info_path = "/groups/{grp}".format(grp=grp_name)
+            resp = test_request(app_or_url, "GET", grp_info_path, headers=headers, cookies=cookies)
+            body = check_response_basic_info(resp, 200, expected_method="GET")
+            check_val_is_in("group", body)
+            grp_terms = body["group"].get("terms")
+
+        if grp_terms:
+            create_user_resp = create_or_assign_user_group_with_terms(test_case=test_case, path=path, data=data,
+                                                                      expect_errors=override_exist,
+                                                                      headers=headers, cookies=cookies,
+                                                                      accept_terms=accept_terms)
+        else:
+            create_user_resp = test_request(app_or_url, "POST", path, json=data, expect_errors=override_exist,
+                                            headers=headers, cookies=cookies)
+
+        if create_user_resp.status_code == 409 and override_exist and usr_name:
             TestSetup.delete_TestUser(test_case,
                                       override_user_name=usr_name,
-                                      override_headers=override_headers,
-                                      override_cookies=override_cookies,
+                                      override_headers=headers,
+                                      override_cookies=cookies,
                                       pending=pending)
             return TestSetup.create_TestUser(test_case,
                                              override_data=override_data,
@@ -2610,11 +2679,12 @@ class TestSetup(object):
                                              override_email=override_email,
                                              override_password=override_password,
                                              override_group_name=override_group_name,
-                                             override_headers=override_headers,
-                                             override_cookies=override_cookies,
+                                             override_headers=headers,
+                                             override_cookies=cookies,
                                              override_exist=False,
-                                             pending=pending)
-        return check_response_basic_info(resp, 201, expected_method="POST")
+                                             pending=pending,
+                                             accept_terms=accept_terms)
+        return check_response_basic_info(create_user_resp, 201, expected_method="POST")
 
     @staticmethod
     def delete_TestUser(test_case,                  # type: AnyMagpieTestCaseType
@@ -2760,29 +2830,52 @@ class TestSetup(object):
                              override_group_name=null,  # type: Optional[Str]
                              override_headers=null,     # type: Optional[HeadersType]
                              override_cookies=null,     # type: Optional[CookiesType]
+                             accept_terms=True,         # type: bool
                              ):                         # type: (...) -> None
         """
         Ensures that the test user is a member of the test group, adding him to the group as needed.
+        Also works for a group that has terms and conditions, either completing the T&C confirmation if the
+        :paramref:`accept_terms` parameter is enabled, or leaving the user as pending.
 
         :raises AssertionError: if any request response does not match successful validation or assignation to group.
         """
         app_or_url = get_app_or_url(test_case)
         usr_name = override_user_name if override_user_name is not null else test_case.test_user_name
         grp_name = override_group_name if override_group_name is not null else test_case.test_group_name
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+
+        # Check if the user is already in the group
         path = "/groups/{grp}/users".format(grp=grp_name)
-        resp = test_request(app_or_url, "GET", path,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        resp = test_request(app_or_url, "GET", path, headers=headers, cookies=cookies)
         body = check_response_basic_info(resp, 200, expected_method="GET")
+
+        is_member = True  # Default expected test result
+
         if usr_name not in body["user_names"]:
+            # Get group info
+            path = "/groups/{grp}".format(grp=grp_name)
+            resp = test_request(app_or_url, "GET", path, headers=headers, cookies=cookies)
+            body = check_response_basic_info(resp, 200, expected_method="GET")
+            check_val_is_in("group", body)
+            group_info = body["group"]
+
+            # Prepare request to add user to group with terms
             path = "/users/{usr}/groups".format(usr=usr_name)
             data = {"group_name": grp_name}
-            resp = test_request(app_or_url, "POST", path, json=data,
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
-            check_response_basic_info(resp, 201, expected_method="POST")
+
+            if group_info.get("terms"):
+                is_member = accept_terms  # Expected test result, should be false if terms are not accepted
+                assign_user_resp = create_or_assign_user_group_with_terms(test_case=test_case, path=path,
+                                                                          data=data, headers=headers, cookies=cookies,
+                                                                          accept_terms=accept_terms)
+                check_response_basic_info(assign_user_resp, 202, expected_method="POST")
+            else:
+                resp = test_request(app_or_url, "POST", path, json=data, headers=headers, cookies=cookies)
+                # User should have been assigned to the group directly if no terms and conditions were found.
+                check_response_basic_info(resp, 201, expected_method="POST")
         TestSetup.check_UserGroupMembership(test_case, override_user_name=usr_name, override_group_name=grp_name,
-                                            override_headers=override_headers, override_cookies=override_cookies)
+                                            override_headers=headers, override_cookies=cookies, member=is_member)
 
     @staticmethod
     def get_RegisteredGroupsList(test_case, only_discoverable=False, override_headers=null, override_cookies=null):
@@ -2817,6 +2910,7 @@ class TestSetup(object):
     @staticmethod
     def create_TestGroup(test_case,                     # type: AnyMagpieTestCaseType
                          override_group_name=null,      # type: Optional[Str]
+                         override_terms=null,           # type: Optional[Str]
                          override_discoverable=null,    # type: Optional[bool]
                          override_data=null,            # type: Optional[JSON]
                          override_headers=null,         # type: Optional[HeadersType]
@@ -2835,6 +2929,8 @@ class TestSetup(object):
             # only add 'discoverable' if explicitly provided here to preserve original behaviour of 'no value provided'
             if override_discoverable is not null:
                 data["discoverable"] = override_discoverable
+            if override_terms is not null:
+                data["terms"] = override_terms
         grp_name = (data or {}).get("group_name")
         if grp_name:
             test_case.extra_group_names.add(grp_name)  # indicate potential removal at a later point

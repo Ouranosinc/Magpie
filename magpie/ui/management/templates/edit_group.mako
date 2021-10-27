@@ -1,6 +1,7 @@
 <%inherit file="magpie.ui.management:templates/tree_scripts.mako"/>
 <%namespace name="panel" file="magpie.ui.management:templates/panel_scripts.mako"/>
 <%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
+<%namespace name="membership_alerts" file="magpie.ui.management:templates/membership_alerts.mako"/>
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
@@ -144,34 +145,54 @@
                 </table>
             </div>
         </div>
+        <div class="panel-box">
+            <div class="panel-heading subsection">
+                <div class="panel-title">Terms and conditions</div>
+            </div>
+            <div class="panel-body">
+                %if terms:
+                    ${terms}
+                %else:
+                    <span class="italic-text">No terms and conditions for this group.</span>
+                %endif
+            </div>
+        </div>
     </div>
 </div>
 
 <h3>Members</h3>
+${membership_alerts.edit_membership_alerts()}
 
 <form id="edit_members" action="${request.path}" method="post">
-<table class="simple-list" id="edit_group_members_list">
-%for user in users:
-<tr>
-    <td>
-        <label class="checkbox-align">
-        <input type="checkbox" value="${user}" name="member"
-            %if user in members:
-               checked
-            %endif
-            %if group_name in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
-               disabled
-               class="disabled"
+    <input type="hidden" value="True" name="edit_group_members"/>
+    <table class="simple-list" id="edit_group_members_list">
+    %for user in users:
+    <tr>
+        <td>
+            <label class="checkbox-align">
+            <input type="checkbox" value="${user}" name="member"
+                %if user in members:
+                   checked
+                %endif
+                %if group_name in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
+                   disabled
+                   class="disabled"
+                %else:
+                   onchange="document.getElementById('edit_members').submit()"
+                %endif
+            >
+            %if user in pending_users:
+                <!-- checkbox is not checked or disabled for pending users
+                     so additional requests and emails can still be sent if needed -->
+                ${user} [pending]
             %else:
-               onchange="document.getElementById('edit_members').submit()"
+                ${user}
             %endif
-        >
-        ${user}
-        </label>
-    </td>
-</tr>
-%endfor
-</table>
+            </label>
+        </td>
+    </tr>
+    %endfor
+    </table>
 </form>
 
 <h3>Permissions</h3>
