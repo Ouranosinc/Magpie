@@ -12,6 +12,40 @@ body {
     font-family: "Open Sans", sans-serif;
 }
 
+table,
+textarea,
+input[type="text"],
+.panel-line {
+    font-family: arial, sans-serif;
+}
+
+textarea,
+input[type="text"] {
+    font-size: 0.8333em;
+}
+
+textarea {
+    resize: both;
+    min-width: 21em;
+    min-height: 5em;
+}
+
+table {
+    border-collapse: collapse;
+    width: auto;
+}
+
+td,
+th {
+    border: 1px solid #DDDDDD;
+    padding: 0.5em;
+}
+
+table thead {
+    color: white;
+    font-weight: bold;
+}
+
 .content {
     margin: 5em;
 }
@@ -38,7 +72,7 @@ body {
 
 .img-button {
     padding: 0.5em;
-    margin: 1em 0 1em;
+    margin: 1em 0;
     display: inline-flex;
 
     /* align-items: flex-end; */
@@ -186,23 +220,6 @@ input[type="submit"] {
     height: 1.5em;
 }
 
-table {
-    font-family: arial, sans-serif;
-    border-collapse: collapse;
-    width: auto;
-}
-
-td,
-th {
-    border: 1px solid #DDDDDD;
-    padding: 0.5em;
-}
-
-table thead {
-    color: white;
-    font-weight: bold;
-}
-
 .checkbox-align label {
     display: block;
 
@@ -279,7 +296,6 @@ table thead {
 
 .panel-line {
     margin: 0.25em 0.5em;
-    font-family: arial, sans-serif;  /* same as table to ensure they match when table is not actually used */
 }
 
 table.panel-line {
@@ -289,7 +305,7 @@ table.panel-line {
 table.panel-line th,
 table.panel-line td {
     border-width: 0;
-    margin: 0.25em 0.25em;
+    margin: 0.25em;
     white-space: nowrap;
     padding: 0;  /* override global th/td */
 }
@@ -393,6 +409,10 @@ table.panel-line td {
     margin-left: 0.5em;
 }
 
+.italic-text {
+    font-style: italic;
+}
+
 /* --- Labels --- */
 
 .label {
@@ -430,7 +450,7 @@ table.panel-line td {
 .alert {
     padding: 20px;
     color: white;
-    opacity: 1;
+    opacity: 100%;
     transition: opacity 0.6s;
     margin-bottom: 15px;
     display: none;              /* hidden default */
@@ -613,9 +633,9 @@ table.panel-line td {
     margin-left: 0.5em;
 }
 
-.icon-color-invert {
-    filter: saturate(0) invert(100%);
-    -webkit-filter: saturate(0) invert(100%);
+.icon-color-white {
+    filter: brightness(0) invert(1);
+    -webkit-filter: brightness(0) invert(1);
 }
 
 .status-container {
@@ -1074,7 +1094,7 @@ ul.breadcrumb li a:hover {
 .admin-button {
     display: inline-block;
     box-sizing: border-box;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    box-shadow: 0 4px 8px 0 rgba(0 0 0 / 20%), 0 6px 20px 0 rgba(0 0 0 / 19%);
     width: 10em;
     height: 10em;
     margin: 3em;
@@ -1251,6 +1271,14 @@ table.fields-table td {
 
 table.fields-table td.centered {
     text-align: center;
+}
+
+table.fields-table td.top-align {
+    vertical-align: top;
+}
+
+table.fields-table td.add-group-fixed-width {
+    width: 11.1875em;
 }
 
 table.fields-table input[type="radio"] {

@@ -877,7 +877,8 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         grp_data = {
             "group_name": _grp_name,
             "description": groups.get(_grp_name, {}).get("description", ""),
-            "discoverable": groups.get(_grp_name, {}).get("discoverable", False)
+            "discoverable": groups.get(_grp_name, {}).get("discoverable", False),
+            "terms": groups.get(_grp_name, {}).get("terms", "")
         }
         if _use_request(cookies_or_session):
             if _usr_name:

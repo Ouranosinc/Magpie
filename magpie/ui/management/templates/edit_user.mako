@@ -1,6 +1,7 @@
 <%inherit file="magpie.ui.home:templates/template.mako"/>
 <%namespace name="panel" file="magpie.ui.management:templates/panel_scripts.mako"/>
 <%namespace name="tree" file="magpie.ui.management:templates/tree_scripts.mako"/>
+<%namespace name="membership_alerts" file="magpie.ui.management:templates/membership_alerts.mako"/>
 
 <%block name="breadcrumb">
 <li><a href="${request.route_url('home')}">Home</a></li>
@@ -212,6 +213,7 @@
 
 
 <h3>Groups Membership</h3>
+${membership_alerts.edit_membership_alerts()}
 
 <form id="edit_membership" action="${request.path}" method="post">
     <input type="hidden" value="True" name="edit_group_membership"/>
@@ -230,7 +232,13 @@
                    onchange="document.getElementById('edit_membership').submit()"
                 %endif
                >
-            ${group}
+            %if group in pending_groups:
+                <!-- checkbox is not checked or disabled for pending groups
+                     so additional requests and emails can still be sent if needed -->
+                ${group} [pending]
+            %else:
+                ${group}
+            %endif
             </label>
         </td>
     </tr>

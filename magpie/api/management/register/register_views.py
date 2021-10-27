@@ -122,6 +122,10 @@ def join_discoverable_group_view(request):
     user = ar.get_logged_user(request)
     group = ru.get_discoverable_group_by_name(group.group_name, db_session=request.db)
 
+    if group.terms:
+        # If group requires terms acceptation, send T&C email and await confirmation before adding the user to the group
+        return uu.send_group_terms_email(user, group, request.db)
+
     ax.verify_param(user.id, param_compare=[usr.id for usr in group.users], not_in=True, with_param=False,
                     http_error=HTTPConflict, content={"user_name": user.user_name, "group_name": group.group_name},
                     msg_on_fail=s.RegisterGroup_POST_ConflictResponseSchema.description)
