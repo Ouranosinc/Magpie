@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.18.0 <https://github.com/Ouranosinc/Magpie/tree/3.18.0>`_ (2021-10-27)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add support of `Twitcher` ``0.6.x`` branch for ``MagpieAdapter``
