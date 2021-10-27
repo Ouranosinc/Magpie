@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.17.1 <https://github.com/Ouranosinc/Magpie/tree/3.17.1>`_ (2021-10-27)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 - Bump ``sqlalchemy_utils==0.37.9`` to resolve vulnerability issue.
