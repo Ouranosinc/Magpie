@@ -1,5 +1,6 @@
 import logging
 from copy import copy
+from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import requests
@@ -24,13 +25,21 @@ from magpie.utils import CONTENT_TYPE_JSON, get_authenticate_headers, get_logger
 #   Twitcher available only when this module is imported from it.
 #   It is installed during tests for evaluation.
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
-from twitcher.owsexceptions import OWSAccessForbidden, OWSInvalidParameterValue, OWSMissingParameterValue  # noqa
-from twitcher.owssecurity import OWSSecurityInterface  # noqa
+from twitcher.__version__ import __version__ as twitcher_version  # noqa
+from twitcher.owsexceptions import OWSAccessForbidden  # noqa; noqa
+from twitcher.owsexceptions import OWSException  # noqa
+from twitcher.owsexceptions import OWSInvalidParameterValue  # noqa
+from twitcher.owsexceptions import OWSMissingParameterValue  # noqa
 from twitcher.utils import parse_service_name  # noqa
+
+if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
+    from twitcher.interface import OWSSecurityInterface  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.x
+else:
+    from twitcher.owssecurity import OWSSecurityInterface  # noqa
 
 LOGGER = get_logger("TWITCHER|{}".format(__name__))
 if TYPE_CHECKING:
-    from typing import Dict, NoReturn, Optional, Tuple
+    from typing import Dict, Tuple
 
     from pyramid.request import Request
 
@@ -122,8 +131,25 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         service_impl = copy(service_impl)
         return service_impl
 
+    def verify_request(self, request):
+        # type: (Request) -> bool
+        """
+        Verify that the service request is allowed.
+
+        .. versionadded:: 3.18
+            Available only in ``Twitcher >= 0.6.x``.
+        """
+        try:
+            self.check_request(request)
+            return True
+        except OWSException:
+            return False
+        except Exception as exc:
+            LOGGER.error("Unhandled exception. Derived OWSException is expected for unauthorized access.", exc_info=exc)
+            return False
+
     def check_request(self, request):
-        # type: (Request) -> Optional[NoReturn]
+        # type: (Request) -> None
         """
         Verifies if the request user has access to the targeted resource according to parent service and permissions.
 
@@ -131,14 +157,20 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         Otherwise, ignore request access validation.
 
         In the case `Twitcher` proxy path is matched, the :term:`Logged User` **MUST** be allowed access following
-        :term:`Effective Permissions` resolution via :term:`ACL`. Otherwise, :exception:`OWSForbidden` is raised.
+        :term:`Effective Permissions` resolution via :term:`ACL`.
+        Otherwise, :exception:`OWSAccessForbidden` is raised.
 
         Failing to parse the request or any underlying component that raises an exception will be left up to the
         parent caller to handle the exception. In most typical use case, this means `Twitcher` will raise a
-        generic :exception:`OWSException` with ``NoApplicableCode``, unless the exception was .
+        generic :exception:`OWSException` with ``NoApplicableCode``, unless the exception was more specifically handled.
 
-        :raises OWSForbidden: if user does not have access to the targeted resource under the service.
-        :returns: nothing if user has access.
+        :raises OWSAccessForbidden:
+            If the user does not have access to the targeted resource under the service.
+        :raises HTTPBadRequest:
+            If a request parsing error was detected when trying to resolve the permission based on the service/resource.
+        :raises Exception:
+            Any derived exception that was not explicitly handled is re-raised directly after logging the event.
+        :returns: Nothing if user has access.
         """
         if request.path.startswith(self.twitcher_protected_path):
             # each service implementation defines their ACL and permission resolution using request definition

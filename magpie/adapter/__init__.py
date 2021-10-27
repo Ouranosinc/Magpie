@@ -1,5 +1,7 @@
 import logging
 import time
+import warnings
+from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import requests
@@ -9,7 +11,7 @@ from pyramid.httpexceptions import HTTPForbidden, HTTPOk
 from pyramid_beaker import set_cache_regions_from_settings
 from ziggurat_foundations.models.services.user import UserService
 
-from magpie import __meta__
+from magpie.__meta__ import __version__ as magpie_version
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
 from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.api.exception import raise_http, valid_http
@@ -29,11 +31,39 @@ from magpie.utils import (
 #   Twitcher available only when this module is imported from it.
 #   It is installed during tests for evaluation.
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
+from twitcher.__version__ import __version__ as twitcher_version  # noqa
 from twitcher.adapter.base import AdapterInterface  # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 
+if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
+    from twitcher.owsregistry import OWSRegistry  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.x
+
+    if LooseVersion(twitcher_version) >= LooseVersion("0.7.0"):
+        warnings.warn(
+            "Magpie version is not guaranteed to work with newer versions of Twitcher. "
+            "This Magpie version offers compatibility with Twitcher 0.6.x. "
+            "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
+            ImportWarning
+        )
+
+if LooseVersion(twitcher_version) < LooseVersion("0.6.0"):
+    warnings.warn(
+        "Magpie version is not guaranteed to work with versions prior to Twitcher 0.6.x. "
+        "It is recommended to either use more recent Twitcher 0.6.x version or revert back "
+        "to older Magpie < 3.18 in order to use Twitcher 0.5.x versions. "
+        "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
+        ImportWarning
+    )
+if LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
+    warnings.warn(
+        "Twitcher 0.6.0 exact version does not have complete compatibility support for MagpieAdapter. "
+        "It is recommended to either revert to Twitcher 0.5.x and previous Magpie < 3.18 version, "
+        "or use an higher Twitcher 0.6.x version. "
+        "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
+        ImportWarning
+    )
+
 if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
     from typing import Optional
 
     from pyramid.config import Configurator
@@ -43,7 +73,7 @@ if TYPE_CHECKING:
     from magpie.models import User
     from magpie.typedefs import JSON, AnySettingsContainer, Str
 
-    from twitcher.store import AccessTokenStoreInterface  # noqa
+    from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
 
 LOGGER = get_logger("TWITCHER|{}".format(__name__))
 
@@ -151,7 +181,7 @@ class MagpieAdapter(AdapterInterface):
 
     def describe_adapter(self):
         # type: () -> JSON
-        return {"name": self.name, "version": __meta__.__version__}
+        return {"name": self.name, "version": magpie_version}
 
     def servicestore_factory(self, request):
         # type: (Request) -> MagpieServiceStore
@@ -161,12 +191,34 @@ class MagpieAdapter(AdapterInterface):
 
     def tokenstore_factory(self, request):
         # type: (Request) -> AccessTokenStoreInterface
+        """
+        Unused token store implementation.
+
+        .. versionchanged:: 3.18
+            Available only in ``Twitcher <= 0.5.x``.
+        """
         raise NotImplementedError
 
-    def owssecurity_factory(self, request):
-        # type: (AnySettingsContainer) -> MagpieOWSSecurity
+    def owsregistry_factory(self, request):
+        # type: (Request) -> OWSRegistry
+        """
+        Creates the :class:`OWSRegistry` implementation derived from :class:`MagpieServiceStore`.
+
+        .. versionadded:: 3.18
+            Available only in ``Twitcher >= 0.6.x``.
+        """
+        return OWSRegistry(self.servicestore_factory(request))
+
+    def owssecurity_factory(self, request=None):  # noqa  # pylint: disable=W0221  # diff between Twitcher 0.5.x/0.6.x
+        # type: (Optional[AnySettingsContainer]) -> MagpieOWSSecurity
+        """
+        Creates the :class:`OWSSecurity` implementation derived from :class:`MagpieOWSSecurity`.
+
+        .. versionchanged:: 3.18
+            Method :paramref:`request` does not exist starting in ``Twitcher >= 0.6.x``.
+        """
         if self._owssecurity is None:
-            self._owssecurity = MagpieOWSSecurity(request)
+            self._owssecurity = MagpieOWSSecurity(request or self.settings)
         return self._owssecurity
 
     def owsproxy_config(self, container):
@@ -177,6 +229,8 @@ class MagpieAdapter(AdapterInterface):
 
     def configurator_factory(self, container):  # noqa: N805, R0201
         # type: (AnySettingsContainer) -> Configurator
+        LOGGER.debug("Preparing database session.")
+
         settings = get_settings(container)
         setup_cache_settings(settings)  # default 'cache=off' if missing since 'pyramid_beaker' enables it otherwise
         set_cache_regions_from_settings(settings)  # parse/convert cache settings into regions understood by beaker
@@ -184,7 +238,7 @@ class MagpieAdapter(AdapterInterface):
         # disable rpcinterface which is conflicting with postgres db
         settings["twitcher.rpcinterface"] = False
 
-        LOGGER.info("Loading MagpieAdapter config")
+        LOGGER.info("Loading Magpie AuthN/AuthZ configuration for adapter.")
         config = get_auth_config(container)
         config.include("pyramid_beaker")
 

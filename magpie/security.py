@@ -68,6 +68,19 @@ def get_auth_config(container):
     Generates Magpie application configuration with all utilities required for security and access control.
     """
     settings = get_settings(container)
+
+    # avoid sporadic errors session/transaction errors
+    #   - sqlalchemy.orm.exc.DetachedInstanceError
+    #   - transaction.interfaces.NoTransaction
+    # see also:
+    #   - https://docs.pylonsproject.org/projects/pyramid_tm/en/latest/
+    #   - https://github.com/Pylons/pyramid_tm/issues/74
+    #   - https://github.com/Ouranosinc/Magpie/issues/466
+    #   - https://github.com/Ouranosinc/Magpie/pull/473
+    # Note:
+    #   Set value here because both Magpie and Twitcher (via MagpieAdapter.configurator_factory) inherit this setting.
+    settings["tm.annotate_user"] = False
+
     magpie_secret = get_constant("MAGPIE_SECRET", settings, settings_name="magpie.secret")
     magpie_cookie_expire = get_constant("MAGPIE_COOKIE_EXPIRE", settings,
                                         settings_name="magpie.cookie_expire", default_value=None,
