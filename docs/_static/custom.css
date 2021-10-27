@@ -20,7 +20,7 @@ code.docutils.literal:not(.xref) {
 
     /* overrides and additions */
     background-color: #DBDBDD;  /* slightly darker than original to make more obvious */
-    padding: 0.1em 0.1em;       /* pad so that background color encapsulate letters going 'lower' (eg: g, j, y) */
+    padding: 0.1em;             /* pad so that background color encapsulate letters going 'lower' (eg: g, j, y) */
     white-space: nowrap;        /* don't allow breaking on non-word items such as dot in value */
 }
 

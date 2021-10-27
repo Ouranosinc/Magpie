@@ -35,7 +35,7 @@ from magpie.utils import ExtendedEnum, FlexibleNameEnum, decompose_enum_flags, g
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, Iterable, List, Optional, Type, Union
+    from typing import Dict, Iterable, List, Optional, Set, Type, Union
 
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session
@@ -73,6 +73,13 @@ class Group(GroupMixin, Base):
         """
         return sa.Column(sa.Boolean(), default=False)
 
+    @declared_attr
+    def terms(self):
+        """
+        Text containing the terms and conditions.
+        """
+        return sa.Column(sa.UnicodeText(), nullable=True)
+
     @property
     def priority(self):
         # type: () -> GroupPriority
@@ -92,6 +99,26 @@ class Group(GroupMixin, Base):
 
 class GroupPermission(GroupPermissionMixin, Base):
     pass
+
+
+class UserGroupStatus(FlexibleNameEnum):
+    """
+    Supported statuses of user-group relationships.
+    """
+    ALL = "all"
+    ACTIVE = "active"
+    PENDING = "pending"
+
+    @classmethod
+    def allowed(cls):
+        # type: () -> List[Str]
+        """
+        Returns all supported representation values that can be mapped to a valid status.
+        """
+        names = cls.names()
+        allowed = names
+        allowed.extend([name.lower() for name in names])
+        return allowed
 
 
 class UserGroup(UserGroupMixin, Base):
@@ -146,6 +173,30 @@ class UserResourcePermission(UserResourcePermissionMixin, Base):
 class User(UserMixin, Base):
     def __str__(self):
         return "<User: name={} id={}>".format(self.user_name, self.id)
+
+    def get_groups_by_status(self, status, db_session=None):
+        # type: (UserGroupStatus, Session) -> Set[Str]
+        """
+        List all groups a user belongs to, filtered by UserGroup status type.
+        """
+        from magpie.api.management.user.user_utils import get_user_groups_checked
+
+        cur_session = get_db_session(session=db_session) if db_session else get_db_session(obj=self)
+
+        group_names = set()
+        member_group_names = set(get_user_groups_checked(self, cur_session))
+        if status in [UserGroupStatus.ACTIVE, UserGroupStatus.ALL]:
+            group_names = group_names.union(member_group_names)
+        if status in [UserGroupStatus.PENDING, UserGroupStatus.ALL]:
+            tmp_tokens = TemporaryToken.by_user(self).filter(
+                TemporaryToken.operation == TokenOperation.GROUP_ACCEPT_TERMS)
+            pending_group_names = set(tmp_token.group.group_name for tmp_token in tmp_tokens)
+
+            # Remove any group a user already belongs to, in case any tokens are irrelevant.
+            # Should not happen since related tokens are deleted upon T&C acceptation.
+            pending_group_names = pending_group_names - member_group_names
+            group_names = group_names.union(pending_group_names)
+        return group_names
 
 
 class UserPending(Base):
@@ -207,6 +258,15 @@ class UserPending(Base):
         Pending user is not a member of any group.
 
         Avoid error in case this field gets accessed when simultaneously handling :class:`User` and :class`UserPending`.
+        """
+        return []
+
+    def get_groups_by_status(self, status, db_session=None):
+        """
+        Pending user is not a member of any group.
+
+        Avoid error in case this method gets accessed when simultaneously
+        handling :class:`User` and :class`UserPending`.
         """
         return []
 

@@ -65,7 +65,7 @@ def handle_temporary_token(tmp_token, request):
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
         ax.verify_param(tmp_token.user, not_none=True,
                         http_error=HTTPInternalServerError, msg_on_fail="Invalid token.")
-        uu.assign_user_group(tmp_token.user, tmp_token.group, request.db)
+        response = uu.handle_user_group_terms_confirmation(tmp_token, request)
 
     elif tmp_token.operation == TokenOperation.USER_PASSWORD_RESET:
         ax.verify_param(tmp_token.user, not_none=True,

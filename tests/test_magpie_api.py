@@ -14,9 +14,10 @@ import mock
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
 from magpie.constants import get_constant
-from magpie.models import UserStatuses
+from magpie.models import UserGroupStatus, UserStatuses
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils
+from tests.utils import TestVersion
 
 
 @runner.MAGPIE_TEST_API
@@ -79,6 +80,44 @@ class TestCase_MagpieAPI_UsersAuth_Local(ti.Interface_MagpieAPI_UsersAuth, unitt
         cls.test_resource_type = "route"
         cls.test_group_name = "unittest-user-auth-local_test-group"
         cls.test_user_name = "unittest-user-auth-local_test-user-username"
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_GROUPS
+    @runner.MAGPIE_TEST_REGISTRATION
+    @utils.mocked_send_email
+    def test_RegisterDiscoverableGroupWithTerms(self):
+        """
+        Non-admin logged user is allowed to request to join a group requiring terms and conditions acceptation.
+        """
+        terms = "Test terms and conditions."
+        utils.TestSetup.delete_TestGroup(self)
+        utils.TestSetup.create_TestGroup(self, override_discoverable=True, override_terms=terms)
+        self.login_test_user()
+
+        path = "/register/groups/{}".format(self.test_group_name)
+        resp = utils.test_request(self, "POST", path, data={}, headers=self.test_headers, cookies=self.test_cookies)
+        body = utils.check_response_basic_info(resp, 202, expected_method="POST")
+        utils.check_val_is_in("group_name", body)
+        utils.check_val_is_in("user_name", body)
+        utils.check_val_is_in(body["group_name"], self.test_group_name)
+        utils.check_val_is_in(body["user_name"], self.test_user_name)
+
+        # validate as admin that user was not registered yet to the group,
+        # since it requires terms and condition acceptation
+        utils.check_or_try_logout_user(self)
+        utils.check_or_try_login_user(self, username=self.usr, password=self.pwd)
+        utils.TestSetup.check_UserGroupMembership(self, member=False,
+                                                  override_headers=self.json_headers, override_cookies=self.cookies)
+
+        # Check if the user's membership is pending
+        path = "/users/{user_name}/groups?status={status}".format(user_name=self.test_user_name,
+                                                                  status=UserGroupStatus.PENDING.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+        utils.check_val_is_in(self.test_group_name, body["group_names"])
 
 
 @runner.MAGPIE_TEST_API
@@ -169,6 +208,248 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
         cls.login_admin()
         cls.setup_test_values()
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetGroupUsers_Pending(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Create test user and request adding the user to test group, but leave him as 'pending'
+        utils.TestSetup.create_TestUser(self, accept_terms=False)
+        # Add admin user as an active member of test group
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=self.usr)
+
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.PENDING.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_all_equal(body["user_names"], {self.test_user_name}, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetGroupUsers_Active(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Create test user and request adding the user to test group, but leave him as 'pending'
+        utils.TestSetup.create_TestUser(self, accept_terms=False)
+        # Add admin user as an active member of test group
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=self.usr)
+
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.ACTIVE.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_all_equal(body["user_names"], {self.usr}, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetGroupUsers_Unspecified(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Create test user and request adding the user to test group, but leave him as 'pending'
+        utils.TestSetup.create_TestUser(self, accept_terms=False)
+        # Add admin user as an active member of test group
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=self.usr)
+
+        path = "/groups/{grp}/users".format(grp=self.test_group_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_all_equal(body["user_names"], {self.usr}, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetGroupUsers_All(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Create test user and request adding the user to test group, but leave him as 'pending'
+        utils.TestSetup.create_TestUser(self, accept_terms=False)
+        # Add admin user as an active member of test group
+        utils.TestSetup.assign_TestUserGroup(self, override_user_name=self.usr)
+
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.ALL.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_all_equal(body["user_names"], {self.usr, self.test_user_name}, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetUserInfo_PendingGroups(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Add user to users group
+        users_group = get_constant("MAGPIE_USERS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=users_group)
+
+        # Check if user info displays no current pending group
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user", body)
+        utils.check_val_is_in("has_pending_group", body["user"])
+        utils.check_val_false(body["user"]["has_pending_group"])
+
+        # add user to test group and leave him as pending
+        utils.TestSetup.assign_TestUserGroup(self, accept_terms=False)
+
+        # Check if user info displays having a pending group
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("user", body)
+        utils.check_val_is_in("has_pending_group", body["user"])
+        utils.check_val_true(body["user"]["has_pending_group"])
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetUserGroups_Pending(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Add user to users group and leave user pending on test group
+        users_group = get_constant("MAGPIE_USERS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=users_group)
+        utils.TestSetup.assign_TestUserGroup(self, accept_terms=False)
+
+        path = "/users/{usr}/groups?status={status}".format(usr=self.test_user_name,
+                                                            status=UserGroupStatus.PENDING.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+        utils.check_all_equal(body["group_names"], {self.test_group_name}, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetUserGroups_Active(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Add user to users group and leave user pending on test group
+        users_group = get_constant("MAGPIE_USERS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=users_group)
+        utils.TestSetup.assign_TestUserGroup(self, accept_terms=False)
+
+        path = "/users/{usr}/groups?status={status}".format(usr=self.test_user_name,
+                                                            status=UserGroupStatus.ACTIVE.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+
+        expected_active_groups = {users_group}
+        if TestVersion(self.version) >= TestVersion("1.4.0"):
+            expected_active_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.check_all_equal(body["group_names"], expected_active_groups, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetUserGroups_Unspecified(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Add user to users group and leave user pending on test group
+        users_group = get_constant("MAGPIE_USERS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=users_group)
+        utils.TestSetup.assign_TestUserGroup(self, accept_terms=False)
+
+        path = "/users/{usr}/groups".format(usr=self.test_user_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+
+        expected_active_groups = {users_group}
+        if TestVersion(self.version) >= TestVersion("1.4.0"):
+            expected_active_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.check_all_equal(body["group_names"], expected_active_groups, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_GetUserGroups_All(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+        # Add user to users group and leave user pending on test group
+        users_group = get_constant("MAGPIE_USERS_GROUP")
+        utils.TestSetup.create_TestUser(self, override_group_name=users_group)
+        utils.TestSetup.assign_TestUserGroup(self, accept_terms=False)
+
+        path = "/users/{usr}/groups?status={status}".format(usr=self.test_user_name,
+                                                            status=UserGroupStatus.ALL.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
+                                  cookies=self.cookies, expect_errors=True)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        utils.check_val_is_in("group_names", body)
+        utils.check_val_type(body["group_names"], list)
+
+        expected_groups = {users_group, self.test_group_name}
+        if TestVersion(self.version) >= TestVersion("1.4.0"):
+            expected_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        utils.check_all_equal(body["group_names"], expected_groups, any_order=True)
+
+    @runner.MAGPIE_TEST_GROUPS
+    @utils.mocked_send_email
+    def test_PostUserGroupWithTerms(self):
+        # First test adding an existing user to a group with terms
+        utils.TestSetup.create_TestUser(self, override_group_name=None)
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+
+        # Request adding the user to test group
+        path = "/users/{usr}/groups".format(usr=self.test_user_name)
+        data = {"group_name": self.test_group_name}
+        resp = utils.test_request(self, "POST", path, json=data,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 202, expected_method="POST")
+
+        # User should not be added to group until terms are accepted
+        utils.TestSetup.check_UserGroupMembership(self, member=False)
+
+        # Now test adding a new user to a group with terms upon user creation
+        new_user_name = "new_usr_in_group_with_terms"
+        self.extra_user_names.add(new_user_name)
+        data = {
+            "user_name": new_user_name,
+            "password": new_user_name,
+            "group_name": self.test_group_name,
+            "email": "{}@mail.com".format(new_user_name)
+        }
+        resp = utils.test_request(self, "POST", "/users", json=data, headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 201, expected_method="POST")
+        utils.TestSetup.check_UserGroupMembership(self, override_user_name=new_user_name, member=False)
+
+        # Check if both user memberships are pending
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.PENDING.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_val_is_in(self.test_user_name, body["user_names"])
+        utils.check_val_is_in(new_user_name, body["user_names"])
+
+    @runner.MAGPIE_TEST_GROUPS
+    def test_PostUserGroupWithTerms_Fail(self):
+        utils.TestSetup.create_TestUser(self, override_group_name=None)
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+
+        # Use empty settings dictionary, not assigning the MAGPIE_SMTP_HOST variable in the settings will
+        # trigger a fail when assigning the user to the group with terms
+        with utils.mocked_get_settings(settings={}):
+            with utils.mock_send_email("magpie.api.management.user.user_utils.send_email"):
+                path = "/users/{usr}/groups".format(usr=self.test_user_name)
+                data = {"group_name": self.test_group_name}
+                resp = utils.test_request(self, "POST", path, json=data, expect_errors=True,
+                                                headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 500, expected_method="POST")
+
+        # Check that the user membership has not been updated as pending or as active
+        path = "/groups/{grp}/users?status={status}".format(grp=self.test_group_name,
+                                                            status=UserGroupStatus.ALL.value)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        utils.check_val_is_in("user_names", body)
+        utils.check_val_type(body["user_names"], list)
+        utils.check_val_not_in(self.test_user_name, body["user_names"])
 
 
 @runner.MAGPIE_TEST_API

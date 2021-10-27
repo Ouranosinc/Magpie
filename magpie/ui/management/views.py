@@ -9,6 +9,7 @@ import yaml
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
+    HTTPException,
     HTTPFound,
     HTTPMovedPermanently,
     HTTPNotFound,
@@ -23,7 +24,7 @@ from magpie.cli import sync_resources
 from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
 # TODO: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
-from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserStatuses
+from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
 from magpie.permissions import PermissionSet
 from magpie.ui.utils import AdminRequests, BaseViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
@@ -122,6 +123,7 @@ class ManagementViews(AdminRequests, BaseViews):
         inherit_grp_perms = self.request.matchdict.get("inherit_groups_permissions", False)
 
         own_groups = self.get_user_groups(user_name)
+        pending_groups = self.get_user_groups(user_name, user_group_status=UserGroupStatus.PENDING)
         all_groups = self.get_all_groups(first_default_group=get_constant("MAGPIE_USERS_GROUP", self.request))
 
         # TODO:
@@ -141,6 +143,7 @@ class ManagementViews(AdminRequests, BaseViews):
         user_info["user_with_error"] = UserStatuses.get(user_info["status"]) != UserStatuses.OK
         user_info["edit_mode"] = "no_edit"
         user_info["own_groups"] = own_groups
+        user_info["pending_groups"] = pending_groups
         user_info["groups"] = all_groups
         user_info["cur_svc_type"] = cur_svc_type
         user_info["svc_types"] = svc_types
@@ -252,12 +255,25 @@ class ManagementViews(AdminRequests, BaseViews):
                     path = schemas.UserGroupAPI.path.format(user_name=user_name, group_name=group)
                     resp = request_api(self.request, path, "DELETE")
                     check_response(resp)
+
+                user_info["edit_new_membership_error"] = set()
+                successful_new_groups = set()
                 for group in new_groups:
-                    path = schemas.UserGroupsAPI.path.format(user_name=user_name)
-                    data = {"group_name": group}
-                    resp = request_api(self.request, path, "POST", data=data)
-                    check_response(resp)
+                    try:
+                        path = schemas.UserGroupsAPI.path.format(user_name=user_name)
+                        data = {"group_name": group}
+                        resp = request_api(self.request, path, "POST", data=data)
+                        check_response(resp)
+                    except HTTPException as exc:
+                        detail = "{} ({}), {!s}".format(type(exc).__name__, exc.code, exc)
+                        LOGGER.error("Unexpected API error under UI operation. [%s]", detail)
+                        user_info["edit_new_membership_error"].add(group)
+                    else:
+                        successful_new_groups.add(group)
                 user_info["own_groups"] = self.get_user_groups(user_name)
+                user_info["pending_groups"] = self.get_user_groups(user_name, user_group_status=UserGroupStatus.PENDING)
+
+                user_info["edit_membership_pending_success"] = successful_new_groups & set(user_info["pending_groups"])
 
         # display resources permissions per service type tab
         try:
@@ -337,17 +353,19 @@ class ManagementViews(AdminRequests, BaseViews):
 
     @view_config(route_name="add_group", renderer="templates/add_group.mako")
     def add_group(self):
-        return_data = {"invalid_group_name": False, "invalid_description": False,
-                       "reason_group_name": "Invalid", "reason_description": "Invalid",
-                       "form_group_name": "", "form_discoverable": False, "form_description": ""}
+        return_data = {"invalid_group_name": False, "invalid_description": False, "invalid_terms": False,
+                       "reason_group_name": "Invalid", "reason_description": "Invalid", "reason_terms": "Invalid",
+                       "form_group_name": "", "form_discoverable": False, "form_description": "", "form_terms": ""}
 
         if "create" in self.request.POST:
             group_name = self.request.POST.get("group_name")
             description = self.request.POST.get("description")
             discoverable = asbool(self.request.POST.get("discoverable"))
+            terms = self.request.POST.get("terms")
             return_data["form_group_name"] = group_name
             return_data["form_description"] = description
             return_data["form_discoverable"] = discoverable
+            return_data["form_terms"] = terms
             if not group_name:
                 return_data["invalid_group_name"] = True
                 return self.add_template_data(return_data)
@@ -356,6 +374,7 @@ class ManagementViews(AdminRequests, BaseViews):
                 "group_name": group_name,
                 "description": return_data["form_description"],
                 "discoverable": return_data["form_discoverable"],
+                "terms": return_data["form_terms"],
             }
             resp = request_api(self.request, schemas.GroupsAPI.path, "POST", data=data)
             if resp.status_code == HTTPConflict.code:
@@ -374,6 +393,10 @@ class ManagementViews(AdminRequests, BaseViews):
                 if param_name == "description":
                     return_data["invalid_description"] = True
                     return_data["reason_description"] = reason
+                    return self.add_template_data(return_data)
+                if param_name == "terms":
+                    return_data["invalid_terms"] = True
+                    return_data["reason_terms"] = reason
                     return self.add_template_data(return_data)
             check_response(resp)  # check for any other exception than checked use-cases
             return HTTPFound(self.request.route_url("view_groups"))
@@ -411,11 +434,22 @@ class ManagementViews(AdminRequests, BaseViews):
             path = schemas.UserGroupAPI.path.format(user_name=user_name, group_name=group_name)
             resp = request_api(self.request, path, "DELETE")
             check_response(resp)
+
+        report_info = {"edit_new_membership_success": set(),
+                       "edit_new_membership_error": set()}
         for user_name in new_members:
-            path = schemas.UserGroupsAPI.path.format(user_name=user_name)
-            data = {"group_name": group_name}
-            resp = request_api(self.request, path, "POST", data=data)
-            check_response(resp)
+            try:
+                path = schemas.UserGroupsAPI.path.format(user_name=user_name)
+                data = {"group_name": group_name}
+                resp = request_api(self.request, path, "POST", data=data)
+                check_response(resp)
+            except HTTPException as exc:
+                detail = "{} ({}), {!s}".format(type(exc).__name__, exc.code, exc)
+                LOGGER.error("Unexpected API error under UI operation. [%s]", detail)
+                report_info["edit_new_membership_error"].add(user_name)
+            else:
+                report_info["edit_new_membership_success"].add(user_name)
+        return report_info
 
     def edit_user_or_group_resource_permissions(self, user_or_group_name, is_user=False):
         posted = self.request.POST.dict_of_lists().items()
@@ -535,6 +569,7 @@ class ManagementViews(AdminRequests, BaseViews):
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         group_info = {"edit_mode": "no_edit", "group_name": group_name, "cur_svc_type": cur_svc_type}
         error_message = ""
+        edit_grp_usrs_info = {}
 
         # TODO:
         #   Until the api is modified to make it possible to request from the RemoteResource table,
@@ -546,6 +581,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
         # move to service or edit requested group/permission changes
         if self.request.method == "POST":
+            is_edit_group_members = False
             res_id = self.request.POST.get("resource_id")
 
             if "delete" in self.request.POST:
@@ -585,8 +621,8 @@ class ManagementViews(AdminRequests, BaseViews):
                 #     res_id = self.add_remote_resource(cur_svc_type, services_names, group_name,
                 #                                       remote_id, is_user=False)
                 self.edit_user_or_group_resource_permissions(group_name, is_user=False)
-            elif "member" in self.request.POST:
-                self.edit_group_users(group_name)
+            elif "edit_group_members" in self.request.POST:
+                is_edit_group_members = True
             elif "force_sync" in self.request.POST:
                 _, errmsg = self.sync_services(services)
                 error_message += errmsg or ""
@@ -596,6 +632,10 @@ class ManagementViews(AdminRequests, BaseViews):
                     self.delete_resource(id_)
             elif "no_edit" not in self.request.POST:
                 raise HTTPBadRequest(detail="Invalid POST request for group edit.")
+
+            # edits to group members checkboxes
+            if is_edit_group_members:
+                edit_grp_usrs_info = self.edit_group_users(group_name)
 
         # display resources permissions per service type tab
         try:
@@ -616,6 +656,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
         group_info.update(self.get_group_info(group_name))
         group_info["members"] = group_info.pop("user_names")
+        group_info["pending_users"] = self.get_group_users(group_name, user_group_status=UserGroupStatus.PENDING)
         group_info["error_message"] = error_message
         group_info["ids_to_clean"] = ";".join(ids_to_clean)
         group_info["last_sync"] = last_sync_humanized
@@ -626,6 +667,11 @@ class ManagementViews(AdminRequests, BaseViews):
         group_info["cur_svc_type"] = cur_svc_type
         group_info["resources"] = res_perms
         group_info["permissions"] = res_perm_names
+
+        if edit_grp_usrs_info:
+            new_usrs_from_pending = edit_grp_usrs_info["edit_new_membership_success"] & set(group_info["pending_users"])
+            group_info["edit_membership_pending_success"] = new_usrs_from_pending
+            group_info["edit_new_membership_error"] = edit_grp_usrs_info["edit_new_membership_error"]
         return self.add_template_data(data=group_info)
 
     @staticmethod

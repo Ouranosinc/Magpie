@@ -1,7 +1,7 @@
 """
 User Views, both for specific user-name provided as request path variable and special keyword for logged session user.
 """
-from pyramid.httpexceptions import HTTPBadRequest, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
@@ -17,6 +17,7 @@ from magpie.api.management.user import user_formats as uf
 from magpie.api.management.user import user_utils as uu
 from magpie.api.webhooks import WebhookAction, process_webhook_requests
 from magpie.constants import MAGPIE_CONTEXT_PERMISSION, MAGPIE_LOGGED_PERMISSION, get_constant
+from magpie.models import UserGroupStatus
 from magpie.permissions import PermissionType, format_permissions
 from magpie.utils import get_logger
 
@@ -124,10 +125,17 @@ def delete_user_view(request):
 def get_user_groups_view(request):
     """
     List all groups a user belongs to.
+    Groups can be filtered by status depending of input arguments.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    group_names = uu.get_user_groups_checked(user, request.db)
-    return ax.valid_http(http_success=HTTPOk, content={"group_names": group_names},
+    status = ar.get_query_param(request, "status", default=UserGroupStatus.ACTIVE.value)
+    ax.verify_param(status, is_in=True, param_compare=UserGroupStatus.values(), param_name="status",
+                    msg_on_fail=s.UserGroup_Check_Status_BadRequestResponseSchema.description,
+                    http_error=HTTPBadRequest)
+    status = UserGroupStatus.get(status)
+    group_names = user.get_groups_by_status(status, request.db)
+
+    return ax.valid_http(http_success=HTTPOk, content={"group_names": sorted(group_names)},
                          detail=s.UserGroups_GET_OkResponseSchema.description)
 
 
@@ -148,9 +156,7 @@ def assign_user_group_view(request):
                              msg_on_fail=s.UserGroups_POST_ForbiddenResponseSchema.description)
     ax.verify_param(group, not_none=True, http_error=HTTPNotFound,
                     msg_on_fail=s.UserGroups_POST_GroupNotFoundResponseSchema.description)
-    uu.assign_user_group(user, group, db_session=request.db)
-    return ax.valid_http(http_success=HTTPCreated, detail=s.UserGroups_POST_CreatedResponseSchema.description,
-                         content={"user_name": user.user_name, "group_name": group.group_name})
+    return uu.create_pending_or_assign_user_group(user, group, db_session=request.db)
 
 
 @s.UserGroupAPI.delete(schema=s.UserGroup_DELETE_RequestSchema, tags=[s.UsersTag],

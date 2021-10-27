@@ -7,6 +7,7 @@ from cornice import Service
 from cornice.service import get_services
 from cornice_swagger.swagger import CorniceSwagger
 from pyramid.httpexceptions import (
+    HTTPAccepted,
     HTTPBadRequest,
     HTTPConflict,
     HTTPCreated,
@@ -25,7 +26,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 
 from magpie import __meta__
 from magpie.constants import get_constant
-from magpie.models import UserStatuses
+from magpie.models import UserGroupStatus, UserStatuses
 from magpie.permissions import Access, Permission, PermissionType, Scope
 from magpie.security import get_provider_names
 from magpie.utils import (
@@ -816,6 +817,11 @@ class UserBodySchema(RegisteredUserInfoSchema):
     group_names = GroupNamesListSchema(
         example=["administrators", "users"]
     )
+    has_pending_group = colander.SchemaNode(
+        colander.Bool(),
+        description="Indicates if the user has any pending group requiring terms and conditions validation.",
+        example=False
+    )
 
 
 class UserDetailListSchema(colander.SequenceSchema):
@@ -850,6 +856,12 @@ class GroupInfoBodySchema(GroupBaseBodySchema):
 
 class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
     description = "Detailed information of the group obtained by specifically requesting it."
+    terms = colander.SchemaNode(
+        colander.String(),
+        name="terms",
+        description="Terms and conditions associated to the group.",
+        example="",
+        missing=colander.null)
     member_count = colander.SchemaNode(
         colander.Integer(),
         description="Number of users member of the group.",
@@ -1901,8 +1913,25 @@ class User_DELETE_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
+class UserGroup_Check_Status_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid 'status' value specified."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class UserGroupsQuery(QueryRequestSchemaAPI):
+    status = colander.SchemaNode(
+        colander.String(),
+        default=UserGroupStatus.ACTIVE.value,
+        missing=colander.drop,
+        description="Obtain the user-groups filtered by statuses [all, active, pending]. "
+                    "Returns active user-groups if not provided. ",
+        validator=colander.OneOf(UserGroupStatus.allowed())
+    )
+
+
 class UserGroups_GET_RequestSchema(BaseRequestSchemaAPI):
     path = User_RequestPathSchema()
+    querystring = UserGroupsQuery()
 
 
 class UserGroups_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -1943,6 +1972,14 @@ class UserGroups_POST_ResponseBodySchema(BaseResponseBodySchema):
 class UserGroups_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     description = "Create user-group assignation successful. User is a member of the group."
     body = UserGroups_POST_ResponseBodySchema(code=HTTPCreated.code, description=description)
+
+
+class UserGroups_POST_AcceptedResponseSchema(BaseResponseSchemaAPI):
+    description = (
+        "Accepted request to add user to the group. Group requires accepting terms and conditions. "
+        "Pending confirmation by the user."
+    )
+    body = UserGroups_POST_ResponseBodySchema(code=HTTPAccepted.code, description=description)
 
 
 class UserGroups_POST_GroupNotFoundResponseSchema(BaseResponseSchemaAPI):
@@ -2369,9 +2406,11 @@ class Groups_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
 class Groups_POST_RequestBodySchema(colander.MappingSchema):
     group_name = colander.SchemaNode(colander.String(), description="Name of the group to create.")
     description = colander.SchemaNode(colander.String(), default="",
-                                      description="Description to apply to the created group.")
+                                      description="Description to apply to the group to create.")
     discoverable = colander.SchemaNode(colander.Boolean(), default=False,
-                                       description="Discoverability status of the created group.")
+                                       description="Discoverability status of the group to create.")
+    terms = colander.SchemaNode(colander.String(), default="",
+                                description="Terms and conditions of the group to create.")
 
 
 class Groups_POST_RequestSchema(BaseRequestSchemaAPI):
@@ -2492,6 +2531,7 @@ class Group_DELETE_ReservedKeyword_ForbiddenResponseSchema(BaseResponseSchemaAPI
 
 class GroupUsers_GET_RequestSchema(BaseRequestSchemaAPI):
     path = Group_RequestPathSchema()
+    querystring = UserGroupsQuery()
 
 
 class GroupUsers_GET_ResponseBodySchema(BaseResponseBodySchema):
@@ -3411,6 +3451,7 @@ UserGroups_GET_responses = {
 }
 UserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
+    "202": UserGroups_POST_AcceptedResponseSchema(),
     "400": User_Check_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
@@ -3558,6 +3599,7 @@ LoggedUserGroups_GET_responses = {
 }
 LoggedUserGroups_POST_responses = {
     "201": UserGroups_POST_CreatedResponseSchema(),
+    "202": UserGroups_POST_AcceptedResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": User_CheckAnonymous_ForbiddenResponseSchema(),
     "404": User_CheckAnonymous_NotFoundResponseSchema(),
@@ -3798,6 +3840,7 @@ RegisterGroup_GET_responses = {
 }
 RegisterGroup_POST_responses = {
     "201": RegisterGroup_POST_CreatedResponseSchema(),
+    "202": UserGroups_POST_AcceptedResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "403": RegisterGroup_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": RegisterGroup_NotFoundResponseSchema(),

@@ -43,6 +43,7 @@ def format_group(group, basic_info=False, public_info=False, dotted=False, db_se
         if public_info:
             return info
         info["discoverable"] = group.discoverable
+        info["terms"] = group.terms
         info["priority"] = "max" if group.priority == math.inf else int(group.priority)
         info["member_count"] = group.get_member_count(db_session)
         info["user_names"] = [usr.user_name for usr in group.users]

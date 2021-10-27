@@ -17,7 +17,7 @@ from six.moves.urllib.parse import urlparse
 # NOTE: must be imported without 'from', otherwise the interface's test cases are also executed
 import tests.interfaces as ti
 from magpie.constants import get_constant
-from magpie.models import Route
+from magpie.models import Route, UserGroupStatus
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
 from magpie.services import ServiceAPI, ServiceWPS
 from tests import runner, utils
@@ -297,6 +297,154 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         check_ui_resource_permissions(res_perm_form, sub_id, [to_ui_permission(perm) for perm in sub_perms_mod])
         check_api_resource_permissions([(svc_id, svc_perms_mod), (res_id, res_perms_mod), (sub_id, sub_perms_mod)])
 
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_FUNCTIONAL
+    @runner.MAGPIE_TEST_GROUPS
+    def test_end2end_user_join_group_with_terms_confirmation(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+
+        terms = "Test terms and conditions."
+        group_with_terms_name = "unittest-admin-auth_ui-group-with-terms-local"
+        utils.TestSetup.create_TestGroup(self, override_group_name=group_with_terms_name, override_discoverable=True,
+                                         override_terms=terms)
+
+        # custom app settings, smtp_host must exist when getting configs, but not used because email mocked
+        settings = {"magpie.smtp_host": "example.com",
+                    # for testing, ignore any 'from' and 'password' arguments that could be found in the .ini file
+                    "magpie.smtp_from": "",
+                    "magpie.smtp_password": ""}
+
+        from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
+        with utils.mocked_get_settings(settings=settings):
+            with utils.mock_send_email("magpie.api.management.user.user_utils.send_email") as email_contexts:
+                _, wrapped_contents, mocked_send = email_contexts
+
+                # Get current group's active members, for later checks
+                path = "/users/{user_name}/groups?status={status}".format(user_name=self.test_user_name,
+                                                                          status=UserGroupStatus.ACTIVE.value)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+                utils.check_val_is_in("group_names", body)
+                active_members = body["group_names"]
+
+                # Request adding the user to test group
+                path = "/users/{usr}/groups".format(usr=self.test_user_name)
+                data = {"group_name": group_with_terms_name}
+                resp = utils.test_request(self, "POST", path, json=data,
+                                          headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 202, expected_method="POST")
+
+                # Send a second request, to check later if both tmp_tokens are removed upon T&C acceptation
+                resp = utils.test_request(self, "POST", path, json=data,
+                                          headers=self.json_headers, cookies=self.cookies)
+                utils.check_response_basic_info(resp, 202, expected_method="POST")
+
+                # User should not be added to group until terms are accepted
+                utils.TestSetup.check_UserGroupMembership(self, member=False,
+                                                          override_group_name=group_with_terms_name)
+
+                utils.check_val_equal(mocked_send.call_count, 2,
+                                      msg="Expected sent notifications to user for an email confirmation "
+                                          "of terms and conditions.")
+
+                # Check if the user's membership is pending
+                path = "/users/{user_name}/groups?status={status}".format(user_name=self.test_user_name,
+                                                                          status=UserGroupStatus.PENDING.value)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+                utils.check_val_is_in("group_names", body)
+                utils.check_val_type(body["group_names"], list)
+                utils.check_val_is_in(group_with_terms_name, body["group_names"])
+                pending_members = body["group_names"]
+
+                # Check if getting all group's members finds both pending and active members
+                path = "/users/{user_name}/groups?status={status}".format(user_name=self.test_user_name,
+                                                                          status=UserGroupStatus.ALL.value)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+                utils.check_val_is_in("group_names", body)
+                self.assertCountEqual(body["group_names"], pending_members + active_members)
+
+                # validate that pending user can be viewed in the edit group page
+                path = "/ui/groups/{}/default".format(group_with_terms_name)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_is_in("{} [pending]".format(self.test_user_name), body)
+
+                # validate that pending group membership can be viewed in the edit user page
+                path = "/ui/users/{}/default".format(self.test_user_name)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_is_in("{} [pending]".format(group_with_terms_name), body)
+
+                # validate that pending group membership can be viewed in the user's account page
+                utils.check_or_try_logout_user(self)
+                utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name,
+                                              use_ui_form_submit=True)
+                resp = utils.test_request(self, "GET", "/ui/users/current")
+                body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
+                utils.check_val_is_in("{} [pending]".format(group_with_terms_name), body)
+
+                # Validate the content of the email that would have been sent if not mocked
+                message = real_contents(*wrapped_contents.call_args.args, **wrapped_contents.call_args.kwargs)
+                msg_str = message.decode()
+
+                confirm_url = wrapped_contents.call_args.args[-1].get("confirm_url")
+
+                test_user_email = "{}@mail.com".format(self.test_user_name)
+                utils.check_val_is_in("To: {}".format(test_user_email), msg_str)
+                utils.check_val_is_in("From: Magpie", msg_str)
+                utils.check_val_is_in(confirm_url, msg_str)
+                utils.check_val_true(confirm_url.startswith("http://localhost") and "/tmp/" in confirm_url,
+                                     msg="Expected confirmation URL in email to be a temporary token URL.")
+
+                # Simulate user clicking the confirmation link in 'sent' email (external operation from Magpie)
+                resp = utils.test_request(self, "GET", urlparse(confirm_url).path)
+                body = utils.check_ui_response_basic_info(resp, 200)
+                utils.check_val_is_in("accepted the terms and conditions", body)
+
+                utils.check_val_equal(mocked_send.call_count, 3,
+                                      msg="Expected sent notification to user for an email confirmation of user added "
+                                          "to requested group, following terms and conditions acceptation.")
+
+                # Log back to admin user to apply admin-only checks
+                utils.check_or_try_logout_user(self)
+                self.login_admin()
+
+                # Check if user has been added to group successfully
+                utils.TestSetup.check_UserGroupMembership(self, override_group_name=group_with_terms_name)
+                path = "/groups/{grp}".format(grp=group_with_terms_name)
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+                utils.check_val_equal(body["group"]["member_count"], 1)
+                utils.check_val_is_in(self.test_user_name, body["group"]["user_names"])
+
+                # UI checks: validates that both test tmp_tokens were deleted if '[pending]' is not displayed anymore
+                # validate that user is no longer pending in the edit group page
+                path = "/ui/groups/{}/default".format(group_with_terms_name)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_not_in("{} [pending]".format(self.test_user_name), body)
+                utils.check_val_is_in(self.test_user_name, body)
+
+                # validate that group membership is no longer pending in the edit user page
+                path = "/ui/users/{}/default".format(self.test_user_name)
+                resp = utils.test_request(self, "GET", path)
+                body = utils.check_ui_response_basic_info(resp)
+                utils.check_val_not_in("{} [pending]".format(group_with_terms_name), body)
+                utils.check_val_is_in(group_with_terms_name, body)
+
+                # validate that group membership is no longer pending in the user's account page
+                utils.check_or_try_logout_user(self)
+                utils.check_or_try_login_user(self, username=self.test_user_name, password=self.test_user_name,
+                                              use_ui_form_submit=True)
+                resp = utils.test_request(self, "GET", "/ui/users/current")
+                body = utils.check_ui_response_basic_info(resp, expected_title="Magpie")
+                utils.check_val_not_in("{} [pending]".format(group_with_terms_name), body)
+                utils.check_val_is_in(group_with_terms_name, body)
+
 
 @runner.MAGPIE_TEST_UI
 @runner.MAGPIE_TEST_LOCAL
@@ -380,7 +528,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
 
         from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
         with utils.mocked_get_settings(settings=settings):
-            with utils.mock_send_email() as email_contexts:
+            with utils.mock_send_email("magpie.api.management.register.register_utils.send_email") as email_contexts:
                 _, wrapped_contents, mocked_send = email_contexts
 
                 # submit the registration form to trigger the confirmation email
@@ -525,7 +673,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
 
         from magpie.api.notifications import make_email_contents as real_contents  # test contents with real generation
         with utils.mocked_get_settings(settings=settings):
-            with utils.mock_send_email() as email_contexts:
+            with utils.mock_send_email("magpie.api.management.register.register_utils.send_email") as email_contexts:
                 _, wrapped_contents, mocked_send = email_contexts
 
                 # submit the registration form to trigger the confirmation email
@@ -588,7 +736,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
         utils.TestSetup.delete_TestUser(self)
 
         with utils.mocked_get_settings():
-            with utils.mock_send_email():
+            with utils.mock_send_email("magpie.api.management.register.register_utils.send_email"):
                 data = {
                     "user_name": test_register_user,
                     "password": test_register_user,

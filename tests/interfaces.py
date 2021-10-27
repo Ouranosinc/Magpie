@@ -4528,24 +4528,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                              override_headers=self.json_headers, override_cookies=self.cookies)
 
     @runner.MAGPIE_TEST_USERS
-    def test_GetUserGroups(self):
-        users_group = get_constant("MAGPIE_USERS_GROUP")
-        utils.TestSetup.create_TestUser(self, override_group_name=users_group)
-        utils.TestSetup.create_TestGroup(self)
-        utils.TestSetup.assign_TestUserGroup(self)
-
-        path = "/users/{usr}/groups".format(usr=self.test_user_name)
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers,
-                                  cookies=self.cookies, expect_errors=True)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_is_in("group_names", body)
-        utils.check_val_type(body["group_names"], list)
-        expected_groups = {self.test_group_name, users_group}
-        if TestVersion(self.version) >= TestVersion("1.4.0"):
-            expected_groups.add(get_constant("MAGPIE_ANONYMOUS_GROUP"))
-        utils.check_all_equal(body["group_names"], expected_groups, any_order=True)
-
-    @runner.MAGPIE_TEST_USERS
     def test_DeleteUser_DeleteSelf(self):
         """
         A generic admin user is allowed to delete his own account.
@@ -4841,6 +4823,22 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(body["group"]["discoverable"], True)
 
     @runner.MAGPIE_TEST_GROUPS
+    def test_UpdateGroup_Terms_BadRequest(self):
+        terms = "Test terms and conditions."
+        utils.TestSetup.create_TestGroup(self, override_terms=terms)
+
+        path = "/groups/{}".format(self.test_group_name)
+        data = {"terms": "Bad request, trying to change the terms & conditions."}
+        resp = utils.test_request(self, self.update_method, path, json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        # T&C should be immutable
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200)
+        utils.check_val_equal(body["group"]["terms"], terms)
+
+    @runner.MAGPIE_TEST_GROUPS
     def test_UpdateGroup_MultipleFields(self):
         data = {"group_name": self.test_group_name, "discoverable": True, "description": "test-group"}
         new_group_name = "{}-new-name".format(self.test_group_name)
@@ -4892,16 +4890,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 403, expected_method="DELETE")
         groups = utils.TestSetup.get_RegisteredGroupsList(self)
         utils.check_val_is_in(admins, groups, msg="Admin special group should still exist.")
-
-    @runner.MAGPIE_TEST_GROUPS
-    def test_GetGroupUsers(self):
-        path = "/groups/{grp}/users".format(grp=get_constant("MAGPIE_ADMIN_GROUP"))
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        utils.check_val_is_in("user_names", body)
-        utils.check_val_type(body["user_names"], list)
-        utils.check_val_is_in(get_constant("MAGPIE_ADMIN_USER"), body["user_names"])
-        utils.check_val_is_in(self.usr, body["user_names"])
 
     @runner.MAGPIE_TEST_GROUPS
     def test_GetGroupUsers_not_found(self):

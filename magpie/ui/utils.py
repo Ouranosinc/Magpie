@@ -21,6 +21,7 @@ from magpie.api import schemas
 from magpie.api.generic import get_exception_info, get_request_info
 from magpie.api.requests import get_logged_user
 from magpie.constants import get_constant
+from magpie.models import UserGroupStatus
 from magpie.security import mask_credentials
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_json, get_logger, get_magpie_url
 
@@ -319,9 +320,10 @@ class AdminRequests(BaseViews):
         return get_json(resp)["group"]
 
     @handle_errors
-    def get_group_users(self, group_name):
+    def get_group_users(self, group_name, user_group_status=UserGroupStatus.ACTIVE):
+        # type: (UserGroupStatus) -> List[str]
         path = schemas.GroupUsersAPI.path.format(group_name=group_name)
-        resp = request_api(self.request, path, "GET")
+        resp = request_api(self.request, path + "?status={}".format(user_group_status.value), "GET")
         check_response(resp)
         return get_json(resp)["user_names"]
 
@@ -340,9 +342,10 @@ class AdminRequests(BaseViews):
         return get_json(resp)
 
     @handle_errors
-    def get_user_groups(self, user_name):
+    def get_user_groups(self, user_name, user_group_status=UserGroupStatus.ACTIVE):
+        # type: (UserGroupStatus) -> List[str]
         path = schemas.UserGroupsAPI.path.format(user_name=user_name)
-        resp = request_api(self.request, path, "GET")
+        resp = request_api(self.request, path + "?status={}".format(user_group_status.value), "GET")
         check_response(resp)
         return get_json(resp)["group_names"]
 
