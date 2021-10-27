@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.17.0 <https://github.com/Ouranosinc/Magpie/tree/3.17.0>`_ (2021-10-27)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add new `Terms and conditions` field for ``Group`` creation. When a request is made to assign a ``User`` to a
