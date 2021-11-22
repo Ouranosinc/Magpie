@@ -91,7 +91,7 @@ a {
 }
 
 .disabled {
-    opacity: 50%;
+    opacity: 0.5;
 }
 
 a:focus,
@@ -115,7 +115,7 @@ input[type="button"].img-button.disabled,
 input[type="submit"].button.disabled,
 input[type="button"].button.disabled {
     color: currentColor;    /* inherit from theme */
-    opacity: 50%;
+    opacity: 0.5;
     vertical-align: center;
     cursor: not-allowed;
     pointer-events: none;
@@ -450,7 +450,7 @@ table.panel-line td {
 .alert {
     padding: 20px;
     color: white;
-    opacity: 100%;
+    opacity: 1;
     transition: opacity 0.6s;
     margin-bottom: 15px;
     display: none;              /* hidden default */

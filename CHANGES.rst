@@ -7,7 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix erroneous config variable name. Changed ``magpie.user_registration_email_template`` to
+  ``magpie.user_registration_submission_email_template``.
 
 `3.18.0 <https://github.com/Ouranosinc/Magpie/tree/3.18.0>`_ (2021-10-27)
 ------------------------------------------------------------------------------------
