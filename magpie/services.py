@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
 
     from pyramid.request import Request
+    from sqlalchemy.orm import Session
 
     from magpie.typedefs import AccessControlListType, ServiceConfiguration, ServiceOrResourceType, Str
 
@@ -232,14 +233,10 @@ class ServiceInterface(object):
         permissions = self.effective_permissions(user, resource, permissions, allow_match)
         return [perm.ace(self.request.user) for perm in permissions]
 
-    def _get_connected_resource(self, resource):
-        # type: (ServiceOrResourceType) -> Optional[ServiceOrResourceType]
+    def _get_connected_session(self):
+        # type: () -> Session
         """
-        Retrieve the resource with an active session and attached state by refreshing connection with request session.
-
-        This operation is required mostly in cases of mismatching references between cached and active objects obtained
-        according to timing of requests and whether caching took placed between them, and for different caching region
-        levels (service, ACL or both). It also attempts to correct and encountered problems due to concurrent requests.
+        Retrieve the session attached to the request or recreated it to ensure it is open and within scoped transaction.
         """
         # This is the only session reference we can trust to be fresh because it is
         # forcefully generated for each request, regardless if any caching took place.
@@ -251,36 +248,60 @@ class ServiceInterface(object):
             LOGGER.debug("Session [%s] was inactive, creating new scoped session for resource.", db_session)
             db_session = get_session_from_other(db_session)
             LOGGER.debug("Session [%s] created.", db_session)
+        return db_session
 
-        # Reconnect resource reference to active database session if it is detached or inactive.
-        # - This can happen during mismatching sources of cached objects for service/ACL combinations,
+    def _get_connected_object(self, obj):
+        # type: (Union[ServiceOrResourceType, models.User]) -> Optional[ServiceOrResourceType]
+        """
+        Retrieve the object with an active session and attached state by refreshing connection with request session.
+
+        This operation is required mostly in cases of mismatching references between cached and active objects obtained
+        according to timing of requests and whether caching took placed between them, and for different caching region
+        levels (service, ACL or both). It also attempts to correct and encountered problems due to concurrent requests.
+        """
+        db_session = self._get_connected_session()
+
+        # Reconnect the referenced object to active database session if it is detached or inactive.
+        # - This can happen during mismatching sources of cached objects for service/ACL region combinations,
         #   where service/resource data is available from cache but not associated with an appropriate session state.
         # - Since this operation is being computed, ACL is not yet cached (or was reset before service cache was).
         #   The service/resource must be refreshed regardless of cache to resolve it with other object references.
+        # - Because of possibly reconnected objects from previous calls to this method, other objects might also need
+        #   to be synced with the same database session.
         # In case the DB session was inactive and a new one was recreated above, also ensure that the resource did not
         # already have an handle referring to the old session.
-        res_session = get_db_session(session=None, obj=resource)
-        if res_session is None or not res_session.is_active:
-            if res_session is None:
-                LOGGER.debug("Reconnect cached resource [%s] with active request session (missing session).", resource)
+        obj_session = get_db_session(session=None, obj=obj)
+        if isinstance(obj, models.User):
+            obj_type = "user"
+        elif isinstance(obj, models.Service):
+            obj_type = "service"
+        else:
+            obj_type = "resource"
+        if obj_session is None or not obj_session.is_active:
+            if obj_session is None:
+                LOGGER.debug("Reconnect cached %s [%s] with active request session (missing session).", obj_type, obj)
             else:
-                LOGGER.debug("Reconnect cached resource [%s] with active request session (inactive session).", resource)
-            resource = ResourceService.by_resource_id(resource.resource_id, db_session=db_session)
-            if resource is None:
-                LOGGER.warning("Reconnect cached resource to active session failed!")
-                LOGGER.debug("Session: %s, Resource: %s", db_session, resource)
+                LOGGER.debug("Reconnect cached %s [%s] with active request session (inactive session).", obj_type, obj)
+            if obj_type == "user":
+                obj_connect = UserService.by_id(obj.id, db_session=db_session)
+            else:
+                obj_connect = ResourceService.by_resource_id(obj.resource_id, db_session=db_session)
+            if obj_connect is None:
+                LOGGER.warning("Reconnect cached %s to active session failed!", obj_type)
+                LOGGER.debug("Session: %s, Resource: %s, Type: %s", db_session, obj, obj_type)
                 return None
+            obj = obj_connect
         # Merge retrieved resource to the active session if not already attached.
-        state = sa_inspect(resource)
+        state = sa_inspect(obj)
         if state.detached:
-            LOGGER.debug("Reconnect cached resource [%s] with active request session (detached state).", resource)
-            resource = db_session.merge(resource)
-            state = sa_inspect(resource)
+            LOGGER.debug("Reconnect cached %s [%s] with active request session (detached state).", obj_type, obj)
+            obj = db_session.merge(obj)
+            state = sa_inspect(obj)
 
-        LOGGER.debug("Resource [%s] is [%s] %s session [%s, active=%s, id=%s].",
-                     resource, "detached" if state.detached else "attached", "from" if state.detached else "to",
+        LOGGER.debug("Object [%s] is [%s] %s session [%s, active=%s, id=%s].",
+                     obj, "detached" if state.detached else "attached", "from" if state.detached else "to",
                      state.session, state.session.is_active, state.session_id)
-        return resource
+        return obj
 
     def _get_request_path_parts(self):
         # type: () -> Optional[List[Str]]
@@ -352,11 +373,12 @@ class ServiceInterface(object):
         requested_perms = set(permissions)  # type: Set[Permission]
         effective_perms = dict()            # type: Dict[Permission, PermissionSet]
 
+        db_session = self._get_connected_session()
+        user = self._get_connected_object(user)  # groups dynamically populated fail if not connected (for admin check)
         LOGGER.debug("Resolving effective permission for: [user: %s, resource: %s, permissions: %s, match: %s]",
                      user, resource, list(permissions), allow_match)
 
         # immediately return all permissions if user is an admin
-        db_session = self.request.db
         admin_group = get_constant("MAGPIE_ADMIN_GROUP", self.request)
         admin_group = GroupService.by_group_name(admin_group, db_session=db_session)
         if admin_group in user.groups:  # noqa
@@ -375,7 +397,7 @@ class ServiceInterface(object):
         # current and parent resource(s) recursive-scope
         while resource is not None and not full_break:  # bottom-up until service is reached
             LOGGER.debug("Resolving for (sub-)resource: [%s]", resource)
-            resource = self._get_connected_resource(resource)
+            resource = self._get_connected_object(resource)
             if resource is None:
                 LOGGER.warning("Resource 'None' after reconnection attempt. Early stop effective resolution loop.")
                 break
