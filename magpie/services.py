@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
 
     from pyramid.request import Request
+    from sqlalchemy.orm import Session
 
     from magpie.typedefs import AccessControlListType, ServiceConfiguration, ServiceOrResourceType, Str
 
@@ -232,14 +233,10 @@ class ServiceInterface(object):
         permissions = self.effective_permissions(user, resource, permissions, allow_match)
         return [perm.ace(self.request.user) for perm in permissions]
 
-    def _get_connected_object(self, obj):
-        # type: (Union[ServiceOrResourceType, models.User]) -> Optional[ServiceOrResourceType]
+    def _get_connected_session(self):
+        # type: () -> Session
         """
-        Retrieve the object with an active session and attached state by refreshing connection with request session.
-
-        This operation is required mostly in cases of mismatching references between cached and active objects obtained
-        according to timing of requests and whether caching took placed between them, and for different caching region
-        levels (service, ACL or both). It also attempts to correct and encountered problems due to concurrent requests.
+        Retrieve the session attached to the request or recreated it to ensure it is open and within scoped transaction.
         """
         # This is the only session reference we can trust to be fresh because it is
         # forcefully generated for each request, regardless if any caching took place.
@@ -251,6 +248,18 @@ class ServiceInterface(object):
             LOGGER.debug("Session [%s] was inactive, creating new scoped session for resource.", db_session)
             db_session = get_session_from_other(db_session)
             LOGGER.debug("Session [%s] created.", db_session)
+        return db_session
+
+    def _get_connected_object(self, obj):
+        # type: (Union[ServiceOrResourceType, models.User]) -> Optional[ServiceOrResourceType]
+        """
+        Retrieve the object with an active session and attached state by refreshing connection with request session.
+
+        This operation is required mostly in cases of mismatching references between cached and active objects obtained
+        according to timing of requests and whether caching took placed between them, and for different caching region
+        levels (service, ACL or both). It also attempts to correct and encountered problems due to concurrent requests.
+        """
+        db_session = self._get_connected_session()
 
         # Reconnect the referenced object to active database session if it is detached or inactive.
         # - This can happen during mismatching sources of cached objects for service/ACL region combinations,
@@ -364,12 +373,12 @@ class ServiceInterface(object):
         requested_perms = set(permissions)  # type: Set[Permission]
         effective_perms = dict()            # type: Dict[Permission, PermissionSet]
 
+        db_session = self._get_connected_session()
         user = self._get_connected_object(user)  # groups dynamically populated fail if not connected (for admin check)
         LOGGER.debug("Resolving effective permission for: [user: %s, resource: %s, permissions: %s, match: %s]",
                      user, resource, list(permissions), allow_match)
 
         # immediately return all permissions if user is an admin
-        db_session = self.request.db
         admin_group = get_constant("MAGPIE_ADMIN_GROUP", self.request)
         admin_group = GroupService.by_group_name(admin_group, db_session=db_session)
         if admin_group in user.groups:  # noqa
