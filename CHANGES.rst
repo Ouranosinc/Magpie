@@ -11,6 +11,10 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix erroneous config variable name. Changed ``magpie.user_registration_email_template`` to
   ``magpie.user_registration_submission_email_template``.
+* Fix ``sqlalchemy.orm.exc.DetachedInstanceError`` and ``transaction.interfaces.NoTransaction`` that
+  could occur on the first ``user.groups`` or ``GroupService.by_group_name`` operations
+  within ``ServiceInterface.effective_permissions`` resolution when caching states differed
+  between ``service`` and ``acl`` regions.
 
 `3.18.0 <https://github.com/Ouranosinc/Magpie/tree/3.18.0>`_ (2021-10-27)
 ------------------------------------------------------------------------------------
@@ -54,7 +58,8 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix HTTP ``Internal Server Error [500]`` on the page to edit a ``Group`` when deleting the last ``User`` of a ``Group``.
+* Fix HTTP ``Internal Server Error [500]`` on the page to edit a ``Group``
+  when deleting the last ``User`` of a ``Group``.
 
 `3.16.1 <https://github.com/Ouranosinc/Magpie/tree/3.16.1>`_ (2021-10-18)
 ------------------------------------------------------------------------------------
