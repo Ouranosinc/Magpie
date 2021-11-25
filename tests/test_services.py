@@ -13,19 +13,21 @@ import unittest
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING
 
+import mock
 import pytest
 import six
+from sqlalchemy import inspect as sa_inspect
 
 from magpie import __meta__, models, owsrequest
 from magpie.constants import get_constant
-from magpie.permissions import Access, Permission, PermissionSet, Scope
-from magpie.services import ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceTHREDDS, ServiceWPS
+from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
+from magpie.services import ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceInterface, ServiceTHREDDS, ServiceWPS
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML
 from tests import interfaces as ti
 from tests import runner, utils
 
 if six.PY3:
-    from magpie.adapter.magpieowssecurity import OWSAccessForbidden
+    from magpie.adapter.magpieowssecurity import OWSAccessForbidden  # noqa  # defined via Twitcher
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -977,3 +979,111 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             corresponding resources accessed through different endpoints and formats.
         """
         raise NotImplementedError  # FIXME: see https://github.com/Ouranosinc/Magpie/issues/360
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_SERVICES
+@runner.MAGPIE_TEST_FUNCTIONAL
+class TestServicesCachedSessionReconnect(ti.UserTestCase, ti.BaseTestCase):
+    """
+    Test detached session instances that can be caused by request caching to ensure they regain an active session.
+    """
+    __test__ = True
+
+    @classmethod
+    @utils.mocked_get_settings
+    def setUpClass(cls):
+        cls.version = __meta__.__version__
+        cls.app = utils.get_test_magpie_app()
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.setup_admin()
+        cls.test_service_type = ServiceAPI.service_type
+        cls.test_service_name = "func-test-session-reconnect"
+        cls.test_resource_type = models.Route.resource_type_name
+        cls.test_group_name = "func-test-session-reconnect-group"
+        cls.test_user_name = "func-test-session-user"
+
+    @utils.mocked_get_settings
+    def setUp(self):
+        ti.UserTestCase.setUp(self)
+        self.cookies = None
+        self.headers, self.cookies = utils.check_or_try_login_user(self, self.usr, self.pwd, use_ui_form_submit=True)
+        self.require = "cannot run tests without logged in user with '{}' permissions".format(self.grp)
+        self.login_admin()
+
+        # setup basic permissions on a resource for test user (in order to call effective resolution)
+        utils.TestSetup.delete_TestService(self)
+        utils.TestSetup.delete_TestGroup(self)
+        res_id_list = utils.TestSetup.create_TestServiceResourceTree(self, resource_depth=4)
+        self.test_service_id = res_id_list[0]
+        test_res_with_perm_id = res_id_list[-2]
+        self.test_resource_id = res_id_list[-1]
+        # note: effective type define here to facilitate compare tests, does not matter for setup operations
+        self.test_svc_perm = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE, PermissionType.EFFECTIVE)
+        self.test_res_perm = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE, PermissionType.EFFECTIVE)
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_resource_id=self.test_service_id, override_permission=self.test_svc_perm)
+        utils.TestSetup.create_TestGroupResourcePermission(
+            self, override_resource_id=test_res_with_perm_id, override_permission=self.test_res_perm)
+
+        # prepare mock
+        self.mock_call_count = 0
+
+    def mock_detach_effective_permissions(
+        self, service_self, user, resource, test_detach_items=None, real_effective_permissions=None, **kwargs
+    ):
+        self.mock_call_count += 1
+        utils.check_val_true(not sa_inspect(user).detached, "Cannot run test. Not expected setup state.")
+        utils.check_val_true(not sa_inspect(resource).detached, "Cannot run test. Not expected setup state.")
+        utils.check_val_true(bool(test_detach_items), "Cannot run test. Missing what to disconnect!")
+        utils.check_val_true(bool(test_detach_items), "Cannot run test. Real function not provided!")
+        for item in test_detach_items:
+            utils.check_val_is_in(item, ["user", "resource"], "Cannot run test. Unknown item to disconnect!")
+            obj = user if item == "user" else resource
+            session = obj.get_db_session()
+            session.expunge(obj)
+            utils.check_val_true(sa_inspect(obj).detached, "Cannot run test. Disconnect failed.")
+        return real_effective_permissions(service_self, user, resource, **kwargs)
+
+    def test_reconnect_user(self):
+        real_effective_permissions = ServiceInterface.effective_permissions
+        with mock.patch.object(
+            ServiceInterface, "effective_permissions",
+            new=lambda *_, **__: self.mock_detach_effective_permissions(
+                *_, test_detach_items=["user"], real_effective_permissions=real_effective_permissions, **__
+            )
+        ):
+            # if operation succeeds, detached objects succeeded dynamically reconnecting
+            path = "/users/{}/resources/{}/permissions?effective=true"
+            path = path.format(self.test_user_name, self.test_resource_id)
+            resp = utils.test_request(self, "GET", path)
+            body = utils.check_response_basic_info(resp)
+            utils.check_val_equal(self.mock_call_count, 1)
+            utils.check_val_is_in("permissions", body)
+            perms = [PermissionSet(perm) for perm in body["permissions"]]
+            perms = [perm for perm in perms if perm.name == Permission.READ]
+            utils.check_val_equal(len(perms), 1)
+            utils.check_all_equal(perms[0].json(), self.test_res_perm.json())
+
+    def test_reconnect_resource(self):
+        real_effective_permissions = ServiceInterface.effective_permissions
+        with mock.patch.object(
+            ServiceInterface, "effective_permissions",
+            new=lambda *_, **__: self.mock_detach_effective_permissions(
+                *_, test_detach_items=["resource"], real_effective_permissions=real_effective_permissions, **__
+            )
+        ):
+            # if operation succeeds, detached objects succeeded dynamically reconnecting
+            path = "/users/{}/resources/{}/permissions?effective=true"
+            path = path.format(self.test_user_name, self.test_resource_id)
+            resp = utils.test_request(self, "GET", path)
+            body = utils.check_response_basic_info(resp)
+            utils.check_val_equal(self.mock_call_count, 1)
+            utils.check_val_is_in("permissions", body)
+            perms = [PermissionSet(perm) for perm in body["permissions"]]
+            perms = [perm for perm in perms if perm.name == Permission.READ]
+            utils.check_val_equal(len(perms), 1)
+            utils.check_all_equal(perms[0].json(), self.test_res_perm.json())
