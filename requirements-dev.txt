@@ -24,6 +24,7 @@ pylint-quotes
 pyramid-twitcher>=0.5.3  # pyup: ignore
 pytest
 python2-secrets; python_version <= "3.5"
+safety
 tox>=3.0
 webtest
 waitress
