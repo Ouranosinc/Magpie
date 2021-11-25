@@ -472,7 +472,7 @@ mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
-CHECKS := pep8 lint security doc8 links imports css
+CHECKS := pep8 lint security security-code security-deps doc8 links imports css
 CHECKS := $(addprefix check-, $(CHECKS))
 
 $(CHECKS): check-%: install-dev check-%-only
