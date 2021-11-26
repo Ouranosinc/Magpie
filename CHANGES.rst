@@ -7,7 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Address more cases where ``sqlalchemy.orm.exc.DetachedInstanceError`` and ``transaction.interfaces.NoTransaction``
+  could occur by enforcing scoped session redefinition when needed and recreation of the transaction for fetched models.
 
 `3.18.1 <https://github.com/Ouranosinc/Magpie/tree/3.18.1>`_ (2021-11-25)
 ------------------------------------------------------------------------------------

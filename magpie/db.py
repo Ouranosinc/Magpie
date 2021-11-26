@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Optional, Union
 
+    from pyramid.request import Request
     from sqlalchemy.engine.base import Engine
 
     from magpie.typedefs import AnySettingsContainer, SettingsType, Str
@@ -142,6 +143,24 @@ def get_db_session_from_config_ini(config_ini_path, ini_main_section_name="app:m
     if isinstance(settings_override, dict):
         settings.update(settings_override)
     return get_db_session_from_settings(settings)
+
+
+def get_connected_session(request):
+    # type: (Request) -> Session
+    """
+    Retrieve the session attached to the request or recreated it to ensure it is open and within scoped transaction.
+    """
+    # This is the only session reference we can trust to be fresh because it is
+    # forcefully generated for each request, regardless if any caching took place.
+    db_session = request.db
+
+    # If the session connection or transaction was closed somehow by incorrectly passed around reference
+    # (concurrent request), reconnect with new scoped session.
+    if not db_session.is_active:
+        LOGGER.debug("Session [%s] was inactive, creating new scoped session for resource.", db_session)
+        db_session = get_session_from_other(db_session)
+        LOGGER.debug("Session [%s] created.", db_session)
+    return db_session
 
 
 def run_database_migration(container=None, db_session=None):

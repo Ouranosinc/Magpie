@@ -9,7 +9,6 @@ import six
 from pyramid.authentication import IAuthenticationPolicy
 from pyramid.httpexceptions import HTTPForbidden, HTTPOk
 from pyramid_beaker import set_cache_regions_from_settings
-from ziggurat_foundations.models.services.user import UserService
 
 from magpie.__meta__ import __version__ as magpie_version
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
@@ -23,6 +22,7 @@ from magpie.utils import (
     SingletonMeta,
     get_logger,
     get_magpie_url,
+    get_request_user,
     get_settings,
     setup_cache_settings
 )
@@ -70,7 +70,7 @@ if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
 
-    from magpie.models import User
+    from magpie import models
     from magpie.typedefs import JSON, AnySettingsContainer, Str
 
     from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
@@ -87,7 +87,7 @@ def debug_cookie_identify(request):
         This function is intended for debugging purposes only. It reveals sensible configuration information.
 
     Re-implements basic functionality of :func:`pyramid.AuthTktAuthenticationPolicy.cookie.identify` called via
-    :func:`request.unauthenticated_userid` within :func:`get_user` to provide additional logging.
+    :func:`request.unauthenticated_userid` within :func:`get_request_user` to provide additional logging.
 
     .. seealso::
         - :class:`pyramid.authentication.AuthTktCookieHelper`
@@ -122,26 +122,6 @@ def debug_cookie_identify(request):
         request._get_authentication_policy().cookie.identify(request)  # noqa: W0212
 
 
-def get_user(request):
-    # type: (Request) -> Optional[User]
-    """
-    Obtains the authenticated user from the request (if any).
-
-    :param request: incoming HTTP request potentially containing authentication definitions.
-    :return: the authenticated user if parameters were valid (good credentials, not expired, etc.) or ``None``.
-    """
-    user_id = request.unauthenticated_userid
-    LOGGER.debug("Current user ID is '%s', attempt resolving user...", user_id)
-
-    if user_id is not None:
-        user = UserService.by_id(user_id, db_session=request.db)
-        LOGGER.debug("Current user has been resolved as '%s'", user)
-        return user
-    if LOGGER.isEnabledFor(logging.DEBUG):
-        debug_cookie_identify(request)
-    return None
-
-
 def verify_user(request):
     # type: (Request) -> HTTPException
     """
@@ -162,6 +142,16 @@ def verify_user(request):
     if result is None:
         return raise_http(HTTPForbidden, detail="Twitcher login incompatible with Magpie login.", nothrow=True)  # noqa
     return valid_http(HTTPOk, detail="Twitcher login verified successfully with Magpie login.")
+
+
+def get_auth_user(request):
+    # type: (Request) -> Optional[models.User]
+    """
+    Log debug authentication details if requested, and then retrieves the authenticated user.
+    """
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        debug_cookie_identify(request)
+    return get_request_user(request)
 
 
 @six.add_metaclass(SingletonMeta)
@@ -254,9 +244,10 @@ class MagpieAdapter(AdapterInterface):
             reify=True
         )
 
-        # use same 'get_user' method as ziggurat to access 'request.user' from
-        # request with auth token with exactly the same behaviour in Twitcher
-        config.add_request_method(get_user, "user", reify=True)
+        # Register an improved ``request.user`` that reattaches the detached session if a transaction commit occurred.
+        #   don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
+        #   replicate the value substitution optimization offered by 'reify' with an explicit attribute
+        config.add_request_method(get_auth_user, "user", reify=False, property=True)
 
         # add route to verify user token matching between Magpie/Twitcher
         config.add_route("verify-user", "/verify")

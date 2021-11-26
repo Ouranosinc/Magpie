@@ -72,7 +72,7 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
         if (registered_group.id, registered_user.id) not in user_group_refs_tup:
             group_entry = models.UserGroup(group_id=registered_group.id, user_id=registered_user.id)  # noqa
             db_session.add(group_entry)
-    except Exception:  # noqa: W0703 # nosec: B110
+    except Exception:  # noqa: W0703 # nosec: B110 # pragma: no cover
         # in case reference already exists, avoid duplicate error
         db_session.rollback()
 
@@ -129,7 +129,7 @@ def init_admin(db_session, settings=None):
             uu.check_user_info(password=admin_password, check_name=False, check_email=False, check_group=False)
             UserService.set_password(admin_usr, admin_password)
             UserService.regenerate_security_code(admin_usr)
-        except Exception as http_exc:  # noqa  # re-raised as value error
+        except Exception as http_exc:  # noqa  # re-raised as value error  # pragma: no cover
             db_session.rollback()
             try:
                 msg = "[{}]".format(get_json(http_exc)["detail"])
@@ -149,7 +149,7 @@ def init_admin(db_session, settings=None):
         new_group_permission = models.GroupPermission(perm_name=admin_perm, group_id=magpie_admin_group.id)  # noqa
         try:
             db_session.add(new_group_permission)
-        except Exception as exc:
+        except Exception as exc:  # noqa: W0703 # nosec: B110 # pragma: no cover
             db_session.rollback()
             raise_log("Failed to create admin user-group permission", exception=type(exc), logger=LOGGER)
 

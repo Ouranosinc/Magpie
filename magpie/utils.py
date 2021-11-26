@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 
     from pyramid.events import NewRequest
 
+    from magpie import models
     from magpie.typedefs import (
         AnyHeadersType,
         AnyKey,
@@ -291,31 +292,48 @@ def setup_ziggurat_config(config):
     settings["ziggurat_foundations.sign_in.sign_out_pattern"] = "/signout"
     config.include("ziggurat_foundations.ext.pyramid.sign_in")
 
-    # register an improved 'request.user' that reattaches the detached session if a transaction commit occurred
-    #   This can happen for example when creating a user from a pending-user where the user must be committed to
-    #   allow webhooks to refer to it. The operations using the 'user' reference following that user creation
-    #   have a detached object from the session.
-    # following is the original config that was used to setup 'request.user' similarly to below methodology
-    #   config.include("ziggurat_foundations.ext.pyramid.get_user")
+    # Register an improved ``request.user`` that reattaches the detached session if a transaction commit occurred.
+    #   don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
+    #   replicate the value substitution optimization offered by 'reify' with an explicit attribute
+    config.add_request_method(get_request_user, "user", reify=False, property=True)
 
-    def get_user(request):
-        user = getattr(request, "_user_prefetched", None)
-        if user is not None and not sa_inspect(user).detached:
-            return user
-        user_id = request.unauthenticated_userid
-        if user_id is not None:
-            user = UserService.by_id(user_id, db_session=request.db)
-            if user is None:
-                return None
-            if sa_inspect(user).detached:
-                request.db.merge(user)
-            setattr(request, "_user_prefetched", user)
-            return user
-        return None
 
-    # don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
-    # replicate the value substitution optimization offered by 'reify' with an explicit attribute
-    config.add_request_method(get_user, "user", reify=False, property=True)
+def get_request_user(request):
+    # type: (Request) -> Optional[models.User]
+    """
+    Obtains the user that corresponds to the authentication details found in the request.
+
+    Prior to resolving the user matching the authenticated user ID, reattaches the detached session or closed
+    transaction if commit occurred beforehand. This can happen for example when creating a user from a pending-user
+    where the user must be committed to allow webhooks to refer to it immediately, although the request has not
+    completed processing. Operations using the ``request.user`` reference following that user creation could have a
+    detached object state from the session. Also ensure that any resolved user is allow attached to the reestablished
+    database session reference in the request.
+
+    After reattaching to the session, following step is the original configuration setup
+    similarly to typical methodology::
+
+        config.include("ziggurat_foundations.ext.pyramid.get_user")
+
+    :param request: request to look for authenticated user.
+    :return: authenticated user or none if unauthenticated.
+    """
+    user = getattr(request, "_user_prefetched", None)
+    if user is not None and not sa_inspect(user).detached:
+        return user
+    user_id = request.unauthenticated_userid
+    LOGGER.debug("Current user ID is '%s', attempt resolving user...", user_id)
+
+    if user_id is not None:
+        user = UserService.by_id(user_id, db_session=request.db)
+        LOGGER.debug("Current user has been resolved as '%s'", user)
+        if user is None:
+            return None
+        if sa_inspect(user).detached:
+            request.db.merge(user)
+        setattr(request, "_user_prefetched", user)
+        return user
+    return None
 
 
 def get_json(response):
