@@ -16,6 +16,7 @@ from six.moves.urllib.parse import urlparse
 from magpie.api.exception import evaluate_call, verify_param
 from magpie.api.schemas import ProviderSigninAPI
 from magpie.constants import get_constant
+from magpie.db import get_connected_session
 from magpie.models import Service
 from magpie.permissions import Permission
 from magpie.services import invalidate_service, service_factory
@@ -73,7 +74,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             - :meth:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity.get_service`
             - :meth:`magpie.adapter.magpieservice.MagpieServiceStore.fetch_by_name`
         """
-        session = self.request.db
+        session = get_connected_session(self.request)
         service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=session),
                                 http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
         verify_param(service, not_none=True, param_name="service_name",
@@ -117,6 +118,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             service_cached.populate_obj(service_data)
             service_impl.service = service_cached
             service_impl.request = request
+            service_impl.request.db = get_connected_session(request)
 
         # Create a shallow copy of the service implementation to mitigate session handling by distinct requests.
         # - Because multiple threads/workers can retrieve the (same) cached definition from memory during concurrent

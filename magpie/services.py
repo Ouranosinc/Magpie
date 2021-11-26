@@ -16,7 +16,7 @@ from ziggurat_foundations.permissions import permission_to_pyramid_acls
 from magpie import models
 from magpie.api import exception as ax
 from magpie.constants import get_constant
-from magpie.db import get_session_from_other
+from magpie.db import get_connected_session
 from magpie.owsrequest import ows_parser_factory
 from magpie.permissions import (
     PERMISSION_REASON_ADMIN,
@@ -35,7 +35,6 @@ if TYPE_CHECKING:
     from typing import Collection, Dict, List, Optional, Set, Tuple, Type, Union
 
     from pyramid.request import Request
-    from sqlalchemy.orm import Session
 
     from magpie.typedefs import AccessControlListType, ServiceConfiguration, ServiceOrResourceType, Str
 
@@ -201,12 +200,23 @@ class ServiceInterface(object):
             Function arguments are required to generate caching keys by which cached elements will be retrieved.
             Actual arguments are not needed as we employ stored objects in the instance.
 
+        .. warning::
+            Anything within this method or any underlying calls that can potentially retrieve database contents,
+            whether for direct object or dynamically generated relationships (eg: ``user.groups``) must attempt
+            to reestablish any detached or invalid session/transaction due to the potentially desynchronized
+            references between objects before/after both incoming ``service`` and this ``acl`` cache regions.
+
         .. seealso::
             - :meth:`ServiceInterface.permission_requested`
             - :meth:`ServiceInterface.resource_requested`
             - :meth:`ServiceInterface.user_requested`
         """
         self._flag_acl_cached[(service_name, request_method, request_path, user_id)] = False
+
+        # attempt to catch any missing reconnect or detect closed transaction if needed for following steps
+        # store in 'request.db' reference since service implementations don't always use 'get_connected_session'
+        self.request.db = get_connected_session(self.request)
+
         permissions = self.permission_requested()
         if permissions is None:
             return [DENY_ALL]
@@ -233,23 +243,6 @@ class ServiceInterface(object):
         permissions = self.effective_permissions(user, resource, permissions, allow_match)
         return [perm.ace(self.request.user) for perm in permissions]
 
-    def _get_connected_session(self):
-        # type: () -> Session
-        """
-        Retrieve the session attached to the request or recreated it to ensure it is open and within scoped transaction.
-        """
-        # This is the only session reference we can trust to be fresh because it is
-        # forcefully generated for each request, regardless if any caching took place.
-        db_session = self.request.db
-
-        # If the session connection or transaction was closed somehow by incorrectly passed around reference
-        # (concurrent request), reconnect with new scoped session.
-        if not db_session.is_active:
-            LOGGER.debug("Session [%s] was inactive, creating new scoped session for resource.", db_session)
-            db_session = get_session_from_other(db_session)
-            LOGGER.debug("Session [%s] created.", db_session)
-        return db_session
-
     def _get_connected_object(self, obj):
         # type: (Union[ServiceOrResourceType, models.User]) -> Optional[ServiceOrResourceType]
         """
@@ -259,7 +252,7 @@ class ServiceInterface(object):
         according to timing of requests and whether caching took placed between them, and for different caching region
         levels (service, ACL or both). It also attempts to correct and encountered problems due to concurrent requests.
         """
-        db_session = self._get_connected_session()
+        db_session = get_connected_session(self.request)
 
         # Reconnect the referenced object to active database session if it is detached or inactive.
         # - This can happen during mismatching sources of cached objects for service/ACL region combinations,
@@ -373,7 +366,7 @@ class ServiceInterface(object):
         requested_perms = set(permissions)  # type: Set[Permission]
         effective_perms = dict()            # type: Dict[Permission, PermissionSet]
 
-        db_session = self._get_connected_session()
+        db_session = get_connected_session(self.request)
         user = self._get_connected_object(user)  # groups dynamically populated fail if not connected (for admin check)
         LOGGER.debug("Resolving effective permission for: [user: %s, resource: %s, permissions: %s, match: %s]",
                      user, resource, list(permissions), allow_match)

@@ -10,6 +10,7 @@ from pyramid.httpexceptions import HTTPOk
 from pyramid.settings import asbool
 
 from magpie.api.schemas import ServicesAPI
+from magpie.db import get_connected_session
 from magpie.models import Service as MagpieService
 from magpie.services import invalidate_service
 from magpie.utils import (
@@ -67,7 +68,7 @@ class MagpieServiceStore(ServiceStoreInterface):
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.magpie_admin_token = get_admin_cookies(self.settings, self.twitcher_ssl_verify)
 
-    def save_service(self, service=None, name=None, url=None, overwrite=True, request=None):
+    def save_service(self, service=None, name=None, url=None, overwrite=True, request=None):  # noqa: F811
         """
         Store is read-only, use `Magpie` :term:`API` to add services.
 
@@ -138,7 +139,7 @@ class MagpieServiceStore(ServiceStoreInterface):
             - :meth:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity.get_service`
             - :meth:`magpie.adapter.magpieservice.MagpieServiceStore.fetch_by_name`
         """
-        session = self.request.db
+        session = get_connected_session(self.request)
         service = MagpieService.by_service_name(service_name, db_session=session)
         if service is None:
             raise ServiceNotFound("Service name not found.")

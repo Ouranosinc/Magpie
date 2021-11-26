@@ -28,7 +28,7 @@ def make_logging_options(parser):
                           help="Explicit log level to employ (default: %(default)s).")
 
 
-def setup_logger_from_options(logger, args):
+def setup_logger_from_options(logger, args):  # pragma: no cover
     # type: (logging.Logger, argparse.Namespace) -> None
     """
     Uses argument parser options to setup logging level from specified flags.
