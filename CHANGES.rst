@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.18.2 <https://github.com/Ouranosinc/Magpie/tree/3.18.2>`_ (2021-11-26)
+------------------------------------------------------------------------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Address more cases where ``sqlalchemy.orm.exc.DetachedInstanceError`` and ``transaction.interfaces.NoTransaction``
