@@ -1,5 +1,3 @@
-import logging
-import time
 import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
@@ -15,16 +13,15 @@ from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
 from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.api.exception import raise_http, valid_http
 from magpie.api.schemas import SigninAPI
-from magpie.db import get_engine, get_session_factory, get_tm_session
 from magpie.security import get_auth_config
 from magpie.utils import (
     CONTENT_TYPE_JSON,
     SingletonMeta,
     get_logger,
     get_magpie_url,
-    get_request_user,
     get_settings,
-    setup_cache_settings
+    setup_cache_settings,
+    setup_session_config
 )
 
 # WARNING:
@@ -70,56 +67,11 @@ if TYPE_CHECKING:
     from pyramid.httpexceptions import HTTPException
     from pyramid.request import Request
 
-    from magpie import models
     from magpie.typedefs import JSON, AnySettingsContainer, Str
 
     from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
 
 LOGGER = get_logger("TWITCHER|{}".format(__name__))
-
-
-def debug_cookie_identify(request):
-    """
-    Logs debug information about request cookie.
-
-    .. WARNING::
-
-        This function is intended for debugging purposes only. It reveals sensible configuration information.
-
-    Re-implements basic functionality of :func:`pyramid.AuthTktAuthenticationPolicy.cookie.identify` called via
-    :func:`request.unauthenticated_userid` within :func:`get_request_user` to provide additional logging.
-
-    .. seealso::
-        - :class:`pyramid.authentication.AuthTktCookieHelper`
-        - :class:`pyramid.authentication.AuthTktAuthenticationPolicy`
-    """
-    # pylint: disable=W0212
-    cookie_inst = request._get_authentication_policy().cookie  # noqa: W0212
-    cookie = request.cookies.get(cookie_inst.cookie_name)
-
-    LOGGER.debug("Cookie (name: %s, secret: %s, hash-alg: %s) : %s",
-                 cookie_inst.cookie_name, cookie_inst.secret, cookie_inst.hashalg, cookie)
-
-    if not cookie:
-        LOGGER.debug("No Cookie!")
-    else:
-        if cookie_inst.include_ip:
-            environ = request.environ
-            remote_addr = environ["REMOTE_ADDR"]
-        else:
-            remote_addr = "0.0.0.0"  # nosec # only for log debugging
-
-        LOGGER.debug("Cookie remote addr (include_ip: %s) : %s", cookie_inst.include_ip, remote_addr)
-        now = time.time()
-        timestamp, _, _, _ = cookie_inst.parse_ticket(cookie_inst.secret, cookie, remote_addr, cookie_inst.hashalg)
-        LOGGER.debug("Cookie timestamp: %s, timeout: %s, now: %s", timestamp, cookie_inst.timeout, now)
-
-        if cookie_inst.timeout and ((timestamp + cookie_inst.timeout) < now):
-            # the auth_tkt data has expired
-            LOGGER.debug("Cookie is expired")
-
-        # Could raise useful exception explaining why unauthenticated_userid is None
-        request._get_authentication_policy().cookie.identify(request)  # noqa: W0212
 
 
 def verify_user(request):
@@ -142,16 +94,6 @@ def verify_user(request):
     if result is None:
         return raise_http(HTTPForbidden, detail="Twitcher login incompatible with Magpie login.", nothrow=True)  # noqa
     return valid_http(HTTPOk, detail="Twitcher login verified successfully with Magpie login.")
-
-
-def get_auth_user(request):
-    # type: (Request) -> Optional[models.User]
-    """
-    Log debug authentication details if requested, and then retrieves the authenticated user.
-    """
-    if LOGGER.isEnabledFor(logging.DEBUG):
-        debug_cookie_identify(request)
-    return get_request_user(request)
 
 
 @six.add_metaclass(SingletonMeta)
@@ -231,23 +173,7 @@ class MagpieAdapter(AdapterInterface):
         LOGGER.info("Loading Magpie AuthN/AuthZ configuration for adapter.")
         config = get_auth_config(container)
         config.include("pyramid_beaker")
-
-        # use pyramid_tm to hook the transaction lifecycle to the request
-        # make request.db available for use in Pyramid
-        config.include("pyramid_tm")
-        session_factory = get_session_factory(get_engine(settings))
-        config.registry["dbsession_factory"] = session_factory
-        config.add_request_method(
-            # r.tm is the transaction manager used by pyramid_tm
-            lambda r: get_tm_session(session_factory, r.tm),
-            "db",
-            reify=True
-        )
-
-        # Register an improved ``request.user`` that reattaches the detached session if a transaction commit occurred.
-        #   don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
-        #   replicate the value substitution optimization offered by 'reify' with an explicit attribute
-        config.add_request_method(get_auth_user, "user", reify=False, property=True)
+        setup_session_config(config)
 
         # add route to verify user token matching between Magpie/Twitcher
         config.add_route("verify-user", "/verify")

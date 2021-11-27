@@ -154,8 +154,9 @@ class ServiceInterface(object):
     def user_requested(self):
         user = self.request.user
         if not user:
+            session = get_connected_session(self.request)
             anonymous = get_constant("MAGPIE_ANONYMOUS_USER", self.request)
-            user = UserService.by_user_name(anonymous, db_session=self.request.db)
+            user = UserService.by_user_name(anonymous, db_session=session)
             if user is None:
                 raise RuntimeError("No Anonymous user in the database")
         return user
@@ -596,7 +597,8 @@ class ServiceWPS(ServiceOWS):
             proc_id = self.parser.params["identifier"]
             if not proc_id:
                 return self.service, False
-            proc = models.find_children_by_name(proc_id, parent_id=wps_id, db_session=self.request.db)
+            session = get_connected_session(self.request)
+            proc = models.find_children_by_name(proc_id, parent_id=wps_id, db_session=session)
             if proc:
                 return proc, True
             return self.service, False
@@ -689,7 +691,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
             # FIXME: this is probably too specific to birdhouse... leave as is for bw-compat, adjust as needed
             netcdf_file = netcdf_file.replace("outputs/", "birdhouse/")
 
-            db_session = self.request.db
+            db_session = get_connected_session(self.request)
             file_parts = netcdf_file.split("/")
             while found_child and file_parts:
                 part = file_parts.pop(0)
@@ -746,9 +748,10 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
                 workspace_name = layer_name.split(":")[0]
         if not workspace_name:
             return self.service, False
+        session = get_connected_session(self.request)
         workspace = models.find_children_by_name(child_name=workspace_name,
                                                  parent_id=self.service.resource_id,
-                                                 db_session=self.request.db)
+                                                 db_session=session)
         if workspace:
             return workspace, True
         return self.service, False
@@ -796,7 +799,8 @@ class ServiceAPI(ServiceInterface):
         while route_child and route_parts:
             part_name = route_parts.pop(0)
             route_res_id = route_child.resource_id
-            route_child = models.find_children_by_name(part_name, parent_id=route_res_id, db_session=self.request.db)
+            session = get_connected_session(self.request)
+            route_child = models.find_children_by_name(part_name, parent_id=route_res_id, db_session=session)
             if route_child:
                 route_found = route_child
 
@@ -927,8 +931,9 @@ class ServiceTHREDDS(ServiceInterface):
                     if matched is not None:
                         part_name = matched
                         break
+            session = get_connected_session(self.request)
             child_res_id = child_resource.resource_id
-            child_resource = models.find_children_by_name(part_name, parent_id=child_res_id, db_session=self.request.db)
+            child_resource = models.find_children_by_name(part_name, parent_id=child_res_id, db_session=session)
             if child_resource:
                 found_resource = child_resource
 

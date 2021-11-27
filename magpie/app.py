@@ -15,7 +15,14 @@ from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
 from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
 from magpie.security import get_auth_config
-from magpie.utils import get_logger, patch_magpie_url, print_log, setup_cache_settings, setup_ziggurat_config
+from magpie.utils import (
+    get_logger,
+    patch_magpie_url,
+    print_log,
+    setup_cache_settings,
+    setup_session_config,
+    setup_ziggurat_config
+)
 
 LOGGER = get_logger(__name__)
 
@@ -96,6 +103,7 @@ def main(global_config=None, **settings):  # noqa: F811
     config = get_auth_config(settings)
     setup_cache_settings(settings)  # default 'cache=off' if missing since 'pyramid_beaker' enables it otherwise
     set_cache_regions_from_settings(settings)  # parse/convert cache settings into regions understood by beaker
+    setup_session_config(config)
     setup_ziggurat_config(config)
 
     # don't use scan otherwise modules like 'magpie.adapter' are
