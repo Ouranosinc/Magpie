@@ -39,7 +39,7 @@ def format_response(response):
 def get_login_session(magpie_url, username, password, return_response=False):
     session = requests.Session()
     data = {"user_name": username, "password": password}
-    response = session.post(magpie_url + "/signin", data=data)
+    response = session.post(magpie_url + "/signin", json=data)
     fmt_resp = format_response(response)
     if return_response:
         return fmt_resp
