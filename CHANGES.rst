@@ -7,7 +7,15 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``pyramid_retry`` package to attempt auto-recovering from still unhandled errors
+  ``sqlalchemy.orm.exc.DetachedInstanceError`` and ``transaction.interfaces.NoTransaction``
+  following invalid cached/reset sessions and objects.
+* Refactor application configuration from ``magpie.__init__`` to ``magpie.app`` to setup all relevant modules and
+  utilities in a common location and let the initialization part only include sub-modules.
+* Avoid double call of ``setup_ziggurat_config`` detected during refactor.
+* Adjust handling and ordering of tweens to ensure intended behaviour and compatibility with ``pyramid_retry``.
 
 `3.18.2 <https://github.com/Ouranosinc/Magpie/tree/3.18.2>`_ (2021-11-26)
 ------------------------------------------------------------------------------------
