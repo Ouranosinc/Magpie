@@ -7,8 +7,8 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 import logging
 
 from pyramid.events import NewRequest
-from pyramid.tweens import EXCVIEW, MAIN
 from pyramid.settings import asbool
+from pyramid.tweens import EXCVIEW, MAIN
 from pyramid_beaker import set_cache_regions_from_settings
 
 from magpie.api.generic import (
