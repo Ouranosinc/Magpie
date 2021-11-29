@@ -12,15 +12,14 @@ from typing import TYPE_CHECKING
 
 import requests
 import six
-from pyramid.config import PHASE1_CONFIG, ConfigurationError, Configurator
+from pyramid.config import ConfigurationError, Configurator
 from pyramid.httpexceptions import HTTPClientError, HTTPException, HTTPOk
-from pyramid.interfaces import IExecutionPolicy
 from pyramid.registry import Registry
 from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.settings import asbool, truthy
 from pyramid.threadlocal import get_current_registry
-from pyramid_retry import IBeforeRetry, RetryableExecutionPolicy, mark_error_retryable
+from pyramid_retry import IBeforeRetry, mark_error_retryable
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
 from six.moves import configparser
