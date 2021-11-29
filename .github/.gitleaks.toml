@@ -115,8 +115,4 @@ title = "gitleaks config"
     '''(go.mod|go.sum)$''',
     # old commit files with false positives or dummy data
     '''magpie/login/login.py''',
-<<<<<<< HEAD
     '''.+(.js.map)$''']
-=======
-    '''magpie/ui/swagger-ui/swagger-ui-bundle.js.map''']
->>>>>>> 2b7ce217... ignore old dummy data
