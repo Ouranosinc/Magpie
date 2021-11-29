@@ -291,7 +291,7 @@ def setup_session_config(config):
     def retry_warn(event):
         # type: (BeforeRetry) -> None
         LOGGER.warning("Will retry request [%s %s] following raised error [%s] during previous attempt.",
-                       event.exception, event.request.method, event.request.url)
+                       event.request.method, event.request.url, event.exception)
 
     # retry sporadic transaction or detached instance errors
     # since these errors happen most of the time during cache reset, following retry should work as intended
