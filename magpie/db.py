@@ -18,6 +18,7 @@ from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.orm import configure_mappers, scoped_session
 from sqlalchemy.orm.session import Session, sessionmaker
 from zope.sqlalchemy import register
+from zope.sqlalchemy.datamanager import join_transaction
 
 from magpie.constants import get_constant
 from magpie.utils import get_logger, get_settings, get_settings_from_config_ini, print_log, raise_log
@@ -160,6 +161,9 @@ def get_connected_session(request):
         LOGGER.debug("Session [%s] was inactive, creating new scoped session for resource.", db_session)
         db_session = get_session_from_other(db_session)
         LOGGER.debug("Session [%s] created.", db_session)
+
+    # no-op if already joined, but make sure to initiate if no transaction when session reestablished from cache
+    join_transaction(db_session)
     return db_session
 
 

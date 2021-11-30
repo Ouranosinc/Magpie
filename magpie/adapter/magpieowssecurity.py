@@ -45,15 +45,16 @@ if TYPE_CHECKING:
     from pyramid.request import Request
 
     from magpie.services import ServiceInterface
-    from magpie.typedefs import AnyValue, Str
+    from magpie.typedefs import AnySettingsContainer, AnyValue, Str
 
 
 class MagpieOWSSecurity(OWSSecurityInterface):
+    _cached_request = None
 
-    def __init__(self, request):
+    def __init__(self, container):
+        # type: (AnySettingsContainer) -> None
         super(MagpieOWSSecurity, self).__init__()
-        self.settings = get_settings(request)
-        self.request = request
+        self.settings = get_settings(container)
         self.magpie_url = get_magpie_url(self.settings)
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.twitcher_protected_path = self.settings.get("twitcher.ows_proxy_protected_path", "/ows")
@@ -74,14 +75,14 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             - :meth:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity.get_service`
             - :meth:`magpie.adapter.magpieservice.MagpieServiceStore.fetch_by_name`
         """
-        session = get_connected_session(self.request)
+        session = get_connected_session(self._cached_request)
         service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=session),
                                 http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
         verify_param(service, not_none=True, param_name="service_name",
                      http_error=HTTPNotFound, msg_on_fail="Service name not found.")
 
         # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
-        service_impl = service_factory(service, self.request)
+        service_impl = service_factory(service, self._cached_request)
         service_data = dict(service.get_appstruct())
         return service_impl, service_data
 
@@ -95,17 +96,18 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         """
 
         # make sure the cache is invalidated to retrieve 'fresh' service from database if requested or cache disabled
-        self.request = request
         service_name = parse_service_name(request.path, self.twitcher_protected_path)
         if "service" not in cache_regions:
             cache_regions["service"] = {"enabled": False}
-        if self.request.headers.get("Cache-Control") == "no-cache":
+        if request.headers.get("Cache-Control") == "no-cache":
             LOGGER.debug("Cache invalidation requested. Removing items from service region: [%s]", service_name)
             invalidate_service(service_name)
 
         # retrieve the implementation and the service data contained in the database entry
         LOGGER.debug("Retrieving service [%s]", service_name)
+        self._cached_request = request
         service_impl, service_data = self._get_service_cached(service_name)
+        self._cached_request = None
 
         # Because the database service *could* be linked to cached item, expired session creates unbound object
         # - rebuild the service from cached data such that following operations can retrieve details as needed
@@ -175,6 +177,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         :returns: Nothing if user has access.
         """
         if request.path.startswith(self.twitcher_protected_path):
+            request.db = get_connected_session(request)
+
             # each service implementation defines their ACL and permission resolution using request definition
             service_impl = self.get_service(request)
             LOGGER.debug("Using service: [%s]", service_impl)
