@@ -16,6 +16,8 @@ Features / Changes
   utilities in a common location and let the initialization part only include sub-modules.
 * Avoid double call of ``setup_ziggurat_config`` detected during refactor.
 * Adjust handling and ordering of tweens to ensure intended behaviour and compatibility with ``pyramid_retry``.
+* Update `Twitcher` base ``Docker.adapter`` image to ``v0.6.2`` to provide fixes related to session transaction
+  handling (relates to `bird-house/twitcher#111 <https://github.com/bird-house/twitcher/pull/111>`_).
 
 `3.18.2 <https://github.com/Ouranosinc/Magpie/tree/3.18.2>`_ (2021-11-26)
 ------------------------------------------------------------------------------------
