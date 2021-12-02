@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.19.0 <https://github.com/Ouranosinc/Magpie/tree/3.19.0>`_ (2021-12-02)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``pyramid_retry`` package to attempt auto-recovering from still unhandled errors
