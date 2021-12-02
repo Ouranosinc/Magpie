@@ -6,16 +6,36 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
 import logging
 
+from pyramid.events import NewRequest
 from pyramid.settings import asbool
+from pyramid.tweens import EXCVIEW, MAIN
 from pyramid_beaker import set_cache_regions_from_settings
 
+from magpie.api.generic import (
+    RemoveSlashNotFoundViewFactory,
+    apply_response_format_tween,
+    internal_server_error,
+    not_found_or_method_not_allowed,
+    unauthorized_or_forbidden,
+    validate_accept_header_tween
+)
 from magpie.api.webhooks import setup_webhooks
 from magpie.cli.register_defaults import register_defaults
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
 from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
 from magpie.security import get_auth_config
-from magpie.utils import get_logger, patch_magpie_url, print_log, setup_cache_settings, setup_ziggurat_config
+from magpie.utils import (
+    fully_qualified_name,
+    get_logger,
+    log_exception_tween,
+    log_request,
+    patch_magpie_url,
+    print_log,
+    setup_cache_settings,
+    setup_session_config,
+    setup_ziggurat_config
+)
 
 LOGGER = get_logger(__name__)
 
@@ -96,7 +116,28 @@ def main(global_config=None, **settings):  # noqa: F811
     config = get_auth_config(settings)
     setup_cache_settings(settings)  # default 'cache=off' if missing since 'pyramid_beaker' enables it otherwise
     set_cache_regions_from_settings(settings)  # parse/convert cache settings into regions understood by beaker
+    setup_session_config(config)
     setup_ziggurat_config(config)
+
+    config.add_exception_view(internal_server_error)
+    config.add_forbidden_view(unauthorized_or_forbidden)
+    config.add_notfound_view(RemoveSlashNotFoundViewFactory(not_found_or_method_not_allowed), append_slash=True)
+    config.set_default_permission(get_constant("MAGPIE_ADMIN_PERMISSION", config))
+
+    tween_position = fully_qualified_name(apply_response_format_tween)
+    config.add_tween(tween_position, over=EXCVIEW)
+    if get_constant("MAGPIE_LOG_REQUEST", config):
+        config.add_subscriber(log_request, NewRequest)
+    if get_constant("MAGPIE_LOG_EXCEPTION", config):
+        tween_name = fully_qualified_name(log_exception_tween)
+        config.add_tween(tween_name, under=tween_position)
+    config.add_tween(fully_qualified_name(validate_accept_header_tween), under=EXCVIEW, over=MAIN)
+
+    config.include("cornice")
+    config.include("cornice_swagger")
+    config.include("pyramid_chameleon")
+    config.include("pyramid_beaker")
+    config.include("pyramid_mako")
 
     # don't use scan otherwise modules like 'magpie.adapter' are
     # automatically found and cause import errors on missing packages

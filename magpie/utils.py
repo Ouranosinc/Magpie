@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import sys
+import time
 import types
 from distutils.dir_util import mkpath
 from typing import TYPE_CHECKING
@@ -18,11 +19,14 @@ from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.settings import asbool, truthy
 from pyramid.threadlocal import get_current_registry
+from pyramid_retry import IBeforeRetry, mark_error_retryable
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
 from six.moves import configparser
 from six.moves.urllib.parse import urlparse
 from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.orm.exc import DetachedInstanceError
+from transaction.interfaces import NoTransaction
 from webob.headers import EnvironHeaders, ResponseHeaders
 from ziggurat_foundations.models.services.user import UserService
 
@@ -40,6 +44,7 @@ if TYPE_CHECKING:
     from typing import Any, List, NoReturn, Optional, Type, Union
 
     from pyramid.events import NewRequest
+    from pyramid_retry import BeforeRetry
 
     from magpie import models
     from magpie.typedefs import (
@@ -266,6 +271,63 @@ def setup_cache_settings(settings, force=False, enabled=False, expire=0):
             settings.pop(cache_expire, None)
 
 
+def setup_session_config(config):
+    from magpie.db import get_engine, get_session_factory, get_tm_session
+
+    settings = get_settings(config)
+
+    # avoid sporadic errors session/transaction errors
+    #   - sqlalchemy.orm.exc.DetachedInstanceError
+    #   - transaction.interfaces.NoTransaction
+    # see also:
+    #   - https://docs.pylonsproject.org/projects/pyramid_tm/en/latest/
+    #   - https://github.com/Pylons/pyramid_tm/issues/74
+    #   - https://github.com/Ouranosinc/Magpie/issues/466
+    #   - https://github.com/Ouranosinc/Magpie/pull/473
+    # Note:
+    #   Set value here because both Magpie and Twitcher (via MagpieAdapter.configurator_factory) inherit this setting.
+    settings["tm.annotate_user"] = False
+
+    def retry_warn(event):
+        # type: (BeforeRetry) -> None
+        LOGGER.warning("Will retry request [%s %s] following raised error [%s] during previous attempt.",
+                       event.request.method, event.request.url, event.exception)
+
+    # retry sporadic transaction or detached instance errors
+    # since these errors happen most of the time during cache reset, following retry should work as intended
+    settings.setdefault("retry.attempts", 2)
+    config.include("pyramid_retry")
+    config.add_subscriber(retry_warn, IBeforeRetry)
+    mark_error_retryable(DetachedInstanceError)
+    mark_error_retryable(NoTransaction)
+
+    # use 'pyramid_tm' to hook the transaction lifecycle to the request
+    # make 'request.db' available for use in Pyramid
+    config.include("pyramid_tm")
+    session_factory = get_session_factory(get_engine(settings))
+    config.registry["dbsession_factory"] = session_factory
+    config.add_request_method(
+        # 'request.tm' is the transaction manager used by 'pyramid_tm'
+        lambda request: get_tm_session(session_factory, request.tm), "db", reify=True
+    )
+
+    def debug_request_user(request):
+        # type: (Request) -> Optional[models.User]
+        """
+        Log debug authentication details if requested, and then retrieves the authenticated user.
+        """
+        debug_cookie_identify(request)
+        return get_request_user(request)
+
+    # Register an improved 'request.user' that reattaches the detached session if a transaction commit occurred.
+    #   don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
+    #   replicate the value substitution optimization offered by 'reify' with an explicit attribute
+    settings.setdefault("magpie.debug_cookie_identity", False)
+    debug_user = LOGGER.isEnabledFor(logging.DEBUG) and asbool(settings["magpie.debug_cookie_identity"])
+    get_user = debug_request_user if debug_user else get_request_user
+    config.add_request_method(get_user, "user", reify=False, property=True)
+
+
 def setup_ziggurat_config(config):
     # type: (Configurator) -> None
     """
@@ -292,10 +354,49 @@ def setup_ziggurat_config(config):
     settings["ziggurat_foundations.sign_in.sign_out_pattern"] = "/signout"
     config.include("ziggurat_foundations.ext.pyramid.sign_in")
 
-    # Register an improved ``request.user`` that reattaches the detached session if a transaction commit occurred.
-    #   don't use 'reify=True' to ensure the function is called and re-evaluates the detached state
-    #   replicate the value substitution optimization offered by 'reify' with an explicit attribute
-    config.add_request_method(get_request_user, "user", reify=False, property=True)
+
+def debug_cookie_identify(request):
+    """
+    Logs debug information about request cookie.
+
+    .. WARNING::
+
+        This function is intended for debugging purposes only. It reveals sensible configuration information.
+
+    Re-implements basic functionality of :func:`pyramid.AuthTktAuthenticationPolicy.cookie.identify` called via
+    :func:`request.unauthenticated_userid` within :func:`get_request_user` to provide additional logging.
+
+    .. seealso::
+        - :class:`pyramid.authentication.AuthTktCookieHelper`
+        - :class:`pyramid.authentication.AuthTktAuthenticationPolicy`
+    """
+    # pylint: disable=W0212
+    cookie_inst = request._get_authentication_policy().cookie  # noqa: W0212
+    cookie = request.cookies.get(cookie_inst.cookie_name)
+
+    LOGGER.debug("Cookie (name: %s, secret: %s, hash-alg: %s) : %s",
+                 cookie_inst.cookie_name, cookie_inst.secret, cookie_inst.hashalg, cookie)
+
+    if not cookie:
+        LOGGER.debug("No Cookie!")
+    else:
+        if cookie_inst.include_ip:
+            environ = request.environ
+            remote_addr = environ["REMOTE_ADDR"]
+        else:
+            remote_addr = "0.0.0.0"  # nosec # only for log debugging
+
+        LOGGER.debug("Cookie remote addr (include_ip: %s) : %s", cookie_inst.include_ip, remote_addr)
+        now = time.time()
+        timestamp, _, _, _ = cookie_inst.parse_ticket(cookie_inst.secret, cookie, remote_addr, cookie_inst.hashalg)
+        LOGGER.debug("Cookie timestamp: %s, timeout: %s, now: %s", timestamp, cookie_inst.timeout, now)
+
+        if cookie_inst.timeout and ((timestamp + cookie_inst.timeout) < now):
+            # the auth_tkt data has expired
+            LOGGER.debug("Cookie is expired")
+
+        # Could raise useful exception explaining why unauthenticated_userid is None
+        request._get_authentication_policy().cookie.identify(request)  # noqa: W0212
 
 
 def get_request_user(request):

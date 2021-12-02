@@ -42,6 +42,31 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
+class RemoveSlashNotFoundViewFactory(object):
+    """
+    Utility that will try to resolve a path without appended slash if one was provided.
+    """
+    def __init__(self, notfound_view=None):
+        self.notfound_view = notfound_view
+
+    def __call__(self, request):
+        from pyramid.httpexceptions import HTTPMovedPermanently
+        from pyramid.interfaces import IRoutesMapper
+        path = request.path
+        registry = request.registry
+        mapper = registry.queryUtility(IRoutesMapper)
+        if mapper is not None and path.endswith("/"):
+            no_slash_path = path.rstrip("/")
+            no_slash_path = no_slash_path.split("/magpie", 1)[-1]
+            for route in mapper.get_routes():
+                if route.match(no_slash_path) is not None:
+                    query = request.query_string
+                    if query:
+                        no_slash_path += "?" + query
+                    return HTTPMovedPermanently(location=no_slash_path)
+        return self.notfound_view(request)
+
+
 def internal_server_error(request):
     # type: (Request) -> HTTPException
     """
@@ -135,10 +160,11 @@ def guess_target_format(request):
 def validate_accept_header_tween(handler, registry):    # noqa: F811
     # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
     """
-    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is a supported one by
-    the application and for the given context.
+    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is supported.
 
-    :raises HTTPNotAcceptable: if desired ``Content-Type`` is not supported.
+    Supported values are defined by :py:data:`SUPPORTED_ACCEPT_TYPES` and for the given context of API or UI.
+
+    :raises HTTPNotAcceptable: if desired ``Accept`` or ``format`` specifier of content-type is not supported.
     """
     def validate_format(request):
         # type: (Request) -> Response
@@ -162,11 +188,12 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
 def apply_response_format_tween(handler, registry):    # noqa: F811
     # type: (Callable[[Request], HTTPException], Registry) -> Callable[[Request], Response]
     """
-    Tween that obtains the request ``Accept`` header or ``format`` query (if any) to generate the response with the
-    desired ``Content-Type``.
+    Tween that applies the response ``Content-Type`` according to the requested ``Accept`` header or ``format`` query.
 
     The target ``Content-Type`` is expected to have been validated by :func:`validate_accept_header_tween` beforehand
-    to handle not-acceptable errors.
+    to handle not-acceptable errors. If an invalid format is detected at this stage, JSON is used by default.
+    This can be the case for example for :func:`validate_accept_header_tween` itself that raises the error about
+    the invalid ``Accept`` header or ``format`` query, but detects these inadequate parameters from incoming request.
 
     The tween also ensures that additional request metadata extracted from :func:`get_request_info` is applied to
     the response body if not already provided by a previous operation.
@@ -202,6 +229,9 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
         # forward any headers such as session cookies to be applied
         metadata = get_request_info(request)
         resp_kwargs = {"headers": resp.headers}
+        # patch any invalid content-type that should have been validated
+        if content_type not in SUPPORTED_ACCEPT_TYPES:
+            content_type = CONTENT_TYPE_JSON
         return ax.generate_response_http_format(type(resp), resp_kwargs, resp.text, content_type, metadata)
     return apply_format
 

@@ -960,7 +960,8 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         if _body is not None and (json is not None or kwargs["content_type"] == CONTENT_TYPE_JSON):
             kwargs["params"] = json_pkg.dumps(_body, cls=json_pkg.JSONEncoder)
             kwargs["content_type"] = CONTENT_TYPE_JSON  # enforce if only 'json' keyword provided
-            kwargs["headers"]["Content-Length"] = str(len(kwargs["params"]))  # need to fix with override JSON payload
+        # always recalculate in case it was fixed with override JSON payload, or simply incorrect value provided
+        kwargs["headers"]["Content-Length"] = str(len(kwargs["params"]))
         if status and status >= 300:
             kwargs["expect_errors"] = True
         err_code = None
