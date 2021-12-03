@@ -973,14 +973,23 @@ def service_factory(service, request):
     """
     ax.verify_param(service, param_compare=models.Service, is_type=True,
                     http_error=HTTPBadRequest, content={"service": repr(service)},
-                    msg_on_fail="Cannot process invalid service object")
+                    msg_on_fail="Cannot process invalid service object.")
     service_type = ax.evaluate_call(lambda: service.type, http_error=HTTPInternalServerError,
-                                    msg_on_fail="Cannot retrieve service type from object")
+                                    msg_on_fail="Cannot retrieve service type from object.")
     ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(),
                     http_error=HTTPNotImplemented, content={"service_type": service_type},
-                    msg_on_fail="Undefined service type mapping to service object")
-    return ax.evaluate_call(lambda: SERVICE_TYPE_DICT[service_type](service, request),
-                            http_error=HTTPInternalServerError,
+                    msg_on_fail="Undefined service type mapping to service object.")
+
+    def _make_service(_typ, _svc, _req):
+        try:
+            return SERVICE_TYPE_DICT[_typ](_svc, _req)
+        except Exception as exc:
+            LOGGER.debug("Failed service creation using (type [%s], service [%s], request [%s]). Exception: [%s] (%s).",
+                         _typ, _svc, _req, type(exc).__name__, exc, exc_info=exc)
+            raise
+
+    return ax.evaluate_call(lambda: _make_service(service_type, service, request),
+                            http_error=HTTPInternalServerError, content={"service_type": service_type},
                             msg_on_fail="Failed to find requested service type.")
 
 
