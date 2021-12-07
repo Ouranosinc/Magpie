@@ -60,7 +60,10 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.twitcher_protected_path = self.settings.get("twitcher.ows_proxy_protected_path", "/ows")
 
-    @cache_region("service")
+    # NOTE: Parameter 'ignore_args' is unofficial from 'https://github.com/crim-ca/beaker/commit/0ac88b'.
+    #       Using this parameter, the request UUID is ignored to avoid generating distinct cache keys for each
+    #       new inbound request, nullifying the whole point of caching similar requests to service mapping.
+    @cache_region("service", ignore_args=["request_uuid"])
     def _get_service_cached(self, service_name, request_uuid):
         # type: (Str, uuid.UUID) -> Tuple[ServiceInterface, Dict[str, AnyValue]]
         """
