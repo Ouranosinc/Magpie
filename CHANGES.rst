@@ -7,7 +7,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix initial request reference sometimes lost before cached service can finish its resolution in rare situations where
+  another inbound request unsets the ``adapter`` request handle by hitting the same cached service key being computed
+  (resolves issue detected with feature in PR `#490 <https://github.com/Ouranosinc/Magpie/pull/490>`_ and observed in
+  `bird-house/birdhouse-deploy#224 <https://github.com/bird-house/birdhouse-deploy/pull/224#issuecomment-985668339>`_).
 
 `3.19.0 <https://github.com/Ouranosinc/Magpie/tree/3.19.0>`_ (2021-12-02)
 ------------------------------------------------------------------------------------
