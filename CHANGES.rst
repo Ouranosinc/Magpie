@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.19.1 <https://github.com/Ouranosinc/Magpie/tree/3.19.1>`_ (2021-12-08)
+------------------------------------------------------------------------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix initial request reference sometimes lost before cached service can finish its resolution in rare situations where
