@@ -9,7 +9,8 @@ alembic>=1.3.0,<1.5
 #   leave http port until merged:
 authomatic[OpenID] @ https://github.com/fmigneault/authomatic/archive/httplib-port.zip
 bcrypt>=3.1.6
-beaker
+# FIXME: integrate when implemnted by official package (see https://github.com/bbangert/beaker/issues/201)
+beaker @ https://github.com/crim-ca/beaker/archive/0ac88bcd8cca063a571fc385ffbe9bcc8acaa690.zip
 colander
 cornice<5; python_version < "3"
 cornice; python_version >= "3"

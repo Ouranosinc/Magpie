@@ -1,4 +1,5 @@
 import logging
+import uuid
 from copy import copy
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
@@ -49,7 +50,7 @@ if TYPE_CHECKING:
 
 
 class MagpieOWSSecurity(OWSSecurityInterface):
-    _cached_request = None
+    _cached_request = {}  # type: Dict[uuid.UUID, Request]  # mapping to retrieve the request when caching is involved
 
     def __init__(self, container):
         # type: (AnySettingsContainer) -> None
@@ -59,9 +60,12 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.twitcher_protected_path = self.settings.get("twitcher.ows_proxy_protected_path", "/ows")
 
-    @cache_region("service")
-    def _get_service_cached(self, service_name):
-        # type: (Str) -> Tuple[ServiceInterface, Dict[str, AnyValue]]
+    # NOTE: Parameter 'ignore_args' is unofficial from 'https://github.com/crim-ca/beaker/commit/0ac88b'.
+    #       Using this parameter, the request UUID is ignored to avoid generating distinct cache keys for each
+    #       new inbound request, nullifying the whole point of caching similar requests to service mapping.
+    @cache_region("service", ignore_args=["request_uuid"])
+    def _get_service_cached(self, service_name, request_uuid):
+        # type: (Str, uuid.UUID) -> Tuple[ServiceInterface, Dict[str, AnyValue]]
         """
         Cache this method with :py:mod:`beaker` based on the provided caching key parameters.
 
@@ -70,19 +74,22 @@ class MagpieOWSSecurity(OWSSecurityInterface):
 
         .. note::
             Function arguments are required to generate caching keys by which cached elements will be retrieved.
+            Those arguments must be serializable to generate the cache key (i.e.: cannot pass a :class:`Request`
+            object that contains session and other unserializable/circular references).
 
         .. seealso::
             - :meth:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity.get_service`
             - :meth:`magpie.adapter.magpieservice.MagpieServiceStore.fetch_by_name`
         """
-        session = get_connected_session(self._cached_request)
+        request = self._cached_request.get(request_uuid)
+        session = get_connected_session(request)
         service = evaluate_call(lambda: Service.by_service_name(service_name, db_session=session),
                                 http_error=HTTPForbidden, msg_on_fail="Service query by name refused by db.")
         verify_param(service, not_none=True, param_name="service_name",
                      http_error=HTTPNotFound, msg_on_fail="Service name not found.")
 
         # return a specific type of service (eg: ServiceWPS with all the ACL loaded according to the service impl.)
-        service_impl = service_factory(service, self._cached_request)
+        service_impl = service_factory(service, request)
         service_data = dict(service.get_appstruct())
         return service_impl, service_data
 
@@ -104,10 +111,17 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             invalidate_service(service_name)
 
         # retrieve the implementation and the service data contained in the database entry
+        #   Use mapping which temporarily holds a reference to the relevant request. Mapping is required in case another
+        #   inbound request needs to be processed while the cached function is already/still processing a previous one,
+        #   to make sure that we don't override nor clear the other request reference until it finished processing.
+        #   After cached service was completely processed, the request reference can be removed (not needed anymore)
+        #   because the service data will be retrieved from the cached result on future calls, until it must be
+        #   re-processed from scratch with a new request following cache reset.
         LOGGER.debug("Retrieving service [%s]", service_name)
-        self._cached_request = request
-        service_impl, service_data = self._get_service_cached(service_name)
-        self._cached_request = None
+        request_uuid = uuid.uuid4()
+        self._cached_request[request_uuid] = request
+        service_impl, service_data = self._get_service_cached(service_name, request_uuid)
+        self._cached_request.pop(request_uuid, None)
 
         # Because the database service *could* be linked to cached item, expired session creates unbound object
         # - rebuild the service from cached data such that following operations can retrieve details as needed
