@@ -136,7 +136,7 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param(1, is_none=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("", not_empty=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("abc", is_empty=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=r"[A-Z]+"), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=r"[0-9]+"), HTTPBadRequest)
 
         # with requested error
         utils.check_raises(lambda:
@@ -157,7 +157,7 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param("", not_empty=True, http_error=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("abc", is_empty=True, http_error=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda:
-                           ax.verify_param("abc", matches=True, param_compare=r"[A-Z]+", http_error=HTTPForbidden),
+                           ax.verify_param("abc", matches=True, param_compare=r"[0-9]+", http_error=HTTPForbidden),
                            HTTPForbidden)
 
     def test_verify_param_proper_verifications_passed(self):

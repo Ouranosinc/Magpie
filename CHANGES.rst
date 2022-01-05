@@ -7,7 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix ``matches`` operation of ``verify_param`` function to consider ignored case and verbose (extended) regexes as
+  defined in reference ``colander`` module to provide the intended validation.
 
 `3.19.1 <https://github.com/Ouranosinc/Magpie/tree/3.19.1>`_ (2021-12-08)
 ------------------------------------------------------------------------------------
