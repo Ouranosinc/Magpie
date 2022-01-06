@@ -906,7 +906,6 @@ div.tree-button {
     */
     float: right;
     text-align: left;
-
     margin-right: 0.5em;  /* spacing with disallowed text to ensure one title doesn't end flush where the next begins */
     width: 9.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-right] */
 
