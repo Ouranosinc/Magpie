@@ -92,7 +92,17 @@
                                 </label>
                             </div>
                         </td>
-                        <td></td>
+                        <td>
+                            %if user_name in MAGPIE_USER_PWD_LOCKED:
+                                <div class="panel-form-warning">
+                                    <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
+                                         alt="WARNING" class="icon-warning" />
+                                    <div class="alert-form-text alert-form-text-warning">
+                                        This special user is locked and can only be edited from configuration.
+                                    </div>
+                                </div>
+                            %endif
+                        </td>
                     </tr>
                     <tr>
                         <td>
@@ -137,9 +147,7 @@
                                 <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
                                      alt="WARNING" class="icon-warning" />
                                 <div class="alert-form-text alert-form-text-warning">
-                                    %if user_name in MAGPIE_USER_PWD_LOCKED:
-                                        This special user password is locked and can only be edited from configuration.
-                                    %else:
+                                    %if user_name not in MAGPIE_USER_PWD_LOCKED:
                                         This special user password is not editable.
                                     %endif
                                 </div>
@@ -166,7 +174,7 @@
                                     %else:
                                         <label>
                                             <span class="panel-value">${email}</span>
-                                            %if user_edit_email:
+                                            %if user_edit_email and user_name not in MAGPIE_USER_PWD_LOCKED:
                                             <input type="submit" value="Edit" name="edit_email" class="button theme">
                                             %else:
                                             <input type="button" value="Edit" name="edit_email"
@@ -196,6 +204,11 @@
                                 <div class="alert-form-text alert-form-text-locked">
                                     Email edition not allowed. Please contact the platform administrator.
                                 </div>
+                            </div>
+                        %elif user_name in MAGPIE_USER_PWD_LOCKED:
+                            <div class="panel-form-warning">
+                                <img src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}"
+                                             alt="WARNING" class="icon-warning" />
                             </div>
                         %endif
                         </td>

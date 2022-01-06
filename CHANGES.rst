@@ -9,17 +9,19 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add UI display for long ``Permission`` titles for ``Resource`` hierarchy tree headers.
-* Add UI display of the ``Resource`` type as label for each item within the hierarchy tree.
-* Add UI display lock icon and message for special ``Group`` that are not editable
-  (resolves to `#434 <https://github.com/Ouranosinc/Magpie/issues/434>`_).
+* Add improved UI display of long ``Permission`` titles for ``Resource`` hierarchy tree headers.
+* Add improved UI display of ``Permission`` titles using capitalization for better readability.
+* Add UI display of the ``Resource`` type as label before its name for each item within the hierarchy tree.
+* Add UI display of lock icon and message for special ``Group`` that are not editable.
 * Move invalid reference to ``Resource`` within UI tree rendering function under the relevant item rendering function.
+* Improve UI icons and messages related to ``User`` and ``Group`` edit not allowed when applicable to special members.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix ``matches`` operation of ``verify_param`` function to consider ignored case and verbose (extended) regexes as
   defined in reference ``colander`` module to provide the intended validation.
-* Remove invalid line above UI tree hierarchy (resolves to `#434 <https://github.com/Ouranosinc/Magpie/issues/434>`_).
+* Fix invalid line above UI tree hierarchy (resolves `#434 <https://github.com/Ouranosinc/Magpie/issues/434>`_).
+* Fix UI edit buttons for disallowed users (resolves `#457 <https://github.com/Ouranosinc/Magpie/issues/457>`_).
 
 `3.19.1 <https://github.com/Ouranosinc/Magpie/tree/3.19.1>`_ (2021-12-08)
 ------------------------------------------------------------------------------------

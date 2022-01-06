@@ -85,15 +85,25 @@
                             %endif
                         </td>
                         <td>
-                        %if invalid_user_name:
-                            <div class="panel-form-error">
-                                <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
-                                     alt="ERROR" class="icon-error" />
-                                <div class="alert-form-text alert-form-text-error">
-                                    ${reason_user_name}
+                            %if invalid_user_name and user_name not in MAGPIE_FIXED_USERS:
+                                <div class="panel-form-error">
+                                    <img src="${request.static_url('magpie.ui.home:static/exclamation-circle.png')}"
+                                         alt="ERROR" class="icon-error" />
+                                    <div class="alert-form-text alert-form-text-error">
+                                        ${reason_user_name}
+                                    </div>
                                 </div>
-                            </div>
-                        %endif
+                            %elif user_name in MAGPIE_FIXED_USERS:
+                                <div class="panel-form-lock">
+                                    <img src="${request.static_url('magpie.ui.home:static/lock.png')}"
+                                         alt="LOCKED" class="icon-locked"/>
+                                    <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                                    <meta name="source" content="https://www.flaticon.com/free-icon/lock_2089784">
+                                    <div class="alert-form-text alert-form-text-locked">
+                                        Edit not allowed for this special user.
+                                    </div>
+                                </div>
+                            %endif
                         </td>
                     </tr>
                     <tr>
@@ -101,30 +111,33 @@
                             <span class="panel-entry">Password: </span>
                         </td>
                         <td>
-                            <form id="edit_password" action="${request.path}" method="post">
+                            %if user_name not in MAGPIE_USER_PWD_DISABLED:
+                                <form id="edit_password" action="${request.path}" method="post">
+                            %endif
                                 <div class="panel-line-entry">
                                     %if edit_mode == "edit_password" and user_name not in MAGPIE_USER_PWD_DISABLED:
                                         <label>
-                                            <input type="password" placeholder="new password" name="new_user_password"
-                                                   id="input_password" value=""
+                                            <input type="password" placeholder="new password"
+                                                   name="new_user_password" id="input_password" value=""
                                                    onkeyup="adjustWidth('input_password')">
-                                            <input type="submit" value="Save" name="save_password" class="button theme">
-                                            <input type="submit" value="Cancel" name="no_edit" class="button cancel">
+                                            <input type="submit" value="Save" name="save_password"
+                                                   class="button theme">
+                                            <input type="submit" value="Cancel" name="no_edit"
+                                                   class="button cancel">
                                         </label>
                                     %else:
                                         <label>
                                             <span class="panel-value">***</span>
-                                            <input value="Edit" name="edit_password"
-                                                %if user_name in MAGPIE_USER_PWD_DISABLED:
-                                                   type="button" class="button theme disabled" disabled
-                                                %else:
-                                                   type="submit" class="button theme"
-                                                %endif
-                                            >
+                                            %if user_name not in MAGPIE_USER_PWD_DISABLED:
+                                                <input type="submit" value="Edit" name="edit_password"
+                                                       class="button theme">
+                                           %endif
                                         </label>
                                     %endif
                                 </div>
-                            </form>
+                            %if user_name not in MAGPIE_USER_PWD_DISABLED:
+                                </form>
+                            %endif
                         </td>
                         <td>
                         %if invalid_password:
@@ -135,19 +148,12 @@
                                     ${reason_password}
                                 </div>
                             </div>
-                        %elif user_name in MAGPIE_USER_PWD_LOCKED or user_name in MAGPIE_USER_PWD_DISABLED:
+                        %elif user_name in MAGPIE_FIXED_USERS:
                             <div class="panel-form-lock">
                                 <img src="${request.static_url('magpie.ui.home:static/lock.png')}"
                                      alt="LOCKED" class="icon-locked"/>
                                 <meta name="author" content="https://www.flaticon.com/authors/those-icons">
                                 <meta name="source" content="https://www.flaticon.com/free-icon/lock_2089784">
-                                <div class="alert-form-text alert-form-text-locked">
-                                    %if user_name in MAGPIE_USER_PWD_LOCKED:
-                                        This special user password is locked and can only be edited from configuration.
-                                    %else:
-                                        This special user password is not editable.
-                                    %endif
-                                </div>
                             </div>
                         %endif
                         </td>
@@ -157,7 +163,9 @@
                             <span class="panel-entry">Email: </span>
                         </td>
                         <td>
-                            <form id="edit_email" action="${request.path}" method="post">
+                            %if user_name not in MAGPIE_FIXED_USERS:
+                                <form id="edit_email" action="${request.path}" method="post">
+                            %endif
                                 <div class="panel-line-entry">
                                     %if edit_mode == "edit_email":
                                         <label>
@@ -170,11 +178,15 @@
                                     %else:
                                         <label>
                                         <span class="panel-value">${email}</span>
-                                        <input type="submit" value="Edit" name="edit_email" class="button theme">
+                                        %if user_name not in MAGPIE_FIXED_USERS:
+                                            <input type="submit" value="Edit" name="edit_email" class="button theme">
+                                        %endif
                                         </label>
                                     %endif
                                 </div>
-                            </form>
+                            %if user_name not in MAGPIE_FIXED_USERS:
+                                </form>
+                            %endif
                         </td>
                         <td>
                         %if invalid_user_email:
@@ -184,6 +196,13 @@
                                 <div class="alert-form-text alert-form-text-error">
                                     ${reason_user_email}
                                 </div>
+                            </div>
+                        %elif user_name in MAGPIE_FIXED_USERS:
+                            <div class="panel-form-lock">
+                                <img src="${request.static_url('magpie.ui.home:static/lock.png')}"
+                                     alt="LOCKED" class="icon-locked"/>
+                                <meta name="author" content="https://www.flaticon.com/authors/those-icons">
+                                <meta name="source" content="https://www.flaticon.com/free-icon/lock_2089784">
                             </div>
                         %endif
                         </td>
@@ -203,6 +222,8 @@
                                          src="${request.static_url('magpie.ui.home:static/checkmark-circle.png')}"/>
                                 %endif
                             </div>
+                        </td>
+                        <td>
                         </td>
                     </tr>
                 </table>

@@ -90,7 +90,7 @@
                                     <meta name="source"
                                           content="https://www.flaticon.com/free-icon/lock_2089784">
                                     <div class="alert-form-text alert-form-text-locked">
-                                        Edit not allowed for this group.
+                                        Edit not allowed for this special group.
                                     </div>
                                 </div>
                             %endif
