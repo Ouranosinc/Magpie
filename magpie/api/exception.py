@@ -228,7 +228,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         fail_conditions.update({"is_type": isinstance(param, param_compare)})
         fail_verify = fail_verify or not fail_conditions["is_type"]
     if matches:
-        fail_conditions.update({"matches": bool(re.match(param_compare, param))})
+        fail_conditions.update({"matches": bool(re.match(param_compare, param, re.I | re.X))})
         fail_verify = fail_verify or not fail_conditions["matches"]
     if fail_verify:
         content = apply_param_content(content, param, param_compare, param_name, with_param, param_content,

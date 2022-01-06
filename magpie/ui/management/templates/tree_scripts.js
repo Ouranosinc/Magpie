@@ -12,6 +12,6 @@ $(document).ready(function() {
         item.toggleClass("expanded");
     }
 
-    $(".tree-key").on("click", toggle)
+    $(".collapsible-tree-item").on("click", toggle)
     $(".collapsible-marker").on("click", toggle)
 })

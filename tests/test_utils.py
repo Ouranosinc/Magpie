@@ -25,8 +25,8 @@ from tests import runner, utils
 
 
 class DummyEnum(ExtendedEnum):
-    VALUE1 = "value-1"
-    VALUE2 = "value-2"
+    TEST_VALUE_1 = "value-1"
+    TEST_VALUE_2 = "value-2"
 
 
 @runner.MAGPIE_TEST_LOCAL
@@ -136,7 +136,7 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param(1, is_none=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("", not_empty=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("abc", is_empty=True), HTTPBadRequest)
-        utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=r"[A-Z]+"), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=r"[0-9]+"), HTTPBadRequest)
 
         # with requested error
         utils.check_raises(lambda:
@@ -157,7 +157,7 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param("", not_empty=True, http_error=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda: ax.verify_param("abc", is_empty=True, http_error=HTTPForbidden), HTTPForbidden)
         utils.check_raises(lambda:
-                           ax.verify_param("abc", matches=True, param_compare=r"[A-Z]+", http_error=HTTPForbidden),
+                           ax.verify_param("abc", matches=True, param_compare=r"[0-9]+", http_error=HTTPForbidden),
                            HTTPForbidden)
 
     def test_verify_param_proper_verifications_passed(self):
@@ -243,16 +243,22 @@ class TestUtils(unittest.TestCase):
         utils.check_all_equal(DummyEnum.values(), ["value-1", "value-2"], any_order=True)
 
     def test_enum_get_by_value(self):
-        utils.check_val_equal(DummyEnum.get("value-1"), DummyEnum.VALUE1)
-        utils.check_val_equal(DummyEnum.get("VALUE1"), DummyEnum.VALUE1)
+        utils.check_val_equal(DummyEnum.get("value-1"), DummyEnum.TEST_VALUE_1)
+        utils.check_val_equal(DummyEnum.get("TEST_VALUE_1"), DummyEnum.TEST_VALUE_1)
         utils.check_val_equal(DummyEnum.get("random"), None)
         utils.check_val_equal(DummyEnum.get("random", "something"), "something")
 
     def test_enum_other(self):
         class OtherEnum(ExtendedEnum):
-            VALUE1 = DummyEnum.VALUE1.value  # copy internal string representation
+            TEST_VALUE_1 = DummyEnum.TEST_VALUE_1.value  # copy internal string representation
 
-        utils.check_val_not_equal(DummyEnum.VALUE1, OtherEnum.VALUE1, msg="concrete enum elements should be different")
+        utils.check_val_not_equal(DummyEnum.TEST_VALUE_1, OtherEnum.TEST_VALUE_1,
+                                  msg="concrete enum elements should be different")
+
+    def test_enum_titles(self):
+        utils.check_val_equal(DummyEnum.TEST_VALUE_1.title, "TestValue1")
+        utils.check_val_equal(DummyEnum.TEST_VALUE_2.title, "TestValue2")
+        utils.check_val_equal(DummyEnum.titles(), ["TestValue1", "TestValue2"])
 
     def test_evaluate_call_callable_incorrect_usage(self):
         """

@@ -6388,7 +6388,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.TestSetup.check_FormSubmit(self, form_match="toggle_visible_perms", form_data=data, path=path)
         # find displayed resources/permissions in hierarchy
         hierarchy = {svc_id: {res1_id: {res2_id: {}, res3_id: {}, res4_id: {}, res5_id: {}}}}
-        res_perms = utils.find_html_resource_tree_permissions(resp, perm, hierarchy)
+        res_perms = utils.find_html_resource_tree_permissions(resp, perm, hierarchy, version=self.version)
 
         utils.check_val_equal(res_perms[svc_id], rAR)
         utils.check_val_equal(res_perms[res1_id], rAR)

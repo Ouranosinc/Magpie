@@ -180,7 +180,7 @@ class BaseViews(object):
     MAGPIE_FIXED_GROUP_MEMBERSHIPS = []
     MAGPIE_FIXED_GROUP_EDITS = []
     MAGPIE_FIXED_USERS = []
-    MAGPIE_USER_PWD_LOCKED = []
+    MAGPIE_USER_PWD_LOCKED = []  # used when user self-edit itself but is not supported since disabled
     MAGPIE_USER_PWD_DISABLED = []
     MAGPIE_ANONYMOUS_GROUP = None
 
