@@ -1,2 +1,2 @@
 pip
-setuptools
+setuptools<60
