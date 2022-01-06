@@ -872,6 +872,24 @@ class ExtendedEnum(Enum):
                 return m_val
         return default
 
+    @classmethod
+    def titles(cls):
+        # type: () -> List[Str]
+        """
+        Returns the title representation of all enum elements.
+        """
+        return list(member.title for member in cls.__members__.values())
+
+    @property
+    def title(self):
+        # type: () -> Str
+        """
+        Returns the title representation of the enum element.
+
+        Title use the original enum element name with capitalization considering underscores for separate words.
+        """
+        return self.name.title().replace("_", "")
+
 
 # note: must not define any enum value here to allow inheritance by subclasses
 class FlexibleNameEnum(ExtendedEnum):

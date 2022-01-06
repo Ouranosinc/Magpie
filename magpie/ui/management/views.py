@@ -25,12 +25,12 @@ from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
 # TODO: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
-from magpie.permissions import PermissionSet
+from magpie.permissions import Permission, PermissionSet
 from magpie.ui.utils import AdminRequests, BaseViews, check_response, handle_errors, request_api
 from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
 
 if TYPE_CHECKING:
-    from typing import Dict, List, Optional, Tuple
+    from typing import Any, Dict, List, Optional, Tuple
 
     from sqlalchemy.orm.session import Session
 
@@ -300,6 +300,7 @@ class ManagementViews(AdminRequests, BaseViews):
         user_info["svc_types"] = svc_types
         user_info["resources"] = res_perms
         user_info["permissions"] = res_perm_names
+        user_info["permission_titles"] = [Permission(perm).title for perm in res_perm_names]
         return self.add_template_data(data=user_info)
 
     def view_pending_user(self):
@@ -410,11 +411,14 @@ class ManagementViews(AdminRequests, BaseViews):
             perm_names = [PermissionSet(perm_json).explicit_permission for perm_json in perms]
             children = self.resource_tree_parser(resource["children"], permission)
             children = OrderedDict(sorted(children.items()))
-            resources_tree[resource["resource_name"]] = dict(id=r_id,
-                                                             permissions=perms,
-                                                             permission_names=perm_names,
-                                                             resource_display_name=resource["resource_display_name"],
-                                                             children=children)
+            resources_tree[resource["resource_name"]] = dict(
+                id=r_id,
+                permissions=perms,
+                permission_names=perm_names,
+                resource_type=resource["resource_type"],
+                resource_display_name=resource["resource_display_name"],
+                children=children
+            )
         return resources_tree
 
     def perm_tree_parser(self, raw_perm_tree):
@@ -548,20 +552,11 @@ class ManagementViews(AdminRequests, BaseViews):
             perm_names = [PermissionSet(perm_json).explicit_permission for perm_json in perms]
             resources[service] = OrderedDict(
                 id=raw_resources["resource_id"],
+                resource_type="service",
                 permissions=perms,
                 permission_names=perm_names,
                 children=self.resource_tree_parser(raw_resources["resources"], permission))
         return resources_permission_names, resources
-
-    def update_user_or_group_resources_permissions_dict(self, res_perms, updated_perms):
-        for res in res_perms.values():
-            perms = updated_perms.get(str(res["id"]), [])
-            if perms:
-                res["permissions"] = perms
-                return True
-            if self.update_user_or_group_resources_permissions_dict(res["children"], updated_perms):
-                return True
-        return False
 
     @view_config(route_name="edit_group", renderer="templates/edit_group.mako")
     def edit_group(self):
@@ -569,7 +564,7 @@ class ManagementViews(AdminRequests, BaseViews):
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         group_info = {"edit_mode": "no_edit", "group_name": group_name, "cur_svc_type": cur_svc_type}
         error_message = ""
-        edit_grp_usrs_info = {}
+        edit_grp_users_info = {}
 
         # TODO:
         #   Until the api is modified to make it possible to request from the RemoteResource table,
@@ -635,7 +630,7 @@ class ManagementViews(AdminRequests, BaseViews):
 
             # edits to group members checkboxes
             if is_edit_group_members:
-                edit_grp_usrs_info = self.edit_group_users(group_name)
+                edit_grp_users_info = self.edit_group_users(group_name)
 
         # display resources permissions per service type tab
         try:
@@ -667,11 +662,13 @@ class ManagementViews(AdminRequests, BaseViews):
         group_info["cur_svc_type"] = cur_svc_type
         group_info["resources"] = res_perms
         group_info["permissions"] = res_perm_names
+        group_info["permission_titles"] = [Permission(perm).title for perm in res_perm_names]
 
-        if edit_grp_usrs_info:
-            new_usrs_from_pending = edit_grp_usrs_info["edit_new_membership_success"] & set(group_info["pending_users"])
-            group_info["edit_membership_pending_success"] = new_usrs_from_pending
-            group_info["edit_new_membership_error"] = edit_grp_usrs_info["edit_new_membership_error"]
+        if edit_grp_users_info:
+            group_info["edit_membership_pending_success"] = (
+                edit_grp_users_info["edit_new_membership_success"] & set(group_info["pending_users"])
+            )
+            group_info["edit_new_membership_error"] = edit_grp_users_info["edit_new_membership_error"]
         return self.add_template_data(data=group_info)
 
     @staticmethod
@@ -888,7 +885,7 @@ class ManagementViews(AdminRequests, BaseViews):
             "service_push": service_push,
             "service_push_show": service_push_show,
             "cur_svc_type": cur_svc_type,
-        }
+        }  # type: Dict[str, Any]
 
         svc_config = service_data["configuration"]
         if not svc_config:

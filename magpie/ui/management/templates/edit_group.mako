@@ -80,6 +80,21 @@
                                 </div>
                             </form>
                         </td>
+                        <td>
+                            %if group_name in MAGPIE_FIXED_GROUP_EDITS:
+                                <div class="panel-form-lock">
+                                    <img src="${request.static_url('magpie.ui.home:static/lock.png')}"
+                                         alt="LOCKED" class="icon-locked"/>
+                                    <meta name="author"
+                                          content="https://www.flaticon.com/authors/those-icons">
+                                    <meta name="source"
+                                          content="https://www.flaticon.com/free-icon/lock_2089784">
+                                    <div class="alert-form-text alert-form-text-locked">
+                                        Edit not allowed for this group.
+                                    </div>
+                                </div>
+                            %endif
+                        </td>
                     </tr>
                     <tr>
                         <td>
@@ -116,6 +131,8 @@
                                 </div>
                             </form>
                         </td>
+                        <td>
+                        </td>
                     </tr>
                     <tr>
                         <td>
@@ -140,6 +157,8 @@
                                     </label>
                                 </div>
                             </form>
+                        </td>
+                        <td>
                         </td>
                     </tr>
                 </table>
@@ -204,7 +223,7 @@ ${membership_alerts.edit_membership_alerts()}
     ])}
 
     <div class="current-tab-panel">
-        <div class="clear underline"></div>
+        <div class="clear"></div>
         %if error_message:
             <div class="alert alert-danger alert-visible">${error_message}</div>
         %endif

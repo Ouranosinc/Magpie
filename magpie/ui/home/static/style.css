@@ -904,25 +904,15 @@ div.tree-button {
     /* ensure that sufficient space is provided to fit all possible permission-name side-by-side
        align with combobox and checkbox, must include both their respective width
     */
-    width: 10em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width] */
     float: right;
     text-align: left;
 
-    /* -webkit-transform: rotate(-10deg); */
+    margin-right: 0.5em;  /* spacing with disallowed text to ensure one title doesn't end flush where the next begins */
+    width: 9.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-right] */
 
-    /* Safari */
-
-    /* -moz-transform: rotate(-10deg); */
-
-    /* Firefox */
-
-    /* -ms-transform: rotate(-10deg); */
-
-    /* IE */
-
-    /* -o-transform: rotate(-10deg); */
-
-    /* Opera */
+    /* make text >width employ an ellipsis with scroll that auto apply/remove when using it for too long titles */
+    text-overflow: ellipsis;
+    overflow: auto;
 }
 
 .permission-title-effective {

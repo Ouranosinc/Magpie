@@ -136,7 +136,7 @@
                                 </div>
                             </div>
                         %elif user_name in MAGPIE_USER_PWD_LOCKED or user_name in MAGPIE_USER_PWD_DISABLED:
-                            <div class="panel-form-warning">
+                            <div class="panel-form-lock">
                                 <img src="${request.static_url('magpie.ui.home:static/lock.png')}"
                                      alt="LOCKED" class="icon-locked"/>
                                 <meta name="author" content="https://www.flaticon.com/authors/those-icons">
@@ -343,7 +343,7 @@ ${membership_alerts.edit_membership_alerts()}
     ])}
 
     <div class="current-tab-panel">
-        <div class="clear underline"></div>
+        <div class="clear"></div>
         %if error_message:
             <div class="alert alert-danger alert-visible">${error_message}</div>
         %endif

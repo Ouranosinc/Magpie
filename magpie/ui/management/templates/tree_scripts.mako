@@ -14,9 +14,6 @@
         <li class="no-child" id="${tree[key]['id']}">
         %endif
             <div class="tree-line">
-                <div class="tree-key">
-                    ${tree[key].get('resource_display_name', key)}
-                </div>
                 <div class="tree-item">
                     ${item_renderer(key, tree[key], level)}
                 </div>
@@ -48,7 +45,7 @@
         <div class="tree-header">
             <div class="tree-key">Resources</div>
             <div class="tree-item">
-                %for perm_name in permissions:
+                %for perm_name in permission_titles:
                     <div
                     %if inherit_groups_permissions:
                         class="permission-title permission-title-effective"
@@ -68,6 +65,10 @@
 
 <!-- renders a single resource line in the tree with applicable permission selectors for it -->
 <%def name="render_resource_permissions_item(key, value, level)">
+    <div class="tree-key">
+        <span class="label label-info">${value["resource_type"]}</span>
+        ${value.get('resource_display_name', key)}
+    </div>
     %for perm_name in permissions:
         ${render_resource_permissions_entry(perm_name, value)}
     %endfor
