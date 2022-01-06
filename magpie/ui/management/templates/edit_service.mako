@@ -154,7 +154,7 @@
                             <span class="panel-entry">Permissions: </span>
                         </td>
                         <td>
-                            <div class="panel-line-entry">
+                            <div class="panel-line-entry panel-line-limit-size">
                                 %for perm in service_perm:
                                     <span class="label label-warning">${perm}</span>
                                 %endfor

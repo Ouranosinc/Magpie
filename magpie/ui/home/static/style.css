@@ -382,6 +382,12 @@ table.panel-line td {
 */
 }
 
+.panel-line-limit-size {
+    /* reduce size of the field to allow other fields to preserve 'Edit' button closer to their value
+       in case the large value contents within this field makes the table column very wide */
+    max-width: 1em;
+}
+
 .panel-line-checkbox {
     padding-top: 0.1em;
     display: inline-block;
