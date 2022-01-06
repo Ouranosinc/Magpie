@@ -273,6 +273,7 @@ def get_resource_root_service_impl(resource, request):
 def create_resource(resource_name, resource_display_name, resource_type, parent_id, db_session):
     # type: (Str, Optional[Str], Str, int, Session) -> HTTPException
     ax.verify_param(resource_name, param_name="resource_name", not_none=True, not_empty=True,
+                    matches=True, param_compare=ax.SCOPE_REGEX,
                     http_error=HTTPUnprocessableEntity,
                     msg_on_fail="Invalid 'resource_name' specified for child resource creation.")
     ax.verify_param(resource_type, param_name="resource_type", not_none=True, not_empty=True,

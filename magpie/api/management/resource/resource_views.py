@@ -55,7 +55,7 @@ def create_resource_view(request):
     """
     Register a new resource.
     """
-    resource_name = ar.get_value_multiformat_body_checked(request, "resource_name")
+    resource_name = ar.get_multiformat_body(request, "resource_name")
     resource_display_name = ar.get_multiformat_body(request, "resource_display_name", default=resource_name)
     resource_type = ar.get_value_multiformat_body_checked(request, "resource_type")
     parent_id = ar.get_value_multiformat_body_checked(request, "parent_id", check_type=int)
