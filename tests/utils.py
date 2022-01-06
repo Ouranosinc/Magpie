@@ -1284,7 +1284,7 @@ def check_val_not_in(val, ref, msg=None):
 
 
 def check_val_type(val, ref, msg=None):
-    # type: (Any, Union[Type[Any], NullType], Optional[Str]) -> None
+    # type: (Any, Union[Type[Any], Tuple[Type[Any]], NullType], Optional[Str]) -> None
     """:raises AssertionError: if :paramref:`val` is not an instanced of :paramref:`ref`."""
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 

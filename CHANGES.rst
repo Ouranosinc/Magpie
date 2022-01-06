@@ -7,7 +7,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Allow ``Resource`` and ``Service`` name to contain colon (``:``) character in order to define scoped names.
 
 `3.20.0 <https://github.com/Ouranosinc/Magpie/tree/3.20.0>`_ (2022-01-06)
 ------------------------------------------------------------------------------------

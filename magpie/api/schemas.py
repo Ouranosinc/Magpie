@@ -1509,6 +1509,11 @@ class Service_PATCH_ConflictResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
+class Service_PATCH_UnprocessableEntityResponseSchema(BaseResponseSchemaAPI):
+    description = "Specified value is in incorrectly or unsupported format."
+    body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
+
+
 Service_DELETE_RequestBodySchema = Resource_DELETE_RequestBodySchema
 
 

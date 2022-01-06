@@ -311,7 +311,7 @@ def get_service_matchdict_checked(request, service_name_key="service_name"):
     :raises HTTPForbidden: if the requesting user does not have sufficient permission to execute this request.
     :raises HTTPNotFound: if the specified service name does not correspond to any existing service.
     """
-    service_name = get_value_matchdict_checked(request, service_name_key)
+    service_name = get_value_matchdict_checked(request, service_name_key, pattern=ax.SCOPE_REGEX)
     service = ax.evaluate_call(lambda: models.Service.by_service_name(service_name, db_session=request.db),
                                fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
                                msg_on_fail=s.Service_MatchDictCheck_ForbiddenResponseSchema.description)

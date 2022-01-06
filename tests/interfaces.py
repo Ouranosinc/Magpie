@@ -5636,6 +5636,39 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                           is_param_value_literal_unicode=True, param_compare_exists=True,
                                           param_value=self.test_resource_name, param_name="resource_name")
 
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_PostServiceResources_ScopedName(self):
+        """
+        Validate that scoped names are allowed for :term:`Service` and :term:`Resource` operations.
+        """
+        utils.warn_version(self, "resource name with scoping", "3.21.0", skip=True)
+        scope = "test:"
+        scope_svc = scope + self.test_service_name
+        scope_res = scope + self.test_resource_name
+        utils.TestSetup.delete_TestService(self, override_service_name=scope_svc)
+        body = utils.TestSetup.create_TestServiceResource(self,
+                                                          override_service_name=scope_svc,
+                                                          override_resource_name=scope_res)
+        res_info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
+        utils.check_val_equal(res_info["resource_name"], scope_res)
+
+        # explicit check of GET to validate scoped names in path are supported
+        svc_info = utils.TestSetup.get_ExistingTestServiceInfo(self, override_service_name=scope_svc)
+        utils.check_val_equal(svc_info["service_name"], scope_svc)
+
+        # check that second POST also properly detects scoped resource name
+        data = {
+            "resource_name": scope_res,
+            "resource_type": self.test_resource_type,
+            "parent_id": res_info["parent_id"],
+        }
+        resp = utils.test_request(self, "POST", "/resources", json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 409, expected_method="POST")
+
+        # explicit check of DELETE to validate it is also supported
+        utils.TestSetup.delete_TestService(self, override_service_name=scope_svc)
+
     @runner.MAGPIE_TEST_SERVICES
     @runner.MAGPIE_TEST_DEFAULTS
     def test_ValidateDefaultServiceProviders(self):
