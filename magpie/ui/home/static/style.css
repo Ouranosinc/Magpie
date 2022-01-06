@@ -922,7 +922,6 @@ div.tree-button {
     text-align: left;
     margin-right: 0.5em;  /* spacing with disallowed text to ensure one title doesn't end flush where the next begins */
     width: 9.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-right] */
-
     /* make text >width employ an ellipsis with scroll that auto apply/remove when using it for too long titles */
     text-overflow: ellipsis;
     overflow: auto;
