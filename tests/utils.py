@@ -1587,6 +1587,7 @@ def find_html_form(forms, form_match):
 def find_html_resource_tree_permissions(response_or_body,   # type: Union[TestResponse, BeautifulSoup]
                                         permission,         # type: AnyPermissionType
                                         resource_tree,      # type: JSON
+                                        version="latest",   # type: Str
                                         ):                  # type: (...) -> Dict[int, Optional[PermissionSet]]
     """
     Retrieves all displayed permissions within combo-boxes of a resource-tree Magpie UI HTML page.
@@ -1609,10 +1610,11 @@ def find_html_resource_tree_permissions(response_or_body,   # type: Union[TestRe
     :param response_or_body: Magpie UI HTML response to search for contents, or directly an HTML content object.
     :param permission: permission (column name) to obtain from the page. Can be any permission type to extract the name.
     :param resource_tree: dictionary of expected tree hierarchy of nested resource IDs to extract.
+    :param version: Magpie application version to be considered for lookup of contents.
     :return: flat dictionary of resource IDs to displayed permission (or empty string if no permission displayed) .
     """
     # find resources/permissions hierarchy container
-    perm_name = PermissionSet(permission).name.value
+    perm = PermissionSet(permission).name
     perm_form = find_html_body_contents(response_or_body, [
         {"class": ["content"]}, {"class": ["tabs-panel"]},
         {"class": ["current-tab-panel"]}, {"id": "resources_permissions"}
@@ -1622,7 +1624,7 @@ def find_html_resource_tree_permissions(response_or_body,   # type: Union[TestRe
         {"class": ["tree-header"]}, {"class": ["tree-item"]}, {"class": ["permission-title"]}
     ])
     perm_titles = [perm.text for perm in perm_header]
-    perm_index = perm_titles.index(perm_name)
+    perm_index = perm_titles.index(perm.title if TestVersion(version) >= TestVersion("3.20") else perm.value)
 
     found_res_perms = {}
 

@@ -251,34 +251,42 @@
     </div>
 </div>
 
-<%def name="render_item(_, value, level)">
-    <form id="resource_${value['id']}" action="${request.path}" method="post">
-        <input type="hidden" value="${value['id']}" name="resource_id">
-        <div class="tree-button">
-            <input type="submit" value="Delete" name="delete_child"
-            %if level > 0:
-                   class="button delete"
-            %else:
-                   class="button delete disabled" disabled
-            %endif
-            >
+<%def name="render_item(key, value, level)">
+    <div class="tree-item-value collapsible-tree-item">
+        <span class="tree-item-label label label-info">${value["resource_type"]}</span>
+        <div class="tree-key">
+            ${value.get('resource_display_name', key)}
         </div>
-        %if "id" in value.keys():
+    </div>
+    <div class="tree-item-buttons">
+        <form id="resource_${value['id']}" action="${request.path}" method="post">
+            <input type="hidden" value="${value['id']}" name="resource_id">
             <div class="tree-button">
-                <input type="submit" value="Add child" name="add_child"
-                %if int(value["id"]) in resources_id_type.keys():
-                    %if resources_id_type[int(value["id"])] in resources_no_child:
-                        class="button theme disabled" disabled
-                    %else:
-                        class="button theme"
-                    %endif
-                %elif not service_no_child:
-                        class="button theme"
+                <input type="submit" value="Delete" name="delete_child"
+                %if level > 0:
+                       class="button delete"
                 %else:
-                    class="button theme disabled" disabled
-                % endif
+                       class="button delete disabled" disabled
+                %endif
                 >
             </div>
-        %endif
-    </form>
+            %if "id" in value.keys():
+                <div class="tree-button">
+                    <input type="submit" value="Add child" name="add_child"
+                    %if int(value["id"]) in resources_id_type.keys():
+                        %if resources_id_type[int(value["id"])] in resources_no_child:
+                            class="button theme disabled" disabled
+                        %else:
+                            class="button theme"
+                        %endif
+                    %elif not service_no_child:
+                            class="button theme"
+                    %else:
+                        class="button theme disabled" disabled
+                    % endif
+                    >
+                </div>
+            %endif
+        </form>
+    </div>
 </%def>

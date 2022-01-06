@@ -845,12 +845,7 @@ table.simple-list input[type="submit"] {
     display: block;
 }
 
-.tree-key {
-    /* display: block;
-    float: left; */
-    display: inline-block;
-    position: absolute;
-
+.collapsible-tree-item {
     /* margin-top: 0.5em; */
     cursor: pointer;
 
@@ -859,12 +854,31 @@ table.simple-list input[type="submit"] {
     z-index: 10;
 }
 
+.tree-key {
+    /* display: block;
+    float: left; */
+    display: inline-block;
+    position: absolute;
+}
+
 .tree-item {
     /* display: block;
     float: right; */
     display: inline-block;
     width: 100%;
     vertical-align: middle;
+}
+
+.tree-item-value {
+    display: inline-block;
+}
+
+.tree-item-label {
+    margin-right: 0.5em;
+}
+
+.tree-item-buttons {
+    float: right;
 }
 
 .tree-button.goto-service {

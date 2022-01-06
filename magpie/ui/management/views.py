@@ -797,6 +797,7 @@ class ManagementViews(AdminRequests, BaseViews):
         resources[service_name] = dict(
             id=raw_resources["resource_id"],
             permissions=[],
+            resource_type="service",
             children=self.resource_tree_parser(raw_resources["resources"], {}))
         resources_id_type = self.get_resource_types()
         return resources, resources_id_type

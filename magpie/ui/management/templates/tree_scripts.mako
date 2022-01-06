@@ -65,9 +65,11 @@
 
 <!-- renders a single resource line in the tree with applicable permission selectors for it -->
 <%def name="render_resource_permissions_item(key, value, level)">
-    <div class="tree-key">
-        <span class="label label-info">${value["resource_type"]}</span>
-        ${value.get('resource_display_name', key)}
+    <div class="tree-item-value collapsible-tree-item">
+        <span class="tree-item-label label label-info">${value["resource_type"]}</span>
+        <div class="tree-key">
+            ${value.get('resource_display_name', key)}
+        </div>
     </div>
     %for perm_name in permissions:
         ${render_resource_permissions_entry(perm_name, value)}
