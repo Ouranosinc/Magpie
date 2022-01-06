@@ -362,7 +362,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
             status = status.split(",")
         if isinstance(status, (str, int)):
             return cls._get_one(status)
-        combined = None
+        combined = None  # type: Optional[UserStatuses]
         for _status in status:
             _status = cls._get_one(_status)
             if combined is not None and _status is not None:
@@ -406,6 +406,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
         return super(UserStatuses, self).__xor__(other)
 
     def __iter__(self):
+        # type: () -> Iterable[UserStatuses]
         values = decompose_enum_flags(self)
         return iter(values)
 
@@ -693,20 +694,28 @@ class Directory(Resource, PathBase):
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
+class Layer(Resource):
+    child_resource_allowed = False
+    resource_type_name = "layer"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
+
+    permissions = [
+        Permission.GET_FEATURE,
+        Permission.DESCRIBE_FEATURE_TYPE,
+        Permission.LOCK_FEATURE,
+        Permission.TRANSACTION,
+    ]
+
+
 class Workspace(Resource):
     resource_type_name = "workspace"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
     permissions = [
-        Permission.GET_CAPABILITIES,
         Permission.GET_MAP,
         Permission.GET_FEATURE_INFO,
         Permission.GET_LEGEND_GRAPHIC,
         Permission.GET_METADATA,
-        Permission.GET_FEATURE,
-        Permission.DESCRIBE_FEATURE_TYPE,
-        Permission.LOCK_FEATURE,
-        Permission.TRANSACTION,
     ]
 
 
@@ -951,8 +960,9 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 RESOURCE_TREE_SERVICE = ResourceTreeService(ResourceTreeServicePostgreSQL)
 REMOTE_RESOURCE_TREE_SERVICE = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
+RESOURCE_TYPES = frozenset([Service, Directory, File, Layer, Workspace, Route, Process])
 RESOURCE_TYPE_DICT = dict()  # type: Dict[Str, Type[Resource]]
-for res in [Service, Directory, File, Workspace, Route, Process]:
+for res in RESOURCE_TYPES:
     if res.resource_type_name in RESOURCE_TYPE_DICT:  # pragma: no cover
         raise KeyError("Duplicate resource type identifiers not allowed")
     RESOURCE_TYPE_DICT[res.resource_type_name] = res

@@ -1,4 +1,5 @@
 import abc
+import inspect
 import re
 from typing import TYPE_CHECKING
 
@@ -582,13 +583,11 @@ class ServiceWPS(ServiceOWS):
     ]
 
     resource_types_permissions = {
-        models.Process: [
-            Permission.DESCRIBE_PROCESS,
-            Permission.EXECUTE,
-        ]
+        models.Process: models.Process.permissions
     }
 
     def resource_requested(self):
+        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
         wps_request = self.permission_requested()
         if wps_request == Permission.GET_CAPABILITIES:
             return self.service, True
@@ -656,6 +655,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
     }
 
     def resource_requested(self):
+        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
         # According to the permission, the resource we want to authorize is not formatted the same way
         permission_requested = self.permission_requested()
         netcdf_file = None
@@ -709,16 +709,13 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
     service_type = "geoserverwms"
 
     resource_types_permissions = {
-        models.Workspace: [
-            Permission.GET_CAPABILITIES,
-            Permission.GET_MAP,
-            Permission.GET_FEATURE_INFO,
-            Permission.GET_LEGEND_GRAPHIC,
-            Permission.GET_METADATA,
-        ]
+        # workspace must allow permissions for layers as well as parent in hierarchy
+        models.Workspace: models.Workspace.permissions + models.Layer.permissions,
+        models.Layer: models.Layer.permissions
     }
 
     def resource_requested(self):
+        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
         path_parts = self._get_request_path_parts()
         if not path_parts:
             return self.service, False
@@ -789,7 +786,6 @@ class ServiceAPI(ServiceInterface):
 
     def resource_requested(self):
         # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
-
         route_parts = self._get_request_path_parts()
         if not route_parts:
             return self.service, True
@@ -907,6 +903,7 @@ class ServiceTHREDDS(ServiceInterface):
             return None
 
     def resource_requested(self):
+        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
         path_parts = self.get_path_parts()
 
         # handle optional prefix as targeting the service directly
@@ -959,11 +956,118 @@ class ServiceTHREDDS(ServiceInterface):
         return None  # automatically deny
 
 
+class ServiceGeoserverMeta(ServiceMeta):
+    """
+    Mapping and grouping of property definitions for ``GeoServer`` services from distinct `OWS` implementations.
+    """
+    service_map = {
+        "wfs": ServiceWFS,
+        "wms": ServiceGeoserverWMS,
+        "wps": ServiceWPS,
+        "WFS": ServiceWFS,
+        "WMS": ServiceGeoserverWMS,
+        "WPS": ServiceWPS,
+    }
+
+    @property
+    def permissions(self):
+        # type: () -> List[Permission]
+        perms = set()
+        for svc in self.supported_ows:
+            if issubclass(svc, ServiceOWS) and hasattr(svc, "permissions"):
+                perms.update(svc.permissions)
+        return list(perms)
+
+    @property
+    def resource_types_permissions(self):
+        # type: () -> Dict[models.Resource, List[Permission]]
+        perms = {}
+        for svc in self.supported_ows:
+            if issubclass(svc, ServiceOWS) and hasattr(svc, "resource_types_permissions"):
+                perms.update(svc.resource_types_permissions)
+        return perms
+
+    @property
+    def supported_ows(self):
+        # type: () -> Set[Type[ServiceOWS]]
+        return set(self.service_map.values())
+
+
+@six.add_metaclass(ServiceGeoserverMeta)
+class ServiceGeoserver(ServiceOWS):
+    """
+    Service that encapsulates the multiple `OWS` endpoints from ``GeoServer`` services.
+
+    .. seealso::
+        https://docs.geoserver.org/stable/en/user/services/index.html
+    """
+    service_type = "geoserver"
+
+    params_expected = [
+        "request",
+        "service"
+    ]
+
+    def service_requested(self):
+        # type: () -> Type[ServiceOWS]
+        """
+        Obtain the applicable `OWS` implementation according to parsed request parameters.
+        """
+        try:
+            svc = self.parser.params["service"]
+        except KeyError:
+            svc = None
+        req = self.parser.params.get("request")
+        if svc is None and req is not None:
+            # geoserver allows omitting 'service' request parameter because it can be inferred from the path
+            # since all OWS services are accessed using '/geoserver/<SERVICE>?request=...'
+            # attempt to match using applicable 'request' parameter
+            for geo_svc in self.supported_ows:
+                if issubclass(geo_svc, ServiceInterface) and hasattr(geo_svc, "permissions"):
+                    perm = Permission(req)
+                    if perm in geo_svc.permissions:
+                        svc = geo_svc
+                        break
+        ax.verify_param(
+            svc, is_in=True, param_compare=self.service_map, param_name="service", http_error=HTTPBadRequest,
+            content={
+                "service": self.service.resource_name,
+                "type": self.service_type,
+                "value": {"service": svc, "request": req}
+            },
+            msg_on_fail=(
+                "Missing or unknown implementation inferred from OWS 'service' and 'request' parameters. " +
+                "Unable to resolve the requested access for service: [{!s}].".format(self.service.resource_name)
+            )
+        )
+        return self.service_map[svc]
+
+    def resource_requested(self):
+        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
+        svc = self.service_requested()
+        return svc(self.service, self.request).resource_requested()
+
+    def permission_requested(self):
+        # type: () -> Permission
+        svc = self.service_requested()
+        return svc(self.service, self.request).permission_requested()
+
+
+SERVICE_TYPES = frozenset([
+    ServiceAccess,
+    ServiceAPI,
+    ServiceGeoserver,
+    ServiceGeoserverWMS,
+    ServiceNCWMS2,
+    ServiceTHREDDS,
+    ServiceWFS,
+    ServiceWPS
+])
 SERVICE_TYPE_DICT = dict()
-for svc in [ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceNCWMS2, ServiceTHREDDS, ServiceWFS, ServiceWPS]:
-    if svc.service_type in SERVICE_TYPE_DICT:
+for _svc in SERVICE_TYPES:
+    if _svc.service_type in SERVICE_TYPE_DICT:
         raise KeyError("Duplicate resource type identifiers not allowed")
-    SERVICE_TYPE_DICT[svc.service_type] = svc
+    SERVICE_TYPE_DICT[_svc.service_type] = _svc
 
 
 def service_factory(service, request):
