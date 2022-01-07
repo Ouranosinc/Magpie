@@ -975,10 +975,10 @@ class ManagementViews(AdminRequests, BaseViews):
                                                     service_name=service_name,
                                                     cur_svc_type=cur_svc_type))
 
-        path = schemas.ServiceTypeResourceTypesAPI.path.format(service_type=cur_svc_type)
+        path = schemas.ResourceTypesAPI.path.format(resource_id=resource_id)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
-        svc_res_types = get_json(resp)["resource_types"]
+        svc_res_types = get_json(resp)["children_resource_types"]
         data = {
             "service_name": service_name,
             "cur_svc_type": cur_svc_type,

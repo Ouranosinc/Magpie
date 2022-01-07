@@ -76,11 +76,13 @@ def format_service(service,                         # type: Service
             return svc_info
         if show_configuration:
             svc_info["configuration"] = service.configuration
-        perms = SERVICE_TYPE_DICT[service.type].permissions if permissions is None else permissions
+        svc_type = SERVICE_TYPE_DICT[service.type]
+        perms = svc_type.permissions if permissions is None else permissions
         svc_info.update(format_permissions(perms, permission_type))
         if show_resources_allowed:
-            svc_info["resource_types_allowed"] = sorted(SERVICE_TYPE_DICT[service.type].resource_type_names)
-            svc_info["resource_child_allowed"] = SERVICE_TYPE_DICT[service.type].child_resource_allowed
+            svc_info["resource_child_allowed"] = svc_type.child_resource_allowed
+            svc_info["resource_types_allowed"] = sorted(svc_type.resource_type_names)
+            svc_info["resource_structure_allowed"] = sorted(svc_type.child_structure_allowed)
         return svc_info
 
     return evaluate_call(

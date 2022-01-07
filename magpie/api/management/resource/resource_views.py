@@ -127,3 +127,46 @@ def get_resource_permissions_view(request):
                                 content={"resource": rf.format_resource(resource, basic_info=True)})
     return ax.valid_http(http_success=HTTPOk, detail=s.ResourcePermissions_GET_OkResponseSchema.description,
                          content=format_permissions(res_perm, PermissionType.ALLOWED))
+
+
+@s.ResourceTypesAPI.get(schema=s.ResourceTypes_GET_RequestSchema, tags=[s.ResourcesTag],
+                        response_schemas=s.ResourceTypes_GET_responses)
+@view_config(route_name=s.ResourceTypesAPI.name, request_method="GET")
+def get_resource_types_view(request):
+    """
+    List all applicable children resource types under another resource within a service hierarchy.
+    """
+    resource = ar.get_resource_matchdict_checked(request, "resource_id")
+
+    def get_res_types(res):
+        svc_root = ru.get_resource_root_service(res, db_session=request.db)
+        svc_impl = SERVICE_TYPE_DICT[svc_root.type]
+        return svc_impl.nested_resource_allowed(res), svc_root
+
+    def get_res_child_allowed(res):
+        # make sure to obtain the specific resource/service implementation to avoid using the default
+        if res.resource_type_name == models.Service.resource_type_name:
+            res_impl = SERVICE_TYPE_DICT[res.type]
+        else:
+            res_impl = models.RESOURCE_TYPE_DICT[res.resource_type_name]
+        return res_impl.child_resource_allowed
+
+    res_types, svc = ax.evaluate_call(lambda: get_res_types(resource),
+                                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                                      msg_on_fail="Error occurred while computing applicable children resource types.",
+                                      content={"resource": rf.format_resource(resource, basic_info=True)})
+    child_allowed = ax.evaluate_call(lambda: get_res_child_allowed(resource),
+                                     http_error=HTTPInternalServerError,
+                                     msg_on_fail="Error occurred while computing allowed children resource status.",
+                                     content={"resource": rf.format_resource(resource, basic_info=True)})
+    data = {
+        "resource_name": resource.resource_name,
+        "resource_type": resource.resource_type_name,
+        "children_resource_types": list(sorted(res_type.resource_type_name for res_type in res_types)),
+        "children_resource_allowed": child_allowed,
+        "root_service_id": svc.resource_id,
+        "root_service_name": svc.resource_name,
+        "root_service_type": svc.type,
+    }
+    return ax.valid_http(http_success=HTTPOk, content=data,
+                         detail=s.ResourceTypes_GET_OkResponseSchema.description)

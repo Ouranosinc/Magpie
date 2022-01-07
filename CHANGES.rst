@@ -10,6 +10,26 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Allow ``Resource`` and ``Service`` name to contain colon (``:``) character in order to define scoped names.
+* Add ``child_structure_allowed`` attribute to ``Service`` implementations allowing them to define specific path-like
+  structures of allowed ``Resource`` types hierarchies in order to control at which level and which combinations
+  of nested ``Resource`` types are valid under their root ``Service``. When not defined under a ``Service``
+  implementation, any defined ``Resource`` type will remain available for creation at any level of the hierarchy,
+  unless the corresponding ``Resource`` in the tree already defined ``child_resource_allowed = False``. This was
+  already the original behaviour in previous versions.
+* Add ``GET /resources/{id}/types`` endpoint that allows retrieval of applicable children ``Resource`` types under
+  a given ``Resource`` considering the nested hierarchy definition of its root ``Service`` defined by the new
+  attribute ``child_structure_allowed``.
+* Add ``child_structure_allowed`` attribute to the response of ``GET /service/{name}`` endpoint.
+  For backward compatibility, ``resource_types_allowed`` parameter already available in the same response will continue
+  to report all possible ``Resource`` types *at any level* under the ``Service`` hierarchy, although not necessarily
+  applicable as immediate child ``Resource`` under that ``Service``.
+* Adjust UI to consider ``child_structure_allowed`` definitions to propose only applicable ``Resource`` types in the
+  combobox when creating a new ``Resource`` in the tree hierarchy.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Remove invalid ``request`` parameter in ``ServiceTHREDDS`` implementation.
+* Remove multiple invalid schema path definitions that are not mapped against any concrete API endpoint.
 
 `3.20.0 <https://github.com/Ouranosinc/Magpie/tree/3.20.0>`_ (2022-01-06)
 ------------------------------------------------------------------------------------

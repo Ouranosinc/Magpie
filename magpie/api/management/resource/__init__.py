@@ -10,5 +10,6 @@ def includeme(config):
     config.add_route(**s.service_api_route_info(s.ResourcesAPI))
     config.add_route(**s.service_api_route_info(s.ResourceAPI))
     config.add_route(**s.service_api_route_info(s.ResourcePermissionsAPI))
+    config.add_route(**s.service_api_route_info(s.ResourceTypesAPI))
 
     config.scan()

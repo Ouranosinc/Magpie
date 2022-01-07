@@ -1,5 +1,4 @@
 import abc
-import inspect
 import re
 from typing import TYPE_CHECKING
 
@@ -61,6 +60,19 @@ class ServiceMeta(type):
     @property
     def child_resource_allowed(cls):
         # type: (Type[ServiceInterface]) -> bool
+        """
+        Lists all resources allowed *somewhere* within its resource hierarchy under the service.
+
+        .. note::
+            Resources are not necessarily all allowed *directly* under the service.
+            This depends on whether :attr:`ServiceInterface.child_structure_allowed` is defined or not.
+            If not defined, resources are applicable anywhere.
+            Otherwise, they must respect the explicit structure definitions.
+
+        .. seealso::
+             Use :meth:`ServiceInterface.nested_resource_allowed` to obtain only scoped types allowed under a
+             given resource considering allowed path structures.
+        """
         return len(cls.resource_types) > 0
 
 
@@ -68,12 +80,58 @@ class ServiceMeta(type):
 class ServiceInterface(object):
     # required service type identifier (unique)
     service_type = None                 # type: Str
-    # required request parameters for the service
+    """
+    Service type identifier (required, unique across implementation).
+    """
+
     params_expected = []                # type: List[Str]
-    # global permissions allowed for the service (top-level resource)
+    """
+    Request parameters that are expected and required for parsing service or child resource access.
+    """
+
     permissions = []                    # type: List[Permission]
-    # dict of list for each corresponding allowed resource permissions (children resources)
-    resource_types_permissions = {}     # type: Dict[models.Resource, List[Permission]]
+    """
+    Permission allowed directly on the service as top-level resource.
+    """
+
+    resource_types_permissions = {}     # type: Dict[Type[models.Resource], List[Permission]]
+    """
+    Mapping of resource types to lists of permissions defining allowed children resource permissions under the service.
+    """
+
+    child_structure_allowed = []        # type: List[Str]
+    """
+    Control listing of path-like resource types limiting the allowed structure of nested children resources.
+
+    When not defined, any nested resource type combination is allowed if they themselves allow children resources.
+    Otherwise, nested child resource under the service can only be created at specific positions within the hierarchy
+    that matches exactly one of the listed control path-like definition. All definitions must start with ``service``
+    and must contain at least one separator and a sub-resource to ensure working behaviour of child resource under
+    the service.
+
+    For example, the below definition allows only resources typed ``route`` directly under the service.
+    The following nested resource under that first-level ``route`` can then be either another ``route`` followed
+    by a child ``process`` or directly a ``process``. Because ``process`` type doesn't allow any children resource
+    (see :attr:`models.Process.child_resource_allowed`), those are the only allowed combinations (cannot further nest
+    resources under the final ``process`` resource). Note that because intermediate ``route`` resources need to be
+    created at some point before the last ``process`` can even exist, partial paths (without ``process``) must also
+    be allowed as valid structures.
+
+    .. code-block:: python
+
+        child_structure_allowed = [
+            "service/route",
+            "service/route/process",
+            "service/route/route",
+            "service/route/route/process",
+        ]
+
+    .. seealso::
+        - Validation of allowed nested children resource insertion of a given type under a parent resource is provided
+          by :meth:`ServiceInterface.validate_nested_resource_type` that employs :attr:`child_structure_allowed`.
+        - Listing of allowed resource types scoped under a given child resource within the hierarchy is provided
+          by :meth:`ServiceInterface.nested_resource_allowed`.
+    """
 
     def __init__(self, service, request):
         # type: (models.Service, Request) -> None
@@ -323,10 +381,79 @@ class ServiceInterface(object):
         """
         Obtains the allowed permissions of the service's child resource fetched by resource type name.
         """
-        for res in cls.resource_types_permissions:  # type: models.Resource
+        for res in cls.resource_types_permissions:  # type: Type[models.Resource]
             if res.resource_type_name == resource_type_name:
                 return cls.resource_types_permissions[res]
         return []
+
+    @classmethod
+    def get_resource_type_path(cls, resource, extra_path=None):
+        # type: (ServiceOrResourceType, Optional[Str]) -> Str
+        """
+        Generate the resource type path-like definition from the top service down to the specified resource.
+
+        :param resource: leaf resource for which to generate the resource type path.
+        :param extra_path: optional resource path to append after the generated path.
+        :return: path like representation of the resource types from service to leaf resource path.
+        """
+        session = get_db_session(obj=resource)
+        res_tree = reversed(list(models.RESOURCE_TREE_SERVICE.path_upper(resource.resource_id, db_session=session)))
+        res_extra_path = [] if extra_path is None else [extra_path]
+        res_types_path = "/".join([res.resource_type_name for res in res_tree] + res_extra_path)
+        return res_types_path
+
+    @classmethod
+    def validate_nested_resource_type(cls, parent_resource, child_resource_type):
+        # type: (ServiceOrResourceType, Str) -> bool
+        """
+        Validate whether a new child resource type is allowed under the parent resource under the service.
+
+        :param parent_resource: Parent under which the new resource must be validated. This can be the service itself.
+        :param child_resource_type: Type to validate at the position defined under the parent resource.
+        :return: status indicating if insertion is allowed for this type and at this parent position.
+        """
+        if not cls.child_resource_allowed:
+            return False
+        # make sure to obtain the specific resource/service implementation to avoid using the default
+        if parent_resource.resource_type_name == models.Service.resource_type_name:
+            res_impl = SERVICE_TYPE_DICT[parent_resource.type]
+        else:
+            res_impl = models.RESOURCE_TYPE_DICT[parent_resource.resource_type_name]
+        if not res_impl.child_resource_allowed:
+            return False
+        # if undefined control structures, assume any combination of nested resource is allowed (original behaviour)
+        if not cls.child_structure_allowed:
+            return True
+        res_types_path = cls.get_resource_type_path(parent_resource, extra_path=child_resource_type)
+        for allow_types_path in cls.child_structure_allowed:
+            if allow_types_path == res_types_path:
+                return True
+        return False
+
+    @classmethod
+    def nested_resource_allowed(cls, parent_resource):
+        # type: (ServiceOrResourceType) -> List[Type[models.Resource]]
+        """
+        Obtain the nested resource types allowed as children children resource within structure definitions.
+        """
+        if not cls.child_resource_allowed:
+            return []
+        # make sure to obtain the specific resource/service implementation to avoid using the default
+        if parent_resource.resource_type_name == models.Service.resource_type_name:
+            res_impl = SERVICE_TYPE_DICT[parent_resource.type]
+        else:
+            res_impl = models.RESOURCE_TYPE_DICT[parent_resource.resource_type_name]
+        if not res_impl.child_resource_allowed:
+            return []
+        # if undefined control structures, any combination is allowed (original behaviour)
+        if not cls.child_structure_allowed:
+            return cls.resource_types
+        res_types_path = cls.get_resource_type_path(parent_resource, extra_path="")  # terminate as ".../"
+        res_types_next = [  # retain only paths that correspond to immediately the next resource type
+            path.replace(res_types_path, "", 1) for path in cls.child_structure_allowed
+            if path.startswith(res_types_path) and len(path.replace(res_types_path, "", 1).split("/")) == 1
+        ]
+        return [models.RESOURCE_TYPE_DICT[res_type] for res_type in res_types_next]
 
     def allowed_permissions(self, resource):
         # type: (ServiceOrResourceType) -> List[Permission]
@@ -849,10 +976,6 @@ class ServiceTHREDDS(ServiceInterface):
         Permission.WRITE,   # NOTE: see special usage of WRITE in docs
     ]
 
-    params_expected = [
-        "request"
-    ]
-
     resource_types_permissions = {
         models.Directory: permissions,
         models.File: permissions,
@@ -964,9 +1087,6 @@ class ServiceGeoserverMeta(ServiceMeta):
         "wfs": ServiceWFS,
         "wms": ServiceGeoserverWMS,
         "wps": ServiceWPS,
-        "WFS": ServiceWFS,
-        "WMS": ServiceGeoserverWMS,
-        "WPS": ServiceWPS,
     }
 
     @property
@@ -1008,28 +1128,48 @@ class ServiceGeoserver(ServiceOWS):
         "service"
     ]
 
+    # only allow workspace directly under service
+    # then, only layer or process under that workspace
+    child_structure_allowed = [
+        "{}/{}".format(
+            models.Service.resource_type_name,
+            models.Workspace.resource_type_name,
+        ),
+        "{}/{}/{}".format(
+            models.Service.resource_type_name,
+            models.Workspace.resource_type_name,
+            models.Layer.resource_type_name,
+        ),
+        "{}/{}/{}".format(
+            models.Service.resource_type_name,
+            models.Workspace.resource_type_name,
+            models.Process.resource_type_name,
+        ),
+    ]
+
     def service_requested(self):
         # type: () -> Type[ServiceOWS]
         """
         Obtain the applicable `OWS` implementation according to parsed request parameters.
         """
         try:
-            svc = self.parser.params["service"]
+            svc_key = svc = self.parser.params["service"]
         except KeyError:
-            svc = None
+            svc_key = svc = None
         req = self.parser.params.get("request")
-        if svc is None and req is not None:
+        if svc_key is None and req is not None:
             # geoserver allows omitting 'service' request parameter because it can be inferred from the path
             # since all OWS services are accessed using '/geoserver/<SERVICE>?request=...'
             # attempt to match using applicable 'request' parameter
-            for geo_svc in self.supported_ows:
-                if issubclass(geo_svc, ServiceInterface) and hasattr(geo_svc, "permissions"):
-                    perm = Permission(req)
-                    if perm in geo_svc.permissions:
-                        svc = geo_svc
+            for svc_ows in self.supported_ows:
+                if issubclass(svc_ows, ServiceInterface) and hasattr(svc_ows, "permissions"):
+                    perm = Permission(str(req).lower())
+                    if perm in svc_ows.permissions:
+                        svc_key = svc_ows
                         break
+        svc_key = str(svc_key).lower()
         ax.verify_param(
-            svc, is_in=True, param_compare=self.service_map, param_name="service", http_error=HTTPBadRequest,
+            svc_key, is_in=True, param_compare=self.service_map, param_name="service", http_error=HTTPBadRequest,
             content={
                 "service": self.service.resource_name,
                 "type": self.service_type,
@@ -1040,7 +1180,7 @@ class ServiceGeoserver(ServiceOWS):
                 "Unable to resolve the requested access for service: [{!s}].".format(self.service.resource_name)
             )
         )
-        return self.service_map[svc]
+        return self.service_map[svc_key]
 
     def resource_requested(self):
         # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
