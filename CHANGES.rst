@@ -12,6 +12,9 @@ Features / Changes
 * Add missing ``ServiceWFS`` permissions according to `OGC WFS standard <https://www.ogc.org/standards/wfs>`_.
 * Add missing ``DescribeLayer`` permission to ``ServiceGeoserverWMS`` according
   to `GeoServer WMS implementation <https://docs.geoserver.org/latest/en/user/services/wms/reference.html>`_.
+* Add support of specific hierarchy of ``Resource`` type ``Layer`` nested under ``Workspace``
+  for ``ServiceGeoserverWMS``.
+* Add support of ``Resource`` type ``Layer`` under ``ServiceWFS``.
 * Allow ``Resource`` and ``Service`` name to contain colon (``:``) character in order to define scoped names
   as it is often the case for ``Layer`` names.
 * Add ``child_structure_allowed`` attribute to ``Service`` implementations allowing them to define specific path-like

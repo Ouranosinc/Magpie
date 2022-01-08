@@ -875,10 +875,22 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
     ]
 
     resource_types_permissions = {
-        # workspace must allow permissions for layers as well as parent in hierarchy
-        models.Workspace: models.Workspace.permissions + models.Layer.permissions,
-        models.Layer: models.Layer.permissions
+        models.Workspace: permissions,
+        models.Layer: permissions,
     }
+
+    # only workspace directly followed by layers
+    child_structure_allowed = [
+        "{}/{}".format(
+            models.Service.resource_type_name,
+            models.Workspace.resource_type_name,
+        ),
+        "{}/{}/{}".format(
+            models.Service.resource_type_name,
+            models.Workspace.resource_type_name,
+            models.Layer.resource_type_name,
+        ),
+    ]
 
     def resource_requested(self):
         # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
@@ -894,6 +906,7 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
             path_parts = path_parts[1:]
             parts_lower = parts_lower[1:]
         workspace_name = None
+        layer_name = None
         if len(parts_lower) > 1 and parts_lower[1] == "wms":
             workspace_name = path_parts[0]
         if permission == Permission.GET_CAPABILITIES:
@@ -916,7 +929,14 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
                                                  parent_id=self.service.resource_id,
                                                  db_session=session)
         if workspace:
-            return workspace, True
+            if not layer_name:
+                return workspace, True
+            layer = models.find_children_by_name(child_name=layer_name,
+                                                 parent_id=workspace.resource_id,
+                                                 db_session=session)
+            if layer:
+                return layer, True
+            return workspace, False
         return self.service, False
 
 
@@ -975,6 +995,9 @@ class ServiceAPI(ServiceInterface):
 class ServiceWFS(ServiceOWS):
     """
     Service that represents a ``Web Feature Service`` endpoint.
+
+    .. seealso::
+        https://www.ogc.org/standards/wfs (OpenGIS WFS 2.0.0 implementation)
     """
     service_type = "wfs"
 
