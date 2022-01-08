@@ -816,15 +816,15 @@ def log_exception_tween(handler, registry):  # noqa: F811
     return log_exc
 
 
-def is_json_body(body):
-    # type: (Any) -> bool
+def is_json_body(body, return_body=False):
+    # type: (Any, bool) -> bool
     if not body:
-        return False
+        return None if return_body else False
     try:
-        json.loads(body)
+        content = json.loads(body)
     except (ValueError, TypeError):
-        return False
-    return True
+        return None if return_body else False
+    return content if return_body else True
 
 
 # note: must not define any enum value here to allow inheritance by subclasses

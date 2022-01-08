@@ -195,14 +195,6 @@
             <div class="panel-heading subsection">
                 <div class="panel-title">Configuration</div>
             </div>
-            <div class="panel-message">
-                <img src="${request.static_url('magpie.ui.home:static/info.png')}"
-                     alt="INFO" class="icon-info alert-info" title="Service Configuration." />
-                <meta name="source" content="https://commons.wikimedia.org/wiki/File:Infobox_info_icon.svg">
-                <div class="panel-message-text">
-                    This service employs the following custom configuration.
-                </div>
-            </div>
             <div class="clear"></div>
             <div class="panel-code-language">
                 <script>

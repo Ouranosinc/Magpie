@@ -23,13 +23,20 @@ Features / Changes
   For backward compatibility, ``resource_types_allowed`` parameter already available in the same response will continue
   to report all possible ``Resource`` types *at any level* under the ``Service`` hierarchy, although not necessarily
   applicable as immediate child ``Resource`` under that ``Service``.
+* Add ``configurable`` attribute to ``Service`` types that supports custom definitions modifying their behaviour.
+* Add ``service_configurable`` to response of ``GET /service/{name}`` endpoint.
 * Adjust UI to consider ``child_structure_allowed`` definitions to propose only applicable ``Resource`` types in the
   combobox when creating a new ``Resource`` in the tree hierarchy.
+* Add UI submission field to provide ``Service`` JSON configuration at creation when supported by the type.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Remove invalid ``request`` parameter in ``ServiceTHREDDS`` implementation.
 * Remove multiple invalid schema path definitions that are not mapped against any concrete API endpoint.
+* Fix reporting of ``Service`` configuration for any type that supports it. Unless overridden during creation with a
+  custom configuration, ``ServiceTHREDDS`` implementation would not report their default configuration and would
+  instead return ``null``, making it difficult to know from the API if default or no configuration was being applied
+  for a given ``Service``.
 
 `3.20.0 <https://github.com/Ouranosinc/Magpie/tree/3.20.0>`_ (2022-01-06)
 ------------------------------------------------------------------------------------

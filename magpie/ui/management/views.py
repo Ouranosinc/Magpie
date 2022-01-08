@@ -23,11 +23,13 @@ from magpie.api import schemas
 from magpie.cli import sync_resources
 from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
-# TODO: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
+# FIXME: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
 from magpie.permissions import Permission, PermissionSet
+# FIXME: remove (SERVICE_TYPE_DICT), implement getters via API
+from magpie.services import SERVICE_TYPE_DICT
 from magpie.ui.utils import AdminRequests, BaseViews, check_response, handle_errors, request_api
-from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
+from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger, is_json_body
 
 if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional, Tuple
@@ -839,29 +841,59 @@ class ManagementViews(AdminRequests, BaseViews):
     def add_service(self):
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         svc_types, cur_svc_type, _ = self.get_services(cur_svc_type)
+        services_keys_sorted = self.get_service_types()
+        services_phoenix_enabled = [
+            (1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
+            for i in range(len(services_keys_sorted))
+        ]
+        # FIXME: retrieve from API
+        services_config_enabled = [
+            int(SERVICE_TYPE_DICT[svc_type].configurable)
+            for svc_type in services_keys_sorted
+        ]
+        data = {
+            "service_name": "",
+            "service_url": "",
+            "service_config": "",
+            "invalid_config": False,
+            "cur_svc_type": cur_svc_type,
+            "service_types": svc_types,
+            "services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
+            "services_phoenix_enabled": services_phoenix_enabled,
+            "services_config_enabled": services_config_enabled,
+        }
 
         if "register" in self.request.POST:
             service_name = self.request.POST.get("service_name")
             service_url = self.request.POST.get("service_url")
             service_type = self.request.POST.get("service_type")
             service_push = self.request.POST.get("service_push")
-            data = {"service_name": service_name,
-                    "service_url": service_url,
-                    "service_type": service_type,
-                    "service_push": service_push}
-            resp = request_api(self.request, schemas.ServicesAPI.path, "POST", data=data)
+            service_config = self.request.POST.get("service_config")
+            json_config = None
+            if service_type in svc_types and SERVICE_TYPE_DICT[service_type].configurable:
+                json_config = None
+                if service_config:
+                    json_config = is_json_body(service_config, return_body=True)
+                    if json_config is None:
+                        data.update({
+                            "service_name": service_name,
+                            "service_type": service_type,
+                            "service_config": service_config,
+                            "invalid_config": True,
+                        })
+                        return self.add_template_data(data)
+
+            body = {
+                "service_name": service_name,
+                "service_url": service_url,
+                "service_type": service_type,
+                "service_push": service_push,
+                "configuration": json_config,
+            }
+            resp = request_api(self.request, schemas.ServicesAPI.path, "POST", data=body)
             check_response(resp)
             return HTTPFound(self.request.route_url("view_services", cur_svc_type=service_type))
 
-        services_keys_sorted = self.get_service_types()
-        services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
-                                    for i in range(len(services_keys_sorted))]
-        data = {
-            "cur_svc_type": cur_svc_type,
-            "service_types": svc_types,
-            "services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
-            "services_phoenix_indices": services_phoenix_indices
-        }
         return self.add_template_data(data)
 
     @view_config(route_name="edit_service", renderer="templates/edit_service.mako")

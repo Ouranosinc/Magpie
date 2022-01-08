@@ -65,6 +65,7 @@ def format_service(service,                         # type: Service
             "service{}name".format(sep): str(service.resource_name),
             "service{}type".format(sep): str(service.type),
             "service{}sync_type".format(sep): svc_sync_type,
+            "service{}configurable".format(sep): SERVICE_TYPE_DICT[service.type].configurable,
             "resource{}id".format(sep): service.resource_id,
         }
         if show_public_url:
@@ -74,9 +75,14 @@ def format_service(service,                         # type: Service
             svc_info["service{}url".format(sep)] = str(service.url)
         if basic_info:
             return svc_info
-        if show_configuration:
-            svc_info["configuration"] = service.configuration
         svc_type = SERVICE_TYPE_DICT[service.type]
+        if show_configuration:
+            # make sure to generate the default configuration if applicable
+            if svc_type.configurable:
+                svc_config = svc_type(service, request=None).get_config()
+            else:
+                svc_config = None
+            svc_info["configuration"] = svc_config
         perms = svc_type.permissions if permissions is None else permissions
         svc_info.update(format_permissions(perms, permission_type))
         if show_resources_allowed:

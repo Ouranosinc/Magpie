@@ -78,28 +78,27 @@ class ServiceMeta(type):
 
 @six.add_metaclass(ServiceMeta)
 class ServiceInterface(object):
-    # required service type identifier (unique)
-    service_type = None                 # type: Str
+    service_type = None  # type: Optional[Str]  # MUST be overridden
     """
     Service type identifier (required, unique across implementation).
     """
 
-    params_expected = []                # type: List[Str]
+    params_expected = []  # type: List[Str]
     """
     Request parameters that are expected and required for parsing service or child resource access.
     """
 
-    permissions = []                    # type: List[Permission]
+    permissions = []  # type: List[Permission]
     """
     Permission allowed directly on the service as top-level resource.
     """
 
-    resource_types_permissions = {}     # type: Dict[Type[models.Resource], List[Permission]]
+    resource_types_permissions = {}  # type: Dict[Type[models.Resource], List[Permission]]
     """
     Mapping of resource types to lists of permissions defining allowed children resource permissions under the service.
     """
 
-    child_structure_allowed = []        # type: List[Str]
+    child_structure_allowed = []  # type: List[Str]
     """
     Control listing of path-like resource types limiting the allowed structure of nested children resources.
 
@@ -131,6 +130,12 @@ class ServiceInterface(object):
           by :meth:`ServiceInterface.validate_nested_resource_type` that employs :attr:`child_structure_allowed`.
         - Listing of allowed resource types scoped under a given child resource within the hierarchy is provided
           by :meth:`ServiceInterface.nested_resource_allowed`.
+    """
+
+    _config = None  # type: Optional[ServiceConfiguration]  # for optimization to avoid reload and parsing each time
+    configurable = False
+    """
+    Indicates if the service supports custom configuration.
     """
 
     def __init__(self, service, request):
@@ -659,6 +664,8 @@ class ServiceOWS(ServiceInterface):
     def _set_request(self, request):
         # type: (Request) -> None
         self._request = request
+        if request is None:
+            return  # avoid error parsing undefined request
         # must reset the parser from scratch if request changes to ensure everything is updated with new inputs
         self.parser = ows_parser_factory(request)
         self.parser.parse(self.params_expected)  # run parsing to obtain guaranteed lowered-name parameters
@@ -958,7 +965,11 @@ class ServiceWFS(ServiceOWS):
         "typenames"
     ]
 
-    resource_types_permissions = {}
+    resource_types_permissions = {
+        # workspace must allow permissions for layers as well as parent in hierarchy
+        models.Workspace: models.Workspace.permissions + models.Layer.permissions,
+        models.Layer: models.Layer.permissions
+    }
 
     def resource_requested(self):
         return self.service, True   # no children resource, so can only be the service
@@ -981,15 +992,12 @@ class ServiceTHREDDS(ServiceInterface):
         models.File: permissions,
     }
 
-    def __init__(self, *_, **__):
-        super(ServiceTHREDDS, self).__init__(*_, **__)
-        self._config = None
+    configurable = True
 
     def get_config(self):
         # type: () -> ServiceConfiguration
         if self._config is not None:
             return self._config
-
         self._config = super(ServiceTHREDDS, self).get_config() or {}
         self._config.setdefault("skip_prefix", "thredds")
         self._config.setdefault("file_patterns", [".*\\.nc"])
@@ -1147,49 +1155,60 @@ class ServiceGeoserver(ServiceOWS):
         ),
     ]
 
+    configurable = True
+
+    def get_config(self):
+        # type: () -> ServiceConfiguration
+        """
+        Obtain the configuration defining which `OWS` services are enabled under this instance.
+
+        Should provide a mapping of all `OWS` service type names to enabled boolean status.
+        """
+        if self._config is not None:
+            return self._config
+        self._config = super(ServiceGeoserver, self).get_config() or {}
+        for svc_type in type(self).service_map:
+            self._config.setdefault(svc_type, True)
+            if not isinstance(self._config[svc_type], bool):
+                self._config[svc_type] = True
+        self._config = {key: self._config[key] for key in sorted(self._config)}
+        return self._config
+
     def service_requested(self):
-        # type: () -> Type[ServiceOWS]
+        # type: () -> Optional[Type[ServiceOWS]]
         """
         Obtain the applicable `OWS` implementation according to parsed request parameters.
         """
-        try:
-            svc_key = svc = self.parser.params["service"]
-        except KeyError:
-            svc_key = svc = None
-        req = self.parser.params.get("request")
-        if svc_key is None and req is not None:
-            # geoserver allows omitting 'service' request parameter because it can be inferred from the path
+        # guaranteed to exist and lowercase string if provided, otherwise None
+        svc = self.parser.params["service"]
+        req = self.parser.params["request"]
+        if not svc and req:
+            # geoserver allows omitting 'service' request query parameter because it can be inferred from the path
             # since all OWS services are accessed using '/geoserver/<SERVICE>?request=...'
             # attempt to match using applicable 'request' parameter
-            for svc_ows in self.supported_ows:
+            for svc_ows in type(self).supported_ows:
                 if issubclass(svc_ows, ServiceInterface) and hasattr(svc_ows, "permissions"):
-                    perm = Permission(str(req).lower())
+                    perm = Permission(req)
                     if perm in svc_ows.permissions:
-                        svc_key = svc_ows
+                        svc = svc_ows
                         break
-        svc_key = str(svc_key).lower()
-        ax.verify_param(
-            svc_key, is_in=True, param_compare=self.service_map, param_name="service", http_error=HTTPBadRequest,
-            content={
-                "service": self.service.resource_name,
-                "type": self.service_type,
-                "value": {"service": svc, "request": req}
-            },
-            msg_on_fail=(
-                "Missing or unknown implementation inferred from OWS 'service' and 'request' parameters. " +
-                "Unable to resolve the requested access for service: [{!s}].".format(self.service.resource_name)
-            )
-        )
-        return self.service_map[svc_key]
+        config = self.get_config()
+        if svc not in config or not config[svc]:
+            return None
+        return type(self).service_map[svc]
 
     def resource_requested(self):
         # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
         svc = self.service_requested()
+        if not svc:
+            return None
         return svc(self.service, self.request).resource_requested()
 
     def permission_requested(self):
-        # type: () -> Permission
+        # type: () -> Optional[Union[Permission, Collection[Permission]]]
         svc = self.service_requested()
+        if not svc:
+            return None
         return svc(self.service, self.request).permission_requested()
 
 

@@ -890,7 +890,11 @@ class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
 
 
 class ServiceConfigurationSchema(colander.MappingSchema):
-    description = "Custom configuration of the service. Expected format and fields specific to each service type."
+    description = (
+        "Custom configuration of the service. "
+        "Expected format and fields specific to each service type. "
+        "Service type must support custom configuration."
+    )
     missing = colander.drop
     default = colander.null
 
@@ -914,6 +918,11 @@ class ServiceSummarySchema(colander.MappingSchema):
         colander.String(),
         description="Type of resource synchronization implementation.",
         example="thredds"
+    )
+    service_configurable = colander.SchemaNode(
+        colander.Boolean(),
+        description="Indicates if the service supports custom configuration.",
+        examble=False,
     )
     public_url = colander.SchemaNode(
         colander.String(),
