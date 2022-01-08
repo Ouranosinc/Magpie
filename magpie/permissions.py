@@ -48,6 +48,7 @@ class Permission(ExtendedEnum):
     GET_FEATURE = "getfeature"
     GET_FEATURE_WITH_LOCK = "getfeaturewithlock"
     DESCRIBE_FEATURE_TYPE = "describefeaturetype"
+    DESCRIBE_LAYER = "describelayer"
     DESCRIBE_PROCESS = "describeprocess"
     EXECUTE = "execute"
     LOCK_FEATURE = "lockfeature"

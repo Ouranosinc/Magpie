@@ -83,11 +83,6 @@ class ServiceInterface(object):
     Service type identifier (required, unique across implementation).
     """
 
-    params_expected = []  # type: List[Str]
-    """
-    Request parameters that are expected and required for parsing service or child resource access.
-    """
-
     permissions = []  # type: List[Permission]
     """
     Permission allowed directly on the service as top-level resource.
@@ -651,6 +646,11 @@ class ServiceOWS(ServiceInterface):
     Generic request-to-permission interpretation method of various ``OGC Web Service`` (OWS) implementations.
     """
 
+    params_expected = []  # type: List[Str]
+    """
+    Request query parameters that are expected and should be preprocessed by parsing the submitted request.
+    """
+
     def __init__(self, service, request):
         # type: (models.Service, Request) -> None
         self._request = None
@@ -741,18 +741,20 @@ class ServiceWPS(ServiceOWS):
 class ServiceBaseWMS(ServiceOWS):
     """
     Service that represents basic capabilities of a ``Web Map Service`` endpoint.
+
+    .. seealso::
+        https://www.ogc.org/standards/wms (OpenGIS WMS 1.3.0 implementation)
     """
 
     @abc.abstractmethod
     def resource_requested(self):
         raise NotImplementedError
 
+    # base implementation only provides the following requests
     permissions = [
         Permission.GET_CAPABILITIES,
         Permission.GET_MAP,
         Permission.GET_FEATURE_INFO,
-        Permission.GET_LEGEND_GRAPHIC,
-        Permission.GET_METADATA,
     ]
 
     params_expected = [
@@ -768,8 +770,24 @@ class ServiceBaseWMS(ServiceOWS):
 class ServiceNCWMS2(ServiceBaseWMS):
     """
     Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``ncWMS2`` .
+
+    .. seealso::
+        https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/04-usage.html
     """
     service_type = "ncwms"
+
+    permissions = [
+        Permission.GET_CAPABILITIES,
+        Permission.GET_MAP,
+        Permission.GET_FEATURE_INFO,
+        # ncWMS specific extensions
+        Permission.GET_LEGEND_GRAPHIC,
+        Permission.GET_METADATA,
+        # FIXME: not implemented
+        # Permission.GET_TIMESERIES,
+        # Permission.GET_VERTICAL_PROFILE,
+        # Permission.GET_VERTICAL_TRANSECT,
+    ]
 
     resource_types_permissions = {
         models.File: [
@@ -839,8 +857,22 @@ class ServiceNCWMS2(ServiceBaseWMS):
 class ServiceGeoserverWMS(ServiceBaseWMS):
     """
     Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``GeoServer``.
+
+    .. seealso::
+        https://docs.geoserver.org/latest/en/user/services/wms/reference.html
     """
     service_type = "geoserverwms"
+
+    permissions = [
+        Permission.GET_CAPABILITIES,
+        Permission.GET_MAP,
+        Permission.GET_FEATURE_INFO,
+        # GeoServer specific extensions
+        Permission.GET_LEGEND_GRAPHIC,
+        Permission.DESCRIBE_LAYER,
+        # FIXME: not implemented
+        # Permission.EXCEPTIONS,
+    ]
 
     resource_types_permissions = {
         # workspace must allow permissions for layers as well as parent in hierarchy
@@ -893,8 +925,6 @@ class ServiceAccess(ServiceInterface):
 
     permissions = [Permission.ACCESS]
 
-    params_expected = []
-
     resource_types_permissions = {}
 
     def resource_requested(self):
@@ -911,8 +941,6 @@ class ServiceAPI(ServiceInterface):
     service_type = "api"
 
     permissions = models.Route.permissions
-
-    params_expected = []
 
     resource_types_permissions = {
         models.Route: models.Route.permissions
@@ -952,10 +980,15 @@ class ServiceWFS(ServiceOWS):
 
     permissions = [
         Permission.GET_CAPABILITIES,
-        Permission.DESCRIBE_FEATURE_TYPE,
         Permission.GET_FEATURE,
+        Permission.GET_FEATURE_WITH_LOCK,
+        Permission.DESCRIBE_FEATURE_TYPE,
         Permission.LOCK_FEATURE,
         Permission.TRANSACTION,
+        Permission.CREATE_STORED_QUERY,
+        Permission.DROP_STORED_QUERY,
+        Permission.LIST_STORED_QUERIES,
+        Permission.DESCRIBE_STORED_QUERIES,
     ]
 
     params_expected = [
@@ -966,12 +999,23 @@ class ServiceWFS(ServiceOWS):
     ]
 
     resource_types_permissions = {
-        # workspace must allow permissions for layers as well as parent in hierarchy
-        models.Workspace: models.Workspace.permissions + models.Layer.permissions,
+        # note: basic WFS does not implement Workspace
         models.Layer: models.Layer.permissions
     }
 
     def resource_requested(self):
+        if not self.parser.params["typenames"]:
+            return self.service, False
+        names = self.parser.params["typenames"]  # can be comma-separated or single layer
+        layer = names.split(",")[0]  # FIXME: multi-resource not supported, must update effective permissions handling
+        if layer:
+            session = get_connected_session(self.request)
+            layer_res = models.find_children_by_name(child_name=layer,
+                                                     parent_id=self.service.resource_id,
+                                                     db_session=session)
+            if layer_res is not None:
+                return layer_res, True
+            return self.service, False
         return self.service, True   # no children resource, so can only be the service
 
 

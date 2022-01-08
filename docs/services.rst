@@ -78,8 +78,8 @@ On top of the above methods, the following attributes must be defined.
         :Term:`Allowed Permissions`, their type and further nested children :term:`Resource`.
     * - :attr:`ServiceInterface.params_expected` |br| (``List[str]``)
       - Represents specific parameter names that can be preprocessed during HTTP request parsing to ease following
-        resolution of :term:`ACL` use cases. Employed most notably by :term:`Service` implementations based on
-        :class:`magpie.services.ServiceOWS`.
+        resolution of :term:`ACL` use cases. Employed only by :term:`Service` implementations derived from
+        :class:`magpie.services.ServiceOWS`. Can be omitted otherwise.
 
 
 .. _services_available:

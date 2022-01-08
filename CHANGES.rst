@@ -9,7 +9,11 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Allow ``Resource`` and ``Service`` name to contain colon (``:``) character in order to define scoped names.
+* Add missing ``ServiceWFS`` permissions according to `OGC WFS standard <https://www.ogc.org/standards/wfs>`_.
+* Add missing ``DescribeLayer`` permission to ``ServiceGeoserverWMS`` according
+  to `GeoServer WMS implementation <https://docs.geoserver.org/latest/en/user/services/wms/reference.html>`_.
+* Allow ``Resource`` and ``Service`` name to contain colon (``:``) character in order to define scoped names
+  as it is often the case for ``Layer`` names.
 * Add ``child_structure_allowed`` attribute to ``Service`` implementations allowing them to define specific path-like
   structures of allowed ``Resource`` types hierarchies in order to control at which level and which combinations
   of nested ``Resource`` types are valid under their root ``Service``. When not defined under a ``Service``
@@ -31,7 +35,9 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Remove invalid ``request`` parameter in ``ServiceTHREDDS`` implementation.
+* Remove invalid ``params_expected`` parameter from ``Service`` implementations (``ServiceAccess``, ``ServiceAPI``,
+  ``ServiceTHREDDS``) that don't make use of it since they don't derive from ``ServiceOWS``.
+* Fix base ``Permission`` definitions for all variants of `WMS` according to their reference implementations.
 * Remove multiple invalid schema path definitions that are not mapped against any concrete API endpoint.
 * Fix reporting of ``Service`` configuration for any type that supports it. Unless overridden during creation with a
   custom configuration, ``ServiceTHREDDS`` implementation would not report their default configuration and would
