@@ -876,9 +876,12 @@ class ManagementViews(AdminRequests, BaseViews):
                     json_config = is_json_body(service_config, return_body=True)
                     if json_config is None:
                         data.update({
+                            # forward any fields to avoid dropping values filled by user
                             "service_name": service_name,
                             "service_type": service_type,
+                            "service_url": service_url,
                             "service_config": service_config,
+                            "service_push": service_push,
                             "invalid_config": True,
                         })
                         return self.add_template_data(data)

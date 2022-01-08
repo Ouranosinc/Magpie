@@ -60,7 +60,7 @@
                                 onchange="updateActiveServiceOptions()" required>
                             %for svc_type in service_types:
                                 <option value="${svc_type}"
-                                %if service_type == svc_type:
+                                %if (service_type or cur_svc_type) == svc_type:
                                     selected
                                 %endif
                                 >${svc_type}
