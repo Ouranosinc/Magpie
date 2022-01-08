@@ -17,6 +17,7 @@ if TYPE_CHECKING:
         AccessControlEntryType,
         AnyPermissionType,
         GroupPriority,
+        JSON,
         PermissionDict,
         ResolvablePermissionType,
         Str
@@ -37,18 +38,24 @@ class Permission(ExtendedEnum):
     WRITE = "write"
     ACCESS = "access"
     BROWSE = "browse"
-    # WPS permissions
+    # WFS/WMS/WPS permissions (https://www.ogc.org/standards/<OWS-type>)
     GET_CAPABILITIES = "getcapabilities"
     GET_MAP = "getmap"
     GET_FEATURE_INFO = "getfeatureinfo"
     GET_LEGEND_GRAPHIC = "getlegendgraphic"
     GET_METADATA = "getmetadata"
+    GET_PROPERTY_VALUE = "getpropertyvalue"
     GET_FEATURE = "getfeature"
+    GET_FEATURE_WITH_LOCK = "getfeaturewithlock"
     DESCRIBE_FEATURE_TYPE = "describefeaturetype"
     DESCRIBE_PROCESS = "describeprocess"
     EXECUTE = "execute"
     LOCK_FEATURE = "lockfeature"
     TRANSACTION = "transaction"
+    CREATE_STORED_QUERY = "createstoredquery"
+    DROP_STORED_QUERY = "dropstoredquery"
+    LIST_STORED_QUERIES = "liststoredqueries"
+    DESCRIBE_STORED_QUERIES = "describestoredqueries"
 
 
 class PermissionType(ExtendedEnum):
@@ -233,6 +240,7 @@ class PermissionSet(object):
         return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type, perm_reason)
 
     def like(self, other):
+        # type: (Any) -> bool
         """
         Evaluates if one permission is *similar* to another permission definition regardless of *modifiers*.
 
@@ -258,6 +266,7 @@ class PermissionSet(object):
         return perm
 
     def webhook_params(self):
+        # type: () -> JSON
         """
         Obtain JSON representation employed for :term:`Webhook` reference.
         """
