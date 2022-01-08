@@ -19,7 +19,7 @@ from magpie import __meta__
 from magpie.api import schemas as s
 from magpie.api.webhooks import webhook_update_error_status
 from magpie.constants import MAGPIE_ROOT, get_constant
-from magpie.models import RESOURCE_TYPE_DICT, Directory, Route, UserStatuses
+from magpie.models import RESOURCE_TYPE_DICT, Directory, File, Route, UserStatuses
 from magpie.permissions import (
     PERMISSION_REASON_DEFAULT,
     PERMISSION_REASON_MULTIPLE,
@@ -6004,6 +6004,182 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("permission_names", body)
         utils.check_val_type(body["permission_names"], list)
         utils.check_all_equal(body["permission_names"], expect_res_perms, any_order=True)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetResourceTypes_ServiceAccess(self):
+        utils.warn_version(self, "validate allowed nested children resource types structure", "3.21.0", skip=True)
+
+        utils.TestSetup.delete_TestService(self)
+        body = utils.TestSetup.create_TestService(self, override_service_type=ServiceAccess.service_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc_id = info["resource_id"]
+
+        path = "/resources/{}/types".format(svc_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_service_name)
+        utils.check_val_is_in(body["resource_type"], "service")
+        utils.check_val_is_in(body["children_resource_types"], [])
+        utils.check_val_is_in(body["children_resource_allowed"], False)
+        utils.check_val_is_in(body["root_service_id"], svc_id)
+        utils.check_val_is_in(body["root_service_name"], self.test_service_name)
+        utils.check_val_is_in(body["root_service_type"], ServiceAccess.service_type)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetResourceTypes_ServiceAPI(self):
+        utils.warn_version(self, "validate allowed nested children resource types structure", "3.21.0", skip=True)
+
+        utils.TestSetup.delete_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc_id = info["resource_id"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc_id)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res_id = info["resource_id"]
+
+        path = "/resources/{}/types".format(svc_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_service_name)
+        utils.check_val_is_in(body["resource_type"], "service")
+        utils.check_val_is_in(body["children_resource_types"], [self.test_resource_type])  # only routes under service
+        utils.check_val_is_in(body["children_resource_allowed"], True)
+        utils.check_val_is_in(body["root_service_id"], svc_id)
+        utils.check_val_is_in(body["root_service_name"], self.test_service_name)
+        utils.check_val_is_in(body["root_service_type"], self.test_service_type)
+
+        path = "/resources/{}/types".format(res_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_resource_name)
+        utils.check_val_is_in(body["resource_type"], "service")
+        utils.check_val_is_in(body["children_resource_types"], [self.test_resource_type])  # routes nested any depth
+        utils.check_val_is_in(body["children_resource_allowed"], True)
+        utils.check_val_is_in(body["root_service_id"], svc_id)
+        utils.check_val_is_in(body["root_service_name"], self.test_service_name)
+        utils.check_val_is_in(body["root_service_type"], self.test_service_type)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetResourceTypes_ServiceTHREDDS(self):
+        utils.warn_version(self, "validate allowed nested children resource types structure", "3.21.0", skip=True)
+
+        utils.TestSetup.delete_TestService(self)
+        res_names = [
+            "dir1",
+            "dir2",
+            "file1",
+        ]
+        dir1_name, dir2_name, file_name = res_names
+        res_types = [
+            Directory.resource_type_name,
+            Directory.resource_type_name,
+            File.resource_type_name,
+        ]
+        svc_id, dir1_id, dir2_id, file_id = utils.TestSetup.create_TestServiceResourceTree(
+            self,
+            override_service_type=ServiceTHREDDS.service_type,
+            override_resource_names=res_names,
+            override_resource_types=res_types
+        )
+
+        # nested file/dirs always allowed at any level expect under File
+        res_types_allowed = [Directory.resource_type_name, File.resource_type_name]
+
+        path = "/resources/{}/types".format(svc_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_service_name)
+        utils.check_val_is_in(body["resource_type"], "service")
+        utils.check_val_is_in(body["children_resource_types"], res_types_allowed)
+        utils.check_val_is_in(body["children_resource_allowed"], True)
+        utils.check_val_is_in(body["root_service_id"], svc_id)
+        utils.check_val_is_in(body["root_service_name"], self.test_service_name)
+        utils.check_val_is_in(body["root_service_type"], ServiceTHREDDS.service_type)
+
+        path = "/resources/{}/types".format(dir1_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], dir1_name)
+        utils.check_val_is_in(body["resource_type"], "service")
+        utils.check_val_is_in(body["children_resource_types"], res_types_allowed)
+        utils.check_val_is_in(body["children_resource_allowed"], True)
+        utils.check_val_is_in(body["root_service_id"], svc_id)
+        utils.check_val_is_in(body["root_service_name"], self.test_service_name)
+        utils.check_val_is_in(body["root_service_type"], ServiceTHREDDS.service_type)
+
+        path = "/resources/{}/types".format(dir2_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], dir2_name)
+        utils.check_val_is_in(body["resource_type"], "service")
+        utils.check_val_is_in(body["children_resource_types"], res_types_allowed)
+        utils.check_val_is_in(body["children_resource_allowed"], True)
+        utils.check_val_is_in(body["root_service_id"], svc_id)
+        utils.check_val_is_in(body["root_service_name"], self.test_service_name)
+        utils.check_val_is_in(body["root_service_type"], ServiceTHREDDS.service_type)
+
+        path = "/resources/{}/types".format(file_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], file_name)
+        utils.check_val_is_in(body["resource_type"], "service")
+        utils.check_val_is_in(body["children_resource_types"], [])
+        utils.check_val_is_in(body["children_resource_allowed"], False)
+        utils.check_val_is_in(body["root_service_id"], svc_id)
+        utils.check_val_is_in(body["root_service_name"], self.test_service_name)
+        utils.check_val_is_in(body["root_service_type"], ServiceTHREDDS.service_type)
 
 
 @runner.MAGPIE_TEST_UI

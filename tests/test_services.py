@@ -21,7 +21,15 @@ from sqlalchemy import inspect as sa_inspect
 from magpie import __meta__, models, owsrequest
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
-from magpie.services import ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceInterface, ServiceTHREDDS, ServiceWPS
+from magpie.services import (
+    ServiceAccess,
+    ServiceAPI,
+    ServiceGeoserver,
+    ServiceGeoserverWMS,
+    ServiceInterface,
+    ServiceTHREDDS,
+    ServiceWPS
+)
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML
 from tests import interfaces as ti
 from tests import runner, utils
@@ -979,6 +987,46 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             corresponding resources accessed through different endpoints and formats.
         """
         raise NotImplementedError  # FIXME: see https://github.com/Ouranosinc/Magpie/issues/360
+
+    @unittest.skip("not implemented")  # FIXME: not implemented
+    @pytest.mark.skip
+    @utils.mocked_get_settings
+    def test_ServiceGeoserver_effective_permissions(self):
+        """
+        Evaluates functionality of :class:`ServiceGeoserver` against a mocked `Magpie` adapter for `Twitcher`.
+
+        The :class:`ServiceGeoserver` implementation works as a combination of many `OWS` sub-services.
+        Validate that different resource types and distinct permissions can be simultaneously applied on them.
+        Effective permissions must be resolved with the appropriate `OWS` service accordingly with request parameters.
+
+        Legend::
+
+            dp: DescribeProcess permission (WPS Process)
+            gf: GetFeature permission (WFS Layer)
+            gi: GetFeatureInfo permission (WMS Layer)
+            A: allow
+            D: deny
+            M: match        (doesn't matter because service always directly referenced)
+            R: recursive    (doesn't matter because service always directly referenced)
+
+        Permissions Applied::
+                                        user        group               effective (reason)
+            Service1                    (a-A-R)                         a-A
+                Workspace1
+                    Layer1
+                    Layer2
+                    Process1
+                    Process2
+
+            Service2                                (a-A-M)             a-A
+            Service3                    (a-D-M)                         a-D
+            Service4                                (a-D-R)             a-D
+            Service5                    (a-A-R)     (a-D-M)             a-A (user > group)
+            Service6                                                    a-D (nothing defaults like explicit deny)
+        """
+        svc_type = ServiceGeoserver.service_type
+        svc1_name = "unittest-service-geoserver-1"
+        raise NotImplementedError
 
 
 @runner.MAGPIE_TEST_LOCAL
