@@ -33,23 +33,32 @@ CONDA_ENVS_DIR ?= $(CONDA_HOME)/envs
 CONDA_ENV_PATH := $(CONDA_ENVS_DIR)/$(CONDA_ENV_NAME)
 # allow pre-installed conda in Windows bash-like shell
 ifeq ($(findstring MINGW,$(OS_NAME)),MINGW)
-  CONDA_BIN_DIR ?= $(CONDA_HOME)/Scripts
+  CONDA_BIN := $(shell which conda 2>/dev/null)
+  ifneq ("$(CONDA_BIN)","")
+    CONDA_BIN_DIR := $(shell dirname "$(CONDA_BIN)")
+    CONDA_HOME := $(shell dirname "$(CONDA_BIN_DIR)")
+  else
+    CONDA_BIN_DIR ?= $(CONDA_HOME)/Scripts
+  endif
 else
   CONDA_BIN_DIR ?= $(CONDA_HOME)/bin
 endif
 CONDA_BIN := $(CONDA_BIN_DIR)/conda
 CONDA_ENV_REAL_TARGET_PATH := $(realpath $(CONDA_ENV_PATH))
 CONDA_ENV_REAL_ACTIVE_PATH := $(realpath ${CONDA_PREFIX})
+CONDA_SETUP := 1
 
 # environment already active - use it directly
 ifneq ("$(CONDA_ENV_REAL_ACTIVE_PATH)", "")
   CONDA_ENV_MODE := [using active environment]
   CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_ACTIVE_PATH))
   CONDA_CMD :=
+  CONDA_SETUP := 0
 endif
 # environment not active but it exists - activate and use it
 ifneq ($(CONDA_ENV_REAL_TARGET_PATH), "")
   CONDA_ENV_NAME := $(notdir $(CONDA_ENV_REAL_TARGET_PATH))
+  CONDA_SETUP := 0
 endif
 # environment not active and not found - create, activate and use it
 ifeq ("$(CONDA_ENV_NAME)", "")
@@ -59,10 +68,10 @@ endif
 ifeq ("$(CONDA_ENV_REAL_ACTIVE_PATH)", "")
   CONDA_ENV_MODE := [will activate environment]
   CONDA_CMD := source "$(CONDA_BIN_DIR)/activate" "$(CONDA_ENV_NAME)";
+  CONDA_SETUP := 0
 endif
 # override conda command as desired
 CONDA_COMMAND ?= undefined
-CONDA_SETUP := 1
 ifneq ("$(CONDA_COMMAND)","undefined")
   CONDA_SETUP := 0
   CONDA_ENV_MODE := [using overridden command]
@@ -722,14 +731,14 @@ coverage-show: $(COVERAGE_HTML_IDX)		## display HTML webpage of generated covera
 .PHONY: conda-base
 conda-base:	 ## obtain a base distribution of conda if missing and required
 	@[ $(CONDA_SETUP) -eq 0 ] && echo "Conda setup disabled." || ( ( \
-		test -f "$(CONDA_HOME)/bin/conda" || test -d "$(DOWNLOAD_CACHE)" || ( \
+		test -f "$(CONDA_BIN)" || test -d "$(DOWNLOAD_CACHE)" || ( \
 			echo "Creating download directory: $(DOWNLOAD_CACHE)" && \
 			mkdir -p "$(DOWNLOAD_CACHE)") ) ; ( \
-		test -f "$(CONDA_HOME)/bin/conda" || \
+		test -f "$(CONDA_BIN)" || \
 		test -f "$(DOWNLOAD_CACHE)/$(FN)" || ( \
 			echo "Fetching conda distribution from: $(CONDA_URL)/$(FN)" && \
 		 	curl "$(CONDA_URL)/$(FN)" --insecure --location --output "$(DOWNLOAD_CACHE)/$(FN)") ) ; ( \
-		test -f "$(CONDA_HOME)/bin/conda" || ( \
+		test -f "$(CONDA_BIN)" || ( \
 		  	bash "$(DOWNLOAD_CACHE)/$(FN)" -b -u -p "$(CONDA_HOME)" && \
 		 	echo "Make sure to add '$(CONDA_HOME)/bin' to your PATH variable in '~/.bashrc'.") ) \
 	)
@@ -737,11 +746,11 @@ conda-base:	 ## obtain a base distribution of conda if missing and required
 .PHONY: conda-cfg
 conda_config: conda-base	## update conda package configuration
 	@echo "Updating conda configuration..."
-	@"$(CONDA_HOME)/bin/conda" config --set ssl_verify true
-	@"$(CONDA_HOME)/bin/conda" config --set use_pip true
-	@"$(CONDA_HOME)/bin/conda" config --set channel_priority true
-	@"$(CONDA_HOME)/bin/conda" config --set auto_update_conda false
-	@"$(CONDA_HOME)/bin/conda" config --add channels defaults
+	@"$(CONDA_BIN)" config --set ssl_verify true
+	@"$(CONDA_BIN)" config --set use_pip true
+	@"$(CONDA_BIN)" config --set channel_priority true
+	@"$(CONDA_BIN)" config --set auto_update_conda false
+	@"$(CONDA_BIN)" config --add channels defaults
 
 # the conda-env target's dependency on conda-cfg above was removed, will add back later if needed
 
@@ -750,5 +759,5 @@ conda-env: conda-base	## create conda environment if missing and required
 	@[ $(CONDA_SETUP) -eq 0 ] || ( \
 		test -d "$(CONDA_ENV_PATH)" || ( \
 			echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
-		 	"$(CONDA_HOME)/bin/conda" create -y -n "$(CONDA_ENV_NAME)" python=$(PYTHON_VERSION)) \
+		 	"$(CONDA_BIN)" create -y -n "$(CONDA_ENV_NAME)" python=$(PYTHON_VERSION)) \
 		)
