@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         AccessControlListType,
         PermissionRequested,
         ResourceRequested,
+        ResourceTypePermissions,
         ServiceConfiguration,
         ServiceOrResourceType,
         Str
@@ -49,7 +50,7 @@ if TYPE_CHECKING:
 class ServiceMeta(type):
     @property
     def resource_types(cls):
-        # type: (Type[ServiceInterface]) -> List[models.Resource]
+        # type: (Type[ServiceInterface]) -> List[Type[models.Resource]]
         """
         Allowed resources type classes under the service.
         """
@@ -99,7 +100,7 @@ class ServiceInterface(object):
     Permission allowed directly on the service as top-level resource.
     """
 
-    resource_types_permissions = {}  # type: Dict[Type[models.Resource], List[Permission]]
+    resource_types_permissions = {}  # type: ResourceTypePermissions
     """
     Mapping of resource types to lists of permissions defining allowed children resource permissions under the service.
     """
@@ -392,7 +393,7 @@ class ServiceInterface(object):
         """
         Obtains the allowed permissions of the service's child resource fetched by resource type name.
         """
-        for res in cls.resource_types_permissions:  # type: Type[models.Resource]
+        for res in cls.resource_types_permissions:
             if res.resource_type_name == resource_type_name:
                 return cls.resource_types_permissions[res]
         return []
@@ -891,7 +892,7 @@ class ServiceGeoserverBase(ServiceInterface):
     @property
     @abc.abstractmethod
     def resource_types_permissions(self):
-        # type: () -> Dict[Type[models.Resource], List[Permission]]
+        # type: () -> ResourceTypePermissions
         """
         Explicit permissions provided for resources for a given `OWS` implementation.
         """
@@ -916,7 +917,7 @@ class ServiceGeoserverBase(ServiceInterface):
         Parse the requested resource down to the applicable :class:`models.Workspace`.
 
         .. note::
-            Further child resource processing must be accomplished by the derived implementation based on their
+            Further child resource processing must be accomplished by the derived implementation as needed.
         """
         path_parts = self._get_request_path_parts()
         if not path_parts:
@@ -1288,11 +1289,16 @@ class ServiceGeoserverMeta(ServiceMeta):
 
     @property
     def resource_types_permissions(self):
-        # type: () -> Dict[models.Resource, List[Permission]]
+        # type: () -> ResourceTypePermissions
         perms = {}
         for svc in self.supported_ows:
             if issubclass(svc, ServiceOWS) and hasattr(svc, "resource_types_permissions"):
-                perms.update(svc.resource_types_permissions)
+                svc_res_perms = svc.resource_types_permissions
+                for res_type, res_perms in svc_res_perms.items():
+                    if res_type in perms:
+                        perms[res_type] = list(set(perms[res_type]) | set(res_perms))
+                    else:
+                        perms[res_type] = list(res_perms)
         return perms
 
     @property
@@ -1323,6 +1329,11 @@ class ServiceGeoserver(ServiceOWS):
             models.Workspace.resource_type_name,
             models.Layer.resource_type_name,
         ),
+        # note:
+        #   In the context of Geoserver, WPS are applied on available resources (WFS, WMS, etc.)
+        #   For this reason, the Process also needs scoped Workspace access to work on them,
+        #   but the Workspace name MUST be in the path (identifier=<WORKSPACE>:<PROCESS_ID>) does not work.
+        #   Without the Workspace scope in the path, 'identifier' parameter resolves as if it was unspecified.
         "{}/{}/{}".format(
             models.Service.resource_type_name,
             models.Workspace.resource_type_name,

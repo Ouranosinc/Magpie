@@ -85,6 +85,7 @@ if TYPE_CHECKING:
 
     ResourceRequested = Optional[Tuple[ServiceOrResourceType, bool]]
     PermissionRequested = Optional[Union[Permission, Collection[Permission]]]
+    ResourceTypePermissions = Dict[Type[models.Resource], List[Permission]]
 
     # note:
     #   For all following items 'Settings' suffix refer to loaded definitions AFTER resolution.
