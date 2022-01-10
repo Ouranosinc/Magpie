@@ -14,10 +14,10 @@ if TYPE_CHECKING:
 
     from magpie import models
     from magpie.typedefs import (
+        JSON,
         AccessControlEntryType,
         AnyPermissionType,
         GroupPriority,
-        JSON,
         PermissionDict,
         ResolvablePermissionType,
         Str

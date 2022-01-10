@@ -888,7 +888,7 @@ class ExtendedEnum(Enum):
 
         Title use the original enum element name with capitalization considering underscores for separate words.
         """
-        return self.name.title().replace("_", "")
+        return self.name.title().replace("_", "")  # pylint: disable=E1101,no-member
 
 
 # note: must not define any enum value here to allow inheritance by subclasses

@@ -84,18 +84,20 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     ax.verify_param(resource_type, is_in=True, http_error=HTTPForbidden,
                     param_name="resource_type", param_compare=root_svc_cls.resource_type_names,
                     msg_on_fail="Invalid 'resource_type' specified for service type '{}'".format(root_service.type))
-    ax.verify_param(root_svc_cls.validate_nested_resource_type(parent_resource, resource_type), is_true=True,
-                    param_content={
-                        "resource_structure_allowed": root_svc_cls.child_structure_allowed,
-                        "resource_types_allowed": [
-                            res.resource_type for res in root_svc_cls.nested_resource_allowed(parent_resource)
-                        ]
-                    },
-                    http_error=HTTPUnprocessableEntity,
-                    msg_on_fail=(
-                        "Invalid 'resource_type' specified for service type '{}' is not allowed at this position "
-                        "under '{}' resource.".format(root_service.type, parent_type)
-                    ))
+    ax.verify_param(
+        root_svc_cls.validate_nested_resource_type(parent_resource, resource_type), is_true=True,
+        param_content={
+            "resource_structure_allowed": root_svc_cls.child_structure_allowed,
+            "resource_types_allowed": [
+                res.resource_type for res in root_svc_cls.nested_resource_allowed(parent_resource)
+            ]
+        },
+        http_error=HTTPUnprocessableEntity,
+        msg_on_fail=(
+            "Invalid 'resource_type' specified for service type '{}' is not allowed at this position "
+            "under '{}' resource.".format(root_service.type, parent_type)
+        )
+    )
     return root_service
 
 

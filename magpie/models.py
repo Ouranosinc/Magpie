@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import AnySettingsContainer, AccessControlListType, GroupPriority, JSON, Str
+    from magpie.typedefs import JSON, AccessControlListType, AnySettingsContainer, GroupPriority, Str
 
     # for convenience of methods using both, using strings because of future definition
     AnyUser = Union["User", "UserPending"]

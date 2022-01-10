@@ -1035,6 +1035,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         l2_name = "layer2"
         p1_name = "process1"
         p2_name = "process2"
+        p3_name = "process3"
 
         svc1_id, w1_id = utils.TestSetup.create_TestServiceResourceTree(
             self,
@@ -1055,13 +1056,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             override_resource_type=models.Layer.resource_type_name
         )
         l2_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
-        info = utils.TestSetup.create_TestResource(
-            self,
-            parent_resource_id=w1_id,
-            override_resource_name=p1_name,
-            override_resource_type=models.Process.resource_type_name
-        )
-        p1_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
         info = utils.TestSetup.create_TestResource(
             self,
             parent_resource_id=w1_id,
@@ -1089,8 +1083,9 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         svc_path = "/ows/proxy/{}".format(svc1_name)
 
         def _msg(_path, _params):
-            _qs = "&".join("{}={}".format(k, v) for k, v in _params.items()) if _params else ""
-            return "Using combination [{}, {}]".format("GET", _path, _qs)
+            _qs = "&".join("{}={}".format(k, v) for k, v in _params.items())
+            path_qs = "{}?{}".format(_path, _qs) if _qs else _path
+            return "Using combination [{}, {}]".format("GET", path_qs)
 
         # request for any OWS
         #   <HOST>/geoserver[/<WORKSPACE>]/<OWS>?request=GetCapabilities
@@ -1201,13 +1196,13 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         # valid WPS requests (workspace only expected to work when in path)
         params = {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p1_name}
         req = self.mock_request(wps_path, method="GET", params=params)
+        utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wps_path, params))
+        params = {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p2_name}
+        req = self.mock_request(wps_path, method="GET", params=params)
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wps_path, params))
-        params = {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p1_name}
+        params = {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p3_name}
         req = self.mock_request(wps_path, method="GET", params=params)
         utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wps_path, params))
-        params = {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p1_name}
-        req = self.mock_request(wps_path, method="GET", params=params)
-        utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wps_path, params))
 
 
 @runner.MAGPIE_TEST_LOCAL

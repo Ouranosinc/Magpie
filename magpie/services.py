@@ -866,7 +866,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
         return found_child, target
 
 
-class ServiceGeoserverBase(ServiceInterface):
+class ServiceGeoserverBase(ServiceOWS):
     """
     Provides basic configuration parameters and functionalities shared by `Geoserver` implementations.
     """
@@ -1270,28 +1270,28 @@ class ServiceGeoserverMeta(ServiceMeta):
     }
 
     @property
-    def params_expected(self):
+    def params_expected(cls):
         # type: () -> List[Str]
         params = set()
-        for svc in self.supported_ows:
+        for svc in cls.supported_ows:  # pylint: disable=E1133,not-an-iterable
             if issubclass(svc, ServiceOWS) and hasattr(svc, "params_expected"):
                 params.update(svc.params_expected)
         return list(params)
 
     @property
-    def permissions(self):
+    def permissions(cls):
         # type: () -> List[Permission]
         perms = set()
-        for svc in self.supported_ows:
+        for svc in cls.supported_ows:  # pylint: disable=E1133,not-an-iterable
             if issubclass(svc, ServiceOWS) and hasattr(svc, "permissions"):
                 perms.update(svc.permissions)
         return list(perms)
 
     @property
-    def resource_types_permissions(self):
+    def resource_types_permissions(cls):
         # type: () -> ResourceTypePermissions
         perms = {}
-        for svc in self.supported_ows:
+        for svc in cls.supported_ows:  # pylint: disable=E1133,not-an-iterable
             if issubclass(svc, ServiceOWS) and hasattr(svc, "resource_types_permissions"):
                 svc_res_perms = svc.resource_types_permissions
                 for res_type, res_perms in svc_res_perms.items():
@@ -1302,9 +1302,9 @@ class ServiceGeoserverMeta(ServiceMeta):
         return perms
 
     @property
-    def supported_ows(self):
+    def supported_ows(cls):
         # type: () -> Set[Type[ServiceOWS]]
-        return set(self.service_map.values())
+        return set(cls.service_map.values())
 
 
 @six.add_metaclass(ServiceGeoserverMeta)
