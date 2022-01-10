@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import math
     import typing
-    from typing import Any, AnyStr, Dict, Iterable, List, Optional, Tuple, Type, Union
+    from typing import Any, AnyStr, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
 
     import six
     from pyramid.config import Configurator
@@ -82,6 +82,9 @@ if TYPE_CHECKING:
     AnyAccessPrincipalType = Union[Str, Iterable[Str]]
     AccessControlEntryType = Union[Tuple[Str, Str, Str], Str]
     AccessControlListType = List[AccessControlEntryType]
+
+    ResourceRequested = Optional[Tuple[ServiceOrResourceType, bool]]
+    PermissionRequested = Optional[Union[Permission, Collection[Permission]]]
 
     # note:
     #   For all following items 'Settings' suffix refer to loaded definitions AFTER resolution.

@@ -35,15 +35,17 @@ from magpie.utils import ExtendedEnum, FlexibleNameEnum, decompose_enum_flags, g
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, Iterable, List, Optional, Set, Type, Union
+    from typing import Any, Dict, Iterable, List, Optional, Set, Type, Union
 
+    from pyramid.request import Request
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import JSON, AccessControlListType, GroupPriority, Str
+    from magpie.typedefs import AnySettingsContainer, AccessControlListType, GroupPriority, JSON, Str
 
     # for convenience of methods using both, using strings because of future definition
     AnyUser = Union["User", "UserPending"]
+    AnyUserStatus = Union["UserGroupStatus", int, Str]
 
 # backward compat enums
 try:
@@ -57,6 +59,7 @@ Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
 
 def get_session_callable(request):
+    # type: (Request) -> Session
     return request.db
 
 
@@ -64,6 +67,7 @@ class Group(GroupMixin, Base):
     _priority = None
 
     def get_member_count(self, db_session=None):
+        # type: (Optional[Session]) -> int
         return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
 
     @declared_attr
@@ -262,6 +266,7 @@ class UserPending(Base):
         return []
 
     def get_groups_by_status(self, status, db_session=None):
+        # type: (UserGroupStatus, Session) -> List[Str]
         """
         Pending user is not a member of any group.
 
@@ -339,6 +344,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
 
     @classmethod
     def _get_one(cls, status):
+        # type: (AnyUserStatus) -> Optional[UserStatuses]
         # matches the literal number, the direct enum object, exact name, or flexible name (inherited)
         status = super(UserStatuses, cls).get(int(status) if str.isnumeric(str(status)) else status)
         if status:
@@ -388,6 +394,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
 
     @classmethod
     def all(cls):
+        # type: () -> UserStatuses
         """
         Representation of all flags combined.
         """
@@ -537,6 +544,7 @@ class RootFactory(object):
     __parent__ = ""
 
     def __init__(self, request):
+        # type: (Request) -> None
         self.request = request
 
     @property
@@ -566,10 +574,12 @@ class RootFactory(object):
 
 class UserFactory(RootFactory):
     def __init__(self, request):
+        # type: (Request) -> None
         super(UserFactory, self).__init__(request)
         self.path_user = None
 
     def __getitem__(self, user_name):
+        # type: (Str) -> None
         context = UserFactory(self.request)
         if user_name == get_constant("MAGPIE_LOGGED_USER", self.request):
             self.path_user = self.request.user
@@ -921,10 +931,12 @@ class TemporaryToken(BaseModel, Base):
             self._pending_user = user
 
     def url(self, settings=None):
+        # type: (AnySettingsContainer) -> Str
         from magpie.api import schemas as s
         return get_magpie_url(settings) + s.TemporaryUrlAPI.path.format(token=self.token)
 
     def expired(self):
+        # type: () -> bool
         expire = int(get_constant("MAGPIE_TOKEN_EXPIRE", raise_missing=False, raise_not_set=False, default_value=86400))
         return (datetime.datetime.utcnow() - self.created) > datetime.timedelta(seconds=expire)
 
@@ -969,6 +981,7 @@ for res in RESOURCE_TYPES:
 
 
 def resource_factory(**kwargs):
+    # type: (Any) -> Resource
     resource_type = ax.evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
                                      msg_on_fail="kwargs do not contain required 'resource_type'",
                                      content={"kwargs": repr(kwargs)})
@@ -979,6 +992,7 @@ def resource_factory(**kwargs):
 
 
 def find_children_by_name(child_name, parent_id, db_session):
+    # type: (Str, Optional[int], Session) -> Optional[Resource]
     tree_struct = RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
     tree_level_filtered = [node.Resource for node in list(tree_struct) if
                            node.Resource.resource_name.lower() == child_name.lower()]

@@ -46,6 +46,8 @@ Bug Fixes
   custom configuration, ``ServiceTHREDDS`` implementation would not report their default configuration and would
   instead return ``null``, making it difficult to know from the API if default or no configuration was being applied
   for a given ``Service``.
+* Fix `Effective Resolution` of ``Permission`` applied for ``ServiceGeoserverWMS`` to consider ``Scope`` modifier
+  of ``Service`` and ``Workspace`` for access to be resolved at the ``Layer`` level.
 
 `3.20.0 <https://github.com/Ouranosinc/Magpie/tree/3.20.0>`_ (2022-01-06)
 ------------------------------------------------------------------------------------

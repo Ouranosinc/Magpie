@@ -36,7 +36,14 @@ if TYPE_CHECKING:
 
     from pyramid.request import Request
 
-    from magpie.typedefs import AccessControlListType, ServiceConfiguration, ServiceOrResourceType, Str
+    from magpie.typedefs import (
+        AccessControlListType,
+        PermissionRequested,
+        ResourceRequested,
+        ServiceConfiguration,
+        ServiceOrResourceType,
+        Str
+    )
 
 
 class ServiceMeta(type):
@@ -78,10 +85,14 @@ class ServiceMeta(type):
 
 @six.add_metaclass(ServiceMeta)
 class ServiceInterface(object):
-    service_type = None  # type: Optional[Str]  # MUST be overridden
-    """
-    Service type identifier (required, unique across implementation).
-    """
+    @property
+    @abc.abstractmethod
+    def service_type(self):
+        # type: () -> Optional[Str]
+        """
+        Service type identifier (required, unique across implementation).
+        """
+        raise NotImplementedError
 
     permissions = []  # type: List[Permission]
     """
@@ -146,7 +157,7 @@ class ServiceInterface(object):
 
     @abc.abstractmethod
     def permission_requested(self):
-        # type: () -> Optional[Union[Permission, Collection[Permission]]]
+        # type: () -> PermissionRequested
         """
         Defines how to interpret the incoming request into :class:`Permission` definitions for the given service.
 
@@ -167,7 +178,7 @@ class ServiceInterface(object):
 
     @abc.abstractmethod
     def resource_requested(self):
-        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
+        # type: () -> ResourceRequested
         """
         Defines how to interpret the incoming request into the targeted :class:`model.Resource` for the given service.
 
@@ -854,14 +865,121 @@ class ServiceNCWMS2(ServiceBaseWMS):
         return found_child, target
 
 
-class ServiceGeoserverWMS(ServiceBaseWMS):
+class ServiceGeoserverBase(ServiceInterface):
+    """
+    Provides basic configuration parameters and functionalities shared by `Geoserver` implementations.
+    """
+
+    @property
+    @abc.abstractmethod
+    def service_base(self):
+        # type: () -> Str
+        """
+        Name of the base `OWS` functionality serviced by `Geoserver`.
+        """
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def layer_param(self):
+        # type: () -> Str
+        """
+        Name of the request query parameter to access requested :class:`models.Layer` children resource.
+        """
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def resource_types_permissions(self):
+        # type: () -> Dict[Type[models.Resource], List[Permission]]
+        """
+        Explicit permissions provided for resources for a given `OWS` implementation.
+        """
+        raise NotImplementedError
+
+    # only workspace directly followed by layers
+    child_structure_allowed = [
+        "{}/{}".format(
+            models.Service.resource_type_name,
+            models.Workspace.resource_type_name,
+        ),
+        "{}/{}/{}".format(
+            models.Service.resource_type_name,
+            models.Workspace.resource_type_name,
+            models.Layer.resource_type_name,
+        ),
+    ]
+
+    def resource_requested(self):
+        # type: () -> ResourceRequested
+        """
+        Parse the requested resource down to the applicable :class:`models.Workspace`.
+
+        .. note::
+            Further child resource processing must be accomplished by the derived implementation based on their
+        """
+        path_parts = self._get_request_path_parts()
+        if not path_parts:
+            return self.service, False
+        permission = self.permission_requested()
+        parts_lower = [part.lower() for part in path_parts]
+        if parts_lower and parts_lower[0] == "":
+            path_parts = path_parts[1:]
+            parts_lower = parts_lower[1:]
+        if parts_lower and parts_lower[0] == "geoserver":
+            path_parts = path_parts[1:]
+            parts_lower = parts_lower[1:]
+        workspace_name = None
+        layer_name = None
+        if len(parts_lower) > 1 and parts_lower[1] == self.service_base:
+            workspace_name = path_parts[0]
+        if permission == Permission.GET_CAPABILITIES:
+            # here we need to check the workspace in the path
+            #   /geoserver/<OWS>?request=getcapabilities (get all workspaces)
+            #   /geoserver/<WORKSPACE>/<OWS>?request=getcapabilities (only for the workspace in the path)
+            if (
+                not path_parts or
+                self.service_base not in parts_lower or
+                (len(parts_lower) == 1 and parts_lower[0] == self.service_base)
+            ):
+                return self.service, True
+        else:
+            # following requests lead to the same resolution, need to check the workspace in the layer
+            #   /geoserver/<WORKSPACE>/<OWS>?<LAYER_PARAM>=[<WORKSPACE>:]<LAYER_NAME>&request=<PERMISSION>
+            #   /geoserver/<OWS>?<LAYER_PARAM>=<WORKSPACE>:<LAYER_NAME>&request=<PERMISSION>
+            if not workspace_name:
+                layer_name = self.parser.params[self.layer_param] or ""
+                if ":" in layer_name:  # if missing, consider layer name as not scoped under workspace
+                    workspace_name, layer_name = layer_name.rsplit(":", 1)
+        if not workspace_name:
+            return self.service, False
+        session = get_connected_session(self.request)
+        workspace = models.find_children_by_name(child_name=workspace_name,
+                                                 parent_id=self.service.resource_id,
+                                                 db_session=session)
+        if workspace:
+            if not layer_name:
+                return workspace, False
+            layer = models.find_children_by_name(child_name=layer_name,
+                                                 parent_id=workspace.resource_id,
+                                                 db_session=session)
+            if layer:
+                return layer, True
+            return workspace, False
+        return self.service, False
+
+
+class ServiceGeoserverWMS(ServiceBaseWMS, ServiceGeoserverBase):
     """
     Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``GeoServer``.
 
     .. seealso::
         https://docs.geoserver.org/latest/en/user/services/wms/reference.html
     """
+    service_base = "wms"
     service_type = "geoserverwms"
+
+    layer_param = "layers"
 
     permissions = [
         Permission.GET_CAPABILITIES,
@@ -879,65 +997,9 @@ class ServiceGeoserverWMS(ServiceBaseWMS):
         models.Layer: permissions,
     }
 
-    # only workspace directly followed by layers
-    child_structure_allowed = [
-        "{}/{}".format(
-            models.Service.resource_type_name,
-            models.Workspace.resource_type_name,
-        ),
-        "{}/{}/{}".format(
-            models.Service.resource_type_name,
-            models.Workspace.resource_type_name,
-            models.Layer.resource_type_name,
-        ),
-    ]
-
     def resource_requested(self):
-        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
-        path_parts = self._get_request_path_parts()
-        if not path_parts:
-            return self.service, False
-        permission = self.permission_requested()
-        parts_lower = [part.lower() for part in path_parts]
-        if parts_lower and parts_lower[0] == "":
-            path_parts = path_parts[1:]
-            parts_lower = parts_lower[1:]
-        if parts_lower and parts_lower[0] == "geoserver":
-            path_parts = path_parts[1:]
-            parts_lower = parts_lower[1:]
-        workspace_name = None
-        layer_name = None
-        if len(parts_lower) > 1 and parts_lower[1] == "wms":
-            workspace_name = path_parts[0]
-        if permission == Permission.GET_CAPABILITIES:
-            # here we need to check the workspace in the path
-            #   /geoserver/wms?request=getcapabilities (get all workspaces)
-            #   /geoserver/WATERSHED/wms?request=getcapabilities (only for the workspace in the path)
-            if not path_parts or "wms" not in parts_lower or (len(parts_lower) == 1 and parts_lower[0] == "wms"):
-                return self.service, True
-        else:
-            # those two request lead to the same thing so, here we need to check the workspace in the layer
-            #   /geoserver/WATERSHED/wms?layers=WATERSHED:BV_1NS&request=getmap
-            #   /geoserver/wms?layers=WATERERSHED:BV1_NS&request=getmap
-            if not workspace_name:
-                layer_name = self.parser.params["layers"] or ""
-                workspace_name = layer_name.split(":")[0]
-        if not workspace_name:
-            return self.service, False
-        session = get_connected_session(self.request)
-        workspace = models.find_children_by_name(child_name=workspace_name,
-                                                 parent_id=self.service.resource_id,
-                                                 db_session=session)
-        if workspace:
-            if not layer_name:
-                return workspace, True
-            layer = models.find_children_by_name(child_name=layer_name,
-                                                 parent_id=workspace.resource_id,
-                                                 db_session=session)
-            if layer:
-                return layer, True
-            return workspace, False
-        return self.service, False
+        # type: () -> ResourceRequested
+        return ServiceGeoserverBase.resource_requested(self)
 
 
 class ServiceAccess(ServiceInterface):
@@ -948,9 +1010,11 @@ class ServiceAccess(ServiceInterface):
     resource_types_permissions = {}
 
     def resource_requested(self):
+        # type: () -> ResourceRequested
         return self.service, True
 
     def permission_requested(self):
+        # type: () -> PermissionRequested
         return Permission.ACCESS
 
 
@@ -967,7 +1031,7 @@ class ServiceAPI(ServiceInterface):
     }
 
     def resource_requested(self):
-        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
+        # type: () -> ResourceRequested
         route_parts = self._get_request_path_parts()
         if not route_parts:
             return self.service, True
@@ -987,6 +1051,7 @@ class ServiceAPI(ServiceInterface):
         return route_found, route_target
 
     def permission_requested(self):
+        # type: () -> PermissionRequested
         if self.request.method.upper() in ["GET", "HEAD"]:
             return Permission.READ
         return Permission.WRITE
@@ -998,16 +1063,19 @@ class ServiceWFS(ServiceOWS):
 
     .. seealso::
         https://www.ogc.org/standards/wfs (OpenGIS WFS 2.0.0 implementation)
+        - https://docs.geoserver.org/latest/en/user/services/wfs/reference.html
     """
     service_type = "wfs"
 
     permissions = [
+        # v1.0.0
         Permission.GET_CAPABILITIES,
         Permission.GET_FEATURE,
-        Permission.GET_FEATURE_WITH_LOCK,
         Permission.DESCRIBE_FEATURE_TYPE,
         Permission.LOCK_FEATURE,
         Permission.TRANSACTION,
+        # v2.0.0 only
+        Permission.GET_FEATURE_WITH_LOCK,
         Permission.CREATE_STORED_QUERY,
         Permission.DROP_STORED_QUERY,
         Permission.LIST_STORED_QUERIES,
@@ -1027,11 +1095,17 @@ class ServiceWFS(ServiceOWS):
     }
 
     def resource_requested(self):
+        # type: () -> ResourceRequested
         if not self.parser.params["typenames"]:
             return self.service, False
         names = self.parser.params["typenames"]  # can be comma-separated or single layer
-        layer = names.split(",")[0]  # FIXME: multi-resource not supported, must update effective permissions handling
+        layer = names.split(",")
         if layer:
+            # FIXME: multi-resource not supported, must update effective permissions handling
+            if len(layer) > 1:
+                LOGGER.warning("Multiple WFS layers access not implemented, considering access using parent workspace.")
+                return self.service, False
+            layer = layer[0]
             session = get_connected_session(self.request)
             layer_res = models.find_children_by_name(child_name=layer,
                                                      parent_id=self.service.resource_id,
@@ -1040,6 +1114,35 @@ class ServiceWFS(ServiceOWS):
                 return layer_res, True
             return self.service, False
         return self.service, True   # no children resource, so can only be the service
+
+
+class ServiceGeoserverWFS(ServiceWFS, ServiceGeoserverBase):
+    """
+    Service that represents a ``Web Feature Service`` endpoint with functionalities specific to ``GeoServer``.
+
+    .. seealso::
+        https://docs.geoserver.org/latest/en/user/services/wfs/reference.html
+    """
+    service_base = "wfs"
+    service_type = "geoserverwfs"
+
+    layer_param = "typenames"
+
+    permissions = ServiceWFS.permissions + [
+        # v1.1.0 only
+        Permission.GET_GML_OBJECT,
+        # v2.0.0 only
+        Permission.GET_PROPERTY_VALUE
+    ]
+
+    resource_types_permissions = {
+        models.Workspace: permissions,
+        models.Layer: permissions,
+    }
+
+    def resource_requested(self):
+        # type: () -> ResourceRequested
+        return ServiceGeoserverBase.resource_requested(self)
 
 
 class ServiceTHREDDS(ServiceInterface):
@@ -1101,7 +1204,7 @@ class ServiceTHREDDS(ServiceInterface):
             return None
 
     def resource_requested(self):
-        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
+        # type: () -> ResourceRequested
         path_parts = self.get_path_parts()
 
         # handle optional prefix as targeting the service directly
@@ -1137,6 +1240,7 @@ class ServiceTHREDDS(ServiceInterface):
         return found_resource, target
 
     def permission_requested(self):
+        # type: () -> PermissionRequested
         cfg = self.get_config()
         path_parts = self.get_path_parts()
         path_prefix = None  # in case of no `<prefix>`, simulate as `null`
@@ -1159,10 +1263,19 @@ class ServiceGeoserverMeta(ServiceMeta):
     Mapping and grouping of property definitions for ``GeoServer`` services from distinct `OWS` implementations.
     """
     service_map = {
-        "wfs": ServiceWFS,
+        "wfs": ServiceGeoserverWFS,
         "wms": ServiceGeoserverWMS,
         "wps": ServiceWPS,
     }
+
+    @property
+    def params_expected(self):
+        # type: () -> List[Str]
+        params = set()
+        for svc in self.supported_ows:
+            if issubclass(svc, ServiceOWS) and hasattr(svc, "params_expected"):
+                params.update(svc.params_expected)
+        return list(params)
 
     @property
     def permissions(self):
@@ -1197,11 +1310,6 @@ class ServiceGeoserver(ServiceOWS):
         https://docs.geoserver.org/stable/en/user/services/index.html
     """
     service_type = "geoserver"
-
-    params_expected = [
-        "request",
-        "service"
-    ]
 
     # only allow workspace directly under service
     # then, only layer or process under that workspace
@@ -1265,14 +1373,14 @@ class ServiceGeoserver(ServiceOWS):
         return type(self).service_map[svc]
 
     def resource_requested(self):
-        # type: () -> Optional[Tuple[ServiceOrResourceType, bool]]
+        # type: () -> ResourceRequested
         svc = self.service_requested()
         if not svc:
             return None
         return svc(self.service, self.request).resource_requested()
 
     def permission_requested(self):
-        # type: () -> Optional[Union[Permission, Collection[Permission]]]
+        # type: () -> PermissionRequested
         svc = self.service_requested()
         if not svc:
             return None
@@ -1283,6 +1391,7 @@ SERVICE_TYPES = frozenset([
     ServiceAccess,
     ServiceAPI,
     ServiceGeoserver,
+    ServiceGeoserverWFS,
     ServiceGeoserverWMS,
     ServiceNCWMS2,
     ServiceTHREDDS,
@@ -1311,6 +1420,7 @@ def service_factory(service, request):
                     msg_on_fail="Undefined service type mapping to service object.")
 
     def _make_service(_typ, _svc, _req):
+        # type: (Str, models.Service, Request) -> ServiceInterface
         try:
             return SERVICE_TYPE_DICT[_typ](_svc, _req)
         except Exception as exc:

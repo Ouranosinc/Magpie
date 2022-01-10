@@ -618,8 +618,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             Service1                                    (c-A-R)         c-A, m-D
                 Workspace1              (c-D-M)                         c-D, m-D
                 Workspace2              (m-A-M)                         c-A, m-A
+                    [Layer]                                             c-A, m-D
             Service2                                    (m-A-R)         c-D, m-A
                 Workspace3                              (c-A-M)         c-A, m-A
+                    [Layer]                                             c-A, m-A
         """
         svc1_name = "unittest-service-geoserverwms1"
         svc2_name = "unittest-service-geoserverwms2"
@@ -665,15 +667,17 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
             # GetCapabilities of specific Workspace
+            # GetCapabilities is always applicable on Service only
+            #   allow/deny applied on children resources should not impact result according to permission on service
             path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc1_name, prefix, res1_name)
             req = self.mock_request(path, method="GET")
-            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+            utils.check_no_raise(lambda: self.ows.check_request(req))
             path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc1_name, prefix, res2_name)
             req = self.mock_request(path, method="GET")
             utils.check_no_raise(lambda: self.ows.check_request(req))
             path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc2_name, prefix, res3_name)
             req = self.mock_request(path, method="GET")
-            utils.check_no_raise(lambda: self.ows.check_request(req))
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
             # GetMap of layer in Workspace (Workspace inferred from path prefix or layer name)
             # workspace 1
@@ -690,7 +694,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                 path = "{}{}/wms?request=getmap&layers={}".format(svc_prefix, workspace_prefix, layer_name)
                 req = self.mock_request(path, method="GET")
                 msg = "Using combination [{}, {}]".format("GET", path)
-                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
             # workspace 3
             svc_prefix = "/ows/proxy/{}{}".format(svc2_name, prefix)
             layer_name = "{}:TEST_LAYER".format(res3_name)
@@ -988,8 +992,6 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         """
         raise NotImplementedError  # FIXME: see https://github.com/Ouranosinc/Magpie/issues/360
 
-    @unittest.skip("not implemented")  # FIXME: not implemented
-    @pytest.mark.skip
     @utils.mocked_get_settings
     def test_ServiceGeoserver_effective_permissions(self):
         """
@@ -1001,32 +1003,162 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         Legend::
 
+            []: Resource does not exist in Magpie, but position matches actual resource for the target service
+            gc: GetCapabilities (shared by all OWS)
+            gf: GetFeature permission (WFS/WMS Layer)
+            gi: GetFeatureInfo permission (WFS/WMS Layer)
             dp: DescribeProcess permission (WPS Process)
-            gf: GetFeature permission (WFS Layer)
-            gi: GetFeatureInfo permission (WMS Layer)
             A: allow
             D: deny
-            M: match        (doesn't matter because service always directly referenced)
-            R: recursive    (doesn't matter because service always directly referenced)
+            M: match        (makes sense only on layer for any permission except GetCapabilities on service itself)
+            R: recursive    (resolution for multiple layers, permissions have no use on Service or Workspace themselves)
 
         Permissions Applied::
-                                        user        group               effective (reason)
-            Service1                    (a-A-R)                         a-A
-                Workspace1
-                    Layer1
-                    Layer2
+                                        user        group                       effective (detail)
+            Service1                    (gc-A-R)                                gc-A
+                Workspace1                          (gf-A-R)                    gf-A (but no use on Workspace itself)
+                    Layer1                          (gi-A-R)                    gf-A, gi-A
+                    Layer2              (gf-D-M)                                gf-D, gi-A
+                    [Layer3]                                                    gf-A, gi-D (doesn't exist, only R apply)
                     Process1
                     Process2
-
-            Service2                                (a-A-M)             a-A
-            Service3                    (a-D-M)                         a-D
-            Service4                                (a-D-R)             a-D
-            Service5                    (a-A-R)     (a-D-M)             a-A (user > group)
-            Service6                                                    a-D (nothing defaults like explicit deny)
         """
         svc_type = ServiceGeoserver.service_type
         svc1_name = "unittest-service-geoserver-1"
-        raise NotImplementedError
+        w1_name = "workspace1"
+        l1_name = "layer1"
+        l2_name = "layer2"
+
+        svc1_id, w1_id = utils.TestSetup.create_TestServiceResourceTree(
+            self,
+            override_service_name=svc1_name, override_service_type=svc_type,
+            override_resource_names=[w1_name], override_resource_types=[models.Workspace.resource_type_name],
+        )
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w1_id,
+            override_resource_name=l1_name,
+            override_resource_type=models.Layer.resource_type_name
+        )
+        l1_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w1_id,
+            override_resource_name=l2_name,
+            override_resource_type=models.Layer.resource_type_name
+        )
+        l2_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+
+        # create permissions
+        gcAR = PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        gfAR = PermissionSet(Permission.GET_FEATURE, Access.ALLOW, Scope.RECURSIVE)         # noqa
+        gfDM = PermissionSet(Permission.GET_FEATURE, Access.DENY, Scope.MATCH)              # noqa
+        giAR = PermissionSet(Permission.GET_FEATURE_INFO, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc1_id, override_permission=gcAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=w1_id, override_permission=gfAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=l1_id, override_permission=giAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=l2_id, override_permission=gfDM)
+
+        # login test user for which the permissions were set
+        self.login_test_user()
+
+        # service calls
+        svc_path = "/ows/proxy/{}".format(svc1_name)
+
+        # request for any OWS
+        #   <HOST>/geoserver[/<WORKSPACE>]/<OWS>?request=GetCapabilities
+        for path in [svc_path, "{}/{}".format(svc_path, w1_name)]:
+            for ows in ["WFS", "WMS", "WPS"]:
+                ows_path = "{}/{}".format(path, ows.lower())
+                msg = "Using combination [{}, {}]".format("GET", ows_path)
+                req = self.mock_request(ows_path, method="GET", params={"request": Permission.GET_CAPABILITIES.title})
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+
+        # request that applies only to WMS
+        # permission is valid on resource for both WFS and WMS, but they expect different parameter names
+        #   <HOST>/geoserver[/<WORKSPACE>]/[wfs|wms]?request=GetFeatureInfo&version=<>&[typeNames|layers]=<LAYER>
+        for path in [svc_path, "{}/{}".format(svc_path, w1_name)]:
+            wfs_path = "{}/wfs".format(path)
+            wms_path = "{}/wms".format(path)
+
+            def _msg(_path, _params):
+                _qs = "&".join("{}={}".format(k, v) for k, v in _params.items()) if _params else ""
+                return "Using combination [{}, {}]".format("GET", _path, _qs)
+
+            # Layer1, valid requests
+            params = {"request": Permission.GET_FEATURE.title, "layers": l1_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wms_path, params))
+            params = {"request": Permission.GET_FEATURE.title, "typeNames": l1_name}
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wfs_path, params))
+
+            # Layer1, mismatched OWS path/param
+            #   because GetFeature is applied recursively on Workspace,
+            #   access is granted even if request is erroneous to retrieve its appropriate Layer resource
+            #   OWS service would normally return a bad request, but Magpie/Twitcher job is over at that point
+            params = {"request": Permission.GET_FEATURE.title, "typeNames": l1_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wms_path, params))
+            params = {"request": Permission.GET_FEATURE.title, "layers": l1_name}
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wfs_path, params))
+
+            # Layer1, valid requests
+            params = {"request": Permission.GET_FEATURE_INFO.title, "layers": l1_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wms_path, params))
+            params = {"request": Permission.GET_FEATURE_INFO.title, "typeNames": l1_name}
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wfs_path, params))
+
+            # Layer1, mismatched OWS path/param
+            #   in this case, GetFeatureInfo permission is applied directly on Layer
+            #   invalid params makes retrieval of the Layer resource to fail, and therefore access is blocked
+            params = {"request": Permission.GET_FEATURE_INFO.title, "typeNames": l1_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wms_path, params))
+            params = {"request": Permission.GET_FEATURE_INFO.title, "layers": l1_name}
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wfs_path, params))
+
+            # Layer2, valid requests and mismatched OWS/path
+            #   resource is always blocked because of explicit deny permission on it, whether resource is found or not
+            params = {"request": Permission.GET_FEATURE.title, "layers": l2_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wms_path, params))
+            params = {"request": Permission.GET_FEATURE.title, "typeNames": l2_name}
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wfs_path, params))
+            params = {"request": Permission.GET_FEATURE.title, "typeNames": l2_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wms_path, params))
+            params = {"request": Permission.GET_FEATURE.title, "layers": l2_name}
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wfs_path, params))
+
+            # Layer2, valid requests and mismatched OWS/path
+            #   resource allowed because of Workspace permission
+            #   mismatched OWS/path would fail on target service side, but not Magpie/Twitcher
+            params = {"request": Permission.GET_FEATURE_INFO.title, "layers": l2_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wms_path, params))
+            params = {"request": Permission.GET_FEATURE.title, "typeNames": l2_name}
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wfs_path, params))
+            params = {"request": Permission.GET_FEATURE.title, "typeNames": l2_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wms_path, params))
+            params = {"request": Permission.GET_FEATURE.title, "layers": l2_name}
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(wfs_path, params))
+
+            # invalid permission not applicable to WFS/WMS
+            params = {"request": Permission.DESCRIBE_PROCESS.title, "process": l1_name}
+            req = self.mock_request(wms_path, method="GET", params=params)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wms_path, params))
+            req = self.mock_request(wfs_path, method="GET", params=params)
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(wfs_path, params))
 
 
 @runner.MAGPIE_TEST_LOCAL

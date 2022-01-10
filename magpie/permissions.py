@@ -47,6 +47,7 @@ class Permission(ExtendedEnum):
     GET_PROPERTY_VALUE = "getpropertyvalue"
     GET_FEATURE = "getfeature"
     GET_FEATURE_WITH_LOCK = "getfeaturewithlock"
+    GET_GML_OBJECT = "getgmlobject"
     DESCRIBE_FEATURE_TYPE = "describefeaturetype"
     DESCRIBE_LAYER = "describelayer"
     DESCRIBE_PROCESS = "describeprocess"
