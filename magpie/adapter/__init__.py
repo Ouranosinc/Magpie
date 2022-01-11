@@ -91,8 +91,7 @@ def verify_user(request):
         if is_json_body(request.text) and not params:
             return requests.post(magpie_url + SigninAPI.path, json=request.json,
                                  headers={"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON})
-        else:
-            return requests.get(magpie_url + SigninAPI.path, data=request.text, params=params)
+        return requests.get(magpie_url + SigninAPI.path, data=request.text, params=params)
 
     resp = evaluate_call(lambda: try_login(),
                          http_error=HTTPServiceUnavailable,
