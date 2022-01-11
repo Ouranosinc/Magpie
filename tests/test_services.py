@@ -997,9 +997,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         """
         Evaluates functionality of :class:`ServiceGeoserver` against a mocked `Magpie` adapter for `Twitcher`.
 
-        The :class:`ServiceGeoserver` implementation works as a combination of many `OWS` sub-services.
+        The :class:`ServiceGeoserver` implementation works as a combination of many :term:`OWS` sub-services.
         Validate that different resource types and distinct permissions can be simultaneously applied on them.
-        Effective permissions must be resolved with the appropriate `OWS` service accordingly with request parameters.
+        Effective permissions must be resolved with the appropriate :term:`OWS` service accordingly with request
+        parameters.
 
         Legend::
 
@@ -1025,7 +1026,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                     [Process3]                                  dp-A, gf-D, gi-D
 
         .. note::
-            Permissions that do not applied to a given sub-`OWS` implementation are automatically denied.
+            Permissions that do not applied to a given sub-:term:`OWS` implementation are automatically denied.
             For example, 'GetFeatureInfo' cannot be applied for a 'Process' nor can 'DescribeProcess' for a 'Layer'.
         """
         svc_type = ServiceGeoserver.service_type

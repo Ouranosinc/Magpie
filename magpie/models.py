@@ -694,17 +694,35 @@ class PathBase(object):
 
 
 class File(Resource, PathBase):
+    """
+    Resource that represents the leaf node in a file-system-like hierarchy.
+
+    In the context of `THREDDS`, this represents the corresponding files exposed by the service.
+    This resource cannot have any children resource under it.
+    """
     child_resource_allowed = False
     resource_type_name = "file"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
 class Directory(Resource, PathBase):
+    """
+    Resource that represents an intermediate directory node within a file-system-like hierarchy.
+
+    In the context of `THREDDS`, this represents the corresponding directories exposed by the service.
+    Any amount of :class:`Directory` can be nested under itself to form the tree hierarchy.
+    """
     resource_type_name = "directory"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
 class Layer(Resource):
+    """
+    Resource that defines multiple corresponding representations of a layer according to the :term:`OWS` it lies under.
+
+    In the context of `WFS`, this is the represented collection of features.
+    In the context of `WMS`, this is the referenced features employed to generate the map.
+    """
     child_resource_allowed = False
     resource_type_name = "layer"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
@@ -718,6 +736,9 @@ class Layer(Resource):
 
 
 class Workspace(Resource):
+    """
+    Resource employed to contain a group of scoped :class:`Layer` within a `Geoserver` instance.
+    """
     resource_type_name = "workspace"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
@@ -730,6 +751,9 @@ class Workspace(Resource):
 
 
 class Route(Resource):
+    """
+    Resource employed to represent a single request path fragment.
+    """
     resource_type_name = "route"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
@@ -740,6 +764,9 @@ class Route(Resource):
 
 
 class Process(Resource):
+    """
+    Resource that represents a process under an :term:`OWS` instance servicing a `WPS` endpoint.
+    """
     child_resource_allowed = False
     resource_type_name = "process"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}

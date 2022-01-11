@@ -446,7 +446,7 @@ class ServiceInterface(object):
     def nested_resource_allowed(cls, parent_resource):
         # type: (ServiceOrResourceType) -> List[Type[models.Resource]]
         """
-        Obtain the nested resource types allowed as children children resource within structure definitions.
+        Obtain the nested resource types allowed as children resource within structure definitions.
         """
         if not cls.child_resource_allowed:
             return []
@@ -876,7 +876,7 @@ class ServiceGeoserverBase(ServiceOWS):
     def service_base(self):
         # type: () -> Str
         """
-        Name of the base `OWS` functionality serviced by `Geoserver`.
+        Name of the base :term:`OWS` functionality serviced by `Geoserver`.
         """
         raise NotImplementedError
 
@@ -894,7 +894,7 @@ class ServiceGeoserverBase(ServiceOWS):
     def resource_types_permissions(self):
         # type: () -> ResourceTypePermissions
         """
-        Explicit permissions provided for resources for a given `OWS` implementation.
+        Explicit permissions provided for resources for a given :term:`OWS` implementation.
         """
         raise NotImplementedError
 
@@ -1261,7 +1261,7 @@ class ServiceTHREDDS(ServiceInterface):
 
 class ServiceGeoserverMeta(ServiceMeta):
     """
-    Mapping and grouping of property definitions for ``GeoServer`` services from distinct `OWS` implementations.
+    Mapping and grouping of property definitions for `GeoServer` services from distinct :term:`OWS` implementations.
     """
     service_map = {
         "wfs": ServiceGeoserverWFS,
@@ -1310,7 +1310,7 @@ class ServiceGeoserverMeta(ServiceMeta):
 @six.add_metaclass(ServiceGeoserverMeta)
 class ServiceGeoserver(ServiceOWS):
     """
-    Service that encapsulates the multiple `OWS` endpoints from ``GeoServer`` services.
+    Service that encapsulates the multiple :term:`OWS` endpoints from `GeoServer` services.
 
     .. seealso::
         https://docs.geoserver.org/stable/en/user/services/index.html
@@ -1346,9 +1346,9 @@ class ServiceGeoserver(ServiceOWS):
     def get_config(self):
         # type: () -> ServiceConfiguration
         """
-        Obtain the configuration defining which `OWS` services are enabled under this instance.
+        Obtain the configuration defining which :term:`OWS` services are enabled under this instance.
 
-        Should provide a mapping of all `OWS` service type names to enabled boolean status.
+        Should provide a mapping of all :term:`OWS` service type names to enabled boolean status.
         """
         if self._config is not None:
             return self._config
@@ -1363,7 +1363,7 @@ class ServiceGeoserver(ServiceOWS):
     def service_requested(self):
         # type: () -> Optional[Type[ServiceOWS]]
         """
-        Obtain the applicable `OWS` implementation according to parsed request parameters.
+        Obtain the applicable :term:`OWS` implementation according to parsed request parameters.
         """
         # guaranteed to exist and lowercase string if provided, otherwise None
         svc = self.parser.params["service"]
