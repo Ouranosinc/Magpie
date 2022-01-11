@@ -7,7 +7,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix `Twitcher` ``/verify`` endpoint integrated through ``MagpieAdapter`` to validate synchronized authentication
+  policies across both services. The endpoint now supports query parameter credentials to facilitate call directly
+  within a web browser (not assuming JSON contents) and properly parses cookies from both policies to report more
+  detailed error messages in case of failure.
 
 `3.20.0 <https://github.com/Ouranosinc/Magpie/tree/3.20.0>`_ (2022-01-06)
 ------------------------------------------------------------------------------------
