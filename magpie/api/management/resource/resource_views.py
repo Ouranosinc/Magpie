@@ -12,7 +12,7 @@ from magpie.api.management.service.service_formats import format_service_resourc
 from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.permissions import PermissionType, format_permissions
 from magpie.register import sync_services_phoenix
-from magpie.services import SERVICE_TYPE_DICT
+from magpie.services import SERVICE_TYPE_DICT, get_resource_child_allowed
 
 
 @s.ResourcesAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resources_GET_responses)
@@ -143,19 +143,11 @@ def get_resource_types_view(request):
         svc_impl = SERVICE_TYPE_DICT[svc_root.type]
         return svc_impl.nested_resource_allowed(res), svc_root
 
-    def get_res_child_allowed(res):
-        # make sure to obtain the specific resource/service implementation to avoid using the default
-        if res.resource_type_name == models.Service.resource_type_name:
-            res_impl = SERVICE_TYPE_DICT[res.type]
-        else:
-            res_impl = models.RESOURCE_TYPE_DICT[res.resource_type_name]
-        return res_impl.child_resource_allowed
-
     res_types, svc = ax.evaluate_call(lambda: get_res_types(resource),
                                       fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
                                       msg_on_fail="Error occurred while computing applicable children resource types.",
                                       content={"resource": rf.format_resource(resource, basic_info=True)})
-    child_allowed = ax.evaluate_call(lambda: get_res_child_allowed(resource),
+    child_allowed = ax.evaluate_call(lambda: get_resource_child_allowed(resource),
                                      http_error=HTTPInternalServerError,
                                      msg_on_fail="Error occurred while computing allowed children resource status.",
                                      content={"resource": rf.format_resource(resource, basic_info=True)})

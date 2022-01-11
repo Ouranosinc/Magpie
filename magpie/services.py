@@ -426,12 +426,7 @@ class ServiceInterface(object):
         """
         if not cls.child_resource_allowed:
             return False
-        # make sure to obtain the specific resource/service implementation to avoid using the default
-        if parent_resource.resource_type_name == models.Service.resource_type_name:
-            res_impl = SERVICE_TYPE_DICT[parent_resource.type]
-        else:
-            res_impl = models.RESOURCE_TYPE_DICT[parent_resource.resource_type_name]
-        if not res_impl.child_resource_allowed:
+        if not get_resource_child_allowed(parent_resource):
             return False
         # if undefined control structures, assume any combination of nested resource is allowed (original behaviour)
         if not cls.child_structure_allowed:
@@ -450,12 +445,7 @@ class ServiceInterface(object):
         """
         if not cls.child_resource_allowed:
             return []
-        # make sure to obtain the specific resource/service implementation to avoid using the default
-        if parent_resource.resource_type_name == models.Service.resource_type_name:
-            res_impl = SERVICE_TYPE_DICT[parent_resource.type]
-        else:
-            res_impl = models.RESOURCE_TYPE_DICT[parent_resource.resource_type_name]
-        if not res_impl.child_resource_allowed:
+        if not get_resource_child_allowed(parent_resource):
             return []
         # if undefined control structures, any combination is allowed (original behaviour)
         if not cls.child_structure_allowed:
@@ -1442,6 +1432,25 @@ def service_factory(service, request):
     return ax.evaluate_call(lambda: _make_service(service_type, service, request),
                             http_error=HTTPInternalServerError, content={"service_type": service_type},
                             msg_on_fail="Failed to find requested service type.")
+
+
+def get_resource_child_allowed(resource):
+    # type: (ServiceOrResourceType) -> bool
+    """
+    Verifies if the specified resource allows nesting children resources under it considering its specific type.
+
+    Makes sure to obtain the specific :class:`Service` or :class:`Resource` implementation to verify children support.
+    If this is not accomplished, the default attribute of base :class:`Service` or :class:`Resource` would erroneously
+    indicate that children are allowed.
+
+    :param resource: Item for which to verify if children resources are allowed.
+    :return: Whether the resource can nest more resources or not.
+    """
+    if resource.resource_type_name == models.Service.resource_type_name:
+        res_impl = SERVICE_TYPE_DICT[resource.type]
+    else:
+        res_impl = models.RESOURCE_TYPE_DICT[resource.resource_type_name]
+    return res_impl.child_resource_allowed
 
 
 def invalidate_service(service_name):
