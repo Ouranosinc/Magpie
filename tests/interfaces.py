@@ -5326,7 +5326,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         apply_config_data = {"configuration": {"ignore_prefix": "something"}}
         modif_config_data = {"configuration": {"ignore_prefix": "other", "file_patterns": [".+\\.nc"]}}
         erase_config_data = {"configuration": None}
-        expected_fields = ["ignore_prefix", "skip_prefix", "file_patterns", "data_type", "metadata_type"]
+        default_expected_fields = ["skip_prefix", "file_patterns", "data_type", "metadata_type"]
+        custom_expected_fields = ["ignore_prefix"]
 
         resp = utils.test_request(self, self.update_method, path, data=apply_config_data,
                                   headers=self.json_headers, cookies=self.cookies)
@@ -5334,7 +5335,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         if TestVersion(self.version) <= TestVersion("3.20.0"):
             utils.check_val_equal(body["service"]["configuration"], apply_config_data["configuration"], diff=True)
         else:
-            for field in expected_fields:
+            for field in custom_expected_fields + default_expected_fields:
                 utils.check_val_is_in(field, body["service"]["configuration"])
             post_ignore_prefix = apply_config_data["configuration"]["ignore_prefix"]
             body_ignore_prefix = body["service"]["configuration"]["ignore_prefix"]  # type: ignore
@@ -5346,11 +5347,11 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         if TestVersion(self.version) <= TestVersion("3.20.0"):
             utils.check_val_equal(body["service"]["configuration"], modif_config_data["configuration"], diff=True)
         else:
-            for field in expected_fields:
+            for field in custom_expected_fields + default_expected_fields:
                 utils.check_val_is_in(field, body["service"]["configuration"])
             for field in modif_config_data["configuration"]:
                 post_field = modif_config_data["configuration"][field]
-                body_field = body["service"]["configuration"]["ignore_prefix"]  # type: ignore
+                body_field = body["service"]["configuration"][field]  # type: ignore
                 utils.check_val_equal(body_field, post_field)
 
         resp = utils.test_request(self, self.update_method, path, data=erase_config_data,
@@ -5360,8 +5361,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_val_equal(body["service"]["configuration"], None, diff=True,
                                   msg="Erase should be allowed with explicit None (null) JSON configuration.")
         else:
-            for field in expected_fields:
+            for field in default_expected_fields:
                 utils.check_val_is_in(field, body["service"]["configuration"])
+            for field in custom_expected_fields:
+                utils.check_val_not_in(field, body["service"]["configuration"])
 
             class MockServiceResource(object):
                 configuration = None
@@ -5369,6 +5372,25 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             default_thredds_config = ServiceTHREDDS(MockServiceResource(), None).get_config()  # type: ignore
             utils.check_val_equal(body["service"]["configuration"], default_thredds_config, diff=True,
                                   msg="JSON configuration following explicit None (null) erase should use default.")
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PatchService_UpdateNonConfigurable(self):
+        """
+        Services defined as not configurable should fail update request with provided configuration.
+        """
+        utils.warn_version(self, "update service configuration on non-configurable implementation", "3.21", skip=True)
+
+        svc_name = "test-service-no-config"
+        svc_type = ServiceAPI.service_type
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+
+        path = "/services/{}".format(svc_name)
+        for config in [None, {}, {"value": "test"}]:
+            data = {"configuration": config}
+            resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PatchService_ReservedKeyword_Types(self):

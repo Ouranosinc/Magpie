@@ -20,13 +20,15 @@ from magpie.api.management.service import service_formats as sf
 from magpie.api.management.service import service_utils as su
 from magpie.permissions import Permission, PermissionType, format_permissions
 from magpie.register import SERVICES_PHOENIX_ALLOWED, sync_services_phoenix
-from magpie.services import SERVICE_TYPE_DICT, invalidate_service
+from magpie.services import SERVICE_TYPE_DICT, invalidate_service, service_factory
 from magpie.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
-    from typing import List, Union
+    from typing import List, Optional, Union
 
-    from magpie.typedefs import JSON
+    from sqlalchemy.orm.session import Session
+
+    from magpie.typedefs import JSON, Str
 
 
 @s.ServiceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypes_GET_responses)
@@ -130,8 +132,10 @@ def update_service_view(request):
     """
     service = ar.get_service_matchdict_checked(request)
     service_push = asbool(ar.get_multiformat_body(request, "service_push", default=False))
+    service_impl = service_factory(service, request)
 
     def select_update(new_value, old_value):
+        # type: (Optional[Str], Optional[Str]) -> Optional[Str]
         return new_value if new_value is not None and not new_value == "" else old_value
 
     # None/Empty values are accepted in case of unspecified
@@ -149,7 +153,7 @@ def update_service_view(request):
                     param_name="service_name", http_error=HTTPForbidden,
                     msg_on_fail=s.Service_PATCH_ForbiddenResponseSchema_ReservedKeyword.description)
     ax.verify_param(svc_name == cur_svc_name and svc_url == service.url and
-                    (not has_svc_config or old_svc_config == new_svc_config),
+                    (not service_impl.configurable or not has_svc_config or old_svc_config == new_svc_config),
                     not_equal=True, param_compare=True, param_name="service_name/service_url",
                     http_error=HTTPBadRequest, msg_on_fail=s.Service_PATCH_BadRequestResponseSchema.description)
 
@@ -171,6 +175,7 @@ def update_service_view(request):
                         msg_on_fail=s.Service_PATCH_UnprocessableEntityResponseSchema.description)
 
     def update_service_magpie_and_phoenix(_svc, new_name, new_url, svc_push, db_session):
+        # type: (models.Service, Str, Str, bool, Session) -> None
         _svc.resource_name = new_name
         _svc.url = new_url
         has_getcap = Permission.GET_CAPABILITIES in SERVICE_TYPE_DICT[_svc.type].permissions
