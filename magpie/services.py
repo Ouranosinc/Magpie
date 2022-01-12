@@ -105,32 +105,27 @@ class ServiceInterface(object):
     Mapping of resource types to lists of permissions defining allowed children resource permissions under the service.
     """
 
-    child_structure_allowed = []  # type: List[Str]
+    child_structure_allowed = {}  # type: Dict[Type[ServiceOrResourceType], List[Type[models.Resource]]]
     """
-    Control listing of path-like resource types limiting the allowed structure of nested children resources.
+    Control mapping of resource types limiting the allowed structure of nested children resources.
 
     When not defined, any nested resource type combination is allowed if they themselves allow children resources.
     Otherwise, nested child resource under the service can only be created at specific positions within the hierarchy
-    that matches exactly one of the listed control path-like definition. All definitions must start with ``service``
-    and must contain at least one separator and a sub-resource to ensure working behaviour of child resource under
-    the service.
+    that matches exactly one of the defined control conditions.
 
     For example, the below definition allows only resources typed ``route`` directly under the service.
     The following nested resource under that first-level ``route`` can then be either another ``route`` followed
     by a child ``process`` or directly a ``process``. Because ``process`` type doesn't allow any children resource
     (see :attr:`models.Process.child_resource_allowed`), those are the only allowed combinations (cannot further nest
-    resources under the final ``process`` resource). Note that because intermediate ``route`` resources need to be
-    created at some point before the last ``process`` can even exist, partial paths (without ``process``) must also
-    be allowed as valid structures.
+    resources under the final ``process`` resource).
 
     .. code-block:: python
 
-        child_structure_allowed = [
-            "service/route",
-            "service/route/process",
-            "service/route/route",
-            "service/route/route/process",
-        ]
+        child_structure_allowed = {
+            models.Service: [models.Route],
+            models.Route: [models.Route, models.Process],
+            models.Process: [],
+        }
 
     .. seealso::
         - Validation of allowed nested children resource insertion of a given type under a parent resource is provided
@@ -399,22 +394,6 @@ class ServiceInterface(object):
         return []
 
     @classmethod
-    def get_resource_type_path(cls, resource, extra_path=None):
-        # type: (ServiceOrResourceType, Optional[Str]) -> Str
-        """
-        Generate the resource type path-like definition from the top service down to the specified resource.
-
-        :param resource: leaf resource for which to generate the resource type path.
-        :param extra_path: optional resource path to append after the generated path.
-        :return: path like representation of the resource types from service to leaf resource path.
-        """
-        session = get_db_session(obj=resource)
-        res_tree = reversed(list(models.RESOURCE_TREE_SERVICE.path_upper(resource.resource_id, db_session=session)))
-        res_extra_path = [] if extra_path is None else [extra_path]
-        res_types_path = "/".join([res.resource_type_name for res in res_tree] + res_extra_path)
-        return res_types_path
-
-    @classmethod
     def validate_nested_resource_type(cls, parent_resource, child_resource_type):
         # type: (ServiceOrResourceType, Str) -> bool
         """
@@ -424,18 +403,11 @@ class ServiceInterface(object):
         :param child_resource_type: Type to validate at the position defined under the parent resource.
         :return: status indicating if insertion is allowed for this type and at this parent position.
         """
-        if not cls.child_resource_allowed:
+        child_resources = cls.nested_resource_allowed(parent_resource)
+        if not child_resources:
             return False
-        if not get_resource_child_allowed(parent_resource):
-            return False
-        # if undefined control structures, assume any combination of nested resource is allowed (original behaviour)
-        if not cls.child_structure_allowed:
-            return True
-        res_types_path = cls.get_resource_type_path(parent_resource, extra_path=child_resource_type)
-        for allow_types_path in cls.child_structure_allowed:
-            if allow_types_path == res_types_path:
-                return True
-        return False
+        child_allow_types = [res.resource_type_name for res in child_resources]
+        return child_resource_type in child_allow_types
 
     @classmethod
     def nested_resource_allowed(cls, parent_resource):
@@ -450,12 +422,10 @@ class ServiceInterface(object):
         # if undefined control structures, any combination is allowed (original behaviour)
         if not cls.child_structure_allowed:
             return cls.resource_types
-        res_types_path = cls.get_resource_type_path(parent_resource, extra_path="")  # terminate as ".../"
-        res_types_next = [  # retain only paths that correspond to immediately the next resource type
-            path.replace(res_types_path, "", 1) for path in cls.child_structure_allowed
-            if path.startswith(res_types_path) and len(path.replace(res_types_path, "", 1).split("/")) == 1
-        ]
-        return [models.RESOURCE_TYPE_DICT[res_type] for res_type in res_types_next]
+        child_allow_types = [res.resource_type_name for res in cls.child_structure_allowed]
+        if parent_resource.resource_type_name not in child_allow_types:
+            return []
+        return cls.child_structure_allowed[type(parent_resource)]
 
     def allowed_permissions(self, resource):
         # type: (ServiceOrResourceType) -> List[Permission]
@@ -917,17 +887,11 @@ class ServiceGeoserverBase(ServiceOWS):
         ]
 
     # only workspace directly followed by layers
-    child_structure_allowed = [
-        "{}/{}".format(
-            models.Service.resource_type_name,
-            models.Workspace.resource_type_name,
-        ),
-        "{}/{}/{}".format(
-            models.Service.resource_type_name,
-            models.Workspace.resource_type_name,
-            models.Layer.resource_type_name,
-        ),
-    ]
+    child_structure_allowed = {
+        models.Service: [models.Workspace],
+        models.Workspace: [models.Layer],
+        models.Layer: [],
+    }
 
     def resource_requested(self):
         # type: () -> ResourceRequested
@@ -1367,27 +1331,25 @@ class ServiceGeoserver(ServiceOWS):
 
     # only allow workspace directly under service
     # then, only layer or process under that workspace
-    child_structure_allowed = [
-        "{}/{}".format(
-            models.Service.resource_type_name,
-            models.Workspace.resource_type_name,
-        ),
-        "{}/{}/{}".format(
-            models.Service.resource_type_name,
-            models.Workspace.resource_type_name,
-            models.Layer.resource_type_name,
-        ),
-        # note:
-        #   In the context of Geoserver, WPS are applied on available resources (WFS, WMS, etc.)
-        #   For this reason, the Process also needs scoped Workspace access to work on them,
-        #   but the Workspace name MUST be in the path (identifier=<WORKSPACE>:<PROCESS_ID>) does not work.
-        #   Without the Workspace scope in the path, 'identifier' parameter resolves as if it was unspecified.
-        "{}/{}/{}".format(
-            models.Service.resource_type_name,
-            models.Workspace.resource_type_name,
-            models.Process.resource_type_name,
-        ),
-    ]
+
+    child_structure_allowed = {
+        models.Service: [models.Workspace],
+        models.Workspace: [models.Layer, models.Process],
+        models.Layer: [],
+        models.Process: [],
+    }
+    """
+    Allowed children resource structure for `Geoserver`.
+    
+    .. note::
+        In the context of `Geoserver`, `WPS` are applied on available resources (`WFS`, `WMS`, etc.).
+        For this reason, the :class:`models.Process` also needs to be scoped under :class:`models.Workspace` in order 
+        to grant access to those resources to work on them, but the :class:`models.Workspace` name **MUST** be in the 
+        path (i.e.: ``identifier=<WORKSPACE>:<PROCESS_ID>`` request parameter does not work).
+        Without the :class:`models.Workspace` scope in the path, ``identifier`` parameter fails to be resolved by 
+        `Geoserver`, as if it was unspecified. Attribute :attr:`ServiceGeoserverWPS.resource_scoped` controls the 
+        behaviour of splitting the defined :attr:`resource_param` into :class:`models.Workspace` and child components.
+    """
 
     configurable = True
 

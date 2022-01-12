@@ -22,12 +22,12 @@ Features / Changes
 * Add support of ``Resource`` type ``Layer`` under ``ServiceWFS``.
 * Allow ``Resource`` and ``Service`` name to contain colon (``:``) character in order to define scoped names
   as it is often the case for ``Layer`` names.
-* Add ``child_structure_allowed`` attribute to ``Service`` implementations allowing them to define specific path-like
-  structures of allowed ``Resource`` types hierarchies in order to control at which level and which combinations
-  of nested ``Resource`` types are valid under their root ``Service``. When not defined under a ``Service``
-  implementation, any defined ``Resource`` type will remain available for creation at any level of the hierarchy,
-  unless the corresponding ``Resource`` in the tree already defined ``child_resource_allowed = False``. This was
-  already the original behaviour in previous versions.
+* Add ``child_structure_allowed`` attribute to ``Service`` implementations allowing them to define specific
+  structures of allowed ``Resource`` types hierarchies in order to control which combinations of nested ``Resource``
+  types are valid under their root ``Service``. When not defined under a ``Service`` implementation, any defined
+  ``Resource`` type will remain available for creation at any level of the hierarchy, unless the corresponding
+  ``Resource`` in the tree already defined ``child_resource_allowed = False``. This was already the original behaviour
+  in previous versions.
 * Add ``GET /resources/{id}/types`` endpoint that allows retrieval of applicable children ``Resource`` types under
   a given ``Resource`` considering the nested hierarchy definition of its root ``Service`` defined by the new
   attribute ``child_structure_allowed``.
