@@ -48,7 +48,7 @@ Bug Fixes
 * Fix base ``Permission`` definitions for all variants of `WMS` according to their reference implementations.
 * Remove multiple invalid schema path definitions that are not mapped against any concrete API endpoint.
 * Fix reporting of ``Service`` configuration for any type that supports it. Unless overridden during creation with a
-  custom configuration, ``ServiceTHREDDS`` implementation would not report their default configuration and would
+  custom configuration, ``ServiceTHREDDS`` instances would not report their default ``configuration`` field and would
   instead return ``null``, making it difficult to know from the API if default or no configuration was being applied
   for a given ``Service``.
 * Fix `Effective Resolution` of ``Permission`` applied for ``ServiceGeoserverWMS`` to consider ``Scope`` modifier

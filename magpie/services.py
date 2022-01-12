@@ -670,16 +670,25 @@ class ServiceOWS(ServiceInterface):
             return  # avoid error parsing undefined request
         # must reset the parser from scratch if request changes to ensure everything is updated with new inputs
         self.parser = ows_parser_factory(request)
-        self.parser.parse(self.params_expected)  # run parsing to obtain guaranteed lowered-name parameters
+        self.parser.parse(type(self).params_expected)  # run parsing to obtain guaranteed lowercase parameters
 
     request = property(_get_request, _set_request)
+
+    @property
+    @abc.abstractmethod
+    def service_base(self):
+        # type: () -> Str
+        """
+        Name of the base :term:`OWS` functionality serviced by `Geoserver`.
+        """
+        raise NotImplementedError
 
     @abc.abstractmethod
     def resource_requested(self):
         raise NotImplementedError
 
     def permission_requested(self):
-        # type: () -> Permission
+        # type: () -> PermissionRequested
         try:
             req = self.parser.params["request"]
             perm = Permission.get(str(req).lower())
@@ -691,6 +700,8 @@ class ServiceOWS(ServiceInterface):
                     "Unable to resolve the requested access for service: [{!s}].".format(self.service.resource_name)
                 )
             )
+            if perm not in self.permissions:
+                return None
             return perm
         except KeyError as exc:
             raise NotImplementedError("Exception: [{!r}] for class '{}'.".format(exc, type(self)))
@@ -700,7 +711,7 @@ class ServiceWPS(ServiceOWS):
     """
     Service that represents a ``Web Processing Service`` endpoint.
     """
-
+    service_base = "wps"
     service_type = "wps"
 
     permissions = [
@@ -737,7 +748,8 @@ class ServiceWPS(ServiceOWS):
             if proc:
                 return proc, True
             return self.service, False
-        raise NotImplementedError("Unknown WPS operation for permission: {}".format(wps_request))
+        LOGGER.debug("Unknown WPS operation for permission: %s", wps_request)
+        return None
 
 
 class ServiceBaseWMS(ServiceOWS):
@@ -776,6 +788,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
     .. seealso::
         https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/04-usage.html
     """
+    service_base = "wms"
     service_type = "ncwms"
 
     permissions = [
@@ -863,19 +876,24 @@ class ServiceGeoserverBase(ServiceOWS):
 
     @property
     @abc.abstractmethod
-    def service_base(self):
-        # type: () -> Str
+    def resource_scoped(self):
+        # type: () -> bool
         """
-        Name of the base :term:`OWS` functionality serviced by `Geoserver`.
+        Indicates if the resource is allowed to employ scoped workspace naming.
+
+        When allowed, the :class:`models.Workspace` can be inferred from the request parameter
+        defined by :attr:`resource_param` to retrieve scoped name as ``<WORKSPACE>:<RESOURCE>``.
+        When not allowed, the resource name is left untouched can will not attempt to infer
+        any :class:`models.Workspace` from it.
         """
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def layer_param(self):
+    def resource_param(self):
         # type: () -> Str
         """
-        Name of the request query parameter to access requested :class:`models.Layer` children resource.
+        Name of the request query parameter to access requested leaf children resource.
         """
         raise NotImplementedError
 
@@ -887,6 +905,16 @@ class ServiceGeoserverBase(ServiceOWS):
         Explicit permissions provided for resources for a given :term:`OWS` implementation.
         """
         raise NotImplementedError
+
+    @property
+    def params_expected(self):
+        # type: () -> List[Str]
+        return [
+            "request",
+            "service",
+            "version",
+            self.resource_param,
+        ]
 
     # only workspace directly followed by layers
     child_structure_allowed = [
@@ -921,7 +949,7 @@ class ServiceGeoserverBase(ServiceOWS):
             path_parts = path_parts[1:]
             parts_lower = parts_lower[1:]
         workspace_name = None
-        layer_name = None
+        res_name = None
         if len(parts_lower) > 1 and parts_lower[1] == self.service_base:
             workspace_name = path_parts[0]
         if permission == Permission.GET_CAPABILITIES:
@@ -936,12 +964,20 @@ class ServiceGeoserverBase(ServiceOWS):
                 return self.service, True
         else:
             # following requests lead to the same resolution, need to check the workspace in the layer
-            #   /geoserver/<WORKSPACE>/<OWS>?<LAYER_PARAM>=[<WORKSPACE>:]<LAYER_NAME>&request=<PERMISSION>
-            #   /geoserver/<OWS>?<LAYER_PARAM>=<WORKSPACE>:<LAYER_NAME>&request=<PERMISSION>
-            if not workspace_name:
-                layer_name = self.parser.params[self.layer_param] or ""
-                if ":" in layer_name:  # if missing, consider layer name as not scoped under workspace
-                    workspace_name, layer_name = layer_name.rsplit(":", 1)
+            #   /geoserver/<WORKSPACE>/<OWS>?<RESOURCE_PARAM>=[<WORKSPACE>:]<LAYER_NAME>&request=<PERMISSION>
+            #   /geoserver/<OWS>?<RESOURCE_PARAM>=<WORKSPACE>:<LAYER_NAME>&request=<PERMISSION>
+            res_name = self.parser.params[self.resource_param] or ""
+            # if missing, consider layer name as not scoped under workspace
+            if self.resource_scoped and ":" in res_name:
+                workspace_scope, res_name = res_name.rsplit(":", 1)
+                if not workspace_name:
+                    workspace_name = workspace_scope
+                elif workspace_name != workspace_scope:
+                    # In case the request was formed with both workspace in path and scoped layer name,
+                    # consider the workspace as not resolved since we cannot know which one to target.
+                    # This avoids erroneously granting access to restricted layer from another workspace by
+                    # forging a request that would include some workspace for which the user does have access.
+                    workspace_name = None
         if not workspace_name:
             return self.service, False
         session = get_connected_session(self.request)
@@ -949,13 +985,13 @@ class ServiceGeoserverBase(ServiceOWS):
                                                  parent_id=self.service.resource_id,
                                                  db_session=session)
         if workspace:
-            if not layer_name:
+            if not res_name:
                 return workspace, False
-            layer = models.find_children_by_name(child_name=layer_name,
-                                                 parent_id=workspace.resource_id,
-                                                 db_session=session)
-            if layer:
-                return layer, True
+            resource = models.find_children_by_name(child_name=res_name,
+                                                    parent_id=workspace.resource_id,
+                                                    db_session=session)
+            if resource:
+                return resource, True
             return workspace, False
         return self.service, False
 
@@ -970,7 +1006,8 @@ class ServiceGeoserverWMS(ServiceBaseWMS, ServiceGeoserverBase):
     service_base = "wms"
     service_type = "geoserverwms"
 
-    layer_param = "layers"
+    resource_scoped = True
+    resource_param = "layers"
 
     permissions = [
         Permission.GET_CAPABILITIES,
@@ -1054,8 +1091,8 @@ class ServiceWFS(ServiceOWS):
 
     .. seealso::
         https://www.ogc.org/standards/wfs (OpenGIS WFS 2.0.0 implementation)
-        - https://docs.geoserver.org/latest/en/user/services/wfs/reference.html
     """
+    service_base = "wfs"
     service_type = "wfs"
 
     permissions = [
@@ -1117,7 +1154,8 @@ class ServiceGeoserverWFS(ServiceWFS, ServiceGeoserverBase):
     service_base = "wfs"
     service_type = "geoserverwfs"
 
-    layer_param = "typenames"
+    resource_scoped = True
+    resource_param = "typenames"
 
     permissions = ServiceWFS.permissions + [
         # v1.1.0 only
@@ -1249,6 +1287,25 @@ class ServiceTHREDDS(ServiceInterface):
         return None  # automatically deny
 
 
+class ServiceGeoserverWPS(ServiceWPS, ServiceGeoserverBase):
+    """
+    Service that represents a ``Web Processing Service`` under a `Geoserver` instance.
+    """
+    service_type = "geoserverwps"
+
+    resource_scoped = False  # name in 'identifier' must not be split and does not match WORKSPACE
+    resource_param = "identifier"
+
+    resource_types_permissions = {
+        models.Workspace: ServiceWPS.permissions,
+        models.Process: models.Process.permissions,
+    }
+
+    def resource_requested(self):
+        # type: () -> ResourceRequested
+        return ServiceGeoserverBase.resource_requested(self)
+
+
 class ServiceGeoserverMeta(ServiceMeta):
     """
     Mapping and grouping of property definitions for `GeoServer` services from distinct :term:`OWS` implementations.
@@ -1256,7 +1313,7 @@ class ServiceGeoserverMeta(ServiceMeta):
     service_map = {
         "wfs": ServiceGeoserverWFS,
         "wms": ServiceGeoserverWMS,
-        "wps": ServiceWPS,
+        "wps": ServiceGeoserverWPS,
     }
 
     @property
@@ -1280,7 +1337,7 @@ class ServiceGeoserverMeta(ServiceMeta):
     @property
     def resource_types_permissions(cls):
         # type: () -> ResourceTypePermissions
-        perms = {}
+        perms = {}  # type: ResourceTypePermissions
         for svc in cls.supported_ows:  # pylint: disable=E1133,not-an-iterable
             if issubclass(svc, ServiceOWS) and hasattr(svc, "resource_types_permissions"):
                 svc_res_perms = svc.resource_types_permissions
@@ -1305,6 +1362,7 @@ class ServiceGeoserver(ServiceOWS):
     .. seealso::
         https://docs.geoserver.org/stable/en/user/services/index.html
     """
+    service_base = None  # use ServiceGeoserverMeta.service_map
     service_type = "geoserver"
 
     # only allow workspace directly under service
@@ -1361,13 +1419,12 @@ class ServiceGeoserver(ServiceOWS):
         if not svc and req:
             # geoserver allows omitting 'service' request query parameter because it can be inferred from the path
             # since all OWS services are accessed using '/geoserver/<SERVICE>?request=...'
-            # attempt to match using applicable 'request' parameter
+            # attempt to match using applicable path fragment
+            svc_path = self.request.path.rsplit("/", 1)[-1].lower()
             for svc_ows in type(self).supported_ows:
-                if issubclass(svc_ows, ServiceInterface) and hasattr(svc_ows, "permissions"):
-                    perm = Permission(req)
-                    if perm in svc_ows.permissions:
-                        svc = svc_ows
-                        break
+                if svc_path == svc_ows.service_base:
+                    svc = svc_ows.service_base
+                    break
         config = self.get_config()
         if svc not in config or not config[svc]:
             return None

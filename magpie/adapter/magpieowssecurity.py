@@ -259,6 +259,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             raise OWSAccessForbidden(error_desc, status_base=error_base, **error_kw)
 
     def update_request_cookies(self, request):
+        # type: (Request) -> None
         """
         Ensure login of the user and update the request cookies if Twitcher is in a special configuration.
 
