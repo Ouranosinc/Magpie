@@ -4,20 +4,31 @@ from typing import TYPE_CHECKING
 
 import requests
 import six
-from six.moves.urllib.parse import parse_qs, urlparse
 from pyramid.authentication import IAuthenticationPolicy
-from pyramid.httpexceptions import HTTPException, HTTPUnauthorized, HTTPForbidden, HTTPOk, HTTPServiceUnavailable
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPException,
+    HTTPForbidden,
+    HTTPOk,
+    HTTPServiceUnavailable,
+    HTTPUnauthorized
+)
 from pyramid_beaker import set_cache_regions_from_settings
+from requests.exceptions import HTTPError
+from six.moves.urllib.parse import parse_qsl, urlparse
 
 from magpie.__meta__ import __version__ as magpie_version
 from magpie.adapter.magpieowssecurity import MagpieOWSSecurity
 from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.api.exception import evaluate_call, raise_http, valid_http, verify_param
+from magpie.api.generic import get_request_info
 from magpie.api.schemas import SigninAPI
 from magpie.security import get_auth_config
 from magpie.utils import (
     CONTENT_TYPE_JSON,
     SingletonMeta,
+    get_cookies,
+    get_json,
     get_logger,
     get_magpie_url,
     get_settings,
@@ -63,12 +74,13 @@ if LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
     )
 
 if TYPE_CHECKING:
-    from typing import Optional
+    from typing import Optional, Union
 
+    from pyramid.authentication import AuthTktCookieHelper
     from pyramid.config import Configurator
     from pyramid.request import Request
 
-    from magpie.typedefs import JSON, AnySettingsContainer, Str
+    from magpie.typedefs import JSON, AnyResponseType, AnySettingsContainer, Str
 
     from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
 
@@ -87,47 +99,62 @@ def verify_user(request):
     magpie_url = get_magpie_url(request)
 
     def try_login():
-        params = parse_qs(urlparse(request.url).query)
-        if is_json_body(request.text) and not params:
-            return requests.post(magpie_url + SigninAPI.path, json=request.json,
-                                 headers={"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON})
-        return requests.get(magpie_url + SigninAPI.path, data=request.text, params=params)
+        # type: () -> Union[AnyResponseType, HTTPError]
+        try:
+            params = dict(parse_qsl(urlparse(request.url).query))
+            if is_json_body(request.text) and not params:
+                return requests.post(magpie_url + SigninAPI.path, json=request.json,
+                                     headers={"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON})
+            return requests.get(magpie_url + SigninAPI.path, data=request.text, params=params)
+        except HTTPError as exc:
+            if getattr(exc, "status_code", 500) >= 500:
+                raise
+            return exc
 
+    # must generate request metadata manually because Twitcher
+    # won't have Magpie's tween that builds it automatically
+    info = get_request_info(request)
     resp = evaluate_call(lambda: try_login(),
-                         http_error=HTTPServiceUnavailable,
-                         content={"url": magpie_url}, content_type=CONTENT_TYPE_JSON,
+                         http_error=HTTPServiceUnavailable, metadata=info,
+                         content={"magpie_url": magpie_url}, content_type=CONTENT_TYPE_JSON,
                          msg_on_fail="Could not obtain response from Magpie to validate login.")
     try:
         verify_param(resp.status_code, is_equal=True, param_compare=HTTPOk.code, param_name="status_code",
-                     http_error=HTTPForbidden, content={"response": resp.json()}, content_type=CONTENT_TYPE_JSON,
-                     msg_on_fail="Failed Magpie login.")
+                     http_error=HTTPBadRequest, content={"response": get_json(resp)}, content_type=CONTENT_TYPE_JSON,
+                     msg_on_fail="Failed Magpie login due to invalid or missing parameters.", metadata=info)
         authn_policy = request.registry.queryUtility(IAuthenticationPolicy)  # noqa
-        authn_cookie = authn_policy.cookie
+        authn_cookie = authn_policy.cookie  # type: AuthTktCookieHelper
         cookie_name = authn_cookie.cookie_name
-        verify_param(cookie_name, is_in=True, param_compare=request.cookies, with_param=False,
-                     http_error=HTTPUnauthorized, content_type=CONTENT_TYPE_JSON,
+        req_cookies = get_cookies(request)
+        resp_cookies = get_cookies(resp)
+        verify_param(cookie_name, is_in=True, param_compare=req_cookies, with_param=False,
+                     http_error=HTTPUnauthorized, content_type=CONTENT_TYPE_JSON, metadata=info,
                      msg_on_fail="Authentication cookies missing from request to validate against Magpie instance.")
-        verify_param(cookie_name, is_in=True, param_compare=resp.cookies, with_param=False,
-                     http_error=HTTPUnauthorized, content_type=CONTENT_TYPE_JSON,
+        verify_param(cookie_name, is_in=True, param_compare=resp_cookies, with_param=False,
+                     http_error=HTTPUnauthorized, content_type=CONTENT_TYPE_JSON, metadata=info,
                      msg_on_fail="Authentication cookies missing from response to validate against Magpie instance.")
         twitcher_identity = authn_cookie.identify(request)
-        twitcher_user_id = twitcher_identity["userid"]
-        verify_param(twitcher_user_id, not_none=True, with_param=False,
-                     http_error=HTTPUnauthorized, content_type=CONTENT_TYPE_JSON,
+        verify_param(twitcher_identity, not_none=True, with_param=False,
+                     http_error=HTTPUnauthorized, content_type=CONTENT_TYPE_JSON, metadata=info,
                      msg_on_fail="Authentication failed from Twitcher policy.")
-        cookie_value = resp.cookies[cookie_name]
+        twitcher_user_id = twitcher_identity["userid"]
+        verify_param(twitcher_user_id, not_none=True, is_type=True, param_compare=int, with_param=False,
+                     http_error=HTTPUnauthorized, content_type=CONTENT_TYPE_JSON, metadata=info,
+                     msg_on_fail="Authentication failed from Twitcher policy.")
+        cookie_value = resp_cookies[cookie_name]
         cookie_userid_type = cookie_value.split("!userid_type:")[-1]
         cookie_decode = authn_cookie.userid_type_decoders[cookie_userid_type]
         cookie_ip = "0.0.0.0"  # nosec: B104
         result = authn_cookie.parse_ticket(authn_cookie.secret, cookie_value, cookie_ip, authn_cookie.hashalg)
         magpie_user_id = cookie_decode(result[1])
         verify_param(magpie_user_id, is_equal=True, param_compare=twitcher_user_id, with_param=False,
-                     http_error=HTTPForbidden, content_type=CONTENT_TYPE_JSON,
+                     http_error=HTTPForbidden, content_type=CONTENT_TYPE_JSON, metadata=info,
                      msg_on_fail="Twitcher login incompatible with Magpie login.")
     except HTTPException as resp_err:
         return resp_err
     except Exception:
-        return raise_http(HTTPForbidden, detail="Twitcher login incompatible with Magpie login.", nothrow=True)
+        return raise_http(HTTPForbidden, content_type=CONTENT_TYPE_JSON, metadata=info,
+                          detail="Twitcher login incompatible with Magpie login.", nothrow=True)
     return valid_http(HTTPOk, detail="Twitcher login verified successfully with Magpie login.")
 
 

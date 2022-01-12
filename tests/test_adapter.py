@@ -7,6 +7,7 @@ import mock
 import pytest
 import six
 from pyramid.httpexceptions import HTTPNotFound
+from six.moves.urllib.parse import urlparse
 
 from magpie import __meta__
 from magpie.constants import get_constant
@@ -19,9 +20,11 @@ if six.PY3:
     from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
 
 if TYPE_CHECKING:
-    from typing import Callable, Tuple
+    from typing import Any, Callable, Tuple
 
     from mock import MagicMock
+
+    from magpie.typedefs import AnyRequestType, AnyResponseType, CookiesType
 
 
 @unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
@@ -141,46 +144,90 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
     @utils.mocked_get_settings
     def test_user_verify(self):
+        self.login_admin()
+        test_other = "unittest-adapter-other-user"
+        utils.TestSetup.delete_TestUser(self, override_user_name=test_other)
+        utils.TestSetup.create_TestUser(self, override_user_name=test_other, override_password=test_other)
+        utils.check_or_try_logout_user(self)
+        other_headers, other_cookies = utils.check_or_try_login_user(self, username=test_other, password=test_other)
+        utils.check_or_try_logout_user(self)
         self.login_test_user()
 
         def mock_magpie_request(*args, **kwargs):
-            method, url, args = args[0], args[1], args[2:]
-            path = url.replace(test_url, "")
-            # because CLI utility does multiple login tests, we must force TestApp logout to forget session
-            # otherwise, error is raised because of user session mismatch between previous login and new one requested
-            if path.startswith("/signin"):
-                utils.check_or_try_logout_user(test_app)
-            return utils.test_request(test_app, method, path, *args, **kwargs)
+            # type: (Any, Any) -> AnyResponseType
+            if args:
+                method, url, args = args[0], args[1], args[2:]
+            else:
+                method = kwargs.pop("method")
+                url = kwargs.pop("url")
+            path = urlparse(url).path
+            return utils.test_request(self.app, method, path, *args, **kwargs, expect_errors=True)
 
-        with mock.patch("requests.Session.request", side_effect=mock_request):
-                with mock.patch("requests.request", side_effect=mock_request):
+        # use the function that is called within the adapter to preemptively mock
+        # the request 'environ' and 'cookies' properties, so that they can be found
+        # by following 'pyramid.authentication.AuthTktCookieHelper' making use of them
+        def mock_cookies(request):
+            # type: (AnyRequestType) -> CookiesType
+            from magpie.utils import get_cookies
 
-        resp = utils.test_request(self.test_adapter_app, "POST", "/verify",
-                                  data={"user_name": self.test_user_name, "password": self.test_user_name},
+            cookies = get_cookies(request)
+            setattr(request, "environ", {})
+            setattr(request, "cookies", cookies)
+            return cookies
+
+        # simulate unreachable magpie (request not yet mocked toward TestApp)
+        data = {"user_name": self.test_user_name, "password": self.test_user_name}
+        resp = utils.test_request(self.test_adapter_app, "POST", "/verify", json=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
-        utils.check_response_basic_info(resp, expected_method="POST")
-
-        resp = utils.test_request(self.test_adapter_app, "POST", "/verify",
-                                  data={}, expect_errors=True,
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=503)
+        resp = utils.test_request(self.test_adapter_app, "GET", "/verify", params=data, expect_errors=True,
                                   headers=self.test_headers, cookies=self.test_cookies)
-        utils.check_response_basic_info(resp, expected_method="POST", expected_code=400)
+        utils.check_response_basic_info(resp, expected_method="GET", expected_code=503)
 
-        resp = utils.test_request(self.test_adapter_app, "POST", "/verify", expect_errors=True,
-                                  data={"user_name": self.test_user_name, "password": self.test_user_name},
-                                  headers={}, cookies={})
-        utils.check_response_basic_info(resp, expected_method="POST", expected_code=401)
+        with mock.patch("requests.Session.request", side_effect=mock_magpie_request):
+            with mock.patch("requests.request", side_effect=mock_magpie_request):
+                with mock.patch("magpie.adapter.get_cookies", side_effect=mock_cookies):
+                    # valid requests with equivalent content/methods
+                    data = {"user_name": self.test_user_name, "password": self.test_user_name}
+                    resp = utils.test_request(self.test_adapter_app, "POST", "/verify", json=data,
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                    utils.check_response_basic_info(resp, expected_method="POST")
+                    resp = utils.test_request(self.test_adapter_app, "GET", "/verify", params=data,
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                    utils.check_response_basic_info(resp, expected_method="GET")
 
-        resp = utils.test_request(self.test_adapter_app, "POST", "/verify", expect_errors=True,
-                                  data={"user_name": "bad-user", "password": self.test_user_name},
-                                  headers=self.test_headers, cookies=self.test_cookies)
-        utils.check_response_basic_info(resp, expected_method="POST", expected_code=403)
+                    # invalid requests with different combinations
+                    data = {}
+                    resp = utils.test_request(self.test_adapter_app, "POST", "/verify", json=data, expect_errors=True,
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                    utils.check_response_basic_info(resp, expected_method="POST", expected_code=400)
+                    resp = utils.test_request(self.test_adapter_app, "GET", "/verify", params=data, expect_errors=True,
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                    utils.check_response_basic_info(resp, expected_method="GET", expected_code=400)
 
-        resp = utils.test_request(self.test_adapter_app, "GET", "/verify",
-                                  params={"user_name": self.test_user_name, "password": self.test_user_name},
-                                  headers=self.test_headers, cookies=self.test_cookies)
-        utils.check_response_basic_info(resp, expected_method="GET")
+                    data = {"user_name": self.test_user_name, "password": self.test_user_name}
+                    resp = utils.test_request(self.test_adapter_app, "POST", "/verify", json=data, expect_errors=True,
+                                              headers={}, cookies={})
+                    utils.check_response_basic_info(resp, expected_method="POST", expected_code=401)
+                    resp = utils.test_request(self.test_adapter_app, "GET", "/verify", params=data, expect_errors=True,
+                                              headers={}, cookies={})
+                    utils.check_response_basic_info(resp, expected_method="GET", expected_code=401)
 
+                    data = {"user_name": "bad-user", "password": self.test_user_name}
+                    resp = utils.test_request(self.test_adapter_app, "POST", "/verify", json=data, expect_errors=True,
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                    utils.check_response_basic_info(resp, expected_method="POST", expected_code=400)
+                    resp = utils.test_request(self.test_adapter_app, "GET", "/verify", params=data, expect_errors=True,
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                    utils.check_response_basic_info(resp, expected_method="GET", expected_code=400)
 
+                    data = {"user_name": self.test_user_name, "password": self.test_user_name}
+                    resp = utils.test_request(self.test_adapter_app, "POST", "/verify", json=data, expect_errors=True,
+                                              headers=other_headers, cookies=other_cookies)
+                    utils.check_response_basic_info(resp, expected_method="POST", expected_code=403)
+                    resp = utils.test_request(self.test_adapter_app, "GET", "/verify", params=data, expect_errors=True,
+                                              headers=other_headers, cookies=other_cookies)
+                    utils.check_response_basic_info(resp, expected_method="GET", expected_code=403)
 
 
 @runner.MAGPIE_TEST_LOCAL

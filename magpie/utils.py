@@ -48,8 +48,10 @@ if TYPE_CHECKING:
 
     from magpie import models
     from magpie.typedefs import (
+        JSON,
         AnyHeadersType,
         AnyKey,
+        AnyRequestType,
         AnyResponseType,
         AnySettingsContainer,
         CookiesType,
@@ -437,17 +439,22 @@ def get_request_user(request):
     return None
 
 
-def get_json(response):
+def get_json(request_or_response):
+    # type: (Union[AnyRequestType, AnyResponseType]) -> JSON
     """
     Retrieves the 'JSON' body of a response using the property/callable according to the response's implementation.
     """
-    if isinstance(response.json, dict):
-        return response.json
-    return response.json()
+    if isinstance(request_or_response.json, dict):
+        return request_or_response.json
+    return request_or_response.json()
 
 
-def get_header(header_name, header_container, default=None, split=None):
-    # type: (Str, AnyHeadersType, Optional[Str], Optional[Union[Str, List[Str]]]) -> Optional[Str]
+def get_header(header_name,         # type: Str
+               header_container,    # type: AnyHeadersType
+               default=None,        # type: Optional[Str], Optional[Union[Str, List[Str]]], bool
+               split=None,          # type: Optional[Union[Str, List[Str]]]
+               multi=False,         # type: bool
+               ):                   # type: (...) -> Optional[Union[Str, List[Str]]]
     """
     Retrieves ``header_name`` by fuzzy match (independently of upper/lower-case and underscore/dash) from various
     framework implementations of ``Headers``.
@@ -461,6 +468,7 @@ def get_header(header_name, header_container, default=None, split=None):
     :param split: character(s) to use to split the *found* `header_name`.
     """
     def fuzzy_name(name):
+        # type: (Str) -> Str
         return name.lower().replace("-", "_")
 
     if header_container is None:
@@ -471,6 +479,7 @@ def get_header(header_name, header_container, default=None, split=None):
     if isinstance(headers, dict):
         headers = header_container.items()
     header_name = fuzzy_name(header_name)
+    headers_found = []
     for h, v in headers:
         if fuzzy_name(h) == header_name:
             if isinstance(split, six.string_types) and len(split) > 1:
@@ -479,8 +488,10 @@ def get_header(header_name, header_container, default=None, split=None):
                 for sep in split:
                     v = v.replace(sep, split[0])
                 split = split[0]
-            return (v.split(split)[0] if split else v).strip()
-    return default
+            headers_found.append((v.split(split)[0] if split else v).strip())
+            if not multi:
+                return headers_found[0]
+    return headers_found or default
 
 
 def convert_response(response):
@@ -553,6 +564,30 @@ def get_authenticate_headers(request, error_type="invalid_token"):
         "Location-When-Unauthenticated": login_url,
     }
     return headers
+
+
+def get_cookies(request_or_response):
+    # type: (Union[AnyRequestType, AnyResponseType]) -> CookiesType
+    """
+    Retrieves a dictionary of cookie names and values from distinct implementations and container types.
+
+    :param request_or_response: Object that potentially contains cookies, by literal property or corresponding headers.
+    :return: Found cookies.
+    """
+    cookies = getattr(request_or_response, "cookies", {})
+    if cookies:
+        return dict(cookies)
+    headers = getattr(request_or_response, "headers", {})
+    if headers:
+        cookies = {}
+        set_cookie = get_header("Set-Cookie", headers, default=[], multi=True)
+        for cookie in set_cookie:
+            cookie_name, cookie_value = cookie.split("=", 1)
+            # when cookies are set in the request utility,
+            # extra header parameters must be stripped to have only value
+            cookies[cookie_name] = cookie_value.split(";")[0]
+        return cookies
+    return {}
 
 
 def get_admin_cookies(container, verify=True, raise_message=None):

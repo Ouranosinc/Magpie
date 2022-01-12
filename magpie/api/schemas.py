@@ -39,7 +39,7 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Union
+    from typing import Any, Dict, List, Union
 
     from magpie.typedefs import JSON, Str
 
@@ -81,6 +81,7 @@ def get_security(service, method):
 # Path definitions (from services and parameters)
 
 def service_api_route_info(service_api, **kwargs):
+    # type: (Service, Any) -> Dict[Str, Any]
     kwargs.update({
         "name": service_api.name,
         "pattern": service_api.path,
@@ -603,6 +604,8 @@ class ErrorCallBodySchema(ErrorFallbackBodySchema):
     content = colander.MappingSchema(default=None, unknown="preserve",
                                      description="Additional contextual details that lead to the error. "
                                                  "Can have any amount of sub-field to describe evaluated values.")
+    type = colander.SchemaNode(colander.String(), default=None, missing=colander.drop,
+                               description="Content-Type of the original call contents.")
 
 
 class ErrorResponseBodySchema(BaseResponseBodySchema):
