@@ -1340,14 +1340,14 @@ class ServiceGeoserver(ServiceOWS):
     }
     """
     Allowed children resource structure for `Geoserver`.
-    
+
     .. note::
         In the context of `Geoserver`, `WPS` are applied on available resources (`WFS`, `WMS`, etc.).
-        For this reason, the :class:`models.Process` also needs to be scoped under :class:`models.Workspace` in order 
-        to grant access to those resources to work on them, but the :class:`models.Workspace` name **MUST** be in the 
+        For this reason, the :class:`models.Process` also needs to be scoped under :class:`models.Workspace` in order
+        to grant access to those resources to work on them, but the :class:`models.Workspace` name **MUST** be in the
         path (i.e.: ``identifier=<WORKSPACE>:<PROCESS_ID>`` request parameter does not work).
-        Without the :class:`models.Workspace` scope in the path, ``identifier`` parameter fails to be resolved by 
-        `Geoserver`, as if it was unspecified. Attribute :attr:`ServiceGeoserverWPS.resource_scoped` controls the 
+        Without the :class:`models.Workspace` scope in the path, ``identifier`` parameter fails to be resolved by
+        `Geoserver`, as if it was unspecified. Attribute :attr:`ServiceGeoserverWPS.resource_scoped` controls the
         behaviour of splitting the defined :attr:`resource_param` into :class:`models.Workspace` and child components.
     """
 
