@@ -118,7 +118,8 @@ def verify_user(request):
         cookie_value = resp.cookies[cookie_name]
         cookie_userid_type = cookie_value.split("!userid_type:")[-1]
         cookie_decode = authn_cookie.userid_type_decoders[cookie_userid_type]
-        result = authn_cookie.parse_ticket(authn_cookie.secret, cookie_value, "0.0.0.0", authn_cookie.hashalg)
+        cookie_ip = "0.0.0.0"  # nosec: B104
+        result = authn_cookie.parse_ticket(authn_cookie.secret, cookie_value, cookie_ip, authn_cookie.hashalg)
         magpie_user_id = cookie_decode(result[1])
         verify_param(magpie_user_id, is_equal=True, param_compare=twitcher_user_id, with_param=False,
                      http_error=HTTPForbidden, content_type=CONTENT_TYPE_JSON,
@@ -135,6 +136,7 @@ class MagpieAdapter(AdapterInterface):
     # pylint: disable: W0223,W0612
 
     def __init__(self, container):
+        # type: (AnySettingsContainer) -> None
         self._servicestore = None
         self._owssecurity = None
         super(MagpieAdapter, self).__init__(container)  # pylint: disable=E1101,no-member
@@ -193,7 +195,7 @@ class MagpieAdapter(AdapterInterface):
         config = self.configurator_factory(container)
         owsproxy_defaultconfig(config)  # let Twitcher configure the rest normally
 
-    def configurator_factory(self, container):  # noqa: N805, R0201
+    def configurator_factory(self, container):  # noqa: R0201
         # type: (AnySettingsContainer) -> Configurator
         LOGGER.debug("Preparing database session.")
 
@@ -210,7 +212,7 @@ class MagpieAdapter(AdapterInterface):
         setup_session_config(config)
 
         # add route to verify user token matching between Magpie/Twitcher
-        config.add_route("verify-user", "/verify")
+        config.add_route("verify-user", "/verify", request_method=("GET", "POST"))
         config.add_view(verify_user, route_name="verify-user")
 
         return config
