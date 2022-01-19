@@ -14,6 +14,7 @@ import six
 import yaml
 from pyramid.interfaces import IRequestExtensions
 from six.moves.urllib.parse import urlparse
+from webtest.app import TestApp
 
 from magpie import __meta__
 from magpie.api import schemas as s
@@ -50,7 +51,6 @@ if TYPE_CHECKING:
     from typing import Dict, List, Optional, Set, Tuple, Union
 
     from sqlalchemy.orm.session import Session
-    from webtest.app import TestApp
 
     from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, Str
 
@@ -523,7 +523,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         # also doesn't make sense to request the version and compare against same request accomplished here
         # so validate version number only if local
         app_or_url = utils.get_app_or_url(self)
-        localhosts = ["localhost", "127.0.0.1", "0.0.0.0"]
+        localhosts = ["localhost", "127.0.0.1", "0.0.0.0"]  # nosec: B104
         if isinstance(app_or_url, six.string_types) and any(loc in app_or_url for loc in localhosts):
             utils.check_val_equal(body["version"], __meta__.__version__)
 
@@ -6558,8 +6558,8 @@ class SetupMagpieAdapter(ConfigTestCase):
         adapter = MagpieAdapter(settings)
         config = adapter.configurator_factory(settings)
         # making the app triggers creation of class instances from registry (eg: AuthN/AuthZ Policies)
-        config.make_wsgi_app()
         settings = config.registry.settings
+        cls.test_adapter_app = TestApp(config.make_wsgi_app())
         cls.ows = adapter.owssecurity_factory(settings)
         cls.adapter = adapter
 
