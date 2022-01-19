@@ -7,22 +7,6 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
-
-`3.20.1 <https://github.com/Ouranosinc/Magpie/tree/3.20.1>`_ (2022-01-19)
-------------------------------------------------------------------------------------
-
-Bug Fixes
-~~~~~~~~~~~~~~~~~~~~~
-* Fix `Twitcher` ``/verify`` endpoint integrated through ``MagpieAdapter`` to validate synchronized authentication
-  policies across both services. The endpoint now supports query parameter credentials to facilitate call directly
-  within a web browser (not assuming JSON contents) and properly parses cookies from both policies to report more
-  detailed error messages in case of failure.
-* Fix ``error`` and ``type`` representation when handling raised exception by ``evaluate_call`` utility function.
-
-`3.20.0 <https://github.com/Ouranosinc/Magpie/tree/3.20.0>`_ (2022-01-06)
-------------------------------------------------------------------------------------
-
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add missing ``ServiceWFS`` permissions according to `OGC WFS standard <https://www.ogc.org/standards/wfs>`_.
@@ -64,6 +48,17 @@ Bug Fixes
   for a given ``Service``.
 * Fix `Effective Resolution` of ``Permission`` applied for ``ServiceGeoserverWMS`` to consider ``Scope`` modifier
   of ``Service`` and ``Workspace`` for access to be resolved at the ``Layer`` level.
+
+`3.20.1 <https://github.com/Ouranosinc/Magpie/tree/3.20.1>`_ (2022-01-19)
+------------------------------------------------------------------------------------
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix `Twitcher` ``/verify`` endpoint integrated through ``MagpieAdapter`` to validate synchronized authentication
+  policies across both services. The endpoint now supports query parameter credentials to facilitate call directly
+  within a web browser (not assuming JSON contents) and properly parses cookies from both policies to report more
+  detailed error messages in case of failure.
+* Fix ``error`` and ``type`` representation when handling raised exception by ``evaluate_call`` utility function.
 
 `3.20.0 <https://github.com/Ouranosinc/Magpie/tree/3.20.0>`_ (2022-01-06)
 ------------------------------------------------------------------------------------
