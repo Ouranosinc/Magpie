@@ -75,7 +75,7 @@ def format_service(service,                         # type: Service
             svc_info["service{}url".format(sep)] = str(service.url)
         if basic_info:
             return svc_info
-        svc_type = SERVICE_TYPE_DICT[service.type]
+        svc_type = SERVICE_TYPE_DICT[service.type]  # type: Type[ServiceInterface]
         if show_configuration:
             # make sure to generate the default configuration if applicable
             if svc_type.configurable:
@@ -88,7 +88,10 @@ def format_service(service,                         # type: Service
         if show_resources_allowed:
             svc_info["resource_child_allowed"] = svc_type.child_resource_allowed
             svc_info["resource_types_allowed"] = sorted(svc_type.resource_type_names)
-            svc_info["resource_structure_allowed"] = sorted(svc_type.child_structure_allowed)
+            svc_info["resource_structure_allowed"] = {
+                res.resource_type_name: list(sorted(child_res.resource_type_name for child_res in children_res))
+                for res, children_res in svc_type.child_structure_allowed.items()
+            }
         return svc_info
 
     return evaluate_call(

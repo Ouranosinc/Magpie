@@ -141,7 +141,15 @@ class ServiceInterface(object):
     """
 
     def __init__(self, service, request):
-        # type: (models.Service, Request) -> None
+        # type: (models.Service, Optional[Request]) -> None
+        """
+        Initialize the service.
+
+        :param service: Base service resource that must be handled by this service implementation.
+        :param request: Active request to handle requested resources, permissions and effective access.
+            The request can be omitted if basic service definition details are to be retrieved.
+            It is mandatory for any ``requested`` or ``effective`` component that should be resolved.
+        """
         self.service = service          # type: models.Service
         self.request = request          # type: Request
         self._flag_acl_cached = {}      # type: Dict[Tuple[Str, Str, Str, Optional[int]], bool]
