@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.20.1 <https://github.com/Ouranosinc/Magpie/tree/3.20.1>`_ (2022-01-19)
+------------------------------------------------------------------------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix `Twitcher` ``/verify`` endpoint integrated through ``MagpieAdapter`` to validate synchronized authentication
