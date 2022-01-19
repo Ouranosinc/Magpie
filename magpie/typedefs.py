@@ -14,13 +14,16 @@ if TYPE_CHECKING:
     from pyramid.config import Configurator
     from pyramid.httpexceptions import HTTPException
     from pyramid.registry import Registry
-    from pyramid.request import Request
+    from pyramid.request import Request as PyramidRequest
     from pyramid.response import Response as PyramidResponse
     from requests.cookies import RequestsCookieJar
+    from requests.models import Request as RequestsRequest
     from requests.structures import CaseInsensitiveDict
     from sqlalchemy.orm.session import Session
     from webob.headers import EnvironHeaders, ResponseHeaders
+    from webob.request import Request as WebobRequest
     from webob.response import Response as WebobResponse
+    from webtest.app import TestRequest
     from webtest.response import TestResponse
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
@@ -44,13 +47,14 @@ if TYPE_CHECKING:
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]
     SettingsType = Dict[Str, SettingValue]
-    AnySettingsContainer = Union[Configurator, Registry, Request, SettingsType]
+    AnySettingsContainer = Union[Configurator, Registry, PyramidRequest, SettingsType]
 
     ParamsType = Dict[Str, Any]
     CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
     HeadersType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
     AnyHeadersType = Union[HeadersType, ResponseHeaders, EnvironHeaders, CaseInsensitiveDict]
     AnyCookiesType = Union[CookiesType, RequestsCookieJar]
+    AnyRequestType = Union[WebobRequest, PyramidRequest, RequestsRequest, TestRequest]
     AnyResponseType = Union[WebobResponse, PyramidResponse, HTTPException, TestResponse]
     CookiesOrSessionType = Union[RequestsCookieJar, Session]
 
