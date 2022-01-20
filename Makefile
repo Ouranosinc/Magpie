@@ -696,7 +696,7 @@ test-remote-only:		## run only remote tests with the environment Python
 .PHONY: test-custom-only
 test-custom-only:		## run custom marker tests using SPEC="<marker-specification>"
 	@echo "Running custom tests..."
-	@[ "${SPEC}" ] || ( echo ">> 'TESTS' is not set"; exit 1 )
+	@[ "${SPEC}" ] || ( echo ">> 'SPEC' is not set"; exit 1 )
 	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker

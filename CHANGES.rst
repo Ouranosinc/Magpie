@@ -35,6 +35,9 @@ Features / Changes
 * Adjust UI to consider ``child_structure_allowed`` definitions to propose only applicable ``Resource`` types in the
   combobox when creating a new ``Resource`` in the tree hierarchy.
 * Add UI submission field to provide ``Service`` JSON configuration at creation when supported by the type.
+* Add ``child_structure_allowed`` to ``ServiceAPI`` and ``ServiceTHREDDS`` to be more explicit about allowed structure
+  hierarchies in API responses. Their original behaviour remains unchanged, but is further enforced during validation
+  of their children resource type creation against explicit structure.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

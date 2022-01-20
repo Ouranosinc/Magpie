@@ -1030,6 +1030,11 @@ class ServiceAPI(ServiceInterface):
         models.Route: models.Route.permissions
     }
 
+    child_structure_allowed = {
+        models.Service: [models.Route],
+        models.Route: [models.Route],
+    }
+
     def resource_requested(self):
         # type: () -> ResourceRequested
         route_parts = self._get_request_path_parts()
@@ -1161,6 +1166,12 @@ class ServiceTHREDDS(ServiceInterface):
     resource_types_permissions = {
         models.Directory: permissions,
         models.File: permissions,
+    }
+
+    child_structure_allowed = {
+        models.Service: [models.Directory, models.File],
+        models.Directory: [models.Directory, models.File],
+        models.File: [],
     }
 
     configurable = True

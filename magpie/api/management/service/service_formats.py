@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
     from magpie.models import Resource, Service
-    from magpie.permissions import PermissionSet
+    from magpie.permissions import Permission, PermissionSet
     from magpie.services import ServiceInterface
     from magpie.typedefs import JSON, ResourcePermissionMap
 
@@ -59,13 +59,15 @@ def format_service(service,                         # type: Service
         :func:`magpie.api.management.resource.resource_formats.format_resource`
     """
     def fmt_svc():
+        # type: () -> JSON
         sep = "." if dotted else "_"
         svc_sync_type = str(service.sync_type) if service.sync_type is not None else service.sync_type
+        svc_type = SERVICE_TYPE_DICT[service.type]
         svc_info = {
             "service{}name".format(sep): str(service.resource_name),
             "service{}type".format(sep): str(service.type),
             "service{}sync_type".format(sep): svc_sync_type,
-            "service{}configurable".format(sep): SERVICE_TYPE_DICT[service.type].configurable,
+            "service{}configurable".format(sep): svc_type.configurable,
             "resource{}id".format(sep): service.resource_id,
         }
         if show_public_url:
@@ -75,7 +77,6 @@ def format_service(service,                         # type: Service
             svc_info["service{}url".format(sep)] = str(service.url)
         if basic_info:
             return svc_info
-        svc_type = SERVICE_TYPE_DICT[service.type]  # type: Type[ServiceInterface]
         if show_configuration:
             # make sure to generate the default configuration if applicable
             if svc_type.configurable:
@@ -130,6 +131,7 @@ def format_service_resources(service,                       # type: Service
     :return: JSON body representation of the service resource tree
     """
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
+        # type: (Service, Session, Optional[List[Permission]], Optional[List[Permission]], bool) -> JSON
         tree = get_resource_children(svc, db)
         if not show_all:
             filter_res_ids = list(res_perms) if res_perms else []

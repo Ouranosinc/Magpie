@@ -1669,11 +1669,24 @@ class ResourceTypesAllowed(colander.SequenceSchema):
     )
 
 
-class ResourceStructuresAllowed(colander.SequenceSchema):
-    description = "List of allowed combinations of resource type hierarchical structures under the service."
-    res_type_path = colander.SchemaNode(
+class ResourceTypeChildrenAllowed(colander.SequenceSchema):
+    title = "ResourceTypeChildrenAllowed"
+    res_type = colander.SchemaNode(
         colander.String(),
-        description="Path-like resource type structure allowed under the service."
+        description="Allowed child resource type."
+    )
+
+
+class ResourceStructuresAllowed(colander.MappingSchema):
+    description = (
+        "Mapping of allowed combinations of nested resource type structures under the service. "
+        "If undefined, the service does not impose any specific resource type hierarchy other "
+        "than whether individual resource types themselves allow children resources."
+    )
+    unknown = "preserve"
+    res_type = ResourceTypeChildrenAllowed(
+        name="{resource_type}",
+        description="List of children resource types in structure allowed under the parent resource type."
     )
 
 
