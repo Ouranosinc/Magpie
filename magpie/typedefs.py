@@ -87,7 +87,8 @@ if TYPE_CHECKING:
     AccessControlEntryType = Union[Tuple[Str, Str, Str], Str]
     AccessControlListType = List[AccessControlEntryType]
 
-    ResourceRequested = Optional[Tuple[ServiceOrResourceType, bool]]
+    TargetResourceRequested = Tuple[ServiceOrResourceType, bool]
+    MultiResourceRequested = Union[None, TargetResourceRequested, List[TargetResourceRequested]]
     PermissionRequested = Optional[Union[Permission, Collection[Permission]]]
     ResourceTypePermissions = Dict[Type[models.Resource], List[Permission]]
 

@@ -27,7 +27,7 @@ from magpie.permissions import (
     PermissionType,
     Scope
 )
-from magpie.utils import get_logger
+from magpie.utils import fully_qualified_name, get_logger
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
@@ -38,12 +38,13 @@ if TYPE_CHECKING:
 
     from magpie.typedefs import (
         AccessControlListType,
+        MultiResourceRequested,
         PermissionRequested,
-        ResourceRequested,
         ResourceTypePermissions,
         ServiceConfiguration,
         ServiceOrResourceType,
-        Str
+        Str,
+        TargetResourceRequested
     )
 
 
@@ -182,7 +183,7 @@ class ServiceInterface(object):
 
     @abc.abstractmethod
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> MultiResourceRequested
         """
         Defines how to interpret the incoming request into the targeted :class:`model.Resource` for the given service.
 
@@ -190,13 +191,15 @@ class ServiceInterface(object):
 
         The expected return value must be either of the following::
 
-            - (target-resource, True)     when the exact resource is found
-            - (parent-resource, False)    when any parent of the resource is found
-            - None                        when invalid request or not found resource
+            - List<(target-resource, target?)>  When multiple resources need validation ('target?' as below for each).
+            - (target-resource, True)           when the exact resource is found according to request parsing.
+            - (parent-resource, False)          when any parent of the resource is found according to request parsing.
+            - None                              when invalid request or not found resource.
 
-        The `parent-resource` indicates the *closest* higher-level resource in the hierarchy that would nest the
-        otherwise desired `target-resource`. The idea behind this is that `Magpie` will be able to resolve the effective
-        recursive permission even if not all corresponding resources were explicitly defined in the database.
+        The ``parent-resource`` should indicate the *closest* higher-level resource in the hierarchy that would nest
+        the otherwise desired ``target-resource``. The idea behind this is that `Magpie` will be able to resolve the
+        effective recursive scoped permission even if not all corresponding resources were explicitly defined in the
+        database.
 
         For example, if the request *would* be interpreted with the following hierarchy after service-specific
         resolution::
@@ -205,15 +208,15 @@ class ServiceInterface(object):
                 Resource1         <== closest *existing* parent resource
                     [Resource2]   <== target (according to service/request resolution), but not existing in database
 
-        A permission defined as Allow/Recursive on ``Resource1`` should normally allow access to ``Resource2``. If
+        A permission defined as Allow/Recursive on ``Resource1`` should *normally* allow access to ``Resource2``. If
         ``Resource2`` is not present in the database though, it cannot be looked for, and the corresponding ACL cannot
         be generated. Because the (real) protected service using `Magpie` can have a large and dynamic hierarchy, it
-        is not convenient to enforce perpetual sync between it and its resource representation in `Magpie`. Using the
+        is not convenient to enforce perpetual sync between it and its resource representation in `Magpie`. Using
         ``(parent-resource, False)`` will allow resolution of permission from the closest available parent.
 
         .. note::
-            In case of `parent-resource` returned, only `recursive`-scoped permissions will be considered, since the
-            missing `target-resource` is the only one that should be checked for `match`-scoped permissions. For this
+            In case of ``parent-resource`` returned, only `recursive`-scoped permissions will be considered, since the
+            missing ``target-resource`` is the only one that should be checked for `match`-scoped permissions. For this
             reason, the service-specific implementation should preferably return the explicit `target` resource whenever
             possible.
 
@@ -221,7 +224,18 @@ class ServiceInterface(object):
         to indicate failure to retrieve the expected resource or that corresponding resource does not exist. Otherwise,
         this method implementation should convert any request path, query parameters, etc. into an existing resource.
 
-        :returns: tuple of reference resource (target/parent), and enabled status of match permissions (True/False)
+        If a list of ``(target-resource, target?)`` is returned, all of those resources should individually perform
+        :term:`Effective Resolution` and should **ALL** simultaneously be granted access to let the request through.
+        This can be used to resolve ambiguous or equivalent parameter combinations from parsing the request, or to
+        validate access to parameters that allow multi-resource references using some kind of list value representation.
+
+        .. seealso::
+            - :meth:`_get_acl` for :term:`Effective Resolution` of over multiple :term:`Resource` references.
+            - :meth:`effective_permissions` for :term:`Effective Resolution`  of a single :term:`Resource`.
+
+        :returns:
+            One or many tuple of reference resource (target/parent),
+            and explicit match status of the corresponding resource (True/False)
         """
         raise NotImplementedError
 
@@ -295,28 +309,67 @@ class ServiceInterface(object):
         permissions = self.permission_requested()
         if permissions is None:
             return [DENY_ALL]
-        resource = self.resource_requested()
-        if not resource:
+
+        target_resources = self.resource_requested()
+        if not target_resources:
             return [DENY_ALL]
-        if not isinstance(resource, tuple):
-            is_target = False
-        else:
-            resource, is_target = resource
+        if not isinstance(target_resources, list):
+            if not isinstance(target_resources, tuple):
+                resource = target_resources
+                is_target = False
+            else:
+                resource, is_target = target_resources
+            target_resources = [(resource, is_target)]
+        if any(res[0] is None for res in target_resources):
+            return [DENY_ALL]
+
         if not isinstance(permissions, (list, set, tuple)):
             permissions = {permissions}
         user = self.user_requested()
-        return self._get_acl(user, resource, permissions, allow_match=is_target)
 
-    def _get_acl(self, user, resource, permissions, allow_match=True):
-        # type: (models.User, ServiceOrResourceType, Collection[Permission], bool) -> AccessControlListType
+        return self._get_acl(user, target_resources, permissions)
+
+    def _get_acl(self, user, resources, permissions):
+        # type: (models.User, MultiResourceRequested, Collection[Permission]) -> AccessControlListType
         """
-        Resolves the resource-tree and the user/group inherited permissions into a simplified ACL for this resource.
+        Resolves resource-tree and user/group inherited permissions into simplified :term:`ACL` of requested resources.
+
+        Contrary to :meth:`effective_permissions` that can be resolved only for individual :term:`Resource`, :term:`ACL`
+        is involved during actual request access, which could refer to multiple :term:`Resource` references or distinct
+        :term:`Permission` names if the identified parent :term:`Service` supports it.
+
+        When more than one item is specified for validation (any combination of :term:`Resource` or :term:`Permission`),
+        **ALL** of them must be granted access to resolve as :data:`Access.ALLOW`. Any denied access blocks the whole
+        set of requested elements.
 
         .. seealso::
-            - :meth:`effective_permissions`
+            - Core :term:`Permission` resolution rules of a single :term:`Resource` using :meth:`effective_permissions`.
+            - Support of multi-:term:`Resource` references defined by returned values of :meth:`resource_requested`
+              for individual :class:`ServiceInterface` implementations.
         """
-        permissions = self.effective_permissions(user, resource, permissions, allow_match)
-        return [perm.ace(self.request.user) for perm in permissions]
+        # avoid useless effective resolution re-computation if duplicates are found
+        target_resources = list(set(resources))
+        effective_perms = {}  # type: Dict[Permission, PermissionSet]
+        allowed_ace = []
+        for resource, allow_match in target_resources:
+
+            # only 1 entry per 'permission name' possible after effective resolution for that resource
+            res_access_perms = self.effective_permissions(user, resource, permissions, allow_match)
+            for perm in res_access_perms:
+                if perm.name not in effective_perms:
+                    effective_perms[perm.name] = perm
+                else:
+                    other_perm = effective_perms[perm.name]
+                    effect_perm = PermissionSet.resolve(perm, other_perm, context=PermissionType.EFFECTIVE)
+                    effective_perms[perm.name] = effect_perm
+
+                # if any resource or any permission indicates deny, break out to avoid useless computation
+                cur_perm = effective_perms[perm.name]
+                if cur_perm.access == Access.DENY:
+                    return [cur_perm.ace(self.request.user)]
+
+            allowed_ace.extend([perm.ace(self.request.user) for perm in effective_perms.values()])
+        return allowed_ace
 
     def _get_connected_object(self, obj):
         # type: (Union[ServiceOrResourceType, models.User]) -> Optional[ServiceOrResourceType]
@@ -447,7 +500,7 @@ class ServiceInterface(object):
     def effective_permissions(self, user, resource, permissions=None, allow_match=True):
         # type: (models.User, ServiceOrResourceType, Optional[Collection[Permission]], bool) -> List[PermissionSet]
         """
-        Obtains the effective permissions the user has over the specified resource.
+        Obtains the :term:`Effective Resolution` of permissions the user has over the specified resource.
 
         Recursively rewinds the resource tree from the specified resource up to the top-most parent service the resource
         resides under (or directly if the resource is the service) and retrieve permissions along the way that should be
@@ -663,6 +716,7 @@ class ServiceOWS(ServiceInterface):
 
     @abc.abstractmethod
     def resource_requested(self):
+        # type: () -> MultiResourceRequested
         raise NotImplementedError
 
     def permission_requested(self):
@@ -857,21 +911,49 @@ class ServiceGeoserverBase(ServiceOWS):
     def resource_scoped(self):
         # type: () -> bool
         """
-        Indicates if the resource is allowed to employ scoped workspace naming.
+        Indicates if the service is allowed to employ scoped :class:`models.Workspace` naming.
 
         When allowed, the :class:`models.Workspace` can be inferred from the request parameter
         defined by :attr:`resource_param` to retrieve scoped name as ``<WORKSPACE>:<RESOURCE>``.
-        When not allowed, the resource name is left untouched can will not attempt to infer
-        any :class:`models.Workspace` from it.
+        When not allowed, the resource name is left untouched `Magpie` will not attempt to infer
+        any :class:`models.Workspace` from it. The :class:`models.Workspace` can only be specified
+        in the request path for isolated :term:`Resource` references.
+        """
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def resource_multi(self):
+        # type: () -> bool
+        """
+        Indicates if the service supports multiple simultaneous :term:`Resource` references.
+
+        When supported, the value retrieved from :attr:`resource_param` can be comma-separated to represent
+        multiple :term:`Resource` of the same nature, which can all be retrieved with the same request.
+        Otherwise, single value only is considered by default.
+
+        .. note::
+            Permission modifier :data:`Access.ALLOW` will have to be resolved for all those :term:`Resource`
+            references for the request to be granted access.
         """
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def resource_param(self):
-        # type: () -> Str
+        # type: () -> Union[Str, List[Str]]
         """
-        Name of the request query parameter to access requested leaf children resource.
+        Name of the request query parameter(s) to access requested leaf children resource.
+
+        If a single string is defined, the parameter must be equal to this value (case insensitive).
+        When using a list, any specified name combination will be resolved as the same parameter.
+
+        .. note::
+            The resulting parameter(s) are automatically added to :meth:`params_expected` to ensure they are always
+            retrieved in the :attr:`parser` from the request query parameters.
+
+        .. seealso::
+            :meth:`resource_param_requested` to obtain the resolved parameter considering any applicable combination.
         """
         raise NotImplementedError
 
@@ -887,22 +969,49 @@ class ServiceGeoserverBase(ServiceOWS):
     @property
     def params_expected(self):
         # type: () -> List[Str]
-        return [
+        """
+        Specify typical `Geoserver` request query parameters expected for any sub-service implementation.
+
+        The :attr:`resource_param` is also added to ensure it is always parsed based on the derived implementation.
+        """
+        if isinstance(self.resource_param, six.string_types):
+            impl_params = [self.resource_param]
+        elif isinstance(self.resource_param, list):
+            impl_params = self.resource_param
+        else:
+            name = fully_qualified_name(self)
+            raise NotImplementedError(f"Missing or invalid definition of 'resource_param' in service: {name}")
+        base_params = [
             "request",
             "service",
             "version",
-            self.resource_param,
         ]
+        return base_params + impl_params
 
-    # only workspace directly followed by layers
-    child_structure_allowed = {
-        models.Service: [models.Workspace],
-        models.Workspace: [models.Layer],
-        models.Layer: [],
-    }
+    def resource_param_requested(self):
+        # type: () -> List[Str]
+        """
+        Obtain the resolved value(s) of the resource query parameter from :term:`OWS` parser applied onto the request.
+        """
+        if isinstance(self.resource_param, six.string_types):
+            value = self.parser.params[self.resource_param]
+            if self.resource_multi and isinstance(value, six.string_types):
+                return value.split(",")
+            return [value]
+        if isinstance(self.resource_param, list):
+            values = []
+            for param in self.resource_param:
+                value = self.parser.params[param]
+                if self.resource_multi and isinstance(value, six.string_types):
+                    values.extend(value.split(","))
+                else:
+                    values.append(value)
+            return values
+        name = fully_qualified_name(self)
+        raise NotImplementedError(f"Missing or invalid requested 'resource_param' in service: {name}")
 
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> MultiResourceRequested
         """
         Parse the requested resource down to the applicable :class:`models.Workspace`.
 
@@ -921,7 +1030,6 @@ class ServiceGeoserverBase(ServiceOWS):
             path_parts = path_parts[1:]
             parts_lower = parts_lower[1:]
         workspace_name = None
-        res_name = None
         if len(parts_lower) > 1 and parts_lower[1] == self.service_base:
             workspace_name = path_parts[0]
         if permission == Permission.GET_CAPABILITIES:
@@ -934,38 +1042,53 @@ class ServiceGeoserverBase(ServiceOWS):
                 (len(parts_lower) == 1 and parts_lower[0] == self.service_base)
             ):
                 return self.service, True
-        else:
-            # following requests lead to the same resolution, need to check the workspace in the layer
-            #   /geoserver/<WORKSPACE>/<OWS>?<RESOURCE_PARAM>=[<WORKSPACE>:]<LAYER_NAME>&request=<PERMISSION>
-            #   /geoserver/<OWS>?<RESOURCE_PARAM>=<WORKSPACE>:<LAYER_NAME>&request=<PERMISSION>
-            res_name = self.parser.params[self.resource_param] or ""
+            return self.service, False
+
+        # following requests lead to the same resolution, need to check the workspace in the layer
+        #   /geoserver/<WORKSPACE>/<OWS>?<RESOURCE_PARAM>=[<WORKSPACE>:]<LAYER_NAME>&request=<PERMISSION>
+        #   /geoserver/<OWS>?<RESOURCE_PARAM>=<WORKSPACE>:<LAYER_NAME>&request=<PERMISSION>
+        matched_resources = []
+        session = get_connected_session(self.request)
+        for res_name in self.resource_param_requested():
+            workspace_isolated = None  # reset for next layer
+
             # if missing, consider layer name as not scoped under workspace
             if self.resource_scoped and ":" in res_name:
                 workspace_scope, res_name = res_name.rsplit(":", 1)
                 if not workspace_name:
-                    workspace_name = workspace_scope
+                    # workspace only in scoped layer parameter
+                    workspace_isolated = workspace_scope
                 elif workspace_name != workspace_scope:
                     # In case the request was formed with both workspace in path and scoped layer name,
                     # consider the workspace as not resolved since we cannot know which one to target.
                     # This avoids erroneously granting access to restricted layer from another workspace by
                     # forging a request that would include some workspace for which the user does have access.
-                    workspace_name = None
-        if not workspace_name:
-            return self.service, False
-        session = get_connected_session(self.request)
-        workspace = models.find_children_by_name(child_name=workspace_name,
-                                                 parent_id=self.service.resource_id,
-                                                 db_session=session)
-        if workspace:
-            if not res_name:
-                return workspace, False
-            resource = models.find_children_by_name(child_name=res_name,
-                                                    parent_id=workspace.resource_id,
-                                                    db_session=session)
-            if resource:
-                return resource, True
-            return workspace, False
-        return self.service, False
+                    workspace_isolated = None
+                else:
+                    # workspace only in path, layer not scoped
+                    workspace_isolated = workspace_name
+
+            if not workspace_isolated:
+                matched_resources.append((self.service, False))
+                continue
+            workspace = models.find_children_by_name(child_name=workspace_isolated,
+                                                     parent_id=self.service.resource_id,
+                                                     db_session=session)
+            if workspace:
+                if not res_name:
+                    matched_resources.append((workspace, False))
+                    continue
+                resource = models.find_children_by_name(child_name=res_name,
+                                                        parent_id=workspace.resource_id,
+                                                        db_session=session)
+                if resource:
+                    matched_resources.append((resource, True))
+                else:
+                    matched_resources.append((workspace, False))
+                continue
+            matched_resources.append((self.service, False))
+
+        return matched_resources
 
 
 class ServiceGeoserverWMS(ServiceBaseWMS, ServiceGeoserverBase):
@@ -979,6 +1102,7 @@ class ServiceGeoserverWMS(ServiceBaseWMS, ServiceGeoserverBase):
     service_type = "geoserverwms"
 
     resource_scoped = True
+    resource_multi = True  # can stack layers on map
     resource_param = "layers"
 
     permissions = [
@@ -992,13 +1116,20 @@ class ServiceGeoserverWMS(ServiceBaseWMS, ServiceGeoserverBase):
         # Permission.EXCEPTIONS,
     ]
 
+    # only workspace directly followed by layers
+    child_structure_allowed = {
+        models.Service: [models.Workspace],
+        models.Workspace: [models.Layer],
+        models.Layer: [],
+    }
+
     resource_types_permissions = {
         models.Workspace: permissions,
         models.Layer: permissions,
     }
 
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> MultiResourceRequested
         return ServiceGeoserverBase.resource_requested(self)
 
 
@@ -1010,7 +1141,7 @@ class ServiceAccess(ServiceInterface):
     resource_types_permissions = {}
 
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> TargetResourceRequested
         return self.service, True
 
     def permission_requested(self):
@@ -1036,7 +1167,7 @@ class ServiceAPI(ServiceInterface):
     }
 
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> TargetResourceRequested
         route_parts = self._get_request_path_parts()
         if not route_parts:
             return self.service, True
@@ -1100,7 +1231,7 @@ class ServiceWFS(ServiceOWS):
     }
 
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> TargetResourceRequested
         if not self.parser.params["typenames"]:
             return self.service, False
         names = self.parser.params["typenames"]  # can be comma-separated or single layer
@@ -1132,7 +1263,8 @@ class ServiceGeoserverWFS(ServiceWFS, ServiceGeoserverBase):
     service_type = "geoserverwfs"
 
     resource_scoped = True
-    resource_param = "typenames"
+    resource_multi = True
+    resource_param = ["typenames", "typename"]  # replacement between WPS 1.x/2.x often handled as synonyms
 
     permissions = ServiceWFS.permissions + [
         # v1.1.0 only
@@ -1146,8 +1278,15 @@ class ServiceGeoserverWFS(ServiceWFS, ServiceGeoserverBase):
         models.Layer: permissions,
     }
 
+    # only workspace directly followed by layers
+    child_structure_allowed = {
+        models.Service: [models.Workspace],
+        models.Workspace: [models.Layer],
+        models.Layer: [],
+    }
+
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> MultiResourceRequested
         return ServiceGeoserverBase.resource_requested(self)
 
 
@@ -1216,7 +1355,7 @@ class ServiceTHREDDS(ServiceInterface):
             return None
 
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> TargetResourceRequested
         path_parts = self.get_path_parts()
 
         # handle optional prefix as targeting the service directly
@@ -1277,6 +1416,7 @@ class ServiceGeoserverWPS(ServiceWPS, ServiceGeoserverBase):
     service_type = "geoserverwps"
 
     resource_scoped = False  # name in 'identifier' must not be split and does not match WORKSPACE
+    resource_multi = True  # possible to describe multiple processes at the same time
     resource_param = "identifier"
 
     resource_types_permissions = {
@@ -1284,8 +1424,15 @@ class ServiceGeoserverWPS(ServiceWPS, ServiceGeoserverBase):
         models.Process: models.Process.permissions,
     }
 
+    # only workspace directly followed by layers
+    child_structure_allowed = {
+        models.Service: [models.Workspace],
+        models.Workspace: [models.Process],
+        models.Layer: [],
+    }
+
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> MultiResourceRequested
         return ServiceGeoserverBase.resource_requested(self)
 
 
@@ -1412,7 +1559,7 @@ class ServiceGeoserver(ServiceOWS):
         return type(self).service_map[svc]
 
     def resource_requested(self):
-        # type: () -> ResourceRequested
+        # type: () -> MultiResourceRequested
         svc = self.service_requested()
         if not svc:
             return None

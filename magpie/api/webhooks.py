@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import requests
+import six
 import transaction
 from pyramid.httpexceptions import HTTPInternalServerError
 from six.moves.urllib.parse import urlparse
@@ -215,22 +216,22 @@ def replace_template(params, payload, force_str=False):
                 for key, value in payload.items()}
     if isinstance(payload, list):
         return [replace_template(params, value) for value in payload]
-    if isinstance(payload, str):  # template fields are always string since '{<param>}' must be provided
+    if isinstance(payload, six.string_types):  # template fields are always string since '{<param>}' must be provided
         for template_param in params:
             template_replace = "{{" + template_param + "}}"
             if template_param in WEBHOOK_TEMPLATE_PARAMS and template_replace in payload:
                 template_value = params[template_param]
                 # if result field is not a string and template is defined as is, allow value type replacement
-                if not force_str and not isinstance(template_value, str) and payload == template_replace:
+                if not force_str and not isinstance(template_value, six.string_types) and payload == template_replace:
                     return template_value
                 # otherwise, enforce convert to string to avoid failing string replacement,
                 # but remove any additional quotes that might be defined to enforce non-string to string conversion
                 template_single_string = "'" + template_replace + "'"
                 template_double_string = "\"" + template_replace + "\""
                 for template_str in [template_single_string, template_double_string]:
-                    if payload == template_str and not isinstance(template_value, str):
+                    if payload == template_str and not isinstance(template_value, six.string_types):
                         template_replace = template_str
-                payload = payload.replace(template_replace, str(template_value))
+                payload = payload.replace(template_replace, six.text_type(template_value))
         return payload
     # For any other type, no replacing to do
     return payload
