@@ -27,7 +27,7 @@ from magpie.permissions import (
     PermissionType,
     Scope
 )
-from magpie.utils import fully_qualified_name, get_logger
+from magpie.utils import classproperty, fully_qualified_name, get_logger
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
@@ -348,27 +348,23 @@ class ServiceInterface(object):
               for individual :class:`ServiceInterface` implementations.
         """
         # avoid useless effective resolution re-computation if duplicates are found
-        target_resources = list(set(resources))
-        effective_perms = {}  # type: Dict[Permission, PermissionSet]
+        target_resources = list(dict.fromkeys(resources))  # set(), but preserving order
         allowed_ace = []
-        for resource, allow_match in target_resources:
+        for resource, is_target in target_resources:
 
-            # only 1 entry per 'permission name' possible after effective resolution for that resource
-            res_access_perms = self.effective_permissions(user, resource, permissions, allow_match)
+            # only 1 entry per (permission-name, resource) possible after effective resolution for each resource
+            # since distinct resources are being processed, user/group precedence and group priority doesn't matter
+            # resulting Allow/Deny for each case is the "highest priority" for each applicable resource individually
+            res_access_perms = self.effective_permissions(user, resource, permissions, is_target)
             for perm in res_access_perms:
-                if perm.name not in effective_perms:
-                    effective_perms[perm.name] = perm
-                else:
-                    other_perm = effective_perms[perm.name]
-                    effect_perm = PermissionSet.resolve(perm, other_perm, context=PermissionType.EFFECTIVE)
-                    effective_perms[perm.name] = effect_perm
+                # if any resource or any permission indicates deny,
+                # break out to avoid useless computation (block all)
+                if perm.access == Access.DENY:
+                    return [perm.ace(self.request.user)]
+                allowed_ace.append(perm.ace(self.request.user))
 
-                # if any resource or any permission indicates deny, break out to avoid useless computation
-                cur_perm = effective_perms[perm.name]
-                if cur_perm.access == Access.DENY:
-                    return [cur_perm.ace(self.request.user)]
-
-            allowed_ace.extend([perm.ace(self.request.user) for perm in effective_perms.values()])
+        if not allowed_ace:
+            return [DENY_ALL]
         return allowed_ace
 
     def _get_connected_object(self, obj):
@@ -497,8 +493,12 @@ class ServiceInterface(object):
             return self.permissions
         return self.get_resource_permissions(resource.resource_type)
 
-    def effective_permissions(self, user, resource, permissions=None, allow_match=True):
-        # type: (models.User, ServiceOrResourceType, Optional[Collection[Permission]], bool) -> List[PermissionSet]
+    def effective_permissions(self,
+                              user,                     # type: models.User
+                              resource,                 # type: ServiceOrResourceType
+                              permissions=None,         # type: Optional[Collection[Permission]]
+                              allow_match=True,         # type: bool
+                              ):                        # type: (...) -> List[PermissionSet]
         """
         Obtains the :term:`Effective Resolution` of permissions the user has over the specified resource.
 
@@ -523,6 +523,12 @@ class ServiceInterface(object):
 
         .. seealso::
             - :meth:`ServiceInterface.resource_requested`
+
+        :param user: :term:`User` for which to perform :term:`Effective Resolution`.
+        :param resource: :term:`Resource` onto which access must be resolved.
+        :param permissions: List of :term:`Permission` for which to perform the resolution.
+        :param allow_match: Indicate if the specific :term:`Resource` was matched to allow :data:`Scope.MATCH` handling.
+        :returns: Resolved set :term:`Effective Permission` for specified parameter combinations.
         """
         if not permissions:
             permissions = self.allowed_permissions(resource)
@@ -907,24 +913,31 @@ class ServiceGeoserverBase(ServiceOWS):
     Provides basic configuration parameters and functionalities shared by `Geoserver` implementations.
     """
 
-    @property
+    @classmethod
+    @classproperty
     @abc.abstractmethod
-    def resource_scoped(self):
+    def resource_scoped(cls):
         # type: () -> bool
         """
         Indicates if the :term:`Service` is allowed to employ scoped :class:`models.Workspace` naming.
 
         When allowed, the :class:`models.Workspace` can be inferred from the request parameter
         defined by :attr:`resource_param` to retrieve scoped name as ``<WORKSPACE>:<RESOURCE>``.
-        When not allowed, the resource name is left untouched `Magpie` will not attempt to infer
-        any :class:`models.Workspace` from it. The :class:`models.Workspace` can only be specified
+        When not allowed, the resource name is left untouched and `Magpie` will not attempt to infer
+        any :class:`models.Workspace` from it. In that case, :class:`models.Workspace` can only be specified
         in the request path for isolated :term:`Resource` references.
+
+        .. note::
+            When this parameter is ``False`` for a given :term:`Service` implementation, children
+            :term:`Resources <Resource>` can still be named in a similar ``<namespace>:<element>`` fashion.
+            The only distinction is that the **full** :term:`Resource` should include this complete definition
+            instead of nesting ``<namespace>`` and ``<element>`` into two distinct :term:`Resources <Resource>`.
         """
         raise NotImplementedError
 
-    @property
+    @classproperty
     @abc.abstractmethod
-    def resource_multi(self):
+    def resource_multi(cls):  # noqa
         # type: () -> bool
         """
         Indicates if the :term:`Service` supports multiple simultaneous :term:`Resource` references.
@@ -939,9 +952,9 @@ class ServiceGeoserverBase(ServiceOWS):
         """
         raise NotImplementedError
 
-    @property
+    @classproperty
     @abc.abstractmethod
-    def resource_param(self):
+    def resource_param(cls):  # noqa
         # type: () -> Union[Str, List[Str]]
         """
         Name of the request query parameter(s) to access requested leaf children resource.
@@ -958,29 +971,29 @@ class ServiceGeoserverBase(ServiceOWS):
         """
         raise NotImplementedError
 
-    @property
+    @classproperty
     @abc.abstractmethod
-    def resource_types_permissions(self):
+    def resource_types_permissions(cls):  # noqa
         # type: () -> ResourceTypePermissions
         """
         Explicit permissions provided for resources for a given :term:`OWS` implementation.
         """
         raise NotImplementedError
 
-    @property
-    def params_expected(self):
+    @classproperty
+    def params_expected(cls):  # noqa
         # type: () -> List[Str]
         """
         Specify typical `Geoserver` request query parameters expected for any sub-service implementation.
 
         The :attr:`resource_param` is also added to ensure it is always parsed based on the derived implementation.
         """
-        if isinstance(self.resource_param, six.string_types):
-            impl_params = [self.resource_param]
-        elif isinstance(self.resource_param, list):
-            impl_params = self.resource_param
+        if isinstance(cls.resource_param, six.string_types):
+            impl_params = [cls.resource_param]
+        elif isinstance(cls.resource_param, list):
+            impl_params = cls.resource_param
         else:
-            name = fully_qualified_name(self)
+            name = fully_qualified_name(cls)
             raise NotImplementedError(f"Missing or invalid definition of 'resource_param' in service: {name}")
         base_params = [
             "request",
@@ -1051,6 +1064,8 @@ class ServiceGeoserverBase(ServiceOWS):
         matched_resources = []
         session = get_connected_session(self.request)
         for res_name in self.resource_param_requested():
+            if not res_name:
+                continue
             workspace_isolated = None  # reset for next layer
 
             # if missing, consider layer name as not scoped under workspace
@@ -1060,17 +1075,22 @@ class ServiceGeoserverBase(ServiceOWS):
                     # workspace only in scoped layer parameter
                     workspace_isolated = workspace_scope
                 elif workspace_name != workspace_scope:
-                    # In case the request was formed with both workspace in path and scoped layer name,
+                    # In case the request was formed with both workspace in path and scoped resource name,
                     # consider the workspace as not resolved since we cannot know which one to target.
                     # This avoids erroneously granting access to restricted layer from another workspace by
                     # forging a request that would include some workspace for which the user does have access.
-                    workspace_isolated = None
+                    return [(self.service, False)]
                 else:
                     # workspace only in path, layer not scoped
                     workspace_isolated = workspace_name
 
+            # never split if service doesn't support resource scoping
+            # therefore, workspace can only be provided by path
+            # do the same if scoping is supported but no scope was specified (directly the resource in param)
+            elif not self.resource_scoped or ":" not in res_name:
+                workspace_isolated = workspace_name
+
             if not workspace_isolated:
-                matched_resources.append((self.service, False))
                 continue
             workspace = models.find_children_by_name(child_name=workspace_isolated,
                                                      parent_id=self.service.resource_id,
@@ -1089,10 +1109,21 @@ class ServiceGeoserverBase(ServiceOWS):
                 continue
             matched_resources.append((self.service, False))
 
+        # if no children resource where matched, check if the Workspace was provided in the path
+        # in such case, a match would provide a closer resource scope, but assume its not a match
+        # since other operation than already handled 'GetCapabilities' all involve resources under Workspace
+        if not matched_resources and workspace_name:
+            workspace = models.find_children_by_name(child_name=workspace_name,
+                                                     parent_id=self.service.resource_id,
+                                                     db_session=session)
+            if workspace:
+                return [(workspace, False)]
+        if not matched_resources:
+            return [(self.service, False)]
         return matched_resources
 
 
-class ServiceGeoserverWMS(ServiceBaseWMS, ServiceGeoserverBase):
+class ServiceGeoserverWMS(ServiceGeoserverBase, ServiceBaseWMS):  # order important to call overridden class properties
     """
     Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``GeoServer``.
 
@@ -1128,10 +1159,6 @@ class ServiceGeoserverWMS(ServiceBaseWMS, ServiceGeoserverBase):
         models.Workspace: permissions,
         models.Layer: permissions,
     }
-
-    def resource_requested(self):
-        # type: () -> MultiResourceRequested
-        return ServiceGeoserverBase.resource_requested(self)
 
 
 class ServiceAccess(ServiceInterface):
@@ -1253,7 +1280,7 @@ class ServiceWFS(ServiceOWS):
         return self.service, True   # no children resource, so can only be the service
 
 
-class ServiceGeoserverWFS(ServiceWFS, ServiceGeoserverBase):
+class ServiceGeoserverWFS(ServiceGeoserverBase, ServiceWFS):  # order important to call overridden class properties
     """
     Service that represents a ``Web Feature Service`` endpoint with functionalities specific to ``GeoServer``.
 
@@ -1285,10 +1312,6 @@ class ServiceGeoserverWFS(ServiceWFS, ServiceGeoserverBase):
         models.Workspace: [models.Layer],
         models.Layer: [],
     }
-
-    def resource_requested(self):
-        # type: () -> MultiResourceRequested
-        return ServiceGeoserverBase.resource_requested(self)
 
 
 class ServiceTHREDDS(ServiceInterface):
@@ -1410,7 +1433,7 @@ class ServiceTHREDDS(ServiceInterface):
         return None  # automatically deny
 
 
-class ServiceGeoserverWPS(ServiceWPS, ServiceGeoserverBase):
+class ServiceGeoserverWPS(ServiceGeoserverBase, ServiceWPS):  # order important to call overridden class properties
     """
     Service that represents a ``Web Processing Service`` under a `Geoserver` instance.
     """
@@ -1432,73 +1455,29 @@ class ServiceGeoserverWPS(ServiceWPS, ServiceGeoserverBase):
         models.Layer: [],
     }
 
-    def resource_requested(self):
-        # type: () -> MultiResourceRequested
-        return ServiceGeoserverBase.resource_requested(self)
 
-
-class ServiceGeoserverMeta(ServiceMeta):
-    """
-    Mapping and grouping of property definitions for `GeoServer` services from distinct :term:`OWS` implementations.
-    """
-    service_map = {
-        "wfs": ServiceGeoserverWFS,
-        "wms": ServiceGeoserverWMS,
-        "wps": ServiceGeoserverWPS,
-    }
-
-    @property
-    def params_expected(cls):
-        # type: () -> List[Str]
-        params = set()
-        for svc in cls.supported_ows:  # pylint: disable=E1133,not-an-iterable
-            if issubclass(svc, ServiceOWS) and hasattr(svc, "params_expected"):
-                params.update(svc.params_expected)
-        return list(params)
-
-    @property
-    def permissions(cls):
-        # type: () -> List[Permission]
-        perms = set()
-        for svc in cls.supported_ows:  # pylint: disable=E1133,not-an-iterable
-            if issubclass(svc, ServiceOWS) and hasattr(svc, "permissions"):
-                perms.update(svc.permissions)
-        return list(perms)
-
-    @property
-    def resource_types_permissions(cls):
-        # type: () -> ResourceTypePermissions
-        perms = {}  # type: ResourceTypePermissions
-        for svc in cls.supported_ows:  # pylint: disable=E1133,not-an-iterable
-            if issubclass(svc, ServiceOWS) and hasattr(svc, "resource_types_permissions"):
-                svc_res_perms = svc.resource_types_permissions
-                for res_type, res_perms in svc_res_perms.items():
-                    if res_type in perms:
-                        perms[res_type] = list(set(perms[res_type]) | set(res_perms))
-                    else:
-                        perms[res_type] = list(res_perms)
-        return perms
-
-    @property
-    def supported_ows(cls):
-        # type: () -> Set[Type[ServiceOWS]]
-        return set(cls.service_map.values())
-
-
-@six.add_metaclass(ServiceGeoserverMeta)
-class ServiceGeoserver(ServiceOWS):
+class ServiceGeoserver(ServiceGeoserverBase):
     """
     Service that encapsulates the multiple :term:`OWS` endpoints from `GeoServer` services.
 
     .. seealso::
         https://docs.geoserver.org/stable/en/user/services/index.html
     """
-    service_base = None  # use ServiceGeoserverMeta.service_map
+    service_base = None  # use 'service_map' and 'service_ows'
     service_type = "geoserver"
+    service_map = {
+        ServiceGeoserverWFS.service_base: ServiceGeoserverWFS,
+        ServiceGeoserverWMS.service_base: ServiceGeoserverWMS,
+        ServiceGeoserverWPS.service_base: ServiceGeoserverWPS,
+    }
+
+    @classproperty
+    def service_ows_supported(cls):  # noqa
+        # type: () -> Set[Type[ServiceOWS]]
+        return set(cls.service_map.values())
 
     # only allow workspace directly under service
     # then, only layer or process under that workspace
-
     child_structure_allowed = {
         models.Service: [models.Workspace],
         models.Workspace: [models.Layer, models.Process],
@@ -1537,11 +1516,60 @@ class ServiceGeoserver(ServiceOWS):
         self._config = {key: self._config[key] for key in sorted(self._config)}
         return self._config
 
+    @classproperty
+    def params_expected(cls):  # noqa
+        # type: () -> List[Str]
+        params = set()
+        for svc in cls.service_ows_supported:
+            if issubclass(svc, ServiceOWS):
+                param_names = getattr(svc, "params_expected", None)
+                if param_names:
+                    params.update(param_names)
+        return list(params)
+
+    @classproperty
+    def permissions(cls):  # noqa
+        # type: () -> List[Permission]
+        perms = set()
+        for svc in cls.service_ows_supported:
+            if issubclass(svc, ServiceOWS):
+                svc_perms = getattr(svc, "permissions", None)
+                if svc_perms:
+                    perms.update(svc.permissions)
+        return list(perms)
+
+    @classproperty
+    def resource_types_permissions(cls):  # noqa
+        # type: () -> ResourceTypePermissions
+        perms = {}  # type: ResourceTypePermissions
+        for svc in cls.service_ows_supported:
+            if issubclass(svc, ServiceOWS):
+                svc_res_perms = getattr(svc, "resource_types_permissions", None)
+                if svc_res_perms:
+                    for res_type, res_perms in svc_res_perms.items():
+                        if res_type in perms:
+                            perms[res_type] = list(set(perms[res_type]) | set(res_perms))
+                        else:
+                            perms[res_type] = list(res_perms)
+        return perms
+
+    def __init__(self, service, request):
+        # type: (models.Service, Optional[Request]) -> None
+        self._service_requested = None  # cache computed requested service to avoid loop for each property
+        super(ServiceGeoserver, self).__init__(service, request)
+
+    def _set_request(self, request):
+        # type: (Request) -> None
+        self._service_requested = None  # reset to make sure any path change finds the new applicable service
+        super(ServiceGeoserver, self)._set_request(request)
+
     def service_requested(self):
-        # type: () -> Optional[Type[ServiceOWS]]
+        # type: () -> Optional[Type[ServiceGeoserverBase]]
         """
         Obtain the applicable :term:`OWS` implementation according to parsed request parameters.
         """
+        if self._service_requested:
+            return self._service_requested
         # guaranteed to exist and lowercase string if provided, otherwise None
         svc = self.parser.params["service"]
         req = self.parser.params["request"]
@@ -1550,14 +1578,34 @@ class ServiceGeoserver(ServiceOWS):
             # since all OWS services are accessed using '/geoserver/<SERVICE>?request=...'
             # attempt to match using applicable path fragment
             svc_path = self.request.path.rsplit("/", 1)[-1].lower()
-            for svc_ows in type(self).supported_ows:
+            for svc_ows in type(self).service_ows_supported:
                 if svc_path == svc_ows.service_base:
                     svc = svc_ows.service_base
                     break
         config = self.get_config()
         if svc not in config or not config[svc]:
+            self._service_requested = None
             return None
-        return type(self).service_map[svc]
+        self._service_requested = type(self).service_map[svc]
+        return self._service_requested
+
+    @classproperty
+    def resource_scoped(cls):  # noqa
+        # type: () -> bool
+        svc = cls.service_requested()
+        return svc.resource_scoped if svc else False
+
+    @classproperty
+    def resource_multi(cls):  # noqa
+        # type: () -> bool
+        svc = cls.service_requested()
+        return svc.resource_multi if svc else False
+
+    @classproperty
+    def resource_param(cls):  # noqa
+        # type: () -> Union[Str, List[Str]]
+        svc = cls.service_requested()
+        return cls.resource_param if svc else []
 
     def resource_requested(self):
         # type: () -> MultiResourceRequested
@@ -1580,6 +1628,7 @@ SERVICE_TYPES = frozenset([
     ServiceGeoserver,
     ServiceGeoserverWFS,
     ServiceGeoserverWMS,
+    ServiceGeoserverWPS,
     ServiceNCWMS2,
     ServiceTHREDDS,
     ServiceWFS,

@@ -997,3 +997,17 @@ class SingletonMeta(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+class classproperty(property):
+    """
+    Mimics :class:`property` decorator, but applied onto ``classmethod`` in backward compatible way.
+
+    .. note::
+        This decorator purposely only supports getter attribute to define unmodifiable class properties.
+
+    .. seealso::
+        https://stackoverflow.com/a/5191224
+    """
+    def __get__(self, cls, owner):  # noqa
+        return classmethod(self.fget).__get__(None, owner)()

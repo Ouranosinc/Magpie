@@ -1169,13 +1169,18 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         # Layer1, mismatched OWS path/param
         #   - When <WORKSPACE> is not directly in the path, because query parameters to extract <WORKSPACE>:<LAYER>
-        #     mismatch the expected OWS service from the path, resolved requested resource is the service itself.
+        #     mismatch the expected OWS service from the path (not 'layers' for WFS, not 'typeNames' for WMS),
+        #     the closest resolved requested resource is the service itself.
         #     That service does not have the requested permissions (directly on it), so access is forbidden.
-        #   - When <WORKSPACE> is directly in the path, the requested resource can be resolved more precisely as the
-        #     Workspace instead of the top-level service. Because GetFeature is applied recursively on Workspace,
-        #     access is granted even if request is erroneous to retrieve its appropriate Layer resource. The OWS
-        #     would still normally respond with bad request since the wrong request parameter is provided for that
-        #     OWS. The request remains invalid even if accessible, but Magpie/Twitcher job is over at that point.
+        #   - When <WORKSPACE> is directly in the path for WFS, the requested resource can be resolved more precisely
+        #     as the Workspace instead of the top-level service.
+        #   - For allowed WFS test cases with <WORKSPACE> in path, because 'GetFeature' is applied recursively on
+        #     Workspace, access is granted even if the request parameter is erroneous to retrieve its appropriate Layer
+        #     resource. Since wrong parameter is used, Magpie does validate the path parameter against the scoped
+        #     Workspace name. The actual OWS should still normally respond with bad request since the wrong request
+        #     parameter (bad 'layers' instead of WFS 'typeNames') is provided for that OWS. The request remains invalid
+        #     even if
+        #     accessible, but Magpie/Twitcher job is over at that point.
         #   - When OWS is WMS, GetFeature does not apply. Therefore, access refused.
         _test(svc_wms_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1}, allow=False)
         _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
@@ -1290,6 +1295,48 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         _test(svc_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l4}, allow=False)
         _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l4}, allow=False)
         _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": l4_name}, allow=False)
+
+        # using either the 'typename' or 'typenames' parameter lets WFS retrieve layers indistinguishably
+        alt_name = "typeName"
+        def_name = "typeNames"
+
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, alt_name: w1_l1}, allow=True)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, alt_name: w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_name}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, alt_name: wx_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, alt_name: w1_l2}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: wx_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_l2}, allow=False)
+
+        def _add_both(value):
+            return {alt_name: value, def_name: value}
+
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, **_add_both(w1_l1)}, allow=True)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, **_add_both(w1_l2)}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_name)}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_l2)}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_l1)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, **_add_both(wx_l1)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, **_add_both(w1_l2)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_l1)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(wx_l1)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_l2)}, allow=False)
+
+        # using multiple layers at the same time should validate all of them (all or nothing access)
+        # order should not matter
+        w1_l1_w1_l1 = ",".join([w1_l1, w1_l1])  # resolved as duplicate, only processed once, allowed
+        w1_l1_w1_l2 = ",".join([w1_l1, w1_l2])  # W1-L1 is allowed, but not W1-L2, so both denied
+        w1_l1_w1_l3 = ",".join([w1_l1, w1_l3])  # both are allowed, so full request allowed as well
+        w1_l2_w1_l1 = ",".join([w1_l2, w1_l1])
+        w1_l3_w1_l1 = ",".join([w1_l3, w1_l1])
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1_w1_l1}, allow=True)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1_w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1_w1_l3}, allow=True)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l2_w1_l1}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l3_w1_l1}, allow=True)
 
 
 @runner.MAGPIE_TEST_LOCAL
