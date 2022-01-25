@@ -56,13 +56,25 @@ div.bordered-content {
 /* apply the parent list number prefixed to the current list numbers
     https://stackoverflow.com/a/13841818
 */
-div.parent-list-numbers > ol {
+div.parent-list-numbers ol {
     counter-reset: item;
 }
-div.parent-list-numbers > li {
-    display: block;
+div.parent-list-numbers ol li {
+    counter-increment: item;
 }
-div.parent-list-numbers > li:before {
+/*div.parent-list-numbers > li:before {
     content: counters(item, ".") " ";
     counter-increment: item
+}*/
+div.parent-list-numbers ol ol > li::before {
+    content: counters(item, ".")")";
+    margin-left: -3em;
+}
+div.parent-list-numbers ol li {
+    counter-increment: item;
+}
+div.parent-list-numbers > ol > li > ol > li {
+    list-style: None;
+    display: inline-flex;
+    display: -webkit-box;
 }

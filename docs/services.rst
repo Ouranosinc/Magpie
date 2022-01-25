@@ -21,7 +21,7 @@ Therefore, they can be listed and searched for either using ``/services`` API ro
 On top of any :term:`Resource`'s metadata, a :term:`Service` provides specific information about its location, its
 remote synchronization method (if any), and its exposed endpoint. Another important detail about the :term:`Service`
 is its ``type``. This will not only dictate its purpose, but also define the whole schema of allowed :term:`Resource`
-under it (if any), as well as every one of their :term:`Allowed Permissions`.
+under it (if any), as well as every one of their :term:`Allowed Permissions <Allowed Permission>`.
 
 The final distinction between a :term:`Service` and generic :term:`Resource` is their position in the hierarchy. Only
 :term:`Service`-specialized :term:`Resource` (literally ``resource_type = "service"``) are allowed to be placed at the
@@ -69,17 +69,70 @@ On top of the above methods, the following attributes must be defined.
       - Defines the mapping of registered :term:`Service` to the appropriate implementation type. Each implementation
         must have an unique value.
     * - :attr:`ServiceInterface.permissions` |br| (``List[Permission]``)
-      - Defines the :term:`Allowed Permissions` that can be applied onto the :term:`Service` reference itself.
+      - Defines the :term:`Allowed Permissions <Allowed Permission>` that can be applied onto the :term:`Service`
+        reference itself.
     * - :attr:`ServiceInterface.resource_types_permissions` |br| (``Dict[Resource, List[Permission]]``)
       - Map of the allowed children :term:`Resource` under the :term:`Service` and their corresponding
-        :term:`Allowed Permissions` for each case. Leaving this map empty will disallow the creation of any children
-        :term:`Resource`, making the :term:`Service` the unique applicable element of the hierarchy. Note that each
-        :term:`Resource` implemented by a derived class of :class:`magpie.models.Resource` also provides details about
-        :Term:`Allowed Permissions`, their type and further nested children :term:`Resource`.
-    * - :attr:`ServiceInterface.params_expected` |br| (``List[str]``)
+        :term:`Allowed Permissions <Allowed Permission>` for each case. Leaving this map empty will disallow the
+        creation of any children :term:`Resource`, making the :term:`Service` the unique applicable element of the
+        hierarchy. Note that each :term:`Resource` implemented by a derived class of :class:`magpie.models.Resource`
+        also provides details about :Term:`Allowed Permissions <Allowed Permission>`, their type and further nested
+        children :term:`Resource`.
+    * - :attr:`child_structure_allowed` |br| (``Dict[Type[ServiceOrResourceType], List[Type[models.Resource]]]``)
+      - Map of allowed :term:`Resource`type nesting hierarchy for the :term:`Service`.
+        This controls whether some children :term:`Resource` can be placed under another to limit creation only to
+        cases that are relevant for the implemented :term:`Service`.
+    * - :attr:`configurable` |br| (``bool``)
+      - Parameter that controls whether the :term:`Service` supports custom configuration, providing means to
+        slightly alter, enable or disable certain behaviours of the parsing methodology of request into :term:`Resource`
+        and :term:`Permission` components for the given :term:`Service`.
+
+.. seealso::
+    :ref:`ServiceTHREDDS` and :ref:`ServiceGeoserver` for examples of :term:`Service` implementations that
+    support custom configuration.
+
+On top of the above definitions, any service that derives from :class:`magpie.services.ServiceOWS` should also provide
+follow parameters for parsing :term:`OWS` requests.
+
+.. list-table::
+    :header-rows: 1
+
+    * - :attr:`ServiceOWS.params_expected` |br| (``List[str]``)
       - Represents specific parameter names that can be preprocessed during HTTP request parsing to ease following
-        resolution of :term:`ACL` use cases. Employed only by :term:`Service` implementations derived from
-        :class:`magpie.services.ServiceOWS`. Can be omitted otherwise.
+        resolution of :term:`ACL` use cases.
+    * - :attr:`ServiceOWS.service_base`  |br| (``str``)
+      - Provide the reference :term:`OWS` type for handling requests with proper parsers and resolvers.
+
+Furthermore, some :term:`Services <Service>` specifically implement extended :term:`OWS` utilities offered by
+`GeoServer`_. They derive from :class:`ServiceGeoserverBase` and should provide the following additional parameters.
+
+.. list-table::
+    :header-rows: 1
+
+    * - :attr:`ServiceGeoserverBase.resource_scoped` |br| (``bool``)
+      - Indicates if the :term:`Service` is allowed to employ scoped :class:`models.Workspace` naming, meaning that
+        a :term:`Resource` of that type can be extracted either from the request path or the specific request parameter
+        using notation format ``<WORKSPACE>:<RESOURCE_PARAM>``.
+    * - :attr:`ServiceGeoserverBase.resource_multi` |br| (``bool``)
+      - Indicates if the :term:`Service` supports multiple simultaneous :term:`Resource` references within a single
+        request (see :ref:`perm_resolution` for more details`), which must all be considered
+        for :term:`Effective Resolution`.
+    * - :attr:`ServiceGeoserverBase.resource_param` |br| (``Union[Str, List[Str]]``)
+      - Name of one or many request query parameter(s) from which to extract multiple equivalent :term:`Resource`
+        references when the :term:`Service` supports multiple representations or notation conventions.
+
+
+.. versionchanged:: 3.21
+    - Attribute :attr:`ServiceOWS.params_expected` has been moved from :class:`ServiceInterface` to instead be directly
+      under :class:`ServiceOWS` since it applies only to derived classes from that base.
+
+.. versionadded:: 3.21
+    - Attribute :attr:`ServiceInterface.child_structure_allowed`
+    - Attribute :attr:`ServiceInterface.configurable`
+    - Attribute :attr:`ServiceOWS.service_base`
+    - Attribute :attr:`ServiceGeoserverBase.resource_scoped`
+    - Attribute :attr:`ServiceGeoserverBase.resource_multi`
+    - Attribute :attr:`ServiceGeoserverBase.resource_param`
 
 
 .. _services_available:
@@ -266,12 +319,16 @@ by the below configuration.
 
 Assuming a proxy intended to receive incoming requests configured with :class:`magpie.adapter.MagpieAdapter` such that
 ``{PROXY_URL}`` is the base path, the following path would point toward the registered service with the above YAML
-configuration::
+configuration.
+
+.. code-block:: http
 
     {PROXY_URL}/LocalThredds
 
 
-An incoming request will be parsed according to configured values against the following format::
+An incoming request will be parsed according to configured values against the following format.
+
+.. code-block:: http
 
     {PROXY_URL}/LocalThredds[/skip/prefix]/<prefix_type>/.../<file>
 
@@ -315,6 +372,32 @@ above *default* ``file_patterns``. The ``file_patterns`` allow for example to co
 ``file.nc.html`` as the same :term:`Resource` internally, which avoids duplicating :term:`Applied Permission` across
 multiple :term:`Resource` for their corresponding *metadata* or *data* representations.
 
+ServiceWFS
+~~~~~~~~~~~
+
+.. seealso::
+    - `ServiceGeoserverWFS`_ for a `GeoServer`_ flavoured implementation with only :term:`WFS` support.
+    - Consider using `ServiceGeoserver`_ for multi-:term:`OWS` implementation support under a common
+      endpoint representing a `GeoServer`_ instance.
+    - https://www.ogc.org/standards/wfs (OpenGIS WFS 2.0.0 implementation)
+
+This implementation is defined by :class:`magpie.services.ServiceWFS`.
+It implements the original standard :term:`WFS` definition. There is **NO** concept of :class:`magpie.models.Workspace`
+for this :term:`Service` implementation. Features are accessed directly using :class:`magpie.models.Layer` typed
+:term:`Resources <Resource>`.
+
+ServiceGeoserverWFS
+~~~~~~~~~~~~~~~~~~~~~
+
+.. seealso::
+
+    - https://docs.geoserver.org/latest/en/user/services/wfs/reference.html
+    - Consider using `ServiceGeoserver`_ for multi-:term:`OWS` implementation support under a common
+      endpoint representing a `GeoServer`_ instance.
+
+This implementation is defined by :class:`magpie.services.ServiceGeoserverWFS`.
+It implements some extensions to base :term:`WFS` by providing more :term:`Permission` and scoping of
+:class:`magpie.models.Layer` under :class:`magpie.models.Workspace` in a file-system-like fashion.
 
 ServiceBaseWMS
 ~~~~~~~~~~~~~~~~~~~~~
@@ -330,7 +413,7 @@ This is a *partial base* class employed to represent :term:`OWS` `Web Map Servic
 It cannot be employed directly as :term:`Service` instance. The derived classes provide different parsing methodologies
 and children :term:`Resource` representation according to their respective functionalities.
 
-It provides support for the following permissions, each corresponding to the appropriate functionality of `WMS`:
+It provides support for the following permissions, each corresponding to the appropriate functionality of :term:`WMS`:
 
 - :attr:`Permission.GET_CAPABILITIES`
 - :attr:`Permission.GET_MAP`
@@ -347,7 +430,10 @@ ServiceGeoserverWMS
 
 .. seealso::
 
-    Base class: `ServiceBaseWMS`_
+    - Base class: `ServiceBaseWMS`_
+    - https://docs.geoserver.org/latest/en/user/services/wms/reference.html
+    - Consider using `ServiceGeoserver`_ for multi-:term:`OWS` implementation support under a common
+      endpoint representing a `GeoServer`_ instance.
 
 This implementation is defined by :class:`magpie.services.ServiceGeoserverWMS`. It extends the base class by using
 children :term:`Resource` defined by :class:`magpie.models.Workspace`, which supports the same set of :term:`Permission`
@@ -365,7 +451,8 @@ ServiceNCWMS2
 
 .. seealso::
 
-    Base class: `ServiceBaseWMS`_
+    - Base class: `ServiceBaseWMS`_
+    - https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/04-usage.html
 
 This implementation is defined by :class:`magpie.services.ServiceNCWMS2`. It extends the base class by using
 children :term:`Resource` defined as :class:`magpie.models.Directory` and :class:`magpie.models.File` instances but,
@@ -387,6 +474,10 @@ relative file path from the ``THREDDS` root. The applicable query parameter depe
 
 ServiceWPS
 ~~~~~~~~~~~~~~~~~~~~~
+
+.. seealso::
+    Consider using `ServiceGeoserver`_ for multi-:term:`OWS` implementation support under a common
+    endpoint representing a `GeoServer`_ instance.
 
 The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceWPS`. It is intended to
 control access to the operations provided by an :term:`OWS` `Web Processing Service`. This :term:`Service` allows
@@ -422,6 +513,80 @@ it against an existing :term:`Resource`. The resolution of :term:`Effective Perm
     dynamic custom service definition
 
 .. todo: Add dynamic services if implemented (https://github.com/Ouranosinc/Magpie/issues/149)
+
+
+ServiceGeoserverWPS
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. seealso::
+    Consider using `ServiceGeoserver`_ for multi-:term:`OWS` implementation support under a common
+    endpoint representing a `GeoServer`_ instance.
+
+The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceGeoserverWPS`.
+It offers similar operations and request handling to :ref:`ServiceWPS`, but adds scoped :class:`magpie.models.Workspace`
+definition of :class:`magpie.models.Process` as for other `GeoServer`_ base :term:`Services <Service>`, in order to
+properly parse request paths that include such references. Other than the :term:`Resource` hierarchy being nested by
+:class:`magpie.models.Workspace`, the rest of the parsing and handling methodology is equivalent to :ref:`ServiceWPS`.
+
+
+ServiceGeoserver
+~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3.21
+
+.. seealso::
+    - :ref:`ServiceGeoserverWFS`
+    - :ref:`ServiceGeoserverWMS`
+    - :ref:`ServiceGeoserverWPS`
+
+This :term:`Service` is combined :term:`OWS` implementation for `GeoServer`_ that allows simultaneous representation of
+:term:`WFS`, :term:`WMS` and :term:`WPS` :term:`Resources <Resource> all nested under a single reference hosted under
+common remote URL. Using this implementation, :class:`magpie.models.Workspace` are first required as immediate children
+under the root :term:`Service`, and can be followed by both :term:`Resources <Resource>` of type
+:class:`magpie.models.Layer` and :class:`magpie.models.Process`.
+There are two main advantages of using this combined implementation over their specific :term:`OWS` counterparts.
+
+First, using the same :term:`Resources <Resource>` to represent corresponding elements in the `GeoServer`_ across
+:term:`OWS` endpoints reduces the chances of inconsistent access to otherwise equivalent :term:`Resources <Resource>`.
+For example, a :class:`magpie.models.Layer` that is granted :term:`Permission` to retrieve features (:term:`WFS`) or
+to render their map raster (:term:`WMS`) will be managed using the same reference. Using distinct
+:ref:`ServiceGeoserverWFS` and :ref:`ServiceGeoserverWMS` :term:`Service` in `Magpie` would require from to
+administrator to always maintain their :term:`Permissions <Permission>` in sync. This is prone to many errors and
+confusion when managing multiple large hierarchies of layers.
+
+Second, this :ref:`ServiceGeoserver` implementation is *configurable*. In other words, if the :term:`Service`
+administrator intends to only make use (for the moment) of :term:`WFS` functionality, they can customize this
+:term:`Service` using the following definition.
+
+.. code-block:: YAML
+
+    providers:
+      RemoteGeoServer:
+        # minimal configuration requirements (where the real `GeoSever` service resides)
+        # other optional parameters from `providers.cfg` can also be provided
+        url: http://localhost:1234
+        type: geoserver
+
+        # customizable configuration (enable desired OWS request handlers)
+        # all OWS are enabled by default if no configuration is provided
+        configuration:
+          wfs: true
+          wms: false
+          wps: false
+
+This would make sure that request parsing and access to :term:`WMS` and :term:`WPS` endpoints is disabled, but leaves
+the :term:`Resource` definitions available for use at a later time if the administrator decides to eventually make use
+of them. For example, the administrator could decide to start using :term:`WMS` as well without any further change
+needed other than updating this :term:`Service` custom configuration and applying :term:`Permissions <Permission>`
+specific only to :term:`WMS`.
+All other :term:`Applied Permissions <Applied Permission>` to existing :term:`User`, :term:`Group` and :term:`Resource`
+for that :term:`Service`, as well as their full :term:`Resource` tree hierarchy, would be automatically ported from
+the :term:`WFS` to :term:`WMS` request handlers.
+
+.. note::
+    Custom configuration can be provided With either the `providers.cfg`_ (as presented above), in
+    a :ref:`config_file` as described in greater lengths within the :ref:`configuration` chapter,
+    or by providing the ``configuration`` field directly within the API request body during :term:`Service` creation.
 
 
 Service Synchronization

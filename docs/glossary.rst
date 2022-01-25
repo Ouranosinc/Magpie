@@ -137,9 +137,9 @@ Glossary
         geospatial data and service methodologies in order to improve access to geospatial and location information.
 
     OWS
-        Acronym that regroups all :term:`OGC` Web Services. This includes `Web Feature Service` (WFS),
-        `Web Map Service` (WMS) and `Web Processing Service` (WPS) for which `Magpie` offers some specific
-        :term:`Service` request parser implementations.
+        Acronym that regroups all :term:`OGC` Web Services. This includes :term:`Web Feature Service <WFS>` (WFS),
+        :term:`Web Map Service <WMS>` (WMS) and :term:`Web Processing Service <WMS>` (WPS), amongst others, for which
+        `Magpie` offers some specific :term:`Service` request parser implementations.
 
     Pending User
         Account that is pending for validation or approval following self-registration when the application is
@@ -226,3 +226,19 @@ Glossary
 
         .. seealso::
             :ref:`config_webhook` and :ref:`config_file` sections for details.
+
+    Web Feature Service
+    WFS
+
+        One of the :term:`OWS` implementation which `Magpie` offers an implementation
+        for controlling access to layers and their features.
+
+    Web Map Service
+    WMS
+        One of the :term:`OWS` implementation which `Magpie` offers an implementation
+        for controlling access to layers and generated maps from them.
+
+    Web Processing Service
+    WPS
+        One of the :term:`OWS` implementation which `Magpie` offers an implementation
+        for controlling access to description and execution of processes.

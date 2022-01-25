@@ -912,7 +912,7 @@ class ServiceGeoserverBase(ServiceOWS):
     def resource_scoped(self):
         # type: () -> bool
         """
-        Indicates if the service is allowed to employ scoped :class:`models.Workspace` naming.
+        Indicates if the :term:`Service` is allowed to employ scoped :class:`models.Workspace` naming.
 
         When allowed, the :class:`models.Workspace` can be inferred from the request parameter
         defined by :attr:`resource_param` to retrieve scoped name as ``<WORKSPACE>:<RESOURCE>``.
@@ -927,7 +927,7 @@ class ServiceGeoserverBase(ServiceOWS):
     def resource_multi(self):
         # type: () -> bool
         """
-        Indicates if the service supports multiple simultaneous :term:`Resource` references.
+        Indicates if the :term:`Service` supports multiple simultaneous :term:`Resource` references.
 
         When supported, the value retrieved from :attr:`resource_param` can be comma-separated to represent
         multiple :term:`Resource` of the same nature, which can all be retrieved with the same request.

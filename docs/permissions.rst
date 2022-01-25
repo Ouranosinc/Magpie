@@ -522,11 +522,11 @@ Below are the resolution steps which are applied for every distinct :term:`Permi
 
        1. There is only one :term:`Group` for which a :term:`Permission` is defined. The :term:`User` inherits that
           specification, whether it is :attr:`Access.ALLOW` or :attr:`Access.DENY`.
-          |
+
        2. Many :term:`Group` membership exist and share of same highest priority. In this case, if any :term:`Group`
           has :attr:`Access.DENY`, the resolved access is marked as denied. If every equally prioritized :term:`Group`
           indicate :attr:`Access.ALLOW`, then access is granted to the :term:`User`.
-          |
+
        3. Otherwise, the highest priority :term:`Group` dictates the :class:`Access` resolution. This can
           potentially *revert* a previous :term:`Group` decision.
 
