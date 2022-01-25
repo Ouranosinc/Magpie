@@ -174,7 +174,7 @@ attempting access of a specific :term:`Resource` of type :class:`magpie.models.F
     Permission :attr:`Permission.READ` does not offer *metadata* content listing of :class:`magpie.models.Directory`
     anymore. For this, :attr:`Permission.BROWSE` should be used instead. Setting :attr:`Permission.READ` on a
     directory will only be logical when combined with :attr:`Scope.RECURSIVE`, in which case `Magpie` will interpret
-    the :term:`Effective Permissions` to allow read access to all :class:`magpie.models.File` under that directory, at
+    the :term:`Effective Permission` to allow read access to all :class:`magpie.models.File` under that directory, at
     any depth level, unless denied by a lower-level specification.
 
 Finally, :attr:`Permission.WRITE` can also be applied on all of the resources, but are not explicitly employed during
@@ -186,7 +186,7 @@ parsing of incoming requests.
     only returns either :attr:`Permission.BROWSE` or :attr:`Permission.READ`. A :term:`User` or :term:`Group` can still
     have this :term:`Applied Permission` to allow a third party service to interrogate `Magpie API` about the presence
     of :attr:`Permission.WRITE` permission and perform the appropriate action with the result. The
-    :term:`Effective Permissions` API routes will provide the resolved ``access``. It is only `Twitcher`_ proxy that
+    :term:`Effective Permission` API routes will provide the resolved ``access``. It is only `Twitcher`_ proxy that
     will not be able to make use of it during incoming requests as it depends on
     :class:`magpie.adapter.magpieowssecurity.MagpieOWSSecurity`, which in turn employs the result from the :term:`ACL`.
 
@@ -312,7 +312,7 @@ To summarize, if ``file_patterns`` produces a match, that matched portion will b
 name is used directly (as is from the specified request path). The plain name is also used if ``file_patterns`` is
 explicitly specified as an empty list or ``null``. Not explicitly overriding the field will result into using the
 above *default* ``file_patterns``. The ``file_patterns`` allow for example to consider ``file.nc``, ``file.ncml`` and
-``file.nc.html`` as the same :term:`Resource` internally, which avoids duplicating :term:`Applied Permissions` across
+``file.nc.html`` as the same :term:`Resource` internally, which avoids duplicating :term:`Applied Permission` across
 multiple :term:`Resource` for their corresponding *metadata* or *data* representations.
 
 

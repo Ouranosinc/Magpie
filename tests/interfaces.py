@@ -2555,7 +2555,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     child-resource      <-- 2nd permission applied
 
         For each combination, there is always only one :term:`Applied Permission` for a user or group per resource in
-        the hierarchy. This makes :term:`Inherited Permissions` and :term:`Resolved Permissions` field ``reasons`` much
+        the hierarchy. This makes :term:`Inherited Permissions <inherited permission>` and
+        :term:`Resolved Permissions <inherited permission>` field ``reasons`` much
         easier to validate as there are no intra-resource (same) permission resolution, only inter-resource (distinct)
         permission inheritance according to local-level priorities, making ``reason`` always single-entry.
         These are highlighted by the corresponding arrow comments in the code.

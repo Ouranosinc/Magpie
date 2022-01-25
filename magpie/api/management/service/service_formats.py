@@ -117,12 +117,12 @@ def format_service_resources(service,                       # type: Service
     :param service: service for which to display details with sub-resources
     :param db_session: database session
     :param service_perms:
-        If provided, sets :term:`Applied Permissions` to display on the formatted :paramref:`service`.
+        If provided, sets all :term:`Applied Permission` to display on the formatted :paramref:`service`.
         Otherwise, sets the :term:`Allowed Permissions` specific to the :paramref:`service`'s type.
     :param resources_perms_dict:
-        If provided (not ``None``), set the :term:`Applied Permissions` on each specified resource matched by ID.
+        If provided (not ``None``), set the :term:`Applied Permission` on each specified resource matched by ID.
         If ``None``, retrieve and set :term:`Allowed Permissions` for the corresponding resources under the service.
-        To set empty :term:`Applied Permissions` (e.g.: :term:`User` doesn't have permissions on that resource), provide
+        To set empty :term:`Applied Permission` (e.g.: :term:`User` doesn't have permissions on that resource), provide
         an explicit empty dictionary instead.
     :param permission_type: Provide permission type being rendered.
     :param show_all_children:

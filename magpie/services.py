@@ -508,8 +508,9 @@ class ServiceInterface(object):
         permissions can be immediately resolved such as when more restrictive conditions enforce denied access.
 
         Both user and group permission inheritance is resolved simultaneously to tree hierarchy with corresponding
-        allow and deny conditions. User :term:`Direct Permissions` have priority over all its groups
-        :term:`Inherited Permissions`, and denied permissions have priority over allowed access ones.
+        allow and deny conditions. User :term:`Direct Permissions <direct permission>` have priority over all its groups
+        :term:`Inherited Permissions <inherited permission>`, and denied permissions have priority over allowed access
+        ones.
 
         All applicable permissions on the resource (as defined by :meth:`allowed_permissions`) will have their
         resolution (Allow/Deny) provided as output, unless a specific subset of permissions is requested using

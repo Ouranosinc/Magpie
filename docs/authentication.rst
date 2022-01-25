@@ -62,9 +62,10 @@ Query Parameters
 
 This method employs the query string parameters in the URL to provide the credentials. The format is as follows.
 
-.. code-block::
+.. code-block:: http
 
-    GET {MAGPIE_URL}/signin?user_name=<usr>&password=<pwd>
+    GET /signin?user_name=<usr>&password=<pwd> HTTP/1.1
+    Host: {MAGPIE_URL}
 
 
 The response will contain :ref:`Authentication Headers` detail needed for user identification.
@@ -89,37 +90,39 @@ Body content requests allow multiple variants, based on the specified ``Content-
 All variants employ a similar structure, but indicate the format of the body to be parsed.
 By default, ``application/json`` is employed if none was specified.
 
-.. code-block::
+.. code-block:: http
 
-    POST {MAGPIE_URL}/signin
-    Headers
-        Content-Type: multipart/form-data; boundary=<boundary-string>
-    Body
-        user_name: "<usr>"
-        password: "<pwd>"
-        provider_name: "<provider>"     # optional
+    POST /signin HTTP/1.1
+    Host: {MAGPIE_URL}
+    Content-Type: multipart/form-data; boundary=<boundary-string>
 
-
-.. code-block::
-
-    POST {MAGPIE_URL}/signin
-    Headers
-        Content-Type: application/x-www-form-urlencoded
-    Body
-        user_name=<usr>&password=<pwd>&provider_name=<provider>
+    --<boundary-string>
+    user_name: "<usr>"
+    password: "<pwd>"
+    provider_name: "<provider>"     # optional
+    --<boundary-string>--
 
 
-.. code-block::
+.. code-block:: http
 
-    POST {MAGPIE_URL}/signin
-    Headers
-        Content-Type: application/json
-    Body
-        {
-            "user_name": "<usr>",
-            "password": "<pwd>",
-            "provider_name": "<provider>"
-        }
+    POST /signin HTTP/1.1
+    Host: {MAGPIE_URL}
+    Content-Type: application/x-www-form-urlencoded
+
+    user_name=<usr>&password=<pwd>&provider_name=<provider>
+
+
+.. code-block::  http
+
+    POST /signin HTTP/1.1
+    Host: {MAGPIE_URL}
+    Content-Type: application/json
+
+    {
+        "user_name": "<usr>",
+        "password": "<pwd>",
+        "provider_name": "<provider>"
+    }
 
 
 The response will contain :ref:`Authentication Headers` detail needed for user identification.
@@ -196,7 +199,7 @@ Authentication Headers
 After execution of an :term:`Authentication` request, a ``Set-Cookie`` header with `Magpie` user identification token
 named according to :ref:`config_security` should be set in the response as follows.
 
-.. code-block::
+.. code-block:: http
 
     Set-Cookie: {MAGPIE_COOKIE_NAME}=<auth-token>!userid_type:int;
                 [Domain=<domain>; Path=<path>; HttpOnly; SameSite=Lax; Max-Age=<seconds>; expires=<datetime>]
@@ -239,7 +242,7 @@ Authorization Headers
 Following any successful :term:`Authentication` request as presented in the previous section, the obtained ``Cookie``
 defines which :term:`Logged User` attempts to accomplish an operation against a given protected URI. `Magpie` employs
 the same ``Cookie`` both for operations provided by its API and for accessing the real :term:`Resource` protected
-behind the :term:`Proxy` according to resolution of :term:`Effective Permissions` based on :term:`Applied Permissions`
+behind the :term:`Proxy` according to resolution of :term:`Effective Permissions` based on :term:`Applied Permission`
 definitions.
 
 Access to Magpie Operations
@@ -276,7 +279,7 @@ employed instead to process :term:`Authentication` only once.
 
 The format of the ``Authorization`` header is has follows.
 
-.. code-block::
+.. code-block:: http
 
     Authorization: Bearer <access_token>
 

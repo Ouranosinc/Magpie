@@ -338,8 +338,8 @@ class PermissionSet(object):
         handle multi-level :term:`Resource` resolution. Resolution is accomplished in this case only for a given level
         in the tree hierarchy.
 
-        The comparison considers both the :class:`Access` and :class:`Scope` of :term:`Inherited Permissions` of the
-        :term:`User`, as well as its :term:`Group` memberships sorted by their priority.
+        The comparison considers both the :class:`Access` and :class:`Scope` of every  :term:`Inherited Permission` of
+        the :term:`User`, as well as its :term:`Group` memberships sorted by their priority.
 
         .. seealso::
             - :meth:`magpie.services.ServiceInterface.effective_permissions`
@@ -601,7 +601,7 @@ def format_permissions(permissions,             # type: Optional[Collection[AnyP
     definition of allowed permissions under :class:`magpie.services.Services` and their children :term:`Resource` by
     only defining :class:`Permission` names without manually listing all variations of :class:`PermissionSet`.
 
-    For other :paramref:`permission_type` values, which represent :term:`Applied Permissions` only explicitly
+    For other :paramref:`permission_type` values, which represent :term:`Applied Permission` only explicitly
     provided :paramref:`permissions` are returned, to effectively return the collection of *active* permissions.
 
     :param permissions: multiple permissions of any implementation and type, to be rendered both as names and JSON.

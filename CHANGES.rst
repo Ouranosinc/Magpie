@@ -38,6 +38,10 @@ Features / Changes
 * Add ``child_structure_allowed`` to ``ServiceAPI`` and ``ServiceTHREDDS`` to be more explicit about allowed structure
   hierarchies in API responses. Their original behaviour remains unchanged, but is further enforced during validation
   of their children resource type creation against explicit structure.
+* Add multiple ``Resource`` ACL resolution within the same request to support ``Service`` implementations that can refer
+  to multiple items simultaneously. An example of this is the comma-separated list of ``Layer`` defined by ``typeNames``
+  of new ``ServiceGeoserverWMS`` implementation. Access is granted if the ``User`` has access to **ALL** ``Resource``
+  resolved from parsing the request.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

@@ -52,3 +52,17 @@ div.bordered-content {
     border: 1px solid #C6C9CB;
     padding: 0 1em 1em 0;
 }
+
+/* apply the parent list number prefixed to the current list numbers
+    https://stackoverflow.com/a/13841818
+*/
+div.parent-list-numbers > ol {
+    counter-reset: item;
+}
+div.parent-list-numbers > li {
+    display: block;
+}
+div.parent-list-numbers > li:before {
+    content: counters(item, ".") " ";
+    counter-increment: item
+}

@@ -500,7 +500,7 @@ class ManagementViews(AdminRequests, BaseViews):
         Result is a :class:`tuple` of:
             - combined :term:`Allowed Permissions` (*names only*) for services and their children resources.
             - dictionary of key-service-name, each with recursive map value of children resource details including
-              the :term:`Applied Permissions` or :term:`Inherited Resources` for the corresponding :term:`User`
+              the :term:`Applied Permissions <Applied Permission>` or :term:`Inherited Resources` for the corresponding :term:`User`
               or :term:`Group` accordingly to specified arguments.
         """
         if is_user:

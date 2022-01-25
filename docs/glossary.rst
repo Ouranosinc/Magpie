@@ -27,13 +27,13 @@ Glossary
         grants or denies :term:`Permission` access to the applicable :term:`User` for the targeted :term:`Resource`.
         Formed of multiple :term:`ACE`.
 
-    Allowed Permissions
+    Allowed Permission
         Set of applicable :term:`Permission` values onto an element.
 
         .. seealso::
             :ref:`Allowed Permissions <allowed-permissions>` section for details.
 
-    Applied Permissions
+    Applied Permission
         An active :term:`Permission` for a given :term:`User` or :term:`Group` depending on context.
 
         .. seealso::
@@ -75,12 +75,19 @@ Glossary
         :term:`Group` that has property ``discoverable=True``, making it publicly viewable to any-level user.
         Otherwise, groups can be listed or accessed only by administrators.
 
-    Effective Permissions
+    Effective Permission
         A :term:`Permission` that has been completely resolved according to all applicable contexts, that indicates
         the final granted or denied result.
 
         .. seealso::
             :ref:`Effective Permissions <effective_permissions>` section for details.
+
+    Effective Resolution
+        Process of resolving :term:`Effective Permission` over a :term:`Resource` considering any applicable
+        :ref:`permission_modifiers`.
+
+        .. seealso::
+            :ref:`perm_resolution` section for details.
 
     External Providers
         Set of all known user-identity :term:`Provider` defined externally to `Magpie`. Each of these :term:`Provider`
@@ -97,14 +104,14 @@ Glossary
         request to ask for confirmation. The terms and conditions can only be defined upon the :term:`Group` creation
         and can never be modified afterwards.
 
-    Immediate Permissions
+    Immediate Permission
         Describes a :term:`Permission` that originates directly and only from a :term:`Service`.
         This is referenced in only a few use-cases, notably for :ref:`Finding User Permissions`.
 
         .. seealso::
             :ref:`Immediate Permissions <immediate_permissions>` section for details.
 
-    Inherited Permissions
+    Inherited Permission
         Describes a :term:`Permission` that includes both :term:`User` and :term:`Group` contexts simultaneously.
 
         .. seealso::
