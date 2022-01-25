@@ -2555,8 +2555,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     child-resource      <-- 2nd permission applied
 
         For each combination, there is always only one :term:`Applied Permission` for a user or group per resource in
-        the hierarchy. This makes :term:`Inherited Permissions <inherited permission>` and
-        :term:`Resolved Permissions <inherited permission>` field ``reasons`` much
+        the hierarchy. This makes :term:`Inherited Permissions <Inherited Permission>` and
+        :term:`Resolved Permissions <Inherited Permission>` field ``reasons`` much
         easier to validate as there are no intra-resource (same) permission resolution, only inter-resource (distinct)
         permission inheritance according to local-level priorities, making ``reason`` always single-entry.
         These are highlighted by the corresponding arrow comments in the code.
@@ -2721,7 +2721,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_GetUserResourcePermissions_EffectivePermissions_ScopedHierarchyResolution(self):
         """
-        Validates that :term:`Effective Permissions` resolution works when scoped subsets of :term:`Resource` have
+        Validates that :term:`Effective Permission` resolution works when scoped subsets of :term:`Resource` have
         alternating :term:`Applied Permissions` with opposite :class:`Access` modifiers.
 
         The resolution of permissions should consider the *closest* scope to the targeted :term:`Resource`, but still
@@ -3738,8 +3738,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         .. warning::
             Group inheritance query parameter existed before ``2.0.0``, but was not producing the correct result
-            for children resources permissions (all :term:`Allowed Permissions` were returned instead of
-            user/group-specific :term:`Applied Permissions`).
+            for children resources permissions (every :term:`Allowed Permission` was returned instead of
+            user/group-specific :term:`Applied Permissions <Applied Permission>`).
         """
         utils.warn_version(self, "user service inheritance", "2.0.0", skip=True)
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
@@ -3788,8 +3788,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         .. warning::
             Group inheritance query parameter existed before ``2.0.0``, but was not producing the correct result
-            for children resources permissions (all :term:`Allowed Permissions` were returned instead of
-            user/group-specific :term:`Applied Permissions`).
+            for children resources permissions (every :term:`Allowed Permission` was returned instead of
+            user/group-specific :term:`Applied Permissions <Applied Permission>`).
         """
         utils.warn_version(self, "user service inheritance", "2.0.0", skip=True)
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)

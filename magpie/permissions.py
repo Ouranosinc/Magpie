@@ -96,13 +96,13 @@ class PermissionSet(object):
 
     The :class:`Permission` is the *name* of the applicable permission on the :class:`magpie.models.Resource`.
     The :class:`Scope` defines how the :class:`Permission` should impact the resolution of the perceived
-    :term:`Effective Permissions` over a :class:`magpie.models.Resource` tree hierarchy.
+    :term:`Effective Permissions <Effective Permission>` over a :class:`magpie.models.Resource` tree hierarchy.
     The :class:`Access` defines how the :class:`Permission` access should be interpreted (granted or denied).
 
     Optionally, a :class:`PermissionType` can be provided to specifically indicate which kind of permission this set
     represents. This type is only for informative purposes, and is not saved to database nor displayed by the explicit
     string representation. It is returned within JSON representation and can be employed by
-    :term:`Effective Permissions` resolution to be more verbose about returned results.
+    :term:`Effective Permissions <Effective Permission>` resolution to be more verbose about returned results.
 
     On missing :class:`Access` or :class:`Scope` specifications, they default to :attr:`Access.ALLOW` and
     :attr:`Scope.RECURSIVE` to handle backward compatible naming convention of plain ``permission_name``.
@@ -334,7 +334,7 @@ class PermissionSet(object):
 
         Permissions **MUST** have the same :term:`Permission` name.
         The associated :term:`Resource` on which the two compared permissions are applied on should also be the same
-        This method **SHOULD NOT** be used by itself to obtain for :term:`Effective Permissions` since it does not
+        This method **SHOULD NOT** be used by itself to obtain for :term:`Effective Permission` since it does not
         handle multi-level :term:`Resource` resolution. Resolution is accomplished in this case only for a given level
         in the tree hierarchy.
 

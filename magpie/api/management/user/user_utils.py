@@ -571,10 +571,10 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
         :term:`Inherited Permission` according to the value of :paramref:`inherit_groups_permissions`.
     :param inherit_groups_permissions:
         If ``False``, return only user-specific service/sub-resources :term:`Direct Permissions`.
-        Otherwise, resolve :term:`Inherited Permissions <inherited permission>` using all groups the user is member of.
+        Otherwise, resolve :term:`Inherited Permissions <Inherited Permission>` using all groups the user is member of.
     :param resolve_groups_permissions:
-        Whether to combine :term:`Direct Permissions <direct permission>` and
-        :term:`Inherited Permissions <inherited permission` for respective resources or not.
+        Whether to combine :term:`Direct Permissions <Direct Permission>` and
+        :term:`Inherited Permissions <Inherited Permission>` for respective resources or not.
     :param format_as_list:
         Returns as list of service dict information (not grouped by type and by name)
     :param service_types:
@@ -646,7 +646,7 @@ def get_user_service_permissions(user, service, request,
     Retrieve the permissions the user has directly on a service or inherited permissions by its group memberships.
 
     .. warning::
-        - Does not consider :term:`Effective Permissions` ownership.
+        - Does not consider :term:`Effective Permissions <Effective Permission>` ownership.
         - Considers direct :term:`Service` ownership, but not implemented everywhere (not operational).
 
     .. seealso::
@@ -682,7 +682,7 @@ def resolve_user_group_permissions(resource_permission_list):
     found for corresponding resource. In such case, only one entry is possible (it is invalid to have more than one
     combination of ``(User, Resource, Permission)``, including modifiers, as per validation during their creation).
 
-    Otherwise, for corresponding :term:`Inherited Permissions <inherited permission>`, resolve the prioritized
+    Otherwise, for corresponding :term:`Inherited Permissions <Inherited Permission>`, resolve the prioritized
     :term:`Permission` across every group.
     Similarly to users, :func:`magpie.groups.group_utils.get_similar_group_resource_permission` validate that only one
     combination of ``(Group, Resource, Permission)`` can exist including permission modifiers. Only, cross-group
@@ -693,10 +693,11 @@ def resolve_user_group_permissions(resource_permission_list):
            other more explicit group membership, regardless of permission modifiers applied on it.
         2. Permissions of same group priority with :attr:`Access.DENY` are prioritized over :attr:`Access.ALLOW`.
         3. Permissions of same group priority with :attr:`Scope.RECURSIVE` are prioritized over :attr:`Access.MATCH` as
-           they affect a larger range of resources when :term:`Effective Permissions` are eventually requested.
+           they affect a larger range of resources when :term:`Effective Permissions <Effective Permission>` are
+           eventually requested.
 
     .. note::
-        Resource tree inherited resolution is not considered here (no recursive :term:`Effective Permissions` computed).
+        Resource tree inherited resolution is not considered here (no recursive :term:`Effective Permission` computed).
         Only same-level scope of every given resource is processed independently. The intended behaviour here is
         therefore to help illustrate in responses *how deep* is a given permission going to have an impact onto
         lower-level resources, making :attr:`Scope.RECURSIVE` more important than specific instance :attr:`Scope.MATCH`.
@@ -732,8 +733,8 @@ def regroup_permissions_by_resource(resource_permissions, resolve=False):
     """
     Regroups multiple uncategorized permissions into a dictionary of corresponding resource IDs.
 
-    While regrouping the various permissions (both :term:`Direct Permissions <direct permission>` and any amount of
-    groups :term:`Inherited Permissions <inherited permission>`) under their respective resource by ID, optionally
+    While regrouping the various permissions (both :term:`Direct Permissions <Direct Permission>` and any amount of
+    groups :term:`Inherited Permissions <Inherited Permission>`) under their respective resource by ID, optionally
     resolve overlapping or conflicting permissions by name such that only one permission persists for that resource
     and name.
 
@@ -742,8 +743,8 @@ def regroup_permissions_by_resource(resource_permissions, resolve=False):
 
     :param resource_permissions:
         List of resource permissions to process.
-        Can include both user :term:`Direct Permissions <direct permission>` and its groups
-        :term:`Inherited Permissions <inherited permission>`.
+        Can include both user :term:`Direct Permissions <Direct Permission>` and its groups
+        :term:`Inherited Permissions <Inherited Permission>`.
     :param resolve:
         When ``False``, only mapping by resource ID is accomplished. Full listing of permissions is returned.
         Otherwise, resolves the corresponding resource permissions (by same ID) considering various priority rules to
@@ -788,7 +789,7 @@ def get_user_resources_permissions_dict(user, request, resource_types=None, reso
     :param resolve_groups_permissions: whether to combine corresponding user/group permissions into one or not.
     :return:
         Only resources which the user has permissions on, or including all
-        :term:`Inherited Permissions <inherited permission>`, according to
+        :term:`Inherited Permissions <Inherited Permission>`, according to
         :paramref:`inherit_groups_permissions` argument.
     """
     ax.verify_param(user, not_none=True, http_error=HTTPNotFound,
@@ -809,7 +810,7 @@ def get_user_service_resources_permissions_dict(user, service, request,
     Retrieves all permissions the user has for every :term:`Resource` nested under the :term:`Service`.
 
     The retrieved permissions can either include only :term:`Direct Permissions` or a combination of user and group
-    :term:`Inherited Permissions <inherited permission>` accordingly to provided options.
+    :term:`Inherited Permissions <Inherited Permission>` accordingly to provided options.
 
     .. seealso::
         :func:`get_user_resources_permissions_dict`

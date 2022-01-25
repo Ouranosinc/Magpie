@@ -32,14 +32,15 @@ Every :term:`Service` type provided by `Magpie` must derive from :class:`magpie.
 specific implementation (see :ref:`services_available`) serves to convert a given incoming HTTP request components
 (method, path, query parameters, body, etc.) into the appropriate :term:`Service`, :term:`Resource` and
 :term:`Permission` elements. This ultimately provides the required elements to resolve :term:`ACL` access of a
-:term:`Request User` toward the targeted :term:`Resource` according to its :term:`Effective Permissions`.
+:term:`Request User` toward the targeted :term:`Resource` according to its
+:term:`Effective Permissions <Effective Permission>`.
 
 In order to implement a new :term:`Service` type, two (2) methods and a few attributes are required. The first method is
 :meth:`magpie.services.ServiceInterface.permission_requested` which basically indicates how the HTTP request should be
 interpreted into a given :class:`Permission`. The second is :meth:`magpie.services.ServiceInterface.resource_requested`
 which similarly tells the interpretation method to convert the request into a :class:`magpie.models.Resource` reference.
 
-Whenever :term:`Effective Permissions` or :term:`ACL` needs to be resolved in order to determine if a
+Whenever :term:`Effective Permission` or :term:`ACL` needs to be resolved in order to determine if a
 :term:`Request User` can have access or not to a :term:`Resource`, `Magpie` will employ the appropriate :term:`Service`
 implementation and call the methods to process the result.
 
@@ -79,7 +80,7 @@ On top of the above methods, the following attributes must be defined.
         also provides details about :Term:`Allowed Permissions <Allowed Permission>`, their type and further nested
         children :term:`Resource`.
     * - :attr:`child_structure_allowed` |br| (``Dict[Type[ServiceOrResourceType], List[Type[models.Resource]]]``)
-      - Map of allowed :term:`Resource`type nesting hierarchy for the :term:`Service`.
+      - Map of allowed :term:`Resource` type nesting hierarchy for the :term:`Service`.
         This controls whether some children :term:`Resource` can be placed under another to limit creation only to
         cases that are relevant for the implemented :term:`Service`.
     * - :attr:`configurable` |br| (``bool``)
@@ -176,9 +177,9 @@ ServiceAPI
 The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceAPI`. It refers to a
 remote URL endpoint that should have a :term:`Resource` tree formed out of the path segments. The :term:`Service` only
 has one (1) type of :term:`Resource`, namely :class:`magpie.models.Route`, that can have an unlimited amount of nested
-children of the same type. The :term:`Allowed Permissions` for this :term:`Service` are :attr:`Permission.READ` and
-:attr:`Permission.WRITE`. All requests using ``GET`` or ``HEAD`` are mapped to :attr:`Permission.READ` access while all
-other HTTP methods represent a :attr:`Permission.WRITE` access.
+children of the same type. The :term:`Allowed Permissions <Allowed Permission>` for this :term:`Service`
+are :attr:`Permission.READ` and :attr:`Permission.WRITE`. All requests using ``GET`` or ``HEAD`` are mapped
+to :attr:`Permission.READ` access while all other HTTP methods represent a :attr:`Permission.WRITE` access.
 
 Request path segments follow the natural hierarchy of the nested :class:`magpie.models.Route` under the :term:`Service`.
 For example, a proxy employing :class:`magpie.adapter.MagpieAdapter` such that ``{PROXY_URL}`` is the base of the
@@ -211,9 +212,9 @@ The implementation of this :term:`Service` is handled by class :class:`magpie.se
 remote data server named `Thematic Real-time Environmental Distributed Data Services` (`THREDDS`_). The :term:`Service`
 employs two (2) types of :term:`Resource`, namely :class:`magpie.models.Directory` and :class:`magpie.models.File`.
 All the directory resources can be nested any number of times, and files can only reside as leaves of the hierarchy,
-similarly to a traditional file system. The :term:`Allowed Permissions` on both the :term:`Service` itself or any of
-its children :term:`Resource` are :attr:`Permission.BROWSE`, :attr:`Permission.READ`, and :attr:`Permission.WRITE`
-(see note below regarding this last permission).
+similarly to a traditional file system. The :term:`Allowed Permissions <Allowed Permission>` on both the :term:`Service`
+itself or any of its children :term:`Resource` are :attr:`Permission.BROWSE`, :attr:`Permission.READ`, and
+:attr:`Permission.WRITE` (see note below regarding this last permission).
 
 .. versionadded:: 3.1
     The :attr:`Permission.BROWSE` permission is used to provide listing access of contents when targeting a
@@ -405,9 +406,8 @@ ServiceBaseWMS
 .. seealso::
 
     Derived implementations:
-
-    - `ServiceGeoserverWMS`_
-    - `ServiceNCWMS2`_
+    - :ref:`ServiceGeoserverWMS`
+    - :ref:`ServiceNCWMS2`
 
 This is a *partial base* class employed to represent :term:`OWS` `Web Map Service` extended via other complete classes.
 It cannot be employed directly as :term:`Service` instance. The derived classes provide different parsing methodologies
@@ -483,9 +483,9 @@ The implementation of this :term:`Service` is handled by class :class:`magpie.se
 control access to the operations provided by an :term:`OWS` `Web Processing Service`. This :term:`Service` allows
 one (1) type of child :term:`Resource`, namely the :class:`magpie.models.Process` which represent the execution units
 that are registered under a remote `WPS`. Every :class:`magpie.models.Process` cannot itself have a child
-:term:`Resource`, making `ServiceWPS`_ maximally a 2-tier level hierarchy.
+:term:`Resource`, making :ref:`ServiceWPS` maximally a 2-tier level hierarchy.
 
-There are three (3) types of :term:`Allowed Permissions` which each represent an operation that can be requested from it
+There are three (3) types of :term:`Allowed Permission` which each represent an operation that can be requested from it
 (via ``request`` query parameter value of the HTTP request), specifically the :attr:`Permission.GET_CAPABILITIES`,
 :attr:`Permission.DESCRIBE_PROCESS`, and :attr:`Permission.EXECUTE`. The :attr:`Permission.GET_CAPABILITIES`
 corresponds to the retrieval of available list of *Processes* on the `WPS` instance, and therefore, can only be applied
@@ -494,9 +494,9 @@ on individual :class:`magpie.models.Process` :term:`Resource` definitions. When 
 :attr:`Scope.RECURSIVE` modifier, the corresponding :term:`Permission` becomes effective to all underlying *Processes*.
 Otherwise, the :term:`Permission` applied on specific :class:`magpie.models.Process` entries control the specific
 :term:`ACL` only for it. When a specific :term:`Permission` is involved on a :class:`magpie.models.Process` during
-:term:`Effective Permissions` resolution, the value of the query parameter ``identifier`` is employ to attempt mapping
-it against an existing :term:`Resource`. The resolution of :term:`Effective Permissions` in even of multi-level tree
-:term:`Resource` is computed in the usual manner described in the :ref:`Permissions` chapter.
+:term:`Effective Permission` resolution, the value of the query parameter ``identifier`` is employ to attempt mapping
+it against an existing :term:`Resource`. The resolution of :term:`Effective Permissions <Effective Permission>` in the
+event of multi-level tree :term:`Resource` is computed in the usual manner described in the :ref:`Permissions` chapter.
 
 
 .. warning::
@@ -540,7 +540,7 @@ ServiceGeoserver
     - :ref:`ServiceGeoserverWPS`
 
 This :term:`Service` is combined :term:`OWS` implementation for `GeoServer`_ that allows simultaneous representation of
-:term:`WFS`, :term:`WMS` and :term:`WPS` :term:`Resources <Resource> all nested under a single reference hosted under
+:term:`WFS`, :term:`WMS` and :term:`WPS` :term:`Resources <Resource>` all nested under a single reference hosted under
 common remote URL. Using this implementation, :class:`magpie.models.Workspace` are first required as immediate children
 under the root :term:`Service`, and can be followed by both :term:`Resources <Resource>` of type
 :class:`magpie.models.Layer` and :class:`magpie.models.Process`.
@@ -614,9 +614,9 @@ element.
 .. note::
     If only :attr:`Scope.RECURSIVE` :term:`Permission` are being applied on the :term:`Service` or their children
     :term:`Resource`, it is better to enter *fewer* children element in the tree to reduce computation time of
-    :term:`Effective Permissions`. The complete hierarchy should be employed only when the depth of the tree is
-    relatively shallow or that :attr:`Scope.MATCH` must be applied specifically for some :term:`Resource` to obtain
-    desired access behaviour.
+    :term:`Effective Permissions <Effective Permission>`. The complete hierarchy should be employed only when the depth
+    of the tree is relatively shallow or that :attr:`Scope.MATCH` must be applied specifically for some :term:`Resource`
+    to obtain desired access behaviour.
 
 When using the `Magpie` Docker image, the default command run the `magpie-cron`_ utility in parallel to the API. This
 cron job will periodically execute the :term:`Resource` auto-synchronization feature for a given :term:`Service` that

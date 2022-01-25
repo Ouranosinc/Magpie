@@ -643,14 +643,15 @@ for |perm_reason|_ field. Following pseudo-code presents the overall procedure.
 .. seealso::
     - |perm_example_resolve|_
 
-In some cases, :term:`Service` implementations will support simultaneous references to multiple :term:`Resources`
-with a single request. One such example is when a request parameter allows a comma-separated list of values referring to
+In some cases, :term:`Service` implementations will support simultaneous references to
+multiple :term:`Resources <Resource>` with a single request.
+One such example is when a request parameter allows a comma-separated list of values referring to
 distinct :term:`Resource` items, for which :term:`Effective Resolution` must be computed for each element of the list.
 When a :term:`Service` supports this type of references, the above |algo_resolve_effective|_ is applied
 iteratively for every :term:`Resource` until all have been validated for :attr:`Access.ALLOW`, or until the first
 :attr:`Access.DENY` is found. For this kind of |effective_permissions|_ to be granted access, **ALL** requested
-:term:`Permission` on every :term:`Resources` in the set must be :attr:`Access.ALLOW` indiscriminately. Denied access
-to any element takes precedence over the whole set.
+:term:`Permission` on every :term:`Resources <Resource>` in the set must be :attr:`Access.ALLOW` indiscriminately.
+Denied access to any element takes precedence over the whole set.
 
 This procedure over multiple :term:`Resource` only applies during :term:`ACL` computation of an actual request to access
 the remote :term:`Service` provider or one of its children :term:`Resource`. When managing |applied_permissions|_ on

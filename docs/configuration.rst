@@ -686,7 +686,7 @@ remain available as described at the start of the :ref:`Configuration` section.
     (Value: ``"admin"``)
 
     Name of the :term:`Permission` used to represent highest administration privilege in the application. It is one of
-    the special :term:`Access Permissions` known by the application (see also :ref:`Route Access` section).
+    the special :term:`Access Permission` known by the application (see also :ref:`Route Access` section).
 
 .. envvar:: MAGPIE_LOGGED_PERMISSION
 
@@ -695,7 +695,7 @@ remain available as described at the start of the :ref:`Configuration` section.
 
     .. versionadded:: 2.0
 
-    Defines a special condition of :term:`Access Permissions` related to the :term:`Logged User` session and the
+    Defines a special condition of :term:`Access Permission` related to the :term:`Logged User` session and the
     targeted :term:`User` by the request. See details in :ref:`Route Access` for when it applies.
 
 .. envvar:: MAGPIE_LOGGED_USER

@@ -242,8 +242,8 @@ Authorization Headers
 Following any successful :term:`Authentication` request as presented in the previous section, the obtained ``Cookie``
 defines which :term:`Logged User` attempts to accomplish an operation against a given protected URI. `Magpie` employs
 the same ``Cookie`` both for operations provided by its API and for accessing the real :term:`Resource` protected
-behind the :term:`Proxy` according to resolution of :term:`Effective Permissions` based on :term:`Applied Permission`
-definitions.
+behind the :term:`Proxy` according to resolution of :term:`Effective Permissions <Effective Permission>` based on
+:term:`Applied Permission` definitions.
 
 Access to Magpie Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -259,14 +259,14 @@ Access to Protected Resources
 
 When sending requests to the :term:`Policy Enforcement Point` (PEP) (e.g.: `Twitcher`_ :term:`Proxy`),
 appropriate ``Cookie`` headers must be defined for it to identify the :term:`Logged User` and resolve its
-:term:`Effective Permissions` accordingly. Not providing those tokens will default to using
+:term:`Effective Permissions <Effective Permission>` accordingly. Not providing those tokens will default to using
 :envvar:`MAGPIE_ANONYMOUS_USER`, which will result into either one of HTTP ``Unauthorized [401]`` or
 ``Forbidden [403]``, depending on how the PEP interprets and returns the response indicated by `Magpie`, unless the
 corresponding :term:`Resource` was allowed for :ref:`perm_public_access`.
 
 When appropriately authenticated, access to the targeted :term:`Resource` will be granted or denied depending on the
-:term:`Effective Permissions` that :term:`Logged User` has for it. This decision is extensively explained in section
-:ref:`perm_resolution`.
+:term:`Effective Permissions <Effective Permission>` that :term:`Logged User` has for it. This decision is extensively
+explained in section :ref:`perm_resolution`.
 
 Another alternative to obtain :term:`Authorization` (only when using the :ref:`utilities_adapter<Magpie Adapter>`) is
 by providing the ``Authorization`` header in the request with appropriate credentials. In this situation, the adapter

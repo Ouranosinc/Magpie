@@ -498,10 +498,11 @@ class ManagementViews(AdminRequests, BaseViews):
         Get the user or group applied permissions as well as applicable permissions for corresponding services.
 
         Result is a :class:`tuple` of:
-            - combined :term:`Allowed Permissions` (*names only*) for services and their children resources.
+            - combined :term:`Allowed Permissions <Applied Permission>` (*names only*) for services and their children
+              :term:`Resources <Resource>`.
             - dictionary of key-service-name, each with recursive map value of children resource details including
-              the :term:`Applied Permissions <Applied Permission>` or :term:`Inherited Resources` for the corresponding :term:`User`
-              or :term:`Group` accordingly to specified arguments.
+              the :term:`Applied Permissions <Applied Permission>` or :term:`Inherited Resources` for the corresponding
+              :term:`User` or :term:`Group` accordingly to specified arguments.
         """
         if is_user:
             # because page can only show a single permission (per name/resource) at a time, apply resolution

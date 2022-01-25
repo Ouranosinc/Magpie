@@ -197,8 +197,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         .. versionchanged:: 3.5
             User and Group permissions for ``Resource1`` and ``Resource2`` have been swapped since new priorities make
-            :term:`Direct Permissions <direct permission>` more important than
-            :term:`Inherited Permissions <inherited permission>`. The :attr:`Access.DENY` was not being reverted with
+            :term:`Direct Permissions <Direct Permission>` more important than
+            :term:`Inherited Permissions <Inherited Permission>`. The :attr:`Access.DENY` was not being reverted with
             original definitions that assumed them to be of equal importance, and therefore plain ``DENY > ALLOW`` was
             working. Permission on ``Resource4`` was moved from Group to User for the same reason.
         """
@@ -342,7 +342,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         .. versionchanged:: 3.5
             User and Group permissions for ``Directory1`` and ``Directory2`` have been swapped since new priorities make
-            :term:`Direct Permissions` more important than :term:`Inherited Permissions <inherited permission>`.
+            :term:`Direct Permissions` more important than :term:`Inherited Permissions <Inherited Permission>`.
             The :attr:`Access.DENY` was not being reverted with original definitions that assumed them to be of equal
             importance, and therefore plain ``DENY > ALLOW`` was working.
         """

@@ -10,10 +10,10 @@ requests are execute in rapid succession. `PostgreSQL`_ and `SQLAlchemy`_ are us
 when more than a couple requests per second are needed, some solutions are possible to
 improve the performance of these requests by avoiding unnecessary reload of static data.
 
-We can take advantage of the fact that individual :temr:`Permission` and :term:`Service` definitions are not
+We can take advantage of the fact that individual :term:`Permission` and :term:`Service` definitions are not
 susceptible to change often and cache the results of these queries.
 
-While not activated by default, it's possible to cache the :term:`Access Control Lists` (ACLs) and :term:`Service`
+While not activated by default, it's possible to cache the :term:`Access Control List` (ACL) and :term:`Service`
 retrieval operations for all services, and give it an expiration timeout.
 
 .. code-block:: ini
@@ -26,8 +26,8 @@ retrieval operations for all services, and give it an expiration timeout.
 .. warning::
     Take into consideration that settings must be applied to `Twitcher`_ INI file such that incoming proxy requests
     will be effective in its web application, in turn using the :class:`magpie.adapter.MagpieAdapter`. Caching settings
-    defined in `Magpie` INI file will be employed only when requesting :term:`Effective Permissions` resolution using
-    `Magpie`'s API endpoints.
+    defined in `Magpie` INI file will be employed only when requesting
+    :term:`Effective Permissions <Effective Permission>` resolution using `Magpie`'s API endpoints.
 
 
 In the above example, for a particular request that queries a :term:`Logged User`'s ACL for a specific :term:`Service`,
