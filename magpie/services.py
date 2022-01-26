@@ -937,7 +937,7 @@ class ServiceGeoserverBase(ServiceOWS):
 
     @classproperty
     @abc.abstractmethod
-    def resource_multi(cls):  # noqa
+    def resource_multi(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> bool
         """
         Indicates if the :term:`Service` supports multiple simultaneous :term:`Resource` references.
@@ -954,7 +954,7 @@ class ServiceGeoserverBase(ServiceOWS):
 
     @classproperty
     @abc.abstractmethod
-    def resource_param(cls):  # noqa
+    def resource_param(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> Union[Str, List[Str]]
         """
         Name of the request query parameter(s) to access requested leaf children resource.
@@ -973,7 +973,7 @@ class ServiceGeoserverBase(ServiceOWS):
 
     @classproperty
     @abc.abstractmethod
-    def resource_types_permissions(cls):  # noqa
+    def resource_types_permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> ResourceTypePermissions
         """
         Explicit permissions provided for resources for a given :term:`OWS` implementation.
@@ -981,7 +981,7 @@ class ServiceGeoserverBase(ServiceOWS):
         raise NotImplementedError
 
     @classproperty
-    def params_expected(cls):  # noqa
+    def params_expected(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> List[Str]
         """
         Specify typical `Geoserver` request query parameters expected for any sub-service implementation.
@@ -1472,7 +1472,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
     }
 
     @classproperty
-    def service_ows_supported(cls):  # noqa
+    def service_ows_supported(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> Set[Type[ServiceOWS]]
         return set(cls.service_map.values())
 
@@ -1517,7 +1517,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
         return self._config
 
     @classproperty
-    def params_expected(cls):  # noqa
+    def params_expected(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> List[Str]
         params = set()
         for svc in cls.service_ows_supported:
@@ -1528,7 +1528,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
         return list(params)
 
     @classproperty
-    def permissions(cls):  # noqa
+    def permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> List[Permission]
         perms = set()
         for svc in cls.service_ows_supported:
@@ -1539,7 +1539,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
         return list(perms)
 
     @classproperty
-    def resource_types_permissions(cls):  # noqa
+    def resource_types_permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> ResourceTypePermissions
         perms = {}  # type: ResourceTypePermissions
         for svc in cls.service_ows_supported:
@@ -1578,7 +1578,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
             # since all OWS services are accessed using '/geoserver/<SERVICE>?request=...'
             # attempt to match using applicable path fragment
             svc_path = self.request.path.rsplit("/", 1)[-1].lower()
-            for svc_ows in type(self).service_ows_supported:
+            for svc_ows in type(self).service_ows_supported:  # pylint: disable=E1133,not-an-iterable
                 if svc_path == svc_ows.service_base:
                     svc = svc_ows.service_base
                     break
@@ -1590,19 +1590,19 @@ class ServiceGeoserver(ServiceGeoserverBase):
         return self._service_requested
 
     @classproperty
-    def resource_scoped(cls):  # noqa
+    def resource_scoped(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> bool
         svc = cls.service_requested()
         return svc.resource_scoped if svc else False
 
     @classproperty
-    def resource_multi(cls):  # noqa
+    def resource_multi(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> bool
         svc = cls.service_requested()
         return svc.resource_multi if svc else False
 
     @classproperty
-    def resource_param(cls):  # noqa
+    def resource_param(cls):  # noqa  # pylint: disable=E0213,no-self-argument
         # type: () -> Union[Str, List[Str]]
         svc = cls.service_requested()
         return cls.resource_param if svc else []

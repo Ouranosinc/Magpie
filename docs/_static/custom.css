@@ -59,22 +59,18 @@ div.bordered-content {
 div.parent-list-numbers ol {
     counter-reset: item;
 }
+
 div.parent-list-numbers ol li {
     counter-increment: item;
 }
-/*div.parent-list-numbers > li:before {
-    content: counters(item, ".") " ";
-    counter-increment: item
-}*/
+
 div.parent-list-numbers ol ol > li::before {
-    content: counters(item, ".")")";
+    content: counters(item, ".") ")";
     margin-left: -3em;
 }
-div.parent-list-numbers ol li {
-    counter-increment: item;
-}
+
 div.parent-list-numbers > ol > li > ol > li {
-    list-style: None;
+    list-style: none;
     display: inline-flex;
     display: -webkit-box;
 }

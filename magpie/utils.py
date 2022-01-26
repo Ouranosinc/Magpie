@@ -999,7 +999,7 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-class classproperty(property):
+class classproperty(property):  # pylint: disable=C0103,invalid-name
     """
     Mimics :class:`property` decorator, but applied onto ``classmethod`` in backward compatible way.
 
