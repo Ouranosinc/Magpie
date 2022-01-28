@@ -994,7 +994,7 @@ class ServiceGeoserverBase(ServiceOWS):
             impl_params = cls.resource_param
         else:
             name = fully_qualified_name(cls)
-            raise NotImplementedError(f"Missing or invalid definition of 'resource_param' in service: {name}")
+            raise NotImplementedError("Missing or invalid definition of 'resource_param' in service: {}".format(name))
         base_params = [
             "request",
             "service",
