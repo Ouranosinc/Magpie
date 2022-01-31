@@ -48,9 +48,9 @@
                 %for perm_name in permission_titles:
                     <div
                     %if inherit_groups_permissions:
-                        class="permission-title permission-title-effective"
+                        class="permission-cell permission-title permission-title-effective"
                     %else:
-                        class="permission-title"
+                        class="permission-cell permission-title"
                     %endif
                     >${perm_name}</div>
                 %endfor
@@ -98,7 +98,7 @@
 
 <!-- renders the permission selector for a single resource/permission combination -->
 <%def name="render_resource_permissions_entry(permission_name, resource_info)">
-    <div class="permission-entry">
+    <div class="permission-cell permission-entry">
         <label for="combobox_permission_resource_${resource_info['id']}">
         <select name="permission_resource_${resource_info['id']}"
                 id="combobox_permission_resource_${resource_info['id']}"
