@@ -848,7 +848,10 @@ table.simple-list input[type="submit"] {
 }
 
 .tree-line {
-    display: block;
+    display: inline-flex;
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
 }
 
 .collapsible-tree-item {
@@ -858,6 +861,37 @@ table.simple-list input[type="submit"] {
     /* this ensures that element is on top to capture the click event to toggle collapsed/expanded
        must be applied in combination to 'position' attribute */
     z-index: 10;
+}
+
+.tree-line-key-container {
+    margin-left: 0;
+    margin-right: auto;
+    width: 20%;
+}
+
+.tree-line-fill-container {
+    /*margin-left: auto;
+    margin-right: 0;
+    width: 10%;*/
+    width: max-content;
+    margin-right: 0;
+    margin-left: auto;
+}
+
+.tree-line-item-container {
+    /*margin-left: auto;
+    margin-right: 0;
+    width: 75%;*/
+    margin-right: 0;
+    width: max-content;
+    max-width: 70%;
+    overflow-x: auto;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.tree-line-item-container-scrollable {
+    /*width: 120%;*/
 }
 
 .tree-key {
@@ -931,7 +965,7 @@ div.tree-button {
     /* ensure that sufficient space is provided to fit all possible permission-name side-by-side
        align with combobox and checkbox, must include both their respective width
     */
-    float: right;
+    /*float: right;*/
     margin-left: 0.5em;  /* spacing with disallowed text to ensure one title doesn't end flush where the next begins */
     width: 9.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-left] */
 

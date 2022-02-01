@@ -14,4 +14,11 @@ $(document).ready(function() {
 
     $(".collapsible-tree-item").on("click", toggle)
     $(".collapsible-marker").on("click", toggle)
-})
+});
+
+
+$(document).ready(function() {
+    /* Scrolls all permission selectors horizontally along with their corresponding titles */
+    let container = $(".tree-line-item-container");
+    container.scrollLeft($(this).scrollLeft());
+});
