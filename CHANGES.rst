@@ -45,6 +45,9 @@ Features / Changes
 * Add auto-restore of previous scroll position in UI page following submitted form.
 * Add UI tooltip `Resource` ID to elements rendered in the ``Service`` and ``Permission`` hierarchy trees
   (relates to `#335 <https://github.com/Ouranosinc/Magpie/issues/335>`_).
+* Add UI horizontal multi-scroll (all tree lines simultaneously) of ``Permission`` selectors when there are more that
+  can fit naturally within the tab view for a given ``Service`` type
+  (relates to `#498 <https://github.com/Ouranosinc/Magpie/issues/498>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
