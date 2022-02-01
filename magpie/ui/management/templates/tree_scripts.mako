@@ -44,7 +44,7 @@
             <div class="tree-line-key-container tree-key">Resources</div>
             <div class="tree-line-fill-container"><!-- --></div>
             <div class="tree-line-item-container tree-item">
-                <div class="tree-line-item-container-scrollable">
+                <div class="tree-line-item-container-scrollable tree-line-scroll-visible">
                     %for perm_name in permission_titles:
                         <div
                         %if inherit_groups_permissions:

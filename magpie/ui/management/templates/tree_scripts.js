@@ -22,7 +22,7 @@ $(document).ready(function() {
 */
 $(document).ready(function() {
     /* Scrolls all permission selectors horizontally along with their corresponding titles */
-    let container = $(".tree-line-item-container");
+    let container = $(".tree-line-item-container-scrollable");
     container.scroll(function () {
         container.scrollLeft($(this).scrollLeft());
     });

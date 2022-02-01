@@ -780,8 +780,8 @@ table.simple-list input[type="submit"] {
 }
 
 .tree-header {
-    padding: 1em 0 0;
     font-weight: bold;
+    padding: 1em 0 2.5em;
 }
 
 .tree .collapsible {
@@ -865,8 +865,8 @@ table.simple-list input[type="submit"] {
 
 .tree-line-key-container {
     margin-left: 0;
-    margin-right: auto;
-    width: 20%;
+    margin-right: 20em;
+    /*width: 20%;*/
 }
 
 .tree-line-fill-container {
@@ -874,24 +874,51 @@ table.simple-list input[type="submit"] {
     margin-right: 0;
     width: 10%;*/
     width: max-content;
-    margin-right: 0;
-    margin-left: auto;
+    margin-right: auto;
+    margin-left: 0;
 }
 
 .tree-line-item-container {
     /*margin-left: auto;
     margin-right: 0;
     width: 75%;*/
-    margin-right: 0;
+    /*margin-right: 0;
     width: max-content;
     max-width: 70%;
-    overflow-x: auto;
+    /*overflow-x: auto;*/
+    /*
     white-space: nowrap;
     display: inline-block;
+    left: 40em;
+    position: absolute;
+    */
+
+    margin-right: 0;
+    width: max-content;
+    max-width: 65%;
+    /*overflow-x: hidden;*/
+    white-space: nowrap;
+    display: inline-block;
+    left: 40em;
+    position: absolute;
 }
 
 .tree-line-item-container-scrollable {
     /*width: 120%;*/
+    /*max-width: 80%;
+    overflow-x: auto;
+    position: relative;
+    display: flex;
+    justify-content: flex-start;*/
+    overflow-x: hidden;
+    position: relative;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.tree-line-scroll-visible {
+    overflow-x: auto;
 }
 
 .tree-key {
