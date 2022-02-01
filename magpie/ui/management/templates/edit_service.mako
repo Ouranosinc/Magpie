@@ -246,9 +246,11 @@
 <%def name="render_item(key, value, level)">
     <div class="tree-item-value collapsible-tree-item">
         <span class="tree-item-label label label-info">${value["resource_type"]}</span>
-        <div class="tree-key">
-            ${value.get('resource_display_name', key)}
+        <div class="tree-key tooltip-container">
+            <span class="tooltip-value">${value.get('resource_display_name', key)}</span>
+            <span class="tooltip-text">Resource: ${value["id"]}</span>
         </div>
+
     </div>
     <div class="tree-item-buttons">
         <form id="resource_${value['id']}" action="${request.path}" method="post">

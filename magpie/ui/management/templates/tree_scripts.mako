@@ -48,9 +48,9 @@
                 %for perm_name in permission_titles:
                     <div
                     %if inherit_groups_permissions:
-                        class="permission-title permission-title-effective"
+                        class="permission-cell permission-title permission-title-effective"
                     %else:
-                        class="permission-title"
+                        class="permission-cell permission-title"
                     %endif
                     >${perm_name}</div>
                 %endfor
@@ -67,8 +67,9 @@
 <%def name="render_resource_permissions_item(key, value, level)">
     <div class="tree-item-value collapsible-tree-item">
         <span class="tree-item-label label label-info">${value["resource_type"]}</span>
-        <div class="tree-key">
-            ${value.get('resource_display_name', key)}
+        <div class="tree-key tooltip-container">
+            <span class="tooltip-value">${value.get('resource_display_name', key)}</span>
+            <span class="tooltip-text">Resource: ${value["id"]}</span>
         </div>
     </div>
     %for perm_name in permissions:
@@ -98,7 +99,7 @@
 
 <!-- renders the permission selector for a single resource/permission combination -->
 <%def name="render_resource_permissions_entry(permission_name, resource_info)">
-    <div class="permission-entry">
+    <div class="permission-cell permission-entry">
         <label for="combobox_permission_resource_${resource_info['id']}">
         <select name="permission_resource_${resource_info['id']}"
                 id="combobox_permission_resource_${resource_info['id']}"
@@ -120,8 +121,10 @@
                 %endfor
             %endfor
         </select>
+
+        <!-- previous state of existing permissions to detect removal of permission vs already blank selectors -->
         %for perm_name in resource_info["permission_names"]:
-        <input type="hidden" name="resource_${resource_info['id']}" value="${perm_name}">
+            <input type="hidden" name="resource_${resource_info['id']}" value="${perm_name}">
         %endfor
         </label>
 

@@ -921,17 +921,25 @@ div.tree-button {
 }
 
 .permission-title {
+    /* make text >width employ an ellipsis with scroll that auto apply/remove when using it for too long titles */
+    text-overflow: ellipsis;
+    overflow: auto;
+    text-align: left;
+}
+
+.permission-cell {
     /* ensure that sufficient space is provided to fit all possible permission-name side-by-side
        align with combobox and checkbox, must include both their respective width
     */
     float: right;
-    text-align: left;
-    margin-right: 0.5em;  /* spacing with disallowed text to ensure one title doesn't end flush where the next begins */
-    width: 9.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-right] */
+    margin-left: 0.5em;  /* spacing with disallowed text to ensure one title doesn't end flush where the next begins */
+    width: 9.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-left] */
 
-    /* make text >width employ an ellipsis with scroll that auto apply/remove when using it for too long titles */
-    text-overflow: ellipsis;
-    overflow: auto;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
 }
 
 .permission-title-effective {
@@ -940,15 +948,12 @@ div.tree-button {
 }
 
 .permission-entry {
-    float: right;
     text-align: left;
     margin-top: 0.05em;
-    margin-right: 0.5em;    /* must be included in 'permission-title' width */
 }
 
 .permission-checkbox {
     width: 1.5em;
-    float: right;
     text-align: left;
     margin-top: 0.1em;
     margin-right: 0;        /* must be included in 'permission-title' width, affects width of 'permission-effective' */
@@ -966,6 +971,34 @@ div.tree-button {
 /* Hide arrow icon in IE browsers */
 .permission-combobox::-ms-expand {
     display: none;
+}
+
+.tooltip-container {
+}
+
+.tooltip-container .tooltip-value {
+    border-bottom: 1px dotted black;
+}
+
+.tooltip-container .tooltip-text {
+    visibility: hidden;
+    text-align: center;
+    background-color: black;
+    color: white;
+    border-radius: 5px;
+    padding: 2px 4px;
+    opacity: 70%;
+    width: max-content;
+    /* position */
+    position: absolute;
+    z-index: 1;
+    margin-left: 0.5em;
+    margin-bottom: 1em;
+    margin-top: -0.1em;
+}
+
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
 }
 
 /* --- Header breadcrumb --- */
