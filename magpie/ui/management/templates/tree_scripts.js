@@ -17,8 +17,13 @@ $(document).ready(function() {
 });
 
 
+/*
+    https://stackoverflow.com/questions/22863324/scroll-multiple-div-at-the-same-time/22863448
+*/
 $(document).ready(function() {
     /* Scrolls all permission selectors horizontally along with their corresponding titles */
     let container = $(".tree-line-item-container");
-    container.scrollLeft($(this).scrollLeft());
+    container.scroll(function () {
+        container.scrollLeft($(this).scrollLeft());
+    });
 });
