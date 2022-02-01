@@ -56,7 +56,8 @@ Bug Fixes
   for a given ``Service``.
 * Fix `Effective Resolution` of ``Permission`` applied for ``ServiceGeoserverWMS`` to consider ``Scope`` modifier
   of ``Service`` and ``Workspace`` for access to be resolved at the ``Layer`` level.
-* Fix UI alignment of permission titles with their corresponding permission selectors.
+* Fix UI alignment of permission titles with their corresponding permission selectors
+  (relates to `#498 <https://github.com/Ouranosinc/Magpie/issues/498>`_).
 
 `3.20.1 <https://github.com/Ouranosinc/Magpie/tree/3.20.1>`_ (2022-01-19)
 ------------------------------------------------------------------------------------
