@@ -851,15 +851,15 @@ def log_exception_tween(handler, registry):  # noqa: F811
     return log_exc
 
 
-def is_json_body(body):
-    # type: (Any) -> bool
+def is_json_body(body, return_body=False):
+    # type: (Any, bool) -> bool
     if not body:
-        return False
+        return None if return_body else False
     try:
-        json.loads(body)
+        content = json.loads(body)
     except (ValueError, TypeError):
-        return False
-    return True
+        return None if return_body else False
+    return content if return_body else True
 
 
 # note: must not define any enum value here to allow inheritance by subclasses
@@ -923,7 +923,7 @@ class ExtendedEnum(Enum):
 
         Title use the original enum element name with capitalization considering underscores for separate words.
         """
-        return self.name.title().replace("_", "")
+        return self.name.title().replace("_", "")  # pylint: disable=E1101,no-member
 
 
 # note: must not define any enum value here to allow inheritance by subclasses
@@ -997,3 +997,17 @@ class SingletonMeta(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+class classproperty(property):  # pylint: disable=C0103,invalid-name
+    """
+    Mimics :class:`property` decorator, but applied onto ``classmethod`` in backward compatible way.
+
+    .. note::
+        This decorator purposely only supports getter attribute to define unmodifiable class properties.
+
+    .. seealso::
+        https://stackoverflow.com/a/5191224
+    """
+    def __get__(self, cls, owner):  # noqa
+        return classmethod(self.fget).__get__(None, owner)()

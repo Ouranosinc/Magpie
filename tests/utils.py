@@ -966,22 +966,26 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
             kwargs["expect_errors"] = True
         err_code = None
         err_msg = None
+        err_exc = None
         try:
             resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212
         except AppError as exc:
             err_code = exc
             err_msg = str(exc)
+            err_exc = exc
         except HTTPException as exc:
             err_code = exc.status_code
             err_msg = str(exc) + str(getattr(exc, "exception", ""))
+            err_exc = exc
         except Exception as exc:
             err_code = 500
             err_msg = "Unknown: {!s}".format(exc)
+            err_exc = exc
         finally:
             if err_code:
                 info = json_msg({"path": path, "method": method, "body": _body, "headers": kwargs["headers"]})
                 result = "Request raised unexpected error: {!s}\nError: {}\nRequest:\n{}"
-                raise AssertionError(result.format(err_code, err_msg, info))
+                six.raise_from(AssertionError(result.format(err_code, err_msg, info)), err_exc)
 
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)
@@ -1284,7 +1288,7 @@ def check_val_not_in(val, ref, msg=None):
 
 
 def check_val_type(val, ref, msg=None):
-    # type: (Any, Union[Tuple[Type[Any]], Type[Any], NullType], Optional[Str]) -> None
+    # type: (Any, Union[Type[Any], Tuple[Type[Any]], NullType], Optional[Str]) -> None
     """:raises AssertionError: if :paramref:`val` is not an instanced of :paramref:`ref`."""
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 

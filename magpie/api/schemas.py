@@ -123,9 +123,6 @@ UserResourcePermissionsAPI = Service(
 UserResourcePermissionAPI = Service(
     path="/users/{user_name}/resources/{resource_id}/permissions/{permission_name}",
     name="UserResourcePermission")
-UserResourceTypesAPI = Service(
-    path="/users/{user_name}/resources/types/{resource_type}",
-    name="UserResourceTypes")
 UserServicesAPI = Service(
     path="/users/{user_name}/services",
     name="UserServices")
@@ -159,9 +156,6 @@ LoggedUserResourcePermissionAPI = Service(
 LoggedUserResourcePermissionsAPI = Service(
     path=LoggedUserBase + "/resources/{resource_id}/permissions",
     name="LoggedUserResourcePermissions")
-LoggedUserResourceTypesAPI = Service(
-    path=LoggedUserBase + "/resources/types/{resource_type}",
-    name="LoggedUserResourceTypes")
 LoggedUserServicesAPI = Service(
     path=LoggedUserBase + "/services",
     name="LoggedUserServices")
@@ -204,9 +198,6 @@ GroupResourcePermissionsAPI = Service(
 GroupResourcePermissionAPI = Service(
     path="/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}",
     name="GroupResourcePermission")
-GroupResourceTypesAPI = Service(
-    path="/groups/{group_name}/resources/types/{resource_type}",
-    name="GroupResourceTypes")
 RegisterGroupsAPI = Service(
     path="/register/groups",
     name="RegisterGroups")
@@ -228,6 +219,9 @@ ResourceAPI = Service(
 ResourcePermissionsAPI = Service(
     path="/resources/{resource_id}/permissions",
     name="ResourcePermissions")
+ResourceTypesAPI = Service(
+    path="/resources/{resource_id}/types",
+    name="ResourceTypes")
 ServicesAPI = Service(
     path="/services",
     name="Services")
@@ -716,6 +710,14 @@ class ResourceTypesListSchema(colander.SequenceSchema):
     )
 
 
+class ChildrenResourceTypesListSchema(colander.SequenceSchema):
+    resource_type = colander.SchemaNode(
+        colander.String(),
+        description="Available children resource types under a resource within a service hierarchy.",
+        example="file",
+    )
+
+
 class GroupNamesListSchema(colander.SequenceSchema):
     group_name = GroupNameParameter
 
@@ -891,7 +893,11 @@ class GroupDetailBodySchema(GroupPublicBodySchema, GroupInfoBodySchema):
 
 
 class ServiceConfigurationSchema(colander.MappingSchema):
-    description = "Custom configuration of the service. Expected format and fields specific to each service type."
+    description = (
+        "Custom configuration of the service. "
+        "Expected format and fields specific to each service type. "
+        "Service type must support custom configuration."
+    )
     missing = colander.drop
     default = colander.null
 
@@ -915,6 +921,11 @@ class ServiceSummarySchema(colander.MappingSchema):
         colander.String(),
         description="Type of resource synchronization implementation.",
         example="thredds"
+    )
+    service_configurable = colander.SchemaNode(
+        colander.Boolean(),
+        description="Indicates if the service supports custom configuration.",
+        examble=False,
     )
     public_url = colander.SchemaNode(
         colander.String(),
@@ -1150,7 +1161,7 @@ class Resources_GET_OkResponseSchema(BaseResponseSchemaAPI):
 class Resources_POST_RequestBodySchema(colander.MappingSchema):
     resource_name = colander.SchemaNode(
         colander.String(),
-        description="Name of the resource to create"
+        description="Name of the resource to create."
     )
     resource_display_name = colander.SchemaNode(
         colander.String(),
@@ -1159,11 +1170,11 @@ class Resources_POST_RequestBodySchema(colander.MappingSchema):
     )
     resource_type = colander.SchemaNode(
         colander.String(),
-        description="Type of the resource to create"
+        description="Type of the resource to create."
     )
     parent_id = colander.SchemaNode(
         colander.Int(),
-        description="ID of parent resource under which the new resource should be created",
+        description="ID of parent resource under which the new resource should be created.",
         missing=colander.drop
     )
 
@@ -1223,6 +1234,51 @@ class ResourcePermissions_GET_OkResponseSchema(BaseResponseSchemaAPI):
 class ResourcePermissions_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
     description = "Invalid resource type to extract permissions."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class ResourceTypes_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = Resource_RequestPathSchema()
+
+
+class ResourceTypes_GET_ResponseBodySchema(BaseResponseBodySchema):
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the specified resource."
+    )
+    resource_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the specified resource."
+    )
+    children_resource_types = ChildrenResourceTypesListSchema(
+        description="All resource types applicable as children under the specified resource. "
+    )
+    children_resource_allowed = colander.SchemaNode(
+        colander.Boolean(),
+        description="Indicates if the resource allows any children resources."
+    )
+    root_service_id = colander.SchemaNode(
+        colander.Integer(),
+        description="Resource tree root service identification number.",
+        default=colander.null,  # if no parent
+        missing=colander.drop  # if not returned (basic_info = True)
+    )
+    root_service_name = colander.SchemaNode(
+        colander.Integer(),
+        description="Resource tree root service name.",
+        default=colander.null,  # if no parent
+        missing=colander.drop  # if not returned (basic_info = True)
+    )
+    root_service_type = colander.SchemaNode(
+        colander.Integer(),
+        description="Resource tree root service type.",
+        default=colander.null,  # if no parent
+        missing=colander.drop  # if not returned (basic_info = True)
+    )
+
+
+class ResourceTypes_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Get applicable children resource types under resource successful."
+    body = ResourceTypes_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class ServiceResourcesBodySchema(ServiceBodySchema):
@@ -1512,6 +1568,11 @@ class Service_PATCH_ConflictResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
+class Service_PATCH_UnprocessableEntityResponseSchema(BaseResponseSchemaAPI):
+    description = "Specified value is in incorrectly or unsupported format."
+    body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
+
+
 Service_DELETE_RequestBodySchema = Resource_DELETE_RequestBodySchema
 
 
@@ -1600,6 +1661,35 @@ class ServiceTypeResources_GET_RequestSchema(BaseRequestSchemaAPI):
     path = ServiceType_RequestPathSchema()
 
 
+class ResourceTypesAllowed(colander.SequenceSchema):
+    description = "List of all allowed resource types at some level within the service hierarchy."
+    res_type_path = colander.SchemaNode(
+        colander.String(),
+        description="Allowed resource type under the service hierarchy."
+    )
+
+
+class ResourceTypeChildrenAllowed(colander.SequenceSchema):
+    title = "ResourceTypeChildrenAllowed"
+    res_type = colander.SchemaNode(
+        colander.String(),
+        description="Allowed child resource type."
+    )
+
+
+class ResourceStructuresAllowed(colander.MappingSchema):
+    description = (
+        "Mapping of allowed combinations of nested resource type structures under the service. "
+        "If undefined, the service does not impose any specific resource type hierarchy other "
+        "than whether individual resource types themselves allow children resources."
+    )
+    unknown = "preserve"
+    res_type = ResourceTypeChildrenAllowed(
+        name="{resource_type}",
+        description="List of children resource types in structure allowed under the parent resource type."
+    )
+
+
 class ServiceTypeResourceInfo(colander.MappingSchema):
     resource_type = colander.SchemaNode(
         colander.String(),
@@ -1607,8 +1697,10 @@ class ServiceTypeResourceInfo(colander.MappingSchema):
     )
     resource_child_allowed = colander.SchemaNode(
         colander.Boolean(),
-        description="Indicates if the resource type allows child resources."
+        description="Indicates if the service allows any child resources."
     )
+    resource_types_allowed = ResourceTypesAllowed()
+    resource_structure_allowed = ResourceStructuresAllowed()
     permission_names = PermissionNameListSchema(
         description="Permissions applicable to the specific resource type.",
         example=[Permission.READ.value, Permission.WRITE.value]
@@ -3272,6 +3364,15 @@ ResourcePermissions_GET_responses = {
     "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+ResourceTypes_GET_responses = {
+    "200": ResourceTypes_GET_OkResponseSchema(),
+    "400": Resource_MatchDictCheck_BadRequestResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "403": Resource_MatchDictCheck_ForbiddenResponseSchema(),
+    "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }

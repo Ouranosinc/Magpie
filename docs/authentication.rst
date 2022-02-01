@@ -62,9 +62,10 @@ Query Parameters
 
 This method employs the query string parameters in the URL to provide the credentials. The format is as follows.
 
-.. code-block::
+.. code-block:: http
 
-    GET {MAGPIE_URL}/signin?user_name=<usr>&password=<pwd>
+    GET /signin?user_name=<usr>&password=<pwd> HTTP/1.1
+    Host: {MAGPIE_URL}
 
 
 The response will contain :ref:`Authentication Headers` detail needed for user identification.
@@ -89,37 +90,39 @@ Body content requests allow multiple variants, based on the specified ``Content-
 All variants employ a similar structure, but indicate the format of the body to be parsed.
 By default, ``application/json`` is employed if none was specified.
 
-.. code-block::
+.. code-block:: http
 
-    POST {MAGPIE_URL}/signin
-    Headers
-        Content-Type: multipart/form-data; boundary=<boundary-string>
-    Body
-        user_name: "<usr>"
-        password: "<pwd>"
-        provider_name: "<provider>"     # optional
+    POST /signin HTTP/1.1
+    Host: {MAGPIE_URL}
+    Content-Type: multipart/form-data; boundary=<boundary-string>
 
-
-.. code-block::
-
-    POST {MAGPIE_URL}/signin
-    Headers
-        Content-Type: application/x-www-form-urlencoded
-    Body
-        user_name=<usr>&password=<pwd>&provider_name=<provider>
+    --<boundary-string>
+    user_name: "<usr>"
+    password: "<pwd>"
+    provider_name: "<provider>"     # optional
+    --<boundary-string>--
 
 
-.. code-block::
+.. code-block:: http
 
-    POST {MAGPIE_URL}/signin
-    Headers
-        Content-Type: application/json
-    Body
-        {
-            "user_name": "<usr>",
-            "password": "<pwd>",
-            "provider_name": "<provider>"
-        }
+    POST /signin HTTP/1.1
+    Host: {MAGPIE_URL}
+    Content-Type: application/x-www-form-urlencoded
+
+    user_name=<usr>&password=<pwd>&provider_name=<provider>
+
+
+.. code-block::  http
+
+    POST /signin HTTP/1.1
+    Host: {MAGPIE_URL}
+    Content-Type: application/json
+
+    {
+        "user_name": "<usr>",
+        "password": "<pwd>",
+        "provider_name": "<provider>"
+    }
 
 
 The response will contain :ref:`Authentication Headers` detail needed for user identification.
@@ -196,7 +199,7 @@ Authentication Headers
 After execution of an :term:`Authentication` request, a ``Set-Cookie`` header with `Magpie` user identification token
 named according to :ref:`config_security` should be set in the response as follows.
 
-.. code-block::
+.. code-block:: http
 
     Set-Cookie: {MAGPIE_COOKIE_NAME}=<auth-token>!userid_type:int;
                 [Domain=<domain>; Path=<path>; HttpOnly; SameSite=Lax; Max-Age=<seconds>; expires=<datetime>]
@@ -239,8 +242,8 @@ Authorization Headers
 Following any successful :term:`Authentication` request as presented in the previous section, the obtained ``Cookie``
 defines which :term:`Logged User` attempts to accomplish an operation against a given protected URI. `Magpie` employs
 the same ``Cookie`` both for operations provided by its API and for accessing the real :term:`Resource` protected
-behind the :term:`Proxy` according to resolution of :term:`Effective Permissions` based on :term:`Applied Permissions`
-definitions.
+behind the :term:`Proxy` according to resolution of :term:`Effective Permissions <Effective Permission>` based on
+:term:`Applied Permission` definitions.
 
 Access to Magpie Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -256,14 +259,14 @@ Access to Protected Resources
 
 When sending requests to the :term:`Policy Enforcement Point` (PEP) (e.g.: `Twitcher`_ :term:`Proxy`),
 appropriate ``Cookie`` headers must be defined for it to identify the :term:`Logged User` and resolve its
-:term:`Effective Permissions` accordingly. Not providing those tokens will default to using
+:term:`Effective Permissions <Effective Permission>` accordingly. Not providing those tokens will default to using
 :envvar:`MAGPIE_ANONYMOUS_USER`, which will result into either one of HTTP ``Unauthorized [401]`` or
 ``Forbidden [403]``, depending on how the PEP interprets and returns the response indicated by `Magpie`, unless the
 corresponding :term:`Resource` was allowed for :ref:`perm_public_access`.
 
 When appropriately authenticated, access to the targeted :term:`Resource` will be granted or denied depending on the
-:term:`Effective Permissions` that :term:`Logged User` has for it. This decision is extensively explained in section
-:ref:`perm_resolution`.
+:term:`Effective Permissions <Effective Permission>` that :term:`Logged User` has for it. This decision is extensively
+explained in section :ref:`perm_resolution`.
 
 Another alternative to obtain :term:`Authorization` (only when using the :ref:`utilities_adapter<Magpie Adapter>`) is
 by providing the ``Authorization`` header in the request with appropriate credentials. In this situation, the adapter
@@ -276,7 +279,7 @@ employed instead to process :term:`Authentication` only once.
 
 The format of the ``Authorization`` header is has follows.
 
-.. code-block::
+.. code-block:: http
 
     Authorization: Bearer <access_token>
 

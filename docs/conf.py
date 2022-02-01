@@ -54,6 +54,8 @@ extensions = [
     "doc_redirect",
     "sphinxcontrib.redoc",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosectionlabel",  # help make cross-references to title/sections
+    "cloud_sptheme.ext.autodoc_sections",  # allow sections in docstrings code
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
@@ -174,7 +176,11 @@ language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = [
+    # ignore multiple over-verbose warnings caused
+    # by file not yet generated when TOC is processed
+    "api.rst",
+]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.

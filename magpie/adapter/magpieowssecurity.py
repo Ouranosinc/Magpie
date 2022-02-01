@@ -175,7 +175,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         Otherwise, ignore request access validation.
 
         In the case `Twitcher` proxy path is matched, the :term:`Logged User` **MUST** be allowed access following
-        :term:`Effective Permissions` resolution via :term:`ACL`.
+        :term:`Effective Permissions <Effective Permission>` resolution via :term:`ACL`.
         Otherwise, :exception:`OWSAccessForbidden` is raised.
 
         Failing to parse the request or any underlying component that raises an exception will be left up to the
@@ -259,6 +259,7 @@ class MagpieOWSSecurity(OWSSecurityInterface):
             raise OWSAccessForbidden(error_desc, status_base=error_base, **error_kw)
 
     def update_request_cookies(self, request):
+        # type: (Request) -> None
         """
         Ensure login of the user and update the request cookies if Twitcher is in a special configuration.
 

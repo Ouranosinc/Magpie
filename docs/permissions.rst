@@ -325,7 +325,7 @@ when resolving the :term:`Resource` tree hierarchy. This helps solving special u
 conditions must be applied at different hierarchy levels. By default, if no |perm_access|_ indication is provided when
 creating a new :term:`Permission`, :attr:`Access.ALLOW` is employed since `Magpie` resolves all |perm_access|_ to a
 :term:`Resource` as :attr:`Access.DENY` unless explicitly granted. In other words, `Magpie` assumes that administrators
-adding new :term:`Permission` entries intent to grant :term:`Service` or :term:`Resource` access for the targeted
+adding new :term:`Permission` entries intend to grant :term:`Service` or :term:`Resource` access for the targeted
 :term:`User` or :term:`Group`. Any :term:`Permission` specifically created using :attr:`Access.DENY` should be involved
 only to revert a previously resolved :attr:`Access.ALLOW`, as they are otherwise redundant to default
 |effective_permissions|_ resolution.
@@ -334,11 +334,12 @@ only to revert a previously resolved :attr:`Access.ALLOW`, as they are otherwise
 .. |perm_scope| replace:: ``scope``
 
 The |perm_scope|_ concept is defined by :class:`magpie.permissions.Scope` enum. This tells `Magpie` whether the
-:term:`Applied Permission` should impact only the immediate :term:`Resource` (i.e.: when ``match``) or should instead
-be applied recursively for it and all its children. By applying a recursive :term:`Permission` on a higher-level
-:term:`Resource`, this modifier avoids having to manually set the same :term:`Permission` on every sub-:term:`Resource`
-when access as to be provided over a large hierarchy. Also, when combined with the |perm_access|_ component, the
-|perm_scope|_ modifier can provide advanced control over granted or denied access.
+:term:`Applied Permissions <Applied Permission>` should impact only the immediate :term:`Resource`
+(i.e.: when ``match``) or should instead be applied recursively for it and all its children. By applying a recursive
+:term:`Permission` on a higher-level :term:`Resource`, this modifier avoids having to manually set the same
+:term:`Permission` on every sub-:term:`Resource` when access as to be provided over a large hierarchy.
+Also, when combined with the |perm_access|_ component, the |perm_scope|_ modifier can provide advanced control over
+granted or denied access.
 
 As a general rule of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
 the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
@@ -348,6 +349,16 @@ hierarchy and by :term:`Group` memberships.
     - |perm_example_modifiers|_
     - |perm_example_resolve|_
 
+.. warning::
+    Whenever possible, it is preferable and strongly advised to define new :term:`Permission` definitions using
+    :attr:`Access.ALLOW` *as close as possible* to the target child :term:`Resource` for which to allow access,
+    and leave the parent :term:`Resource` without any :term:`Permission` to let it be resolved by default to
+    :attr:`Access.DENY` as well as any other :term:`Resource` under it except the explicitly allowed one.
+    This is safer than the error prone alternative to :attr:`Access.ALLOW` everything at the root and revoke access
+    at lower levels using :attr:`Access.DENY` to add "allowed exceptions" to the :term:`Resource` hierarchy. In case
+    of incorrect request parsing, this second approach could potentially erroneously grant access to :term:`Resource`
+    intended to be blocked. Using the first approach (only explicitly :attr:`Access.ALLOW` granted items) would still
+    block by default all incorrectly parsed requests, ensuring children :term:`Resource` would still be protected.
 
 .. _permission_representations:
 
@@ -499,7 +510,8 @@ Below are the resolution steps which are applied for every distinct :term:`Permi
 
     |inherited_permissions|_ resolution
 
-.. container:: bordered-content
+.. container class generates '#.#' numbering with parent list reference automatically for proper alignment of text
+.. container:: bordered-content parent-list-numbers
     :name: steps_resolve_inherited_block
 
     1. Any |direct_permissions|_ applied explicitly for the evaluated :term:`User` and :term:`Resource` combination
@@ -508,15 +520,15 @@ Below are the resolution steps which are applied for every distinct :term:`Permi
 
     2. Following is the resolution of |inherited_permissions|_. In this case, there are three possibilities:
 
-        2.1 There is only one :term:`Group` for which a :term:`Permission` is defined. The :term:`User` inherits that
-            specification, whether it is :attr:`Access.ALLOW` or :attr:`Access.DENY`.
+       1. There is only one :term:`Group` for which a :term:`Permission` is defined. The :term:`User` inherits that
+          specification, whether it is :attr:`Access.ALLOW` or :attr:`Access.DENY`.
 
-        2.2 Many :term:`Group` membership exist and share of same highest priority. In this case, if any :term:`Group`
-            has :attr:`Access.DENY`, the resolved access is marked as denied. If every equally prioritized :term:`Group`
-            indicate :attr:`Access.ALLOW`, then access is granted to the :term:`User`.
+       2. Many :term:`Group` membership exist and share of same highest priority. In this case, if any :term:`Group`
+          has :attr:`Access.DENY`, the resolved access is marked as denied. If every equally prioritized :term:`Group`
+          indicate :attr:`Access.ALLOW`, then access is granted to the :term:`User`.
 
-        2.3 Otherwise, the highest priority :term:`Group` dictates the :class:`Access` resolution. This can
-            potentially *revert* a previous :term:`Group` decision.
+       3. Otherwise, the highest priority :term:`Group` dictates the :class:`Access` resolution. This can
+          potentially *revert* a previous :term:`Group` decision.
 
 
 The specific use case of step (2.3) is intended to give higher resolution precedence to any *generic* :term:`Group`
@@ -556,33 +568,32 @@ scoped inheritance over the :term:`Resource` tree. The following resolution prio
 .. container:: bordered-content
     :name: steps_resolve_effective_block
 
-    1. Resolve administrative access (i.e.: full access).
-       [only during |effective_permissions|_]
-    2. Resolution of |direct_permissions|_.
-       [same as step (1) of |steps_resolve_inherited|_]
-    3. Resolution of |inherited_permissions|_ from :term:`Group` memberships.
-       [same as step (2) of |steps_resolve_inherited|_]
-    4. Rewinding of the :term:`Resource` tree to consider scoped inheritance.
-       [only during |effective_permissions|_]
+    1. | Resolve administrative access (i.e.: full access).
+       | [only during |effective_permissions|_]
+    2. | Resolution of |direct_permissions|_.
+       | [same as step (1) of |steps_resolve_inherited|_]
+    3. | Resolution of |inherited_permissions|_ from :term:`Group` memberships.
+       | [same as step (2) of |steps_resolve_inherited|_]
+    4. | Rewinding of the :term:`Resource` tree to consider scoped inheritance.
+       | [only during |effective_permissions|_]
 
-
-In this case, step (1) that verifies if the :term:`User` is a member for :envvar:`MAGPIE_ADMIN_GROUP`.
+In this case, step (1) verifies if the :term:`User` is a member for :envvar:`MAGPIE_ADMIN_GROUP`.
 In such case, :attr:`Access.ALLOW` is immediately returned for every possible |allowed_permissions|_ for the
 targeted :term:`Resource` without further resolution involved.
 The reason why this check is accomplished only during |effective_permissions|_ resolution is to avoid over
 populating the database with :envvar:`MAGPIE_ADMIN_GROUP` :term:`Permission` for every possible :term:`Resource`.
-It can be noted that effectively, ``"administrator"`` reason will never be returned when requesting any other type of
-:term:`Permission` than when specifying ``effective=true`` query, as there is no need to explicitly define
-:envvar:`MAGPIE_ADMIN_GROUP` |applied_permissions|_.
+It can be noted that effectively, ``"administrator"`` as :term:`Permission` ``reason`` will never be returned when
+requesting any other type of :term:`Permission` than when specifying ``effective=true`` query, as there is no need
+to explicitly define :envvar:`MAGPIE_ADMIN_GROUP` |applied_permissions|_.
 Furthermore, doing this pre-check step ensures that :envvar:`MAGPIE_ADMIN_GROUP` members are always granted full access
 regardless of any explicit :term:`Applied Permission` that could exist for that *special* :term:`Group`.
 
-When the :term:`User` is not a member of :envvar:`MAGPIE_ADMIN_GROUP`, |effective_permissions|_ would then pursue
-with the traditional |steps_resolve_inherited|_ listed earlier. The resolution process continues by rewinding the parent
-:term:`Resource` hierarchy until the first :term:`Permission` is found, or until reaching the top-most :term:`Service`.
-Only on the first iteration (when the targeted :term:`Resource` is the same as the one looked for potential
-|inherited_permissions|_) does :attr:`Scope.MATCH` take effect. Only :attr:`Scope.RECURSIVE` are considered
-afterwards.
+When the :term:`User` is not a member of :envvar:`MAGPIE_ADMIN_GROUP`, |effective_permissions|_ would then pursue to
+steps (2) and (3) with the traditional |steps_resolve_inherited|_ listed earlier. The resolution process continues with
+step (4) by rewinding the parent :term:`Resource` hierarchy until the first :term:`Permission` is found, or until the
+root :term:`Service` is reached. Only on the first iteration (when the targeted :term:`Resource` is the same as the one
+looked for potential |inherited_permissions|_) does :attr:`Scope.MATCH` take effect. Only :attr:`Scope.RECURSIVE` are
+considered afterwards.
 
 When the first :term:`Permission` is found, the procedure *remembers* the :class:`Access` of the
 |resolved_permissions|_ for the current scope. If the found :term:`Permission` is linked directly to the
@@ -631,6 +642,24 @@ for |perm_reason|_ field. Following pseudo-code presents the overall procedure.
 
 .. seealso::
     - |perm_example_resolve|_
+
+In some cases, :term:`Service` implementations will support simultaneous references to
+multiple :term:`Resources <Resource>` with a single request.
+One such example is when a request parameter allows a comma-separated list of values referring to
+distinct :term:`Resource` items, for which :term:`Effective Resolution` must be computed for each element of the list.
+When a :term:`Service` supports this type of references, the above |algo_resolve_effective|_ is applied
+iteratively for every :term:`Resource` until all have been validated for :attr:`Access.ALLOW`, or until the first
+:attr:`Access.DENY` is found. For this kind of |effective_permissions|_ to be granted access, **ALL** requested
+:term:`Permission` on every :term:`Resources <Resource>` in the set must be :attr:`Access.ALLOW` indiscriminately.
+Denied access to any element takes precedence over the whole set.
+
+This procedure over multiple :term:`Resource` only applies during :term:`ACL` computation of an actual request to access
+the remote :term:`Service` provider or one of its children :term:`Resource`. When managing |applied_permissions|_ on
+:term:`Resource` definitions in `Magpie`, operations are always applied on elements individually.
+
+.. versionadded:: 3.21
+    Resolution over multiple simultaneous :term:`Resource` referred by a common request.
+
 
 Examples
 -------------------

@@ -396,7 +396,7 @@ install-npm:    		## install npm package manager if it cannot be found
 	)
 	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | wc -l` = 1 ] || ( \
 		echo "Install required libraries for style checks." && \
-		npm install stylelint stylelint-config-standard --save-dev \
+		npm install stylelint@13.13.1 stylelint-config-standard@22.0.0 --save-dev \
 	)
 
 ## --- Launchers targets --- ##
@@ -696,7 +696,7 @@ test-remote-only:		## run only remote tests with the environment Python
 .PHONY: test-custom-only
 test-custom-only:		## run custom marker tests using SPEC="<marker-specification>"
 	@echo "Running custom tests..."
-	@[ "${SPEC}" ] || ( echo ">> 'TESTS' is not set"; exit 1 )
+	@[ "${SPEC}" ] || ( echo ">> 'SPEC' is not set"; exit 1 )
 	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker

@@ -12,7 +12,7 @@ from magpie.api.management.service.service_formats import format_service_resourc
 from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.permissions import PermissionType, format_permissions
 from magpie.register import sync_services_phoenix
-from magpie.services import SERVICE_TYPE_DICT
+from magpie.services import SERVICE_TYPE_DICT, get_resource_child_allowed
 
 
 @s.ResourcesAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resources_GET_responses)
@@ -55,7 +55,7 @@ def create_resource_view(request):
     """
     Register a new resource.
     """
-    resource_name = ar.get_value_multiformat_body_checked(request, "resource_name")
+    resource_name = ar.get_multiformat_body(request, "resource_name")
     resource_display_name = ar.get_multiformat_body(request, "resource_display_name", default=resource_name)
     resource_type = ar.get_value_multiformat_body_checked(request, "resource_type")
     parent_id = ar.get_value_multiformat_body_checked(request, "parent_id", check_type=int)
@@ -127,3 +127,38 @@ def get_resource_permissions_view(request):
                                 content={"resource": rf.format_resource(resource, basic_info=True)})
     return ax.valid_http(http_success=HTTPOk, detail=s.ResourcePermissions_GET_OkResponseSchema.description,
                          content=format_permissions(res_perm, PermissionType.ALLOWED))
+
+
+@s.ResourceTypesAPI.get(schema=s.ResourceTypes_GET_RequestSchema, tags=[s.ResourcesTag],
+                        response_schemas=s.ResourceTypes_GET_responses)
+@view_config(route_name=s.ResourceTypesAPI.name, request_method="GET")
+def get_resource_types_view(request):
+    """
+    List all applicable children resource types under another resource within a service hierarchy.
+    """
+    resource = ar.get_resource_matchdict_checked(request, "resource_id")
+
+    def get_res_types(res):
+        svc_root = ru.get_resource_root_service(res, db_session=request.db)
+        svc_impl = SERVICE_TYPE_DICT[svc_root.type]
+        return svc_impl.nested_resource_allowed(res), svc_root
+
+    res_types, svc = ax.evaluate_call(lambda: get_res_types(resource),
+                                      fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                                      msg_on_fail="Error occurred while computing applicable children resource types.",
+                                      content={"resource": rf.format_resource(resource, basic_info=True)})
+    child_allowed = ax.evaluate_call(lambda: get_resource_child_allowed(resource),
+                                     http_error=HTTPInternalServerError,
+                                     msg_on_fail="Error occurred while computing allowed children resource status.",
+                                     content={"resource": rf.format_resource(resource, basic_info=True)})
+    data = {
+        "resource_name": resource.resource_name,
+        "resource_type": resource.resource_type_name,
+        "children_resource_types": list(sorted(res_type.resource_type_name for res_type in res_types)),
+        "children_resource_allowed": child_allowed,
+        "root_service_id": svc.resource_id,
+        "root_service_name": svc.resource_name,
+        "root_service_type": svc.type,
+    }
+    return ax.valid_http(http_success=HTTPOk, content=data,
+                         detail=s.ResourceTypes_GET_OkResponseSchema.description)

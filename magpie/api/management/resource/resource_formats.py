@@ -78,11 +78,13 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, permis
     :param children: service or resource for which to generate the formatted resource tree
     :param db_session: connection to db
     :param resources_perms_dict:
-        Any pre-established :term:`Applied Permissions` to set to corresponding resources by ID.
-        When provided, these will define the :term:`User`, :term:`Group` or both (i.e.: :term:`Inherited Permissions`)
-        actual permissions, or even the :term:`Effective Permissions`, according to parent caller function's context.
-        Otherwise (``None``), defaults to extracting :term:`Allowed Permissions` for the given :term:`Resource` scoped
-        under the corresponding root :term:`Service`.
+        Any pre-established :term:`Applied Permission` to set to corresponding resources by ID.
+        When provided, these will define the :term:`User`, :term:`Group` or both
+        (i.e.: :term:`Inherited Permissions <Inherited Permission>`)
+        actual permissions, or even the :term:`Effective Permissions <Effective Permission>`, according to parent
+        caller function's context.
+        Otherwise (``None``), defaults to extracting :term:`Allowed Permissions <Allowed Permission>` for the given
+        :term:`Resource` scoped under the corresponding root :term:`Service`.
     :return: formatted resource tree
     """
     # optimization to avoid re-lookup of 'allowed permissions' when already fetched

@@ -23,11 +23,13 @@ from magpie.api import schemas
 from magpie.cli import sync_resources
 from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
-# TODO: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
+# FIXME: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
 from magpie.permissions import Permission, PermissionSet
+# FIXME: remove (SERVICE_TYPE_DICT), implement getters via API
+from magpie.services import SERVICE_TYPE_DICT
 from magpie.ui.utils import AdminRequests, BaseViews, check_response, handle_errors, request_api
-from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger
+from magpie.utils import CONTENT_TYPE_JSON, get_json, get_logger, is_json_body
 
 if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional, Tuple
@@ -496,10 +498,11 @@ class ManagementViews(AdminRequests, BaseViews):
         Get the user or group applied permissions as well as applicable permissions for corresponding services.
 
         Result is a :class:`tuple` of:
-            - combined :term:`Allowed Permissions` (*names only*) for services and their children resources.
+            - combined :term:`Allowed Permissions <Applied Permission>` (*names only*) for services and their children
+              :term:`Resources <Resource>`.
             - dictionary of key-service-name, each with recursive map value of children resource details including
-              the :term:`Applied Permissions` or :term:`Inherited Resources` for the corresponding :term:`User`
-              or :term:`Group` accordingly to specified arguments.
+              the :term:`Applied Permissions <Applied Permission>` or :term:`Inherited Resources` for the corresponding
+              :term:`User` or :term:`Group` accordingly to specified arguments.
         """
         if is_user:
             # because page can only show a single permission (per name/resource) at a time, apply resolution
@@ -839,29 +842,62 @@ class ManagementViews(AdminRequests, BaseViews):
     def add_service(self):
         cur_svc_type = self.request.matchdict["cur_svc_type"]
         svc_types, cur_svc_type, _ = self.get_services(cur_svc_type)
+        services_keys_sorted = self.get_service_types()
+        services_phoenix_enabled = [
+            (1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
+            for i in range(len(services_keys_sorted))
+        ]
+        # FIXME: retrieve from API
+        services_config_enabled = [
+            int(SERVICE_TYPE_DICT[svc_type].configurable)
+            for svc_type in services_keys_sorted
+        ]
+        data = {
+            "service_name": "",
+            "service_url": "",
+            "service_config": "",
+            "invalid_config": False,
+            "cur_svc_type": cur_svc_type,
+            "service_types": svc_types,
+            "services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
+            "services_phoenix_enabled": services_phoenix_enabled,
+            "services_config_enabled": services_config_enabled,
+        }
 
         if "register" in self.request.POST:
             service_name = self.request.POST.get("service_name")
             service_url = self.request.POST.get("service_url")
             service_type = self.request.POST.get("service_type")
             service_push = self.request.POST.get("service_push")
-            data = {"service_name": service_name,
-                    "service_url": service_url,
-                    "service_type": service_type,
-                    "service_push": service_push}
-            resp = request_api(self.request, schemas.ServicesAPI.path, "POST", data=data)
+            service_config = self.request.POST.get("service_config")
+            json_config = None
+            if service_type in svc_types and SERVICE_TYPE_DICT[service_type].configurable:
+                json_config = None
+                if service_config:
+                    json_config = is_json_body(service_config, return_body=True)
+                    if json_config is None:
+                        data.update({
+                            # forward any fields to avoid dropping values filled by user
+                            "service_name": service_name,
+                            "service_type": service_type,
+                            "service_url": service_url,
+                            "service_config": service_config,
+                            "service_push": service_push,
+                            "invalid_config": True,
+                        })
+                        return self.add_template_data(data)
+
+            body = {
+                "service_name": service_name,
+                "service_url": service_url,
+                "service_type": service_type,
+                "service_push": service_push,
+                "configuration": json_config,
+            }
+            resp = request_api(self.request, schemas.ServicesAPI.path, "POST", data=body)
             check_response(resp)
             return HTTPFound(self.request.route_url("view_services", cur_svc_type=service_type))
 
-        services_keys_sorted = self.get_service_types()
-        services_phoenix_indices = [(1 if services_keys_sorted[i] in register.SERVICES_PHOENIX_ALLOWED else 0)
-                                    for i in range(len(services_keys_sorted))]
-        data = {
-            "cur_svc_type": cur_svc_type,
-            "service_types": svc_types,
-            "services_phoenix": register.SERVICES_PHOENIX_ALLOWED,
-            "services_phoenix_indices": services_phoenix_indices
-        }
         return self.add_template_data(data)
 
     @view_config(route_name="edit_service", renderer="templates/edit_service.mako")
@@ -975,10 +1011,10 @@ class ManagementViews(AdminRequests, BaseViews):
                                                     service_name=service_name,
                                                     cur_svc_type=cur_svc_type))
 
-        path = schemas.ServiceTypeResourceTypesAPI.path.format(service_type=cur_svc_type)
+        path = schemas.ResourceTypesAPI.path.format(resource_id=resource_id)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
-        svc_res_types = get_json(resp)["resource_types"]
+        svc_res_types = get_json(resp)["children_resource_types"]
         data = {
             "service_name": service_name,
             "cur_svc_type": cur_svc_type,

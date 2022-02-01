@@ -21,7 +21,6 @@ def includeme(config):
     config.add_route(**s.service_api_route_info(s.UserServicePermissionAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.UserServiceResourcesAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.UserResourcesAPI, **user_kwargs))
-    config.add_route(**s.service_api_route_info(s.UserResourceTypesAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.UserResourcePermissionsAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.UserResourcePermissionAPI, **user_kwargs))
     # Logged User routes
@@ -33,7 +32,6 @@ def includeme(config):
     config.add_route(**s.service_api_route_info(s.LoggedUserServicePermissionAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.LoggedUserServiceResourcesAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.LoggedUserResourcesAPI, **user_kwargs))
-    config.add_route(**s.service_api_route_info(s.LoggedUserResourceTypesAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.LoggedUserResourcePermissionsAPI, **user_kwargs))
     config.add_route(**s.service_api_route_info(s.LoggedUserResourcePermissionAPI, **user_kwargs))
 

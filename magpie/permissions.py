@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from magpie import models
     from magpie.typedefs import (
+        JSON,
         AccessControlEntryType,
         AnyPermissionType,
         GroupPriority,
@@ -37,18 +38,26 @@ class Permission(ExtendedEnum):
     WRITE = "write"
     ACCESS = "access"
     BROWSE = "browse"
-    # WPS permissions
+    # WFS/WMS/WPS permissions (https://www.ogc.org/standards/<OWS-type>)
     GET_CAPABILITIES = "getcapabilities"
     GET_MAP = "getmap"
     GET_FEATURE_INFO = "getfeatureinfo"
     GET_LEGEND_GRAPHIC = "getlegendgraphic"
     GET_METADATA = "getmetadata"
+    GET_PROPERTY_VALUE = "getpropertyvalue"
     GET_FEATURE = "getfeature"
+    GET_FEATURE_WITH_LOCK = "getfeaturewithlock"
+    GET_GML_OBJECT = "getgmlobject"
     DESCRIBE_FEATURE_TYPE = "describefeaturetype"
+    DESCRIBE_LAYER = "describelayer"
     DESCRIBE_PROCESS = "describeprocess"
     EXECUTE = "execute"
     LOCK_FEATURE = "lockfeature"
     TRANSACTION = "transaction"
+    CREATE_STORED_QUERY = "createstoredquery"
+    DROP_STORED_QUERY = "dropstoredquery"
+    LIST_STORED_QUERIES = "liststoredqueries"
+    DESCRIBE_STORED_QUERIES = "describestoredqueries"
 
 
 class PermissionType(ExtendedEnum):
@@ -87,13 +96,13 @@ class PermissionSet(object):
 
     The :class:`Permission` is the *name* of the applicable permission on the :class:`magpie.models.Resource`.
     The :class:`Scope` defines how the :class:`Permission` should impact the resolution of the perceived
-    :term:`Effective Permissions` over a :class:`magpie.models.Resource` tree hierarchy.
+    :term:`Effective Permissions <Effective Permission>` over a :class:`magpie.models.Resource` tree hierarchy.
     The :class:`Access` defines how the :class:`Permission` access should be interpreted (granted or denied).
 
     Optionally, a :class:`PermissionType` can be provided to specifically indicate which kind of permission this set
     represents. This type is only for informative purposes, and is not saved to database nor displayed by the explicit
     string representation. It is returned within JSON representation and can be employed by
-    :term:`Effective Permissions` resolution to be more verbose about returned results.
+    :term:`Effective Permissions <Effective Permission>` resolution to be more verbose about returned results.
 
     On missing :class:`Access` or :class:`Scope` specifications, they default to :attr:`Access.ALLOW` and
     :attr:`Scope.RECURSIVE` to handle backward compatible naming convention of plain ``permission_name``.
@@ -233,6 +242,7 @@ class PermissionSet(object):
         return perm_repr_template.format(self.name.value, self.access.value, self.scope.value, perm_type, perm_reason)
 
     def like(self, other):
+        # type: (Any) -> bool
         """
         Evaluates if one permission is *similar* to another permission definition regardless of *modifiers*.
 
@@ -258,6 +268,7 @@ class PermissionSet(object):
         return perm
 
     def webhook_params(self):
+        # type: () -> JSON
         """
         Obtain JSON representation employed for :term:`Webhook` reference.
         """
@@ -315,26 +326,35 @@ class PermissionSet(object):
                 permission1,                        # type: ResolvablePermissionType
                 permission2,                        # type: ResolvablePermissionType
                 context=PermissionType.INHERITED,   # type: PermissionType
-                multiple_choice=None,               # type: Optional[ResolvablePermissionType]
+                multiple_choice=None,               # type: Optional[Str]
                 ):                                  # type: (...) -> ResolvablePermissionType
 
         """
         Resolves provided permissions into a single one considering various modifiers and groups for a resource.
 
         Permissions **MUST** have the same :term:`Permission` name.
+        The associated :term:`Resource` on which the two compared permissions are applied on should also be the same
+        This method **SHOULD NOT** be used by itself to obtain for :term:`Effective Permission` since it does not
+        handle multi-level :term:`Resource` resolution. Resolution is accomplished in this case only for a given level
+        in the tree hierarchy.
 
-        By default (using :paramref:`same_resources`), the associated :term:`Resource` on which the two compared
-        permissions are applied on should also be the same (especially during local :term:`Inherited Permissions`
-        resolution). This safeguard must be disabled for :term:`Effective Permissions` that specifically handles
-        multi-level :term:`Resource` resolution.
-
-        The comparison considers both the :class:`Access` and :class:`Scope` of :term:`Inherited Permissions` of the
-        :term:`User`, as well as its :term:`Group` memberships sorted by their priority.
+        The comparison considers both the :class:`Access` and :class:`Scope` of every  :term:`Inherited Permission` of
+        the :term:`User`, as well as its :term:`Group` memberships sorted by their priority.
 
         .. seealso::
             - :meth:`magpie.services.ServiceInterface.effective_permissions`
             - :func:`magpie.api.management.user.user_utils.combine_user_group_permissions`
             - :meth:`PermissionSet.__lt__`
+
+        :param permission1: Permission to compare.
+        :param permission2: Permission to compare.
+        :param context:
+            Control the resolution context (local/effective) of the permissions (safeguard against invalid definitions).
+        :param multiple_choice:
+            Alternate explanation to default :data:`PERMISSION_REASON_MULTIPLE` applied if multiple :term:`Permission`
+            refer to distinct :term:`Group` of equal priority and equivalent access definitions, meaning they are
+            interchangeable without impacting resolution to access the same target :term:`Resource`.
+        :returns: Permission with highest priority to resolve access a resource without considering scope.
         """
         if not isinstance(permission1, PermissionSet):
             permission1 = PermissionSet(permission1)
@@ -344,8 +364,10 @@ class PermissionSet(object):
         # they must also have the same permission name to actually resolving the one to preserve
         if permission1.name != permission2.name or not (permission1.perm_tuple and permission2.perm_tuple):
             raise ValueError("Invalid resolution attempt between two incomparable permissions.")
-        # when resolving (local inherited resolution), only one user permission on same resource is possible (by design)
-        # hierarchical/effective resolution of resources can differ
+        # when resolving (local inherited resolution),
+        #   - only one user permission on same resource is possible (by design)
+        #   - multiple group permissions can exist, but still must refer to same resource
+        # when processing hierarchical/effective resolution, resources can differ (parent/child resources)
         if context == PermissionType.INHERITED and (
                 (permission1.perm_tuple.resource is not permission2.perm_tuple.resource) or
                 (permission1.type == PermissionType.DIRECT and permission2.type == PermissionType.DIRECT)):
@@ -367,7 +389,7 @@ class PermissionSet(object):
         if permission1 == permission2:
             # if the two different groups have the exact same resolution value,
             # indicate that multiple groups resolve into the same access, unless a choice was provided
-            permission1.reason = multiple_choice.reason if multiple_choice else PERMISSION_REASON_MULTIPLE
+            permission1.reason = multiple_choice if multiple_choice else PERMISSION_REASON_MULTIPLE
             return permission1  # preserved group in perm-tuple doesn't matter as they are equivalent
         # otherwise return whichever group permission has higher resolution value
         return permission2 if permission1 < permission2 else permission1
@@ -579,7 +601,7 @@ def format_permissions(permissions,             # type: Optional[Collection[AnyP
     definition of allowed permissions under :class:`magpie.services.Services` and their children :term:`Resource` by
     only defining :class:`Permission` names without manually listing all variations of :class:`PermissionSet`.
 
-    For other :paramref:`permission_type` values, which represent :term:`Applied Permissions` only explicitly
+    For other :paramref:`permission_type` values, which represent :term:`Applied Permission` only explicitly
     provided :paramref:`permissions` are returned, to effectively return the collection of *active* permissions.
 
     :param permissions: multiple permissions of any implementation and type, to be rendered both as names and JSON.

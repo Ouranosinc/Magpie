@@ -58,6 +58,7 @@ def check_valid_service_or_resource_permission(permission_name, service_or_resou
 
 
 def check_valid_service_resource(parent_resource, resource_type, db_session):
+    # type: (ServiceOrResourceType, Str, Session) -> models.Service
     """
     Checks if a new Resource can be contained under a parent Resource given the requested type and the corresponding
     Service under which the parent Resource is already assigned.
@@ -69,20 +70,34 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     """
     parent_type = parent_resource.resource_type_name
     parent_msg_err = "Child resource not allowed for specified parent resource type '{}'".format(parent_type)
-    ax.verify_param(models.RESOURCE_TYPE_DICT[parent_type].child_resource_allowed, is_equal=True,
-                    param_compare=True, http_error=HTTPForbidden, msg_on_fail=parent_msg_err)
+    ax.verify_param(models.RESOURCE_TYPE_DICT[parent_type].child_resource_allowed, is_true=True,
+                    http_error=HTTPForbidden, msg_on_fail=parent_msg_err)
     root_service = get_resource_root_service(parent_resource, db_session=db_session)
     ax.verify_param(root_service, not_none=True, http_error=HTTPInternalServerError,
                     msg_on_fail="Failed retrieving 'root_service' from db")
     ax.verify_param(root_service.resource_type, is_equal=True, http_error=HTTPInternalServerError,
                     param_name="resource_type", param_compare=models.Service.resource_type_name,
                     msg_on_fail="Invalid 'root_service' retrieved from db is not a service")
-    ax.verify_param(SERVICE_TYPE_DICT[root_service.type].child_resource_allowed, is_equal=True,
-                    param_compare=True, http_error=HTTPForbidden,
+    root_svc_cls = SERVICE_TYPE_DICT[root_service.type]
+    ax.verify_param(root_svc_cls.child_resource_allowed, is_true=True, http_error=HTTPForbidden,
                     msg_on_fail="Child resource not allowed for specified service type '{}'".format(root_service.type))
     ax.verify_param(resource_type, is_in=True, http_error=HTTPForbidden,
-                    param_name="resource_type", param_compare=SERVICE_TYPE_DICT[root_service.type].resource_type_names,
+                    param_name="resource_type", param_compare=root_svc_cls.resource_type_names,
                     msg_on_fail="Invalid 'resource_type' specified for service type '{}'".format(root_service.type))
+    ax.verify_param(
+        root_svc_cls.validate_nested_resource_type(parent_resource, resource_type), is_true=True,
+        param_content={
+            "resource_structure_allowed": root_svc_cls.child_structure_allowed,
+            "resource_types_allowed": [
+                res.resource_type for res in root_svc_cls.nested_resource_allowed(parent_resource)
+            ]
+        },
+        http_error=HTTPUnprocessableEntity,
+        msg_on_fail=(
+            "Invalid 'resource_type' specified for service type '{}' is not allowed at this position "
+            "under '{}' resource.".format(root_service.type, parent_type)
+        )
+    )
     return root_service
 
 
@@ -273,6 +288,7 @@ def get_resource_root_service_impl(resource, request):
 def create_resource(resource_name, resource_display_name, resource_type, parent_id, db_session):
     # type: (Str, Optional[Str], Str, int, Session) -> HTTPException
     ax.verify_param(resource_name, param_name="resource_name", not_none=True, not_empty=True,
+                    matches=True, param_compare=ax.SCOPE_REGEX,
                     http_error=HTTPUnprocessableEntity,
                     msg_on_fail="Invalid 'resource_name' specified for child resource creation.")
     ax.verify_param(resource_type, param_name="resource_type", not_none=True, not_empty=True,

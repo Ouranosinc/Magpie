@@ -382,6 +382,12 @@ table.panel-line td {
 */
 }
 
+.panel-line-limit-size {
+    /* reduce size of the field to allow other fields to preserve 'Edit' button closer to their value
+       in case the large value contents within this field makes the table column very wide */
+    max-width: 1em;
+}
+
 .panel-line-checkbox {
     padding-top: 0.1em;
     display: inline-block;
@@ -1244,6 +1250,10 @@ a.tab:visited {
     border-color: black;
 }
 
+.input-configuration {
+
+}
+
 .current-option {
 
 }
@@ -1286,6 +1296,22 @@ table.fields-table td.add-group-fixed-width {
 
 table.fields-table input[type="radio"] {
     margin-left: 2em;
+}
+
+.service-button {
+    margin-left: 40%;
+}
+
+.service-config-error {
+    margin-top: 0.25em;
+    margin-left: 0;
+    display: inline-flex;
+}
+
+.service-config-error > img {
+    width: 1em;
+    height: 1em;
+    margin: 0.1em 0.25em 0.15em 0;
 }
 
 /* ---

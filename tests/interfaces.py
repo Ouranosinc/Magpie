@@ -20,7 +20,7 @@ from magpie import __meta__
 from magpie.api import schemas as s
 from magpie.api.webhooks import webhook_update_error_status
 from magpie.constants import MAGPIE_ROOT, get_constant
-from magpie.models import RESOURCE_TYPE_DICT, Directory, Route, UserStatuses
+from magpie.models import RESOURCE_TYPE_DICT, Directory, File, Layer, Process, Route, Service, UserStatuses, Workspace
 from magpie.permissions import (
     PERMISSION_REASON_DEFAULT,
     PERMISSION_REASON_MULTIPLE,
@@ -31,7 +31,14 @@ from magpie.permissions import (
     Scope
 )
 from magpie.register import pseudo_random_string
-from magpie.services import SERVICE_TYPE_DICT, ServiceAccess, ServiceAPI, ServiceNCWMS2, ServiceTHREDDS
+from magpie.services import (
+    SERVICE_TYPE_DICT,
+    ServiceAccess,
+    ServiceAPI,
+    ServiceGeoserver,
+    ServiceNCWMS2,
+    ServiceTHREDDS
+)
 from magpie.utils import (
     CONTENT_TYPE_FORM,
     CONTENT_TYPE_HTML,
@@ -2548,7 +2555,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     child-resource      <-- 2nd permission applied
 
         For each combination, there is always only one :term:`Applied Permission` for a user or group per resource in
-        the hierarchy. This makes :term:`Inherited Permissions` and :term:`Resolved Permissions` field ``reasons`` much
+        the hierarchy. This makes :term:`Inherited Permissions <Inherited Permission>` and
+        :term:`Resolved Permissions <Inherited Permission>` field ``reasons`` much
         easier to validate as there are no intra-resource (same) permission resolution, only inter-resource (distinct)
         permission inheritance according to local-level priorities, making ``reason`` always single-entry.
         These are highlighted by the corresponding arrow comments in the code.
@@ -2713,7 +2721,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_FUNCTIONAL
     def test_GetUserResourcePermissions_EffectivePermissions_ScopedHierarchyResolution(self):
         """
-        Validates that :term:`Effective Permissions` resolution works when scoped subsets of :term:`Resource` have
+        Validates that :term:`Effective Permission` resolution works when scoped subsets of :term:`Resource` have
         alternating :term:`Applied Permissions` with opposite :class:`Access` modifiers.
 
         The resolution of permissions should consider the *closest* scope to the targeted :term:`Resource`, but still
@@ -3730,8 +3738,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         .. warning::
             Group inheritance query parameter existed before ``2.0.0``, but was not producing the correct result
-            for children resources permissions (all :term:`Allowed Permissions` were returned instead of
-            user/group-specific :term:`Applied Permissions`).
+            for children resources permissions (every :term:`Allowed Permission` was returned instead of
+            user/group-specific :term:`Applied Permissions <Applied Permission>`).
         """
         utils.warn_version(self, "user service inheritance", "2.0.0", skip=True)
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
@@ -3780,8 +3788,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         .. warning::
             Group inheritance query parameter existed before ``2.0.0``, but was not producing the correct result
-            for children resources permissions (all :term:`Allowed Permissions` were returned instead of
-            user/group-specific :term:`Applied Permissions`).
+            for children resources permissions (every :term:`Allowed Permission` was returned instead of
+            user/group-specific :term:`Applied Permissions <Applied Permission>`).
         """
         utils.warn_version(self, "user service inheritance", "2.0.0", skip=True)
         resp = utils.test_request(self, "GET", "/services", headers=self.json_headers, cookies=self.cookies)
@@ -5270,7 +5278,10 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         data = {"service_name": svc_name, "configuration": svc_config}
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
-        utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
+        if TestVersion(self.version) >= TestVersion("3.21.0"):
+            # obtain full configuration (with non-provided defaults included) to attempt update with exact value
+            svc_config = body["service"]["configuration"]
 
         # test case of omitted update fields
         resp = utils.test_request(self, self.update_method, path, data={}, expect_errors=True,
@@ -5308,6 +5319,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         Validate that an update of only the additional JSON configuration field is accepted.
 
         Updates should allow both modification or erasure of the configuration without any other field.
+
+        .. versionchanged:: 3.21
+            Newer versions report the full configuration including defaults for fields that were not provided.
         """
         # Prior to this version, config-only was refused (had to be combined with service name or url field)
         utils.warn_version(self, "update only service configuration field", "3.15", skip=True)
@@ -5320,22 +5334,71 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         apply_config_data = {"configuration": {"ignore_prefix": "something"}}
         modif_config_data = {"configuration": {"ignore_prefix": "other", "file_patterns": [".+\\.nc"]}}
         erase_config_data = {"configuration": None}
+        default_expected_fields = ["skip_prefix", "file_patterns", "data_type", "metadata_type"]
+        custom_expected_fields = ["ignore_prefix"]
 
         resp = utils.test_request(self, self.update_method, path, data=apply_config_data,
                                   headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
-        utils.check_val_equal(body["service"]["configuration"], apply_config_data["configuration"], diff=True)
+        if TestVersion(self.version) <= TestVersion("3.20.0"):
+            utils.check_val_equal(body["service"]["configuration"], apply_config_data["configuration"], diff=True)
+        else:
+            for field in custom_expected_fields + default_expected_fields:
+                utils.check_val_is_in(field, body["service"]["configuration"])
+            post_ignore_prefix = apply_config_data["configuration"]["ignore_prefix"]
+            body_ignore_prefix = body["service"]["configuration"]["ignore_prefix"]  # type: ignore
+            utils.check_val_equal(body_ignore_prefix, post_ignore_prefix)
 
         resp = utils.test_request(self, self.update_method, path, data=modif_config_data,
                                   headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
-        utils.check_val_equal(body["service"]["configuration"], modif_config_data["configuration"], diff=True)
+        if TestVersion(self.version) <= TestVersion("3.20.0"):
+            utils.check_val_equal(body["service"]["configuration"], modif_config_data["configuration"], diff=True)
+        else:
+            for field in custom_expected_fields + default_expected_fields:
+                utils.check_val_is_in(field, body["service"]["configuration"])
+            for field in modif_config_data["configuration"]:
+                post_field = modif_config_data["configuration"][field]
+                body_field = body["service"]["configuration"][field]  # type: ignore
+                utils.check_val_equal(body_field, post_field)
 
         resp = utils.test_request(self, self.update_method, path, data=erase_config_data,
                                   headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method=self.update_method)
-        utils.check_val_equal(body["service"]["configuration"], None, diff=True,
-                              msg="Erase should be allowed with explicit None (null) JSON configuration.")
+        if TestVersion(self.version) <= TestVersion("3.20.0"):
+            utils.check_val_equal(body["service"]["configuration"], None, diff=True,
+                                  msg="Erase should be allowed with explicit None (null) JSON configuration.")
+        else:
+            for field in default_expected_fields:
+                utils.check_val_is_in(field, body["service"]["configuration"])
+            for field in custom_expected_fields:
+                utils.check_val_not_in(field, body["service"]["configuration"])
+
+            class MockServiceResource(object):
+                configuration = None
+
+            default_thredds_config = ServiceTHREDDS(MockServiceResource(), None).get_config()  # type: ignore
+            utils.check_val_equal(body["service"]["configuration"], default_thredds_config, diff=True,
+                                  msg="JSON configuration following explicit None (null) erase should use default.")
+
+    @runner.MAGPIE_TEST_SERVICES
+    def test_PatchService_UpdateNonConfigurable(self):
+        """
+        Services defined as not configurable should fail update request with provided configuration.
+        """
+        utils.warn_version(self, "update service configuration on non-configurable implementation", "3.21", skip=True)
+
+        svc_name = "test-service-no-config"
+        svc_type = ServiceAPI.service_type
+        utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+        utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
+
+        path = "/services/{}".format(svc_name)
+        for config in [None, {}, {"value": "test"}]:
+            data = {"configuration": config}
+            resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                      headers=self.json_headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_SERVICES
     def test_PatchService_ReservedKeyword_Types(self):
@@ -5635,6 +5698,39 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_error_param_structure(body, version=self.version,
                                           is_param_value_literal_unicode=True, param_compare_exists=True,
                                           param_value=self.test_resource_name, param_name="resource_name")
+
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_PostServiceResources_ScopedName(self):
+        """
+        Validate that scoped names are allowed for :term:`Service` and :term:`Resource` operations.
+        """
+        utils.warn_version(self, "resource name with scoping", "3.21.0", skip=True)
+        scope = "test:"
+        scope_svc = scope + self.test_service_name
+        scope_res = scope + self.test_resource_name
+        utils.TestSetup.delete_TestService(self, override_service_name=scope_svc)
+        body = utils.TestSetup.create_TestServiceResource(self,
+                                                          override_service_name=scope_svc,
+                                                          override_resource_name=scope_res)
+        res_info = utils.TestSetup.get_ResourceInfo(self, override_body=body, full_detail=True)
+        utils.check_val_equal(res_info["resource_name"], scope_res)
+
+        # explicit check of GET to validate scoped names in path are supported
+        svc_info = utils.TestSetup.get_ExistingTestServiceInfo(self, override_service_name=scope_svc)
+        utils.check_val_equal(svc_info["service_name"], scope_svc)
+
+        # check that second POST also properly detects scoped resource name
+        data = {
+            "resource_name": scope_res,
+            "resource_type": self.test_resource_type,
+            "parent_id": res_info["parent_id"],
+        }
+        resp = utils.test_request(self, "POST", "/resources", json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 409, expected_method="POST")
+
+        # explicit check of DELETE to validate it is also supported
+        utils.TestSetup.delete_TestService(self, override_service_name=scope_svc)
 
     @runner.MAGPIE_TEST_SERVICES
     @runner.MAGPIE_TEST_DEFAULTS
@@ -5971,6 +6067,346 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("permission_names", body)
         utils.check_val_type(body["permission_names"], list)
         utils.check_all_equal(body["permission_names"], expect_res_perms, any_order=True)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetResourceTypes_ServiceAccess(self):
+        utils.warn_version(self, "validate allowed nested children resource types structure", "3.21.0", skip=True)
+
+        utils.TestSetup.delete_TestService(self)
+        body = utils.TestSetup.create_TestService(self, override_service_type=ServiceAccess.service_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc_id = info["resource_id"]
+
+        path = "/services/{}".format(self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        svc = body["service"]
+        utils.check_val_is_in("resource_child_allowed", svc)
+        utils.check_val_is_in("resource_types_allowed", svc)
+        utils.check_val_is_in("resource_structure_allowed", svc)
+        utils.check_val_equal(svc["resource_child_allowed"], False)
+        utils.check_val_equal(svc["resource_types_allowed"], [])
+        utils.check_val_equal(svc["resource_structure_allowed"], {})
+
+        path = "/resources/{}/types".format(svc_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_service_name)
+        utils.check_val_equal(body["resource_type"], "service")
+        utils.check_val_equal(body["children_resource_types"], [])
+        utils.check_val_equal(body["children_resource_allowed"], False)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceAccess.service_type)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetResourceTypes_ServiceAPI(self):
+        utils.warn_version(self, "validate allowed nested children resource types structure", "3.21.0", skip=True)
+
+        utils.TestSetup.delete_TestService(self)
+        body = utils.TestSetup.create_TestService(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc_id = info["resource_id"]
+        res1_name = "test1"
+        res2_name = "test2"
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=svc_id, override_resource_name=res1_name)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res1_id = info["resource_id"]
+        body = utils.TestSetup.create_TestResource(self, parent_resource_id=res1_id, override_resource_name=res2_name)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res2_id = info["resource_id"]
+
+        res_types_allowed = [Route.resource_type_name]
+        struct_allowed = {
+            "service": res_types_allowed,
+            Route.resource_type_name: res_types_allowed
+        }
+
+        path = "/services/{}".format(self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        svc = body["service"]
+        utils.check_val_is_in("resource_child_allowed", svc)
+        utils.check_val_is_in("resource_types_allowed", svc)
+        utils.check_val_is_in("resource_structure_allowed", svc)
+        utils.check_val_equal(svc["resource_child_allowed"], True)
+        utils.check_val_equal(svc["resource_types_allowed"], res_types_allowed)
+        utils.check_val_equal(svc["resource_structure_allowed"], struct_allowed)
+
+        path = "/resources/{}/types".format(svc_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_service_name)
+        utils.check_val_equal(body["resource_type"], "service")
+        utils.check_val_equal(body["children_resource_types"], res_types_allowed)  # only routes under service
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], self.test_service_type)
+
+        path = "/resources/{}/types".format(res1_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], res1_name)
+        utils.check_val_equal(body["resource_type"], self.test_resource_type)
+        utils.check_val_equal(body["children_resource_types"], res_types_allowed)  # routes nested any depth
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], self.test_service_type)
+
+        path = "/resources/{}/types".format(res2_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], res2_name)
+        utils.check_val_equal(body["resource_type"], self.test_resource_type)
+        utils.check_val_equal(body["children_resource_types"], res_types_allowed)  # routes nested any depth
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], self.test_service_type)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetResourceTypes_ServiceTHREDDS(self):
+        utils.warn_version(self, "validate allowed nested children resource types structure", "3.21.0", skip=True)
+
+        utils.TestSetup.delete_TestService(self)
+        res_names = [
+            "dir1",
+            "dir2",
+            "file1",
+        ]
+        dir1_name, dir2_name, file_name = res_names
+        res_types = [
+            Directory.resource_type_name,
+            Directory.resource_type_name,
+            File.resource_type_name,
+        ]
+        svc_id, dir1_id, dir2_id, file_id = utils.TestSetup.create_TestServiceResourceTree(
+            self,
+            override_service_type=ServiceTHREDDS.service_type,
+            override_resource_names=res_names,
+            override_resource_types=res_types
+        )
+
+        # nested file/dirs always allowed at any level expect under File
+        res_types_allowed = [Directory.resource_type_name, File.resource_type_name]
+        struct_allowed = {
+            "service": res_types_allowed,
+            Directory.resource_type_name: res_types_allowed,
+            File.resource_type_name: [],
+        }
+
+        path = "/services/{}".format(self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        svc = body["service"]
+        utils.check_val_is_in("resource_child_allowed", svc)
+        utils.check_val_is_in("resource_types_allowed", svc)
+        utils.check_val_is_in("resource_structure_allowed", svc)
+        utils.check_val_equal(svc["resource_child_allowed"], True)
+        utils.check_val_equal(svc["resource_types_allowed"], res_types_allowed)
+        utils.check_val_equal(svc["resource_structure_allowed"], struct_allowed)
+
+        path = "/resources/{}/types".format(svc_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_service_name)
+        utils.check_val_equal(body["resource_type"], "service")
+        utils.check_val_equal(body["children_resource_types"], res_types_allowed)
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceTHREDDS.service_type)
+
+        path = "/resources/{}/types".format(dir1_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], dir1_name)
+        utils.check_val_equal(body["resource_type"], Directory.resource_type_name)
+        utils.check_val_equal(body["children_resource_types"], res_types_allowed)
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceTHREDDS.service_type)
+
+        path = "/resources/{}/types".format(dir2_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], dir2_name)
+        utils.check_val_equal(body["resource_type"], Directory.resource_type_name)
+        utils.check_val_equal(body["children_resource_types"], res_types_allowed)
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceTHREDDS.service_type)
+
+        path = "/resources/{}/types".format(file_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], file_name)
+        utils.check_val_equal(body["resource_type"], File.resource_type_name)
+        utils.check_val_equal(body["children_resource_types"], [])
+        utils.check_val_equal(body["children_resource_allowed"], False)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceTHREDDS.service_type)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetResourceTypes_ServiceGeoserver(self):
+        utils.warn_version(self, "validate allowed nested children resource types structure", "3.21.0", skip=True)
+        utils.warn_version(self, "multi-ows GeoServer service implementation", "3.21.0", skip=True)
+
+        utils.TestSetup.delete_TestService(self)
+        res_names = [
+            "workspace1",
+            "layer1",
+        ]
+        w1_name, l1_name = res_names
+        res_types = [
+            Workspace.resource_type_name,
+            Layer.resource_type_name,
+        ]
+        svc_id, w1_id, l1_id = utils.TestSetup.create_TestServiceResourceTree(
+            self,
+            override_service_type=ServiceGeoserver.service_type,
+            override_resource_names=res_names,
+            override_resource_types=res_types
+        )
+
+        # nested file/dirs always allowed at any level expect under File
+        res_types_allowed = [Layer.resource_type_name, Process.resource_type_name, Workspace.resource_type_name]
+        struct_allowed = {
+            Service.resource_type_name: [Workspace.resource_type_name],
+            Workspace.resource_type_name: [Layer.resource_type_name, Process.resource_type_name],
+            Layer.resource_type_name: [],
+            Process.resource_type_name: [],
+        }
+
+        path = "/services/{}".format(self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        svc = body["service"]
+        utils.check_val_is_in("resource_child_allowed", svc)
+        utils.check_val_is_in("resource_types_allowed", svc)
+        utils.check_val_is_in("resource_structure_allowed", svc)
+        utils.check_val_equal(svc["resource_child_allowed"], True)
+        utils.check_val_equal(svc["resource_types_allowed"], res_types_allowed)
+        utils.check_val_equal(svc["resource_structure_allowed"], struct_allowed)
+
+        path = "/resources/{}/types".format(svc_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_service_name)
+        utils.check_val_equal(body["resource_type"], "service")
+        utils.check_val_equal(body["children_resource_types"], struct_allowed[Service.resource_type_name])
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceGeoserver.service_type)
+
+        path = "/resources/{}/types".format(w1_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], w1_name)
+        utils.check_val_equal(body["resource_type"], Workspace.resource_type_name)
+        utils.check_val_equal(body["children_resource_types"], struct_allowed[Workspace.resource_type_name])
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceGeoserver.service_type)
+
+        path = "/resources/{}/types".format(l1_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], l1_name)
+        utils.check_val_equal(body["resource_type"], Layer.resource_type_name)
+        utils.check_val_equal(body["children_resource_types"], [])
+        utils.check_val_equal(body["children_resource_allowed"], False)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceGeoserver.service_type)
 
 
 @runner.MAGPIE_TEST_UI

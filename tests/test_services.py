@@ -21,7 +21,15 @@ from sqlalchemy import inspect as sa_inspect
 from magpie import __meta__, models, owsrequest
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
-from magpie.services import ServiceAccess, ServiceAPI, ServiceGeoserverWMS, ServiceInterface, ServiceTHREDDS, ServiceWPS
+from magpie.services import (
+    ServiceAccess,
+    ServiceAPI,
+    ServiceGeoserver,
+    ServiceGeoserverWMS,
+    ServiceInterface,
+    ServiceTHREDDS,
+    ServiceWPS
+)
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML
 from tests import interfaces as ti
 from tests import runner, utils
@@ -189,10 +197,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         .. versionchanged:: 3.5
             User and Group permissions for ``Resource1`` and ``Resource2`` have been swapped since new priorities make
-            :term:`Direct Permissions` more important than :term:`Inherited Permissions`. The :attr:`Access.DENY` was
-            not being reverted with original definitions that assumed them to be of equal importance, and therefore
-            plain ``DENY > ALLOW`` was working. Permission on ``Resource4`` was moved from Group to User for the same
-            reason.
+            :term:`Direct Permissions <Direct Permission>` more important than
+            :term:`Inherited Permissions <Inherited Permission>`. The :attr:`Access.DENY` was not being reverted with
+            original definitions that assumed them to be of equal importance, and therefore plain ``DENY > ALLOW`` was
+            working. Permission on ``Resource4`` was moved from Group to User for the same reason.
         """
         svc_name = "unittest-service-api"
         svc_type = ServiceAPI.service_type
@@ -334,9 +342,9 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         .. versionchanged:: 3.5
             User and Group permissions for ``Directory1`` and ``Directory2`` have been swapped since new priorities make
-            :term:`Direct Permissions` more important than :term:`Inherited Permissions`. The :attr:`Access.DENY` was
-            not being reverted with original definitions that assumed them to be of equal importance, and therefore
-            plain ``DENY > ALLOW`` was working.
+            :term:`Direct Permissions` more important than :term:`Inherited Permissions <Inherited Permission>`.
+            The :attr:`Access.DENY` was not being reverted with original definitions that assumed them to be of equal
+            importance, and therefore plain ``DENY > ALLOW`` was working.
         """
         svc_type = ServiceTHREDDS.service_type
         svc1_name = "unittest-service-thredds-1"
@@ -610,8 +618,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             Service1                                    (c-A-R)         c-A, m-D
                 Workspace1              (c-D-M)                         c-D, m-D
                 Workspace2              (m-A-M)                         c-A, m-A
+                    [Layer]                                             c-A, m-D
             Service2                                    (m-A-R)         c-D, m-A
                 Workspace3                              (c-A-M)         c-A, m-A
+                    [Layer]                                             c-A, m-A
         """
         svc1_name = "unittest-service-geoserverwms1"
         svc2_name = "unittest-service-geoserverwms2"
@@ -657,15 +667,17 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
             # GetCapabilities of specific Workspace
+            # GetCapabilities is always applicable on Service only
+            #   allow/deny applied on children resources should not impact result according to permission on service
             path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc1_name, prefix, res1_name)
             req = self.mock_request(path, method="GET")
-            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+            utils.check_no_raise(lambda: self.ows.check_request(req))
             path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc1_name, prefix, res2_name)
             req = self.mock_request(path, method="GET")
             utils.check_no_raise(lambda: self.ows.check_request(req))
             path = "/ows/proxy/{}{}/{}/wms?request=getcapabilities".format(svc2_name, prefix, res3_name)
             req = self.mock_request(path, method="GET")
-            utils.check_no_raise(lambda: self.ows.check_request(req))
+            utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
             # GetMap of layer in Workspace (Workspace inferred from path prefix or layer name)
             # workspace 1
@@ -682,7 +694,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                 path = "{}{}/wms?request=getmap&layers={}".format(svc_prefix, workspace_prefix, layer_name)
                 req = self.mock_request(path, method="GET")
                 msg = "Using combination [{}, {}]".format("GET", path)
-                utils.check_no_raise(lambda: self.ows.check_request(req), msg=msg)
+                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
             # workspace 3
             svc_prefix = "/ows/proxy/{}{}".format(svc2_name, prefix)
             layer_name = "{}:TEST_LAYER".format(res3_name)
@@ -979,6 +991,426 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             corresponding resources accessed through different endpoints and formats.
         """
         raise NotImplementedError  # FIXME: see https://github.com/Ouranosinc/Magpie/issues/360
+
+    @utils.mocked_get_settings
+    def test_ServiceGeoserver_effective_permissions(self):
+        """
+        Evaluates functionality of :class:`ServiceGeoserver` against a mocked `Magpie` adapter for `Twitcher`.
+
+        The :class:`ServiceGeoserver` implementation works as a combination of many :term:`OWS` sub-services.
+        Validate that different resource types and distinct permissions can be simultaneously applied on them.
+        Effective permissions must be resolved with the appropriate :term:`OWS` service accordingly with request
+        parameters.
+
+        Legend::
+
+            []: Resource does not exist in Magpie, but position matches actual resource for the target service
+            gc: GetCapabilities (shared by all OWS)
+            gf: GetFeature permission (WFS Layer)
+            gi: GetFeatureInfo permission (WMS Layer)
+            gm: GetMap (WMS Layer)
+            dp: DescribeProcess permission (WPS Process)
+            A: allow
+            D: deny
+            M: match        (makes sense only on layer for any permission except GetCapabilities on service itself)
+            R: recursive    (resolution for multiple layers, permissions have no use on Service or Workspace themselves)
+
+        Permissions Applied::
+                                        user        group       effective (detail)
+            Service1                    (gc-A-R)    (gm-D-R)    gc-A, gf-D, gi-D, gm-D
+                Workspace1              (dp-A-R)    (gf-A-R)    dp-A, gf-A, gi-D, gm-D (no match on Workspace itself)
+                    Layer11                         (gi-A-R)    dp-D, gf-A, gi-A, gm-D
+                    Layer12             (gf-D-M)    (gm-A-M)    dp-D, gf-D, gi-A, gm-A (match > recursive)
+                    Layer13             (gm-A-R)                dp-D, gf-A, gi-A, gm-A (effective user > group)
+                    [Layer4]                                    dp-D, gf-A, gi-D (doesn't exist, only R apply)
+                    Process11                                   dp-A, gf-D, gi-D (gf/gi don't apply on Process)
+                    Process12           (dp-D-M)                dp-D, gf-D, gi-D
+                    Process13                       (dp-D-M)    dp-A, gf-D, gi-D (effective workspace user > group)
+                    [Process4]                                  dp-A, gf-D, gi-D
+                Workspace2                          (gf-A-R)    dp-D, gf-A, gi-D
+                    Layer21             (gf-D-M)                dp-D, gf-D, gi-D (revoke access, user > group)
+                    Layer22                         (gf-D-M)    dp-D, gf-D, gi-D (revoke access, both groups)
+                    Layer23             (gf-A-M)    (gf-D-M)    dp-D, gf-A, gi-D (allowed access, user > group)
+
+        .. note::
+            Permissions that do not applied to a given sub-:term:`OWS` implementation are automatically denied.
+            For example, 'GetFeatureInfo' cannot be applied for a 'Process' nor can 'DescribeProcess' for a 'Layer'.
+        """
+        svc_type = ServiceGeoserver.service_type
+        svc1_name = "unittest-service-geoserver-1"
+        w1_name = "workspace1"
+        w2_name = "workspace2"
+        wx_name = "fake-workspace"
+        l11_name = "layer11"
+        l12_name = "layer12"
+        l13_name = "layer13"
+        l14_name = "layer14"
+        l21_name = "layer21"
+        l22_name = "layer22"
+        l23_name = "layer23"
+        p11_name = "process11"
+        p12_name = "process12"
+        p13_name = "process13"
+        p14_name = "process14"
+
+        utils.TestSetup.delete_TestService(self, svc1_name)
+        svc1_id, w1_id = utils.TestSetup.create_TestServiceResourceTree(
+            self,
+            override_service_name=svc1_name, override_service_type=svc_type,
+            override_resource_names=[w1_name], override_resource_types=[models.Workspace.resource_type_name],
+        )
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w1_id,
+            override_resource_name=l11_name,
+            override_resource_type=models.Layer.resource_type_name
+        )
+        l11_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w1_id,
+            override_resource_name=l12_name,
+            override_resource_type=models.Layer.resource_type_name
+        )
+        l12_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w1_id,
+            override_resource_name=l13_name,
+            override_resource_type=models.Layer.resource_type_name
+        )
+        l13_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w1_id,
+            override_resource_name=p12_name,
+            override_resource_type=models.Process.resource_type_name
+        )
+        p12_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w1_id,
+            override_resource_name=p13_name,
+            override_resource_type=models.Process.resource_type_name
+        )
+        p13_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=svc1_id,
+            override_resource_name=w2_name,
+            override_resource_type=models.Workspace.resource_type_name
+        )
+        w2_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w2_id,
+            override_resource_name=l21_name,
+            override_resource_type=models.Layer.resource_type_name
+        )
+        l21_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w2_id,
+            override_resource_name=l22_name,
+            override_resource_type=models.Layer.resource_type_name
+        )
+        l22_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=w2_id,
+            override_resource_name=l23_name,
+            override_resource_type=models.Layer.resource_type_name
+        )
+        l23_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+
+        # create permissions
+        gcAR = PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        gfAR = PermissionSet(Permission.GET_FEATURE, Access.ALLOW, Scope.RECURSIVE)         # noqa
+        gfAM = PermissionSet(Permission.GET_FEATURE, Access.ALLOW, Scope.MATCH)             # noqa
+        gfDM = PermissionSet(Permission.GET_FEATURE, Access.DENY, Scope.MATCH)              # noqa
+        giAR = PermissionSet(Permission.GET_FEATURE_INFO, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        gmAM = PermissionSet(Permission.GET_MAP, Access.ALLOW, Scope.MATCH)                 # noqa
+        gmAR = PermissionSet(Permission.GET_MAP, Access.ALLOW, Scope.RECURSIVE)             # noqa
+        gmDR = PermissionSet(Permission.GET_MAP, Access.DENY, Scope.RECURSIVE)              # noqa
+        dpAR = PermissionSet(Permission.DESCRIBE_PROCESS, Access.ALLOW, Scope.RECURSIVE)    # noqa
+        dpDM = PermissionSet(Permission.DESCRIBE_PROCESS, Access.DENY, Scope.MATCH)         # noqa
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc1_id, override_permission=gcAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc1_id, override_permission=gmDR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=w1_id, override_permission=gfAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=w1_id, override_permission=dpAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=l11_id, override_permission=giAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=l12_id, override_permission=gfDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=l12_id, override_permission=gmAM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=l13_id, override_permission=gmAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=p12_id, override_permission=dpDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=p13_id, override_permission=dpDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=w2_id, override_permission=gfAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=l21_id, override_permission=gfDM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=l22_id, override_permission=gfDM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=l23_id, override_permission=gfAM)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=l23_id, override_permission=gfDM)
+
+        # login test user for which the permissions were set
+        self.login_test_user()
+
+        # service calls
+        svc_path = "/ows/proxy/{}".format(svc1_name)
+
+        def _msg(_path, _params):
+            # type: (Str, Dict[Str, Str]) -> Str
+            _qs = "&".join("{}={}".format(k, v) for k, v in _params.items())
+            path_qs = "{}?{}".format(_path, _qs) if _qs else _path
+            return "Using combination [{}, {}]".format("GET", path_qs)
+
+        def _scope(workspace, layer):
+            # type: (Str, Str) -> Str
+            return "{}:{}".format(workspace, layer)
+
+        def _test(_path, _params, allow):
+            # type: (Str, Dict[Str, Str], bool) -> None
+            req = self.mock_request(_path, method="GET", params=_params)
+            if allow:
+                utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(_path, _params))
+            else:
+                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(_path, _params))
+
+        # request for any OWS
+        #   <HOST>/geoserver[/<WORKSPACE>]/<OWS>?request=GetCapabilities
+        for path in [svc_path, "{}/{}".format(svc_path, w1_name)]:
+            for ows in ["WFS", "WMS", "WPS"]:
+                ows_path = "{}/{}".format(path, ows.lower())
+                _test(ows_path, {"request": Permission.GET_CAPABILITIES.title}, allow=True)
+
+        # permission is valid on resource for both WFS and WMS, but they expect different parameter names
+        #   <HOST>/geoserver[/<WORKSPACE>]/[wfs|wms]?request=GetFeatureInfo&version=<>&[typeNames|layers]=<LAYER>
+        w1_wfs_path = "{}/{}/wfs".format(svc_path, w1_name)
+        w1_wms_path = "{}/{}/wms".format(svc_path, w1_name)
+        w1_wps_path = "{}/{}/wps".format(svc_path, w1_name)
+        w2_wfs_path = "{}/{}/wfs".format(svc_path, w2_name)
+        wx_wfs_path = "{}/{}/wfs".format(svc_path, wx_name)
+        wx_wms_path = "{}/{}/wms".format(svc_path, wx_name)
+        svc_wfs_path = "{}/wfs".format(svc_path)
+        svc_wms_path = "{}/wms".format(svc_path)
+        svc_wps_path = "{}/wps".format(svc_path)
+        wx_l1 = _scope(wx_name, l11_name)
+        w1_l1 = _scope(w1_name, l11_name)
+        w1_l2 = _scope(w1_name, l12_name)
+        w1_l3 = _scope(w1_name, l13_name)
+        w1_l4 = _scope(w1_name, l14_name)
+        w1_p1 = _scope(w1_name, p11_name)
+        w1_p2 = _scope(w1_name, p12_name)
+        w1_p3 = _scope(w1_name, p13_name)
+        w1_p4 = _scope(w1_name, p14_name)
+        w2_l1 = _scope(w2_name, l21_name)
+        w2_l2 = _scope(w2_name, l22_name)
+        w2_l3 = _scope(w2_name, l23_name)
+
+        # Layer1, mismatching permission for WMS
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
+
+        # Layer1, valid requests (WFS)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1}, allow=True)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1}, allow=True)
+
+        # Layer1, mismatched OWS path/param
+        #   - When <WORKSPACE> is not directly in the path, because query parameters to extract <WORKSPACE>:<LAYER>
+        #     mismatch the expected OWS service from the path (not 'layers' for WFS, not 'typeNames' for WMS),
+        #     the closest resolved requested resource is the service itself.
+        #     That service does not have the requested permissions (directly on it), so access is forbidden.
+        #   - When <WORKSPACE> is directly in the path for WFS, the requested resource can be resolved more precisely
+        #     as the Workspace instead of the top-level service.
+        #   - For allowed WFS test cases with <WORKSPACE> in path, because 'GetFeature' is applied recursively on
+        #     Workspace, access is granted even if the request parameter is erroneous to retrieve its appropriate Layer
+        #     resource. Since wrong parameter is used, Magpie does validate the path parameter against the scoped
+        #     Workspace name. The actual OWS should still normally respond with bad request since the wrong request
+        #     parameter (bad 'layers' instead of WFS 'typeNames') is provided for that OWS. The request remains invalid
+        #     even if
+        #     accessible, but Magpie/Twitcher job is over at that point.
+        #   - When OWS is WMS, GetFeature does not apply. Therefore, access refused.
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=True)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_name}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, "layers": w1_name}, allow=True)
+
+        # Layer1, valid requests (WMS)
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l1}, allow=True)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l1}, allow=True)
+
+        # Layer1, mismatching permission for WFS
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l1}, allow=False)
+
+        # Layer1, missing workspace
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_name}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_name}, allow=False)
+
+        # Layer1, mismatched OWS path/param
+        #   in this case, GetFeatureInfo permission is applied directly on Layer
+        #   invalid params makes retrieval of the Layer resource to fail, and therefore access is blocked
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l1}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l1}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l1}, allow=False)
+
+        # Layer2, valid requests and mismatched OWS/path
+        #   - Resource is always blocked because of explicit deny permission on it when it is matched.
+        #   - When OWS service and request parameters mismatch, the parent workspace is resolved.
+        #     In that case, access can be granted because recursive Workspace permission is allowed.
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l2}, allow=False)
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l2}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l2}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l2}, allow=False)
+        # mismatch OWS params resolve using workspace permission
+        # WMS fails because of invalid permission, WFS 'succeeds' access because of valid permission.
+        # WFS should fail on the instance side because of missing 'typeNames' parameter though.
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l2}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l2}, allow=True)
+
+        # Layer2, valid requests and mismatched OWS/path
+        #   - Resource blocked when matched because no permission directly on the layer.
+        #   - When mismatched OWS/path, fail to get target layer, but still blocked because
+        #     Workspace also doesn't have that permission.
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l2}, allow=False)
+        _test(svc_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l2}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l2}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l2}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l2}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l2}, allow=False)
+
+        # invalid permission not applicable to WFS/WMS
+        _test(svc_wms_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": w1_l1}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": w1_l1}, allow=False)
+        _test(w1_wms_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": w1_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": w1_l1}, allow=False)
+
+        # mismatch workspace between path and scoped layer
+        # result is no workspace being matched, therefore permissions on them are not applied
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE.title, "layers": wx_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": wx_l1}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": wx_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": wx_l1}, allow=False)
+        _test(wx_wms_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
+        _test(wx_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1}, allow=False)
+        _test(wx_wms_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l1}, allow=False)
+        _test(wx_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l1}, allow=False)
+
+        # invalid permission not applicable to WPS
+        _test(svc_wps_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
+        _test(svc_wps_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1}, allow=False)
+        _test(svc_wps_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l1}, allow=False)
+        _test(svc_wps_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l1}, allow=False)
+        _test(w1_wps_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
+        _test(w1_wps_path, {"request": Permission.GET_FEATURE.title, "typeNames": w1_l1}, allow=False)
+        _test(w1_wps_path, {"request": Permission.GET_FEATURE_INFO.title, "layers": w1_l1}, allow=False)
+        _test(w1_wps_path, {"request": Permission.GET_FEATURE_INFO.title, "typeNames": w1_l1}, allow=False)
+
+        # valid WPS requests
+        #   - Workspace only expected to work when in path because 'identifier' is not linked to workspace
+        #   - Process2 is explicitly denied, so access still blocked even when resource is properly resolved.
+        _test(w1_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p11_name}, allow=True)
+        _test(w1_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p12_name}, allow=False)
+        _test(w1_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p13_name}, allow=True)
+        _test(w1_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p14_name}, allow=True)
+        # other cases all invalid since workspace cannot be resolved
+        _test(svc_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p11_name}, allow=False)
+        _test(svc_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p12_name}, allow=False)
+        _test(svc_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": p13_name}, allow=False)
+        _test(svc_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": w1_p1}, allow=False)
+        _test(svc_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": w1_p2}, allow=False)
+        _test(svc_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": w1_p3}, allow=False)
+        _test(svc_wps_path, {"request": Permission.DESCRIBE_PROCESS.title, "identifier": w1_p4}, allow=False)
+
+        # valid WMS requests
+        # validate that effective resolution considering user/group priority and recursive/match scope priority work
+        _test(svc_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l1}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l1}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": l11_name}, allow=False)
+        _test(svc_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l2}, allow=True)
+        _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l2}, allow=True)
+        _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": l12_name}, allow=True)
+        _test(svc_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l3}, allow=True)
+        _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l3}, allow=True)
+        _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": l13_name}, allow=True)
+        _test(svc_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l4}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": w1_l4}, allow=False)
+        _test(w1_wms_path, {"request": Permission.GET_MAP.title, "layers": l14_name}, allow=False)
+
+        # using either the 'typename' or 'typenames' parameter lets WFS retrieve layers indistinguishably
+        alt_name = "typeName"
+        def_name = "typeNames"
+
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, alt_name: w1_l1}, allow=True)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, alt_name: w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_name}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, alt_name: wx_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, alt_name: w1_l2}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: wx_l1}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, alt_name: w1_l2}, allow=False)
+
+        def _add_both(value):
+            return {alt_name: value, def_name: value}
+
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, **_add_both(w1_l1)}, allow=True)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, **_add_both(w1_l2)}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_name)}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_l2)}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_l1)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, **_add_both(wx_l1)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, **_add_both(w1_l2)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_l1)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(wx_l1)}, allow=False)
+        _test(w1_wfs_path, {"request": Permission.GET_FEATURE_INFO.title, **_add_both(w1_l2)}, allow=False)
+
+        # using multiple layers at the same time should validate all of them (all or nothing access)
+        # order should not matter
+        l11_l11 = ",".join([w1_l1, w1_l1])  # resolved as duplicate, only processed once, allowed
+        l11_l12 = ",".join([w1_l1, w1_l2])  # W1-L1 is allowed, but not W1-L2, so both denied
+        l11_l13 = ",".join([w1_l1, w1_l3])  # both are allowed, so full request allowed as well
+        l12_l11 = ",".join([w1_l2, w1_l1])
+        l13_l11 = ",".join([w1_l3, w1_l1])
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": l11_l11}, allow=True)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": l11_l12}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": l11_l13}, allow=True)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": l12_l11}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": l13_l11}, allow=True)
+
+        # validate revoking access when explicit denies are placed under previously allowed-recursive resources
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w2_l1}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w2_l2}, allow=False)
+        _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w2_l3}, allow=True)
+        _test(w2_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w2_l1}, allow=False)
+        _test(w2_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w2_l2}, allow=False)
+        _test(w2_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": w2_l3}, allow=True)
+
+        # mixing workspaces still work if only in scoped resource reference,
+        # but fail for isolated path workspace due to mismatch workspace reference in at least one case
+        #   Summary (GetFeature):
+        #       L11: A  L21: D      -> only allowed combinations are exclusively with:  [L11, L13, L23]
+        #       L12: D  L22: D      -> deny any combination when following are present: [L12, L21, L22]
+        #       L13: A  L23: A
+        for quantity in [2, 3, 4, 5]:
+            layer_permutes = itertools.permutations([w1_l1, w1_l2, w1_l3, w2_l1, w2_l2, w2_l3], quantity)
+            for layer_combo in layer_permutes:
+                query = ",".join(layer_combo)
+                allow = not any(layer_deny in layer_combo for layer_deny in [w1_l2, w2_l1, w2_l2])
+                _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": query}, allow=allow)
+
+                # multiple layers nested under same workspace will work for request with Workspace isolated path
+                # otherwise, automatic deny regardless if they were allowed during request without workspace in path
+                allow_w1 = allow and all(layer.startswith(w1_name) for layer in layer_combo)
+                allow_w2 = allow and all(layer.startswith(w2_name) for layer in layer_combo)
+                _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": query}, allow=allow_w1)
+                _test(w2_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": query}, allow=allow_w2)
 
 
 @runner.MAGPIE_TEST_LOCAL

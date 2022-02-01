@@ -35,15 +35,17 @@ from magpie.utils import ExtendedEnum, FlexibleNameEnum, decompose_enum_flags, g
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Dict, Iterable, List, Optional, Set, Type, Union
+    from typing import Any, Dict, Iterable, List, Optional, Set, Type, Union
 
+    from pyramid.request import Request
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import JSON, AccessControlListType, GroupPriority, Str
+    from magpie.typedefs import JSON, AccessControlListType, AnySettingsContainer, GroupPriority, Str
 
     # for convenience of methods using both, using strings because of future definition
     AnyUser = Union["User", "UserPending"]
+    AnyUserStatus = Union["UserGroupStatus", int, Str]
 
 # backward compat enums
 try:
@@ -57,6 +59,7 @@ Base = declarative_base()   # pylint: disable=C0103,invalid-name
 
 
 def get_session_callable(request):
+    # type: (Request) -> Session
     return request.db
 
 
@@ -64,6 +67,7 @@ class Group(GroupMixin, Base):
     _priority = None
 
     def get_member_count(self, db_session=None):
+        # type: (Optional[Session]) -> int
         return BaseService.all(UserGroup, db_session=db_session).filter(UserGroup.group_id == self.id).count()
 
     @declared_attr
@@ -262,6 +266,7 @@ class UserPending(Base):
         return []
 
     def get_groups_by_status(self, status, db_session=None):
+        # type: (UserGroupStatus, Session) -> List[Str]
         """
         Pending user is not a member of any group.
 
@@ -339,6 +344,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
 
     @classmethod
     def _get_one(cls, status):
+        # type: (AnyUserStatus) -> Optional[UserStatuses]
         # matches the literal number, the direct enum object, exact name, or flexible name (inherited)
         status = super(UserStatuses, cls).get(int(status) if str.isnumeric(str(status)) else status)
         if status:
@@ -362,7 +368,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
             status = status.split(",")
         if isinstance(status, (str, int)):
             return cls._get_one(status)
-        combined = None
+        combined = None  # type: Optional[UserStatuses]
         for _status in status:
             _status = cls._get_one(_status)
             if combined is not None and _status is not None:
@@ -388,6 +394,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
 
     @classmethod
     def all(cls):
+        # type: () -> UserStatuses
         """
         Representation of all flags combined.
         """
@@ -406,6 +413,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
         return super(UserStatuses, self).__xor__(other)
 
     def __iter__(self):
+        # type: () -> Iterable[UserStatuses]
         values = decompose_enum_flags(self)
         return iter(values)
 
@@ -536,6 +544,7 @@ class RootFactory(object):
     __parent__ = ""
 
     def __init__(self, request):
+        # type: (Request) -> None
         self.request = request
 
     @property
@@ -565,10 +574,12 @@ class RootFactory(object):
 
 class UserFactory(RootFactory):
     def __init__(self, request):
+        # type: (Request) -> None
         super(UserFactory, self).__init__(request)
         self.path_user = None
 
     def __getitem__(self, user_name):
+        # type: (Str) -> None
         context = UserFactory(self.request)
         if user_name == get_constant("MAGPIE_LOGGED_USER", self.request):
             self.path_user = self.request.user
@@ -683,26 +694,40 @@ class PathBase(object):
 
 
 class File(Resource, PathBase):
+    """
+    Resource that represents the leaf node in a file-system-like hierarchy.
+
+    In the context of `THREDDS`, this represents the corresponding files exposed by the service.
+    This resource cannot have any children resource under it.
+    """
     child_resource_allowed = False
     resource_type_name = "file"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
 class Directory(Resource, PathBase):
+    """
+    Resource that represents an intermediate directory node within a file-system-like hierarchy.
+
+    In the context of `THREDDS`, this represents the corresponding directories exposed by the service.
+    Any amount of :class:`Directory` can be nested under itself to form the tree hierarchy.
+    """
     resource_type_name = "directory"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
 
-class Workspace(Resource):
-    resource_type_name = "workspace"
+class Layer(Resource):
+    """
+    Resource that defines multiple corresponding representations of a layer according to the :term:`OWS` it lies under.
+
+    In the context of `WFS`, this is the represented collection of features.
+    In the context of `WMS`, this is the referenced features employed to generate the map.
+    """
+    child_resource_allowed = False
+    resource_type_name = "layer"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
     permissions = [
-        Permission.GET_CAPABILITIES,
-        Permission.GET_MAP,
-        Permission.GET_FEATURE_INFO,
-        Permission.GET_LEGEND_GRAPHIC,
-        Permission.GET_METADATA,
         Permission.GET_FEATURE,
         Permission.DESCRIBE_FEATURE_TYPE,
         Permission.LOCK_FEATURE,
@@ -710,7 +735,25 @@ class Workspace(Resource):
     ]
 
 
+class Workspace(Resource):
+    """
+    Resource employed to contain a group of scoped :class:`Layer` within a `Geoserver` instance.
+    """
+    resource_type_name = "workspace"
+    __mapper_args__ = {"polymorphic_identity": resource_type_name}
+
+    permissions = [
+        Permission.GET_MAP,
+        Permission.GET_FEATURE_INFO,
+        Permission.GET_LEGEND_GRAPHIC,
+        Permission.GET_METADATA,
+    ]
+
+
 class Route(Resource):
+    """
+    Resource employed to represent a single request path fragment.
+    """
     resource_type_name = "route"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
 
@@ -721,6 +764,9 @@ class Route(Resource):
 
 
 class Process(Resource):
+    """
+    Resource that represents a process under an :term:`OWS` instance servicing a `WPS` endpoint.
+    """
     child_resource_allowed = False
     resource_type_name = "process"
     __mapper_args__ = {"polymorphic_identity": resource_type_name}
@@ -912,10 +958,12 @@ class TemporaryToken(BaseModel, Base):
             self._pending_user = user
 
     def url(self, settings=None):
+        # type: (AnySettingsContainer) -> Str
         from magpie.api import schemas as s
         return get_magpie_url(settings) + s.TemporaryUrlAPI.path.format(token=self.token)
 
     def expired(self):
+        # type: () -> bool
         expire = int(get_constant("MAGPIE_TOKEN_EXPIRE", raise_missing=False, raise_not_set=False, default_value=86400))
         return (datetime.datetime.utcnow() - self.created) > datetime.timedelta(seconds=expire)
 
@@ -951,14 +999,16 @@ ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,
 RESOURCE_TREE_SERVICE = ResourceTreeService(ResourceTreeServicePostgreSQL)
 REMOTE_RESOURCE_TREE_SERVICE = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
+RESOURCE_TYPES = frozenset([Service, Directory, File, Layer, Workspace, Route, Process])
 RESOURCE_TYPE_DICT = dict()  # type: Dict[Str, Type[Resource]]
-for res in [Service, Directory, File, Workspace, Route, Process]:
+for res in RESOURCE_TYPES:
     if res.resource_type_name in RESOURCE_TYPE_DICT:  # pragma: no cover
         raise KeyError("Duplicate resource type identifiers not allowed")
     RESOURCE_TYPE_DICT[res.resource_type_name] = res
 
 
 def resource_factory(**kwargs):
+    # type: (Any) -> Resource
     resource_type = ax.evaluate_call(lambda: kwargs["resource_type"], http_error=HTTPInternalServerError,
                                      msg_on_fail="kwargs do not contain required 'resource_type'",
                                      content={"kwargs": repr(kwargs)})
@@ -969,6 +1019,7 @@ def resource_factory(**kwargs):
 
 
 def find_children_by_name(child_name, parent_id, db_session):
+    # type: (Str, Optional[int], Session) -> Optional[Resource]
     tree_struct = RESOURCE_TREE_SERVICE.from_parent_deeper(parent_id=parent_id, limit_depth=1, db_session=db_session)
     tree_level_filtered = [node.Resource for node in list(tree_struct) if
                            node.Resource.resource_name.lower() == child_name.lower()]

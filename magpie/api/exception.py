@@ -44,6 +44,7 @@ RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 # utility parameter validation regexes for 'matches' argument
 PARAM_REGEX = r"^[A-Za-z0-9]+(?:[\s_\-\.][A-Za-z0-9]+)*$"    # request parameters
+SCOPE_REGEX = r"^[A-Za-z0-9]+(?:[\:\s_\-\.][A-Za-z0-9]+)*$"  # allow scoped names (e.g.: 'namespace:value')
 EMAIL_REGEX = colander.EMAIL_RE
 UUID_REGEX = colander.UUID_REGEX
 URL_REGEX = colander.URL_REGEX

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
     from magpie.models import Resource, Service
-    from magpie.permissions import PermissionSet
+    from magpie.permissions import Permission, PermissionSet
     from magpie.services import ServiceInterface
     from magpie.typedefs import JSON, ResourcePermissionMap
 
@@ -59,12 +59,15 @@ def format_service(service,                         # type: Service
         :func:`magpie.api.management.resource.resource_formats.format_resource`
     """
     def fmt_svc():
+        # type: () -> JSON
         sep = "." if dotted else "_"
         svc_sync_type = str(service.sync_type) if service.sync_type is not None else service.sync_type
+        svc_type = SERVICE_TYPE_DICT[service.type]
         svc_info = {
             "service{}name".format(sep): str(service.resource_name),
             "service{}type".format(sep): str(service.type),
             "service{}sync_type".format(sep): svc_sync_type,
+            "service{}configurable".format(sep): svc_type.configurable,
             "resource{}id".format(sep): service.resource_id,
         }
         if show_public_url:
@@ -75,12 +78,21 @@ def format_service(service,                         # type: Service
         if basic_info:
             return svc_info
         if show_configuration:
-            svc_info["configuration"] = service.configuration
-        perms = SERVICE_TYPE_DICT[service.type].permissions if permissions is None else permissions
+            # make sure to generate the default configuration if applicable
+            if svc_type.configurable:
+                svc_config = svc_type(service, request=None).get_config()
+            else:
+                svc_config = None
+            svc_info["configuration"] = svc_config
+        perms = svc_type.permissions if permissions is None else permissions
         svc_info.update(format_permissions(perms, permission_type))
         if show_resources_allowed:
-            svc_info["resource_types_allowed"] = sorted(SERVICE_TYPE_DICT[service.type].resource_type_names)
-            svc_info["resource_child_allowed"] = SERVICE_TYPE_DICT[service.type].child_resource_allowed
+            svc_info["resource_child_allowed"] = svc_type.child_resource_allowed
+            svc_info["resource_types_allowed"] = sorted(svc_type.resource_type_names)
+            svc_info["resource_structure_allowed"] = {
+                res.resource_type_name: list(sorted(child_res.resource_type_name for child_res in children_res))
+                for res, children_res in svc_type.child_structure_allowed.items()
+            }
         return svc_info
 
     return evaluate_call(
@@ -105,12 +117,13 @@ def format_service_resources(service,                       # type: Service
     :param service: service for which to display details with sub-resources
     :param db_session: database session
     :param service_perms:
-        If provided, sets :term:`Applied Permissions` to display on the formatted :paramref:`service`.
-        Otherwise, sets the :term:`Allowed Permissions` specific to the :paramref:`service`'s type.
+        If provided, sets all :term:`Applied Permission` to display on the formatted :paramref:`service`.
+        Otherwise, sets :term:`Allowed Permissions <Allowed Permission>` specific to the :paramref:`service`'s type.
     :param resources_perms_dict:
-        If provided (not ``None``), set the :term:`Applied Permissions` on each specified resource matched by ID.
-        If ``None``, retrieve and set :term:`Allowed Permissions` for the corresponding resources under the service.
-        To set empty :term:`Applied Permissions` (e.g.: :term:`User` doesn't have permissions on that resource), provide
+        If provided (not ``None``), set the :term:`Applied Permission` on each specified resource matched by ID.
+        If ``None``, retrieve and set :term:`Allowed Permissions <Allowed Permission>` for the corresponding
+        :term:`Resources <Resource>` under the :term:`Service`.
+        To set empty :term:`Applied Permission` (e.g.: :term:`User` doesn't have permissions on that resource), provide
         an explicit empty dictionary instead.
     :param permission_type: Provide permission type being rendered.
     :param show_all_children:
@@ -119,6 +132,7 @@ def format_service_resources(service,                       # type: Service
     :return: JSON body representation of the service resource tree
     """
     def fmt_svc_res(svc, db, svc_perms, res_perms, show_all):
+        # type: (Service, Session, Optional[List[Permission]], Optional[List[Permission]], bool) -> JSON
         tree = get_resource_children(svc, db)
         if not show_all:
             filter_res_ids = list(res_perms) if res_perms else []
