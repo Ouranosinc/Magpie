@@ -962,9 +962,8 @@ div.tree-button {
     /* ensure that sufficient space is provided to fit all possible permission-name side-by-side
        align with combobox and checkbox, must include both their respective width
     */
-    /*float: right;*/
     margin-left: 0.5em;  /* spacing with disallowed text to ensure one title doesn't end flush where the next begins */
-    width: 9.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-left] */
+    width: 10.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-left] */
 
     display: inline-flex;
     flex-wrap: nowrap;
@@ -997,6 +996,8 @@ div.tree-button {
     border-radius: 3px;
     border-width: 1px;
     border-style: solid;
+    width: 100%;    /* use as much space as available in 'permission-entry' excluding space for 'permission-checkbox' */
+    margin-right: 5em;  /* value must be "big enough" to push checkbox right as much as possible, but < cell width */
 }
 
 /* Hide arrow icon in IE browsers */
