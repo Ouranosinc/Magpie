@@ -18,7 +18,7 @@
         document.getElementById("service_push_phoenix_section").hidden = !selectedPhoenixEnabled;
         document.getElementById("service_configurable_section").hidden = !selectedConfigEnabled;
     }
-    $( document ).ready(function() {
+    $(document).ready(function() {
         updateActiveServiceOptions();
     });
 </script>

@@ -19,6 +19,9 @@
     <script type="text/javascript">
         <%include file="magpie.ui.management:templates/tree_scripts.js"/>
     </script>
+    <script type="text/javascript">
+        <%include file="magpie.ui.home:templates/restore_scroll.js"/>
+    </script>
     <!-- needs more work, some elements should be static such as resource-names -->
     <!--
     <script type="text/javascript">

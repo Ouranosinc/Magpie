@@ -42,6 +42,7 @@ Features / Changes
   to multiple items simultaneously. An example of this is the comma-separated list of ``Layer`` defined by ``typeNames``
   of new ``ServiceGeoserverWMS`` implementation. Access is granted if the ``User`` has access to **ALL** ``Resource``
   resolved from parsing the request.
+* Add auto-restore of previous scroll position in UI page following submitted form.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -55,6 +56,7 @@ Bug Fixes
   for a given ``Service``.
 * Fix `Effective Resolution` of ``Permission`` applied for ``ServiceGeoserverWMS`` to consider ``Scope`` modifier
   of ``Service`` and ``Workspace`` for access to be resolved at the ``Layer`` level.
+* Fix UI alignment of permission titles with their corresponding permission selectors.
 
 `3.20.1 <https://github.com/Ouranosinc/Magpie/tree/3.20.1>`_ (2022-01-19)
 ------------------------------------------------------------------------------------
