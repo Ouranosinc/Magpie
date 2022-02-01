@@ -157,11 +157,17 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
             resp = utils.TestSetup.check_FormSubmit(self, form_match="add_resource_form", form_submit="add_child",
                                                     form_data=data, previous_response=resp)
             for res_name in (self.test_service_parent_resource_name, self.test_service_child_resource_name):
-                if TestVersion(self.version) >= TestVersion("3.0"):
-                    find = "<div class=\"tree-key\">{}</div>".format(res_name)
-                    text = resp.text.replace("\n", "").replace("  ", "")  # ignore formatting of source file
+                if TestVersion(self.version) <= TestVersion("3.20.1"):
+                    if TestVersion(self.version) >= TestVersion("3.0"):
+                        find = "<div class=\"tree-key\">{}</div>".format(res_name)
+                        text = resp.text.replace("\n", "").replace("  ", "")  # ignore formatting of source file
+                    else:
+                        find = "<div class=\"tree-item\">{}</div>".format(res_name)
+                        text = resp.text
                 else:
-                    find = "<div class=\"tree-item\">{}</div>".format(res_name)
+                    # ignore other CSS classes (eg: tooltip) applied in front,
+                    # target specifically the value rather than any container to adjust rendering the tree-key
+                    find = "tree-key-value\">{}</".format(res_name)
                     text = resp.text
                 utils.check_val_is_in(find, text, msg=utils.null)
         finally:
@@ -238,7 +244,10 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         resp = resp.click(self.test_service_type)  # tabs are '<a href=...>{service-type}</a>'
         body = utils.check_ui_response_basic_info(resp)
         text = body.replace("\n", "").replace("  ", "")  # ignore HTML formatting
-        tree_keys = re.findall(r"<div class=\"tree-key\">(.*?)</div>", text)
+        if TestVersion(self.version) >= TestVersion("3.21"):
+            tree_keys = re.findall(r"<[a-z]+ class=\"[a-z\-\_\s]*tree-key-value\">(.*?)</[a-z]+>", text)
+        else:
+            tree_keys = re.findall(r"<div class=\"tree-key\">(.*?)</div>", text)
         for r_name in [svc_name, res_name, sub_name]:
             utils.check_val_is_in(r_name, tree_keys, msg="Resource '{}' expected to be listed in tree.".format(r_name))
 
@@ -249,15 +258,19 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         res_perm_form = resp.forms[res_form_name]
         for r_id in [svc_id, res_id, sub_id]:
             check_ui_resource_permissions(res_perm_form, r_id, [])
-        # 2.2 apply new
-        # NOTE: because tree-view is created by reversed order of permissions, we must provide them as [WRITE, READ]
+        # 2.2 apply new permissions ([READ, WRITE])
         svc_perm1 = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)
-        svc_perms = ["", svc_perm1]
+        svc_perms = [svc_perm1, ""]
         res_perm1 = PermissionSet(Permission.READ, Access.DENY, Scope.RECURSIVE)
         res_perm2 = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)
-        res_perms = [res_perm2, res_perm1]
+        res_perms = [res_perm1, res_perm2]
         sub_perm1 = PermissionSet(Permission.READ, Access.ALLOW, Scope.MATCH)
-        sub_perms = ["", sub_perm1]
+        sub_perms = [sub_perm1, ""]
+        if TestVersion(self.version) < TestVersion("3.21"):
+            # NOTE: because tree-view was created in reversed permissions order, we had to provide them as [WRITE, READ]
+            svc_perms = list(reversed(svc_perms))
+            res_perms = list(reversed(res_perms))
+            sub_perms = list(reversed(sub_perms))
         data = {
             # set value for following correspond to 'select' option that was chosen
             "permission_resource_{}".format(svc_id): [to_ui_permission(perm) for perm in svc_perms],
@@ -280,8 +293,10 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         #    modify permission: this is detected by combo of (res-id, perm-name) with different (access, scope)
         svc_perms_mod = ["", ""]  # remove the previous (READ, ALLOW, RECURSIVE)
         res_perm1_mod = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)  # DENY -> ALLOW
-        res_perms_mod = [res_perm2, res_perm1_mod]  # second WRITE permission is unchanged
+        res_perms_mod = [res_perm1_mod, res_perm2]  # second WRITE permission is unchanged
         sub_perms_mod = sub_perms  # all unchanged for this resource
+        if TestVersion(self.version) < TestVersion("3.21"):
+            res_perms_mod = list(reversed(res_perms_mod))
         data = {
             "permission_resource_{}".format(svc_id): [to_ui_permission(perm) for perm in svc_perms_mod],
             "permission_resource_{}".format(res_id): [to_ui_permission(perm) for perm in res_perms_mod],

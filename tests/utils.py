@@ -1618,17 +1618,28 @@ def find_html_resource_tree_permissions(response_or_body,   # type: Union[TestRe
     :return: flat dictionary of resource IDs to displayed permission (or empty string if no permission displayed) .
     """
     # find resources/permissions hierarchy container
-    perm = PermissionSet(permission).name
+    perm_find = PermissionSet(permission).name
     perm_form = find_html_body_contents(response_or_body, [
         {"class": ["content"]}, {"class": ["tabs-panel"]},
         {"class": ["current-tab-panel"]}, {"id": "resources_permissions"}
     ])
     # find column for which test permissions are displayed
-    perm_header = find_html_body_contents(perm_form, [
-        {"class": ["tree-header"]}, {"class": ["tree-item"]}, {"class": ["permission-title"]}
-    ])
+    if TestVersion(version) >= TestVersion("3.21"):
+        perm_search = [
+            {"class": ["tree-header"]},
+            {"class": ["tree-line-item-container"]},
+            {"class": "tree-line-item-container-scrollable"},
+            {"class": "permission-title"}
+        ]
+    else:
+        perm_search = [
+            {"class": ["tree-header"]},
+            {"class": ["tree-item"]},
+            {"class": ["permission-title"]}
+        ]
+    perm_header = find_html_body_contents(perm_form, perm_search)
     perm_titles = [perm.text for perm in perm_header]
-    perm_index = perm_titles.index(perm.title if TestVersion(version) >= TestVersion("3.20") else perm.value)
+    perm_index = perm_titles.index(perm_find.title if TestVersion(version) >= TestVersion("3.20") else perm_find.value)
 
     found_res_perms = {}
 
@@ -1639,12 +1650,24 @@ def find_html_resource_tree_permissions(response_or_body,   # type: Union[TestRe
         for res_id in sub_tree_res:
             # find permission values in combo-box
             res_line = find_html_body_contents(res_level, [{"id": str(res_id)}])
-            res_combo_perm = find_html_body_contents(res_line, [
-                {"class": ["tree-line"]}, {"class": ["tree-item"]},
-                {"class": ["permission-entry"], "index": perm_index},
-                {"name": "label"}, {"name": "select"},
-                {"name": "option", "attribute": "selected"}
-            ])
+            if TestVersion(version) >= TestVersion("3.21"):
+                res_search_perm = [
+                    {"class": ["tree-line"]},
+                    {"class": ["tree-line-item-container"]},
+                    {"class": "tree-line-item-container-scrollable"},
+                    {"class": ["permission-entry"], "index": perm_index},
+                    {"name": "label"}, {"name": "select"},
+                    {"name": "option", "attribute": "selected"}
+                ]
+            else:
+                res_search_perm = [
+                    {"class": ["tree-line"]},
+                    {"class": ["tree-item"]},
+                    {"class": ["permission-entry"], "index": perm_index},
+                    {"name": "label"}, {"name": "select"},
+                    {"name": "option", "attribute": "selected"}
+                ]
+            res_combo_perm = find_html_body_contents(res_line, res_search_perm)
             check_val_is_in(len(res_combo_perm), [0, 1],
                             msg="Expected to have exactly [0,1] permission selected in combobox. Cannot have multiple.")
             if res_combo_perm:

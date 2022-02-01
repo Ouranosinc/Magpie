@@ -901,6 +901,9 @@ table.simple-list input[type="submit"] {
     position: absolute;
 }
 
+.tree-key-value {
+}
+
 .tree-item {
     display: inline-block;
     vertical-align: middle;

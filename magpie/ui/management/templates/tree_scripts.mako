@@ -69,7 +69,7 @@
     <div class="tree-line-key-container tree-item-value collapsible-tree-item">
         <span class="tree-item-label label label-info">${value["resource_type"]}</span>
         <div class="tree-key tooltip-container">
-            <span class="tooltip-value">${value.get('resource_display_name', key)}</span>
+            <span class="tooltip-value tree-key-value">${value.get('resource_display_name', key)}</span>
             <span class="tooltip-text">Resource: ${value["id"]}</span>
         </div>
     </div>
