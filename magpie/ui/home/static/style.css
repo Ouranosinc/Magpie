@@ -973,6 +973,34 @@ div.tree-button {
     display: none;
 }
 
+.tooltip-container {
+}
+
+.tooltip-container .tooltip-value {
+    border-bottom: 1px dotted black;
+}
+
+.tooltip-container .tooltip-text {
+    visibility: hidden;
+    text-align: center;
+    background-color: black;
+    color: white;
+    border-radius: 5px;
+    padding: 2px 4px;
+    opacity: 70%;
+    width: max-content;
+    /* position */
+    position: absolute;
+    z-index: 1;
+    margin-left: 0.5em;
+    margin-bottom: 1em;
+    margin-top: -0.1em;
+}
+
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+}
+
 /* --- Header breadcrumb --- */
 
 ul.breadcrumb {

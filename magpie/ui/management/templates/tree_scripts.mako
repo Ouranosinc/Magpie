@@ -67,8 +67,9 @@
 <%def name="render_resource_permissions_item(key, value, level)">
     <div class="tree-item-value collapsible-tree-item">
         <span class="tree-item-label label label-info">${value["resource_type"]}</span>
-        <div class="tree-key">
-            ${value.get('resource_display_name', key)}
+        <div class="tree-key tooltip-container">
+            <span class="tooltip-value">${value.get('resource_display_name', key)}</span>
+            <span class="tooltip-text">Resource: ${value["id"]}</span>
         </div>
     </div>
     %for perm_name in permissions:
@@ -120,8 +121,10 @@
                 %endfor
             %endfor
         </select>
+
+        <!-- previous state of existing permissions to detect removal of permission vs already blank selectors -->
         %for perm_name in resource_info["permission_names"]:
-        <input type="hidden" name="resource_${resource_info['id']}" value="${perm_name}">
+            <input type="hidden" name="resource_${resource_info['id']}" value="${perm_name}">
         %endfor
         </label>
 

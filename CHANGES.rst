@@ -43,6 +43,8 @@ Features / Changes
   of new ``ServiceGeoserverWMS`` implementation. Access is granted if the ``User`` has access to **ALL** ``Resource``
   resolved from parsing the request.
 * Add auto-restore of previous scroll position in UI page following submitted form.
+* Add UI tooltip `Resource` ID to elements rendered in the ``Service`` and ``Permission`` hierarchy trees
+  (relates to `#335 <https://github.com/Ouranosinc/Magpie/issues/335>`_).
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
