@@ -394,7 +394,7 @@ install-npm:    		## install npm package manager if it cannot be found
 		echo "Binary package manager npm not found. Attempting to install it."; \
 		apt-get install npm \
 	)
-	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | wc -l` = 1 ] || ( \
+	@[ `npm ls -only dev -depth 0 2>/dev/null | grep -V "UNMET" | grep stylelint-config-standard | wc -l` = 1 ] || ( \
 		echo "Install required libraries for style checks." && \
 		npm install stylelint@13.13.1 stylelint-config-standard@22.0.0 --save-dev \
 	)

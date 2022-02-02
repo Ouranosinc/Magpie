@@ -14,9 +14,7 @@
         <li class="no-child" id="${tree[key]['id']}">
         %endif
             <div class="tree-line">
-                <div class="tree-item">
-                    ${item_renderer(key, tree[key], level)}
-                </div>
+                ${item_renderer(key, tree[key], level)}
             </div>
             <div class="clear underline"></div>
             %if tree[key]["children"]:
@@ -43,17 +41,20 @@
         </div>
 
         <div class="tree-header">
-            <div class="tree-key">Resources</div>
-            <div class="tree-item">
-                %for perm_name in permission_titles:
-                    <div
-                    %if inherit_groups_permissions:
-                        class="permission-cell permission-title permission-title-effective"
-                    %else:
-                        class="permission-cell permission-title"
-                    %endif
-                    >${perm_name}</div>
-                %endfor
+            <div class="tree-line-key-container tree-key">Resources</div>
+            <div class="tree-line-fill-container"><!-- --></div>
+            <div class="tree-line-item-container tree-item">
+                <div class="tree-line-item-container-scrollable tree-line-scroll-visible">
+                    %for perm_name in permission_titles:
+                        <div
+                        %if inherit_groups_permissions:
+                            class="permission-cell permission-title permission-title-effective"
+                        %else:
+                            class="permission-cell permission-title"
+                        %endif
+                        >${perm_name}</div>
+                    %endfor
+                </div>
             </div>
         </div>
         <div class="tree">
@@ -65,34 +66,40 @@
 
 <!-- renders a single resource line in the tree with applicable permission selectors for it -->
 <%def name="render_resource_permissions_item(key, value, level)">
-    <div class="tree-item-value collapsible-tree-item">
+    <div class="tree-line-key-container tree-item-value collapsible-tree-item">
         <span class="tree-item-label label label-info">${value["resource_type"]}</span>
         <div class="tree-key tooltip-container">
-            <span class="tooltip-value">${value.get('resource_display_name', key)}</span>
+            <span class="tooltip-value tree-key-value">${value.get('resource_display_name', key)}</span>
             <span class="tooltip-text">Resource: ${value["id"]}</span>
         </div>
     </div>
-    %for perm_name in permissions:
-        ${render_resource_permissions_entry(perm_name, value)}
-    %endfor
-    %if not value.get("matches_remote", True):
+    <div class="tree-line-fill-container">
+        %if not value.get("matches_remote", True):
+            <div class="tree-button">
+                <input type="submit" class="button-warning" value="Clean" name="clean_resource">
+            </div>
+            <p class="tree-item-message">
+                <img title="This resource is absent from the remote server." class="icon-warning"
+                     src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}" alt="WARNING" />
+            </p>
+        %endif
         <div class="tree-button">
-            <input type="submit" class="button-warning" value="Clean" name="clean_resource">
+        %if level == 0:
+            <form id="resource_${value['id']}_${value.get('remote_id', '')}" action="${request.path}" method="post">
+                <input type="submit" class="tree-button goto-service theme" value="Edit Service" name="goto_service">
+                <input type="hidden" value="${value['id']}" name="resource_id">
+                <input type="hidden" value="${value.get('remote_id', '')}" name="remote_id">
+                <input type="hidden" value="${value.get('matches_remote', '')}" name="matches_remote">
+            </form>
+        %endif
         </div>
-        <p class="tree-item-message">
-            <img title="This resource is absent from the remote server." class="icon-warning"
-                 src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}" alt="WARNING" />
-        </p>
-    %endif
-    <div class="tree-button">
-    %if level == 0:
-        <form id="resource_${value['id']}_${value.get('remote_id', '')}" action="${request.path}" method="post">
-            <input type="submit" class="tree-button goto-service theme" value="Edit Service" name="goto_service">
-            <input type="hidden" value="${value['id']}" name="resource_id">
-            <input type="hidden" value="${value.get('remote_id', '')}" name="remote_id">
-            <input type="hidden" value="${value.get('matches_remote', '')}" name="matches_remote">
-        </form>
-    %endif
+    </div>
+    <div class="tree-line-item-container">
+        <div class="tree-line-item-container-scrollable">
+            %for perm_name in permissions:
+                ${render_resource_permissions_entry(perm_name, value)}
+            %endfor
+        </div>
     </div>
 </%def>
 

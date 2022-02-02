@@ -1022,7 +1022,7 @@ class ServiceGeoserverBase(ServiceOWS):
                     values.append(value)
             return values
         name = fully_qualified_name(self)
-        raise NotImplementedError(f"Missing or invalid requested 'resource_param' in service: {name}")
+        raise NotImplementedError("Missing or invalid requested 'resource_param' in service: {}".format(name))
 
     def resource_requested(self):
         # type: () -> MultiResourceRequested

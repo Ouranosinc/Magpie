@@ -530,9 +530,7 @@ class ManagementViews(AdminRequests, BaseViews):
         for svc in resp_available_svc_types:
             perm_names = {perm["name"] for perm in resp_available_svc_types[svc]["permissions"]}
             resources_permission_names.update(perm_names)
-        # NOTE:
-        #  inverse sort so that displayed permissions are sorted, since added from right to left in tree view
-        resources_permission_names = sorted(resources_permission_names, reverse=True)
+        resources_permission_names = sorted(resources_permission_names)
 
         resources = OrderedDict()
         for service in sorted(services):

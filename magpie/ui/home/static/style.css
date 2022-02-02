@@ -780,8 +780,8 @@ table.simple-list input[type="submit"] {
 }
 
 .tree-header {
-    padding: 1em 0 0;
     font-weight: bold;
+    padding: 1em 0 2.5em;
 }
 
 .tree .collapsible {
@@ -848,7 +848,10 @@ table.simple-list input[type="submit"] {
 }
 
 .tree-line {
-    display: block;
+    display: inline-flex;
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
 }
 
 .collapsible-tree-item {
@@ -860,18 +863,49 @@ table.simple-list input[type="submit"] {
     z-index: 10;
 }
 
+.tree-line-key-container {
+    margin-left: 0;
+    margin-right: 20em;
+}
+
+.tree-line-fill-container {
+    width: max-content;
+    margin-right: auto;
+    margin-left: 0;
+}
+
+.tree-line-item-container {
+    margin-right: 0;
+    width: max-content;
+    white-space: nowrap;
+    display: inline-block;
+    position: absolute;
+    max-width: 55%;
+    right: 6em;  /* page border + tab panel border */
+}
+
+.tree-line-item-container-scrollable {
+    overflow-x: hidden;
+    position: relative;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.tree-line-scroll-visible {
+    overflow-x: auto;
+}
+
 .tree-key {
-    /* display: block;
-    float: left; */
     display: inline-block;
     position: absolute;
 }
 
+.tree-key-value {
+}
+
 .tree-item {
-    /* display: block;
-    float: right; */
     display: inline-block;
-    width: 100%;
     vertical-align: middle;
 }
 
@@ -931,10 +965,10 @@ div.tree-button {
     /* ensure that sufficient space is provided to fit all possible permission-name side-by-side
        align with combobox and checkbox, must include both their respective width
     */
-    float: right;
     margin-left: 0.5em;  /* spacing with disallowed text to ensure one title doesn't end flush where the next begins */
-    width: 9.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-left] */
+    width: 10.5em;   /* [width = <desired-width> + permission-entry.width + permission-checkbox.width - margin-left] */
 
+    /* position */
     display: inline-flex;
     flex-wrap: nowrap;
     flex-direction: row;
@@ -966,6 +1000,8 @@ div.tree-button {
     border-radius: 3px;
     border-width: 1px;
     border-style: solid;
+    width: 100%;    /* use as much space as available in 'permission-entry' excluding space for 'permission-checkbox' */
+    margin-right: 5em;  /* value must be "big enough" to push checkbox right as much as possible, but < cell width */
 }
 
 /* Hide arrow icon in IE browsers */
@@ -989,6 +1025,7 @@ div.tree-button {
     padding: 2px 4px;
     opacity: 70%;
     width: max-content;
+
     /* position */
     position: absolute;
     z-index: 1;
