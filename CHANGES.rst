@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+`3.21.0 <https://github.com/Ouranosinc/Magpie/tree/3.21.0>`_ (2022-02-02)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add missing ``ServiceWFS`` permissions according to `OGC WFS standard <https://www.ogc.org/standards/wfs>`_.
