@@ -9,7 +9,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix missing link to *OpenAPI Specification* in generated `ReadTheDocs` TOC.
 
 .. _changes_3.21.0:
 
