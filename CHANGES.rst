@@ -23,6 +23,7 @@ Bug Fixes
   and documented in function parameters. User ``MAGPIE_ANONYMOUS_USER`` is not accessible from the API, which caused
   the auto-creation of allowed ``GetCapabilities`` to be impossible to remove. Given ``User``-level permission has
   an higher priority in resolution order than ``Group``-level, it was also impossible to revert it with ``deny``.
+* Fix missing link to *OpenAPI Specification* in generated `ReadTheDocs` TOC.
 
 .. _changes_3.21.0:
 
