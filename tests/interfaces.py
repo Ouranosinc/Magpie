@@ -5735,6 +5735,17 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_SERVICES
     @runner.MAGPIE_TEST_DEFAULTS
     def test_ValidateDefaultServiceProviders(self):
+        """
+        Validate that providers defined in sample ``config/providers.cfg`` are registered at startup.
+
+        .. versionchanged:: 3.22
+            For :term:`Service` types that allow ``GetCapabilities`` :term:`Permission`, it was expected that
+            they automatically set it to be allowed for ``MAGPIE_ANONYMOUS_USER``. This caused problems
+            when the inverse operation (deny) is required since ``MAGPIE_ANONYMOUS_USER`` cannot be modified
+            from the API and :term:`Direct Permission` has higher priority over :term:`Inherited Permission`,
+            making it possible to revert with any inherited :term:`Group` :term:`Permission`.
+            This behaviour is not automatically applied in following versions.
+        """
         services_list = utils.TestSetup.get_RegisteredServicesList(self)
 
         # ensure that registered services information are all matching the providers in config file
@@ -5774,10 +5785,19 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         for svc in services_list_getcap:
             svc_name = svc["service_name"]
             svc_type = svc["service_type"]
-            msg = "Service '{name}' of type '{type}' is expected to have '{perm}' permissions for user '{usr}'." \
-                  .format(name=svc_name, type=svc_type, perm="getcapabilities", usr=anonymous)
+            msg = "Service '{name}' of type '{type}' is expected to have '{perm}' permissions for user '{usr}'.".format(
+                name=svc_name, type=svc_type, perm="getcapabilities", usr=anonymous
+            )
             utils.check_val_is_in(svc_name, services_body[svc_type], msg=msg)
-            utils.check_val_is_in("getcapabilities", services_body[svc_type][svc_name]["permission_names"])  # noqa
+            if TestVersion(self.version) <= TestVersion("3.21"):
+                utils.check_val_is_in("getcapabilities", services_body[svc_type][svc_name]["permission_names"])  # noqa
+            else:
+                # example 'permission.cfg' adds 'getcapabilities' for some services
+                # make sure at least it is not directly on anonymous *USER*
+                svc_info = services_body[svc_type][svc_name]
+                if svc_info["permissions"]:  # valid if no permission otherwise
+                    for perm in svc_info["permissions"]:
+                        utils.check_val_not_equal(perm["type"], PermissionType.DIRECT.value)  # noqa
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetResources_ResponseFormat(self):
