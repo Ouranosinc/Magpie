@@ -9,7 +9,20 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Remove auto-creation of ``GetCapabilities`` allowed ``Permission`` applied directly onto any ``Service`` type that
+  supports it, for the ``MAGPIE_ANONYMOUS_USER``, for a ``Service`` registered at startup from a definition retrieved
+  from ``providers.cfg`` configuration file. Platforms that desire to maintain a similar auto-creation of the public
+  ``Permission`` should consider instead defining an entry in ``permissions.cfg`` for the targeted ``Service``.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* When the option is provided to auto-create ``GetCapabilities`` on a ``Service`` that supports it, the ``Permission``
+  is now applied onto ``MAGPIE_ANONYMOUS_GROUP`` instead of ``MAGPIE_ANONYMOUS_USER``, as it was originally intended
+  and documented in function parameters. User ``MAGPIE_ANONYMOUS_USER`` is not accessible from the API, which caused
+  the auto-creation of allowed ``GetCapabilities`` to be impossible to remove. Given ``User``-level permission has
+  an higher priority in resolution order than ``Group``-level, it was also impossible to revert it with ``deny``.
 
 .. _changes_3.21.0:
 

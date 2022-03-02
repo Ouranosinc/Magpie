@@ -95,7 +95,7 @@ def main(global_config=None, **settings):  # noqa: F811
     prov_cfg = combined_config or get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", settings, default_value="",
                                                raise_missing=False, raise_not_set=False, print_missing=True)
     magpie_register_services_from_config(prov_cfg, push_to_phoenix=push_phoenix, force_update=True,
-                                         disable_getcapabilities=False, db_session=db_session)
+                                         disable_getcapabilities=True, db_session=db_session)
 
     print_log("Register configuration permissions...", LOGGER)
     perm_cfg = combined_config or get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", settings, default_value="",

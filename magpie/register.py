@@ -324,8 +324,9 @@ def sync_services_phoenix(services, services_as_dicts=False):
 
 
 def _magpie_add_register_services_perms(services, statuses, curl_cookies, request_cookies, disable_getcapabilities):
+    # type: (ServicesSettings, Dict[Str, int], str, AnyCookiesType, bool) -> None
     magpie_url = get_magpie_url()
-    login_usr = get_constant("MAGPIE_ANONYMOUS_USER")
+    anon_group = get_constant("MAGPIE_ANONYMOUS_GROUP")
 
     for service_name in services:
         svc_available_perms_url = "{magpie}/services/{svc}/permissions" \
@@ -343,8 +344,8 @@ def _magpie_add_register_services_perms(services, statuses, curl_cookies, reques
             # update 'getcapabilities' permission when the service existed and it allowed
             if ((not disable_getcapabilities and statuses[service_name] == 409)
                     or statuses[service_name] == 200 or statuses[service_name] == 201):
-                svc_anonym_add_perms_url = "{magpie}/users/{usr}/services/{svc}/permissions" \
-                                           .format(magpie=magpie_url, usr=login_usr, svc=service_name)
+                svc_anonym_add_perms_url = "{magpie}/groups/{grp}/services/{svc}/permissions" \
+                                           .format(magpie=magpie_url, grp=anon_group, svc=service_name)
                 svc_anonym_perm_data = {"permission_name": Permission.GET_CAPABILITIES.value}
                 requests.post(svc_anonym_add_perms_url, data=svc_anonym_perm_data, cookies=request_cookies)
 
