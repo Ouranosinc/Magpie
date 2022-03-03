@@ -5788,10 +5788,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             msg = "Service '{name}' of type '{type}' is expected to have '{perm}' permissions for user '{usr}'.".format(
                 name=svc_name, type=svc_type, perm="getcapabilities", usr=anonymous
             )
-            utils.check_val_is_in(svc_name, services_body[svc_type], msg=msg)
             if TestVersion(self.version) <= TestVersion("3.21"):
+                utils.check_val_is_in(svc_name, services_body[svc_type], msg=msg)
                 utils.check_val_is_in("getcapabilities", services_body[svc_type][svc_name]["permission_names"])  # noqa
             else:
+                if svc_type not in services_body or svc_name not in services_body[svc_type]:
+                    continue  # no permission applied, service not returned is valid
                 # example 'permission.cfg' adds 'getcapabilities' for some services
                 # make sure at least it is not directly on anonymous *USER*
                 svc_info = services_body[svc_type][svc_name]
