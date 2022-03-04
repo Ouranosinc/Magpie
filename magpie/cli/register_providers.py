@@ -33,8 +33,11 @@ def make_parser():
                         help="Enforce update of services URL if conflicting services are found (default: %(default)s).")
     parser.add_argument("-g", "--no-getcapabilities-overwrite", default=False, action="store_true",
                         dest="no_getcapabilities",
-                        help="Disable overwriting 'GetCapabilities' permissions to applicable services when they "
-                             "already exist, ie: when conflicts occur during service creation (default: %(default)s)")
+                        help="Disable overwriting 'GetCapabilities' permission to allow applicable services that "
+                             "support it to become publicly accessible if this permission was missing or already "
+                             "exists but was incorrectly defined. Anonymous group would then be given permission for "
+                             "'GetCapabilities' to grant public access to the service entrypoint. "
+                             "(default: %(default)s)")
     parser.add_argument("-p", "--phoenix-push", default=False, action="store_true", dest="phoenix_push",
                         help="push registered Magpie services to sync in Phoenix (default: %(default)s)")
     parser.add_argument("--db", "--use-db-session", default=False, action="store_true", dest="use_db_session",
