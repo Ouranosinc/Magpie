@@ -195,7 +195,7 @@ class BaseViews(object):
     MAGPIE_FIXED_USERS_REFS = []
     """
     Special :term:`User` that cannot have any relationship edited.
-     
+
     This includes both :term:`Group` memberships and :term:`Permission` references.
     """
 
