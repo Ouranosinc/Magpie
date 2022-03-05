@@ -105,6 +105,10 @@ def delete_user_view(request):
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
     uu.check_user_editable(user, request)
+    ax.verify_param(user.user_name, not_equal=True, with_param=False,  # avoid leaking username details
+                    param_compare=get_constant("MAGPIE_ADMIN_USER", request),
+                    http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
+
     ax.evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
 
