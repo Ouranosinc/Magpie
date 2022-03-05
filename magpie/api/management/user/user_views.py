@@ -72,6 +72,7 @@ def update_user_view(request):
     Update user information by user name.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     new_user_name = ar.get_multiformat_body(request, "user_name", default=user.user_name)
     new_email = ar.get_multiformat_body(request, "email", default=user.email)
     new_password = ar.get_multiformat_body(request, "password", default=user.user_password)
@@ -103,10 +104,7 @@ def delete_user_view(request):
     Delete a user by name.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-    ax.verify_param(user.user_name, not_in=True, with_param=False,  # avoid leaking username details
-                    param_compare=[get_constant("MAGPIE_ADMIN_USER", request),
-                                   get_constant("MAGPIE_ANONYMOUS_USER", request)],
-                    http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
+    uu.check_user_editable(user, request)
     ax.evaluate_call(lambda: request.db.delete(user), fallback=lambda: request.db.rollback(),
                      http_error=HTTPForbidden, msg_on_fail=s.User_DELETE_ForbiddenResponseSchema.description)
 
@@ -149,7 +147,7 @@ def assign_user_group_view(request):
     Assign a user to a group.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
-
+    uu.check_user_editable(user, request)
     group_name = ar.get_value_multiformat_body_checked(request, "group_name")
     group = ax.evaluate_call(lambda: GroupService.by_group_name(group_name, db_session=request.db),
                              fallback=lambda: request.db.rollback(), http_error=HTTPForbidden,
@@ -169,6 +167,7 @@ def delete_user_group_view(request):
     Removes a user from a group.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     group = ar.get_group_matchdict_checked(request)
     uu.delete_user_group(user, group, request.db)
     return ax.valid_http(http_success=HTTPOk, detail=s.UserGroup_DELETE_OkResponseSchema.description)
@@ -272,6 +271,7 @@ def create_user_resource_permissions_view(request):
     Create a permission on specific resource for a user.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     resource = ar.get_resource_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, resource)
     return uu.create_user_resource_permission_response(user, resource, permission, request.db, overwrite=False)
@@ -291,6 +291,7 @@ def replace_user_resource_permissions_view(request):
     Can be used to adjust permission modifiers.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     resource = ar.get_resource_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, resource)
     return uu.create_user_resource_permission_response(user, resource, permission, request.db, overwrite=True)
@@ -308,6 +309,7 @@ def delete_user_resource_permissions_view(request):
     Delete a permission from a specific resource for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     resource = ar.get_resource_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, resource)
     return uu.delete_user_resource_permission_response(user, resource, permission, request.db)
@@ -325,6 +327,7 @@ def delete_user_resource_permission_name_view(request):
     Delete a permission by name from a resource for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     resource = ar.get_resource_matchdict_checked(request)
     permission = ar.get_permission_matchdict_checked(request, resource)
     return uu.delete_user_resource_permission_response(user, resource, permission, request.db)
@@ -397,6 +400,7 @@ def create_user_service_permissions_view(request):
     Create a permission on a service for a user.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     service = ar.get_service_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, service)
     return uu.create_user_resource_permission_response(user, service, permission, request.db, overwrite=False)
@@ -416,6 +420,7 @@ def replace_user_service_permissions_view(request):
     Can be used to adjust permission modifiers.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     service = ar.get_service_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, service)
     return uu.create_user_resource_permission_response(user, service, permission, request.db, overwrite=True)
@@ -433,6 +438,7 @@ def delete_user_service_permissions_view(request):
     Delete a permission from a service for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     service = ar.get_service_matchdict_checked(request)
     permission = ar.get_permission_multiformat_body_checked(request, service)
     return uu.delete_user_resource_permission_response(user, service, permission, request.db)
@@ -450,6 +456,7 @@ def delete_user_service_permission_name_view(request):
     Delete a permission by name from a service for a user (not including his groups permissions).
     """
     user = ar.get_user_matchdict_checked_or_logged(request)
+    uu.check_user_editable(user, request)
     service = ar.get_service_matchdict_checked(request)
     permission = ar.get_permission_matchdict_checked(request, service)
     return uu.delete_user_resource_permission_response(user, service, permission, request.db)

@@ -2006,8 +2006,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
         path = "/groups/{grp}/resources/{res}/permissions".format(res=p_res_id, grp=self.grp)
         utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
-        path = "/users/{usr}/resources/{res}/permissions".format(res=c_res_id, usr=usr_anon)
-        utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
+        if TestVersion(self.version) < TestVersion("3.22"):
+            path = "/groups/{usr}/resources/{res}/permissions".format(res=c_res_id, usr=usr_anon)
+            utils.test_request(self, "POST", path, data=data_match, headers=self.json_headers, cookies=self.cookies)
         path = "/groups/{grp}/resources/{res}/permissions".format(res=svc_res_id, grp=grp_anon)
         utils.test_request(self, "POST", path, data=data_recur, headers=self.json_headers, cookies=self.cookies)
 
@@ -2071,6 +2072,20 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.check_GetUserResourcePermissions(self, self.usr, body["resource"]["resource_id"])
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_GetUserResourcesPermissions_ReservedKeyword_AnonymousAllowed(self):
+        """
+        Make sure that, allow edition is forbidden, getting permissions is allowed for anonymous.
+
+        This operation is allowed since it can be used with inheritance or effective flags to evaluate public access.
+        """
+        utils.TestSetup.create_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        anon = get_constant("MAGPIE_ANONYMOUS_USER")
+        utils.TestSetup.check_GetUserResourcePermissions(self, anon, body["resource"]["resource_id"])
+
+    @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_PostUserResourcesPermissions_Created(self):
@@ -2124,6 +2139,24 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.delete_TestServiceResource(self, override_resource_name=resource_name)
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_PostUserResourcesPermissions_ReservedKeyword_AnonymousForbidden(self):
+        utils.warn_version(self, "post user permissions forbidden for anonymous user", "3.22", skip=True)
+
+        utils.TestSetup.create_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res_id = info["resource_id"]
+        anon = get_constant("MAGPIE_ANONYMOUS_USER")
+        perm = {"name": self.test_service_perm, "access": Access.DENY.value, "scope": Scope.MATCH.value}
+        data = {"permission": perm}
+        path = "/users/{usr}/resources/{res}/permissions".format(usr=self.test_user_name, res=res_id)
+        resp = utils.test_request(self, "POST", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 403, expected_method="POST")
+        utils.check_val_is_in("anonymous", body["detail"])
+
+    @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_UpdateUserResourcePermissions(self):
@@ -2172,6 +2205,24 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(perm_body["scope"], data["permission"]["scope"])
 
     @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_UpdateUserResourcePermissions_ReservedKeyword_AnonymousForbidden(self):
+        utils.warn_version(self, "update user permissions forbidden for anonymous user", "3.22", skip=True)
+
+        utils.TestSetup.create_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res_id = info["resource_id"]
+        anon = get_constant("MAGPIE_ANONYMOUS_USER")
+        perm = {"name": self.test_service_perm, "access": Access.DENY.value, "scope": Scope.MATCH.value}
+        data = {"permission": perm}
+        path = "/users/{usr}/resources/{res}/permissions".format(usr=self.test_user_name, res=res_id)
+        resp = utils.test_request(self, "PUT", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 403, expected_method="PUT")
+        utils.check_val_is_in("anonymous", body["detail"])
+
+    @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_DeleteUserResourcePermission(self):
@@ -2197,6 +2248,24 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_not_in(self.test_resource_perm_name, body["permission_names"])
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_DeleteUserResourcePermission_ReservedKeyword_AnonymousForbidden(self):
+        utils.warn_version(self, "delete user permissions forbidden for anonymous user", "3.22", skip=True)
+
+        utils.TestSetup.create_TestService(self)
+        body = utils.TestSetup.create_TestServiceResource(self)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        res_id = info["resource_id"]
+        anon = get_constant("MAGPIE_ANONYMOUS_USER")
+        perm = {"name": self.test_service_perm, "access": Access.DENY.value, "scope": Scope.MATCH.value}
+        data = {"permission": perm}
+        path = "/users/{usr}/resources/{res}/permissions".format(usr=anon, res=res_id)
+        resp = utils.test_request(self, "DELETE", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        utils.check_val_is_in("anonymous", body["detail"])
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_SERVICES
@@ -2250,6 +2319,21 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_SERVICES
     @runner.MAGPIE_TEST_PERMISSIONS
+    def test_UpdateUserServicePermissions_ReservedKeyword_AnonymousForbidden(self):
+        utils.warn_version(self, "update user permissions forbidden for anonymous user", "3.22", skip=True)
+
+        utils.TestSetup.create_TestService(self)
+        anon = get_constant("MAGPIE_ANONYMOUS_USER")
+        perm = {"name": self.test_service_perm, "access": Access.DENY.value, "scope": Scope.MATCH.value}
+        data = {"permission": perm}
+        path = "/users/{}/services/{}/permissions".format(self.test_user_name, self.test_service_name)
+        resp = utils.test_request(self, "PUT", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 403, expected_method="PUT")
+        utils.check_val_is_in("anonymous", body["detail"])
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_PERMISSIONS
     def test_DeleteUserServicePermission(self):
         utils.warn_version(self, "delete user permissions with body", "3.0", skip=True)
 
@@ -2270,6 +2354,26 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_not_in(self.test_service_perm, body["permission_names"])
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_DeleteUserServicePermission_ReservedKeyword_AnonymousForbidden(self):
+        utils.warn_version(self, "delete user permissions forbidden for anonymous user", "3.22", skip=True)
+
+        utils.TestSetup.create_TestService(self)
+        anon = get_constant("MAGPIE_ANONYMOUS_USER")
+        path = "/users/{usr}/services/{svc}/permissions".format(usr=anon, svc=self.test_service_name)
+        data = {"permission_name": self.test_service_perm}
+        resp = utils.test_request(self, "DELETE", path, json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        utils.check_val_is_in("anonymous", body["detail"])
+
+        path_perm = "{path}/{perm}".format(path=path, perm=self.test_service_perm)
+        resp = utils.test_request(self, "DELETE", path_perm, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 403, expected_method="DELETE")
+        utils.check_val_is_in("anonymous", body["detail"])
 
     def create_validate_permissions(self,
                                     test_user_name,                     # type: Str
@@ -4286,6 +4390,19 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, self.update_method, path, data=data,
                                   headers=self.json_headers, cookies=self.cookies, expect_errors=True)
         utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_UpdateUser_ReservedKeyword_AnonymousForbidden(self):
+        utils.warn_version(self, "anonymous user cannot be updated", "3.22", skip=True)
+
+        anon = get_constant("MAGPIE_ANONYMOUS_USER")
+        path = "/users/{usr}".format(usr=anon)
+        new_user_name = anon + "-updated"
+        self.extra_user_names.add(new_user_name)
+        data = {"user_name": new_user_name}
+        resp = utils.test_request(self, self.update_method, path, data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUser_nothing(self):

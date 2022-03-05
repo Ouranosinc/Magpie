@@ -1969,7 +1969,7 @@ class User_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class User_CheckAnonymous_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Anonymous user query refused by db."
+    description = "Anonymous user refused for this operation."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 

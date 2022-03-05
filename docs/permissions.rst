@@ -279,6 +279,11 @@ but the same person wouldn't retain access to the same resources anymore as soon
 (login). That :term:`User` would have the impression that its access rights are lowered although they should
 naturally expect increased privileges after authenticating itself.
 
+.. versionchanged:: 3.22
+    Starting with this version, modifications to :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` itself, or any
+    :term:`Service`, :term:`Resource` or :term:`Permission` with references to that *special* :term:`User` will be
+    explicitly forbidden by the :term:`API` to avoid above mentioned ambiguities.
+
 Special :term:`User` :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` is available only for evaluation purpose of
 :term:`Public`-only :term:`Permission` applied to :term:`Service` and :term:`Resource`, but is technically not required
 to execute `Magpie` application. Effectively, when the active session corresponds to unauthenticated
