@@ -20,6 +20,7 @@ Features / Changes
   be converted automatically to the corresponding ``MAGPIE_ANONYMOUS_GROUP`` with database migration at application
   startup. If a conflict occurs, the existing ``Permission`` for ``MAGPIE_ANONYMOUS_GROUP`` will be prioritized and
   the one for ``MAGPIE_ANONYMOUS_USER`` will be dropped.
+* Update UI to better represent disallowed operations for ``MAGPIE_ANONYMOUS_USER``.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

@@ -247,7 +247,7 @@ ${membership_alerts.edit_membership_alerts()}
                 %if group in own_groups:
                    checked
                 %endif
-                %if group in MAGPIE_FIXED_GROUP_MEMBERSHIPS:
+                %if group in MAGPIE_FIXED_GROUP_MEMBERSHIPS or user_name in MAGPIE_FIXED_USERS_REFS:
                    disabled
                 %else:
                    onchange="document.getElementById('edit_membership').submit()"
