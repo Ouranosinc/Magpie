@@ -2156,7 +2156,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         perm = {"name": self.test_service_perm, "access": Access.DENY.value, "scope": Scope.MATCH.value}
         data = {"permission": perm}
         path = "/users/{usr}/resources/{res}/permissions".format(usr=anon, res=res_id)
-        resp = utils.test_request(self, "POST", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, "POST", path, json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 403, expected_method="POST")
         utils.check_val_is_in("anonymous", body["detail"].lower())
 
@@ -2222,7 +2223,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         perm = {"name": self.test_service_perm, "access": Access.DENY.value, "scope": Scope.MATCH.value}
         data = {"permission": perm}
         path = "/users/{usr}/resources/{res}/permissions".format(usr=anon, res=res_id)
-        resp = utils.test_request(self, "PUT", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, "PUT", path, json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 403, expected_method="PUT")
         utils.check_val_is_in("anonymous", body["detail"].lower())
 
@@ -2332,7 +2334,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         perm = {"name": self.test_service_perm, "access": Access.DENY.value, "scope": Scope.MATCH.value}
         data = {"permission": perm}
         path = "/users/{}/services/{}/permissions".format(anon, self.test_service_name)
-        resp = utils.test_request(self, "PUT", path, json=data, headers=self.json_headers, cookies=self.cookies)
+        resp = utils.test_request(self, "PUT", path, json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 403, expected_method="PUT")
         utils.check_val_is_in("anonymous", body["detail"].lower())
 
