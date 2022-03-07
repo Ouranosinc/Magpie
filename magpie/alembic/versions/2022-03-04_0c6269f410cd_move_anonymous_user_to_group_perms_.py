@@ -46,8 +46,10 @@ usr_res_perms = sa.table(
 
 def upgrade():
     session = Session(bind=op.get_bind())
-    anon_usr = session.execute(sa.select([users]).where(users.c.user_name == get_constant("MAGPIE_ANONYMOUS_USER")))
-    anon_grp = session.execute(sa.select([groups]).where(groups.c.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP")))
+    anon_usr_name = get_constant("MAGPIE_ANONYMOUS_USER")
+    anon_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
+    anon_usr = session.execute(sa.select([users]).where(users.c.user_name == anon_usr_name)).fetchone()
+    anon_grp = session.execute(sa.select([groups]).where(groups.c.group_name == anon_grp_name)).fetchone()
     anon_usr_res_perms = session.execute(sa.select([usr_res_perms]).where(usr_res_perms.c.user_id == anon_usr.id))
     anon_grp_res_perms = session.execute(sa.select([grp_res_perms]).where(grp_res_perms.c.group_id == anon_grp.id))
     for urp in anon_usr_res_perms:
