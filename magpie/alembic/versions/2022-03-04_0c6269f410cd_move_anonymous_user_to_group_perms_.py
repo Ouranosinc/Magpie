@@ -50,6 +50,11 @@ def upgrade():
     anon_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
     anon_usr = session.execute(sa.select([users]).where(users.c.user_name == anon_usr_name)).fetchone()
     anon_grp = session.execute(sa.select([groups]).where(groups.c.group_name == anon_grp_name)).fetchone()
+    # in case of first-time db creation, both are undefined
+    # ignore case where only group exists, since it is expected they come together and cannot be modified by API
+    # if this happens, it is because admin modified db manually, up to them to patch things accordingly
+    if anon_usr is None or anon_grp is None:
+        return
     anon_usr_res_perms = session.execute(sa.select([usr_res_perms]).where(usr_res_perms.c.user_id == anon_usr.id))
     anon_grp_res_perms = session.execute(sa.select([grp_res_perms]).where(grp_res_perms.c.group_id == anon_grp.id))
     for urp in anon_usr_res_perms:
