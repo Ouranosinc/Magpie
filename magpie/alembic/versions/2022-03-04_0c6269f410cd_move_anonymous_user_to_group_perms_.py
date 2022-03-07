@@ -48,8 +48,8 @@ def upgrade():
     session = Session(bind=op.get_bind())
     anon_usr = session.execute(sa.select([users]).where(users.c.user_name == get_constant("MAGPIE_ANONYMOUS_USER")))
     anon_grp = session.execute(sa.select([groups]).where(groups.c.group_name == get_constant("MAGPIE_ANONYMOUS_GROUP")))
-    anon_usr_res_perms = session.execute(sa.select([usr_res_perms]).where(usr_res_perms.c.user_id == anon_usr.c.id))
-    anon_grp_res_perms = session.execute(sa.select([grp_res_perms]).where(grp_res_perms.c.group_id == anon_grp.c.id))
+    anon_usr_res_perms = session.execute(sa.select([usr_res_perms]).where(usr_res_perms.c.user_id == anon_usr.id))
+    anon_grp_res_perms = session.execute(sa.select([grp_res_perms]).where(grp_res_perms.c.group_id == anon_grp.id))
     for urp in anon_usr_res_perms:
         # prioritize existing permission on group over user, regardless of permission name
         if not any(grp.resource_id == urp.resource_id for grp in anon_grp_res_perms):
