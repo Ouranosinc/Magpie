@@ -8,13 +8,13 @@ The OWSRequest is based on pywps code:
 import abc
 from typing import TYPE_CHECKING
 
-import lxml.etree  # nosec: B410 # module safe but bandit flags it : https://github.com/tiran/defusedxml/issues/38
-
+from magpie import xml_util
 from magpie.api.requests import get_multiformat_body
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_PLAIN, get_header, get_logger, is_json_body
 
 if TYPE_CHECKING:
     from pyramid.request import Request
+
 LOGGER = get_logger(__name__)
 
 
@@ -93,22 +93,12 @@ class OWSGetParser(OWSParser):
         return None
 
 
-def lxml_strip_ns(tree):
-    for node in tree.iter():
-        try:
-            has_namespace = node.tag.startswith("{")
-        except AttributeError:
-            continue  # node.tag is not a string (node is a comment or similar)
-        if has_namespace:
-            node.tag = node.tag.split("}", 1)[1]
-
-
 class OWSPostParser(OWSParser):
 
     def __init__(self, request):
         super(OWSPostParser, self).__init__(request)
-        self.document = lxml.etree.fromstring(self.request.body)  # nosec: B410
-        lxml_strip_ns(self.document)
+        self.document = xml_util.fromstring(self.request.body)
+        xml_util.strip_namespace(self.document)
 
     def _get_param_value(self, param):
         if param in self.document.attrib:
