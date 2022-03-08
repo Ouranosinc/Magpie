@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from lxml import etree as lxml_etree  # nosec: B410  # flagged known issue, this is what the applied fix below is about
 
 if TYPE_CHECKING:
-    from lxml.etree._FeedParser import _FeedParser as Parser  # noqa # pylint: disable=W0212
+    from lxml.etree._FeedParser import _FeedParser as Parser  # noqa # nosec: B410 # pylint: disable=W0212
 
 XML_PARSER = lxml_etree.XMLParser(
     # security fix: XML external entity (XXE) injection
