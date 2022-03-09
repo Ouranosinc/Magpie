@@ -61,7 +61,11 @@ def upgrade():
         # prioritize existing permission on group over user, regardless of permission name
         if not any(grp.resource_id == urp.resource_id for grp in anon_grp_res_perms):
             sa.insert(grp_res_perms, (anon_grp.id, urp.resource_id, urp.perm_name))
-        session.delete(urp)
+        session.execute(sa.delete(usr_res_perms).where(
+            usr_res_perms.c.user_id == urp.user_id and
+            usr_res_perms.c.resource_id == urp.resource_id and
+            usr_res_perms.c.perm_name == urp.perm_name
+        ))
     session.commit()
 
 
