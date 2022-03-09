@@ -32,6 +32,7 @@ Bug Fixes
   would cause auto-creation of allowed ``GetCapabilities`` to be impossible to remove. Given ``User``-level permission
   has an higher priority in resolution order than ``Group``-level, it was also impossible to revert it with ``deny``.
 * Fix missing link to *OpenAPI Specification* in generated `ReadTheDocs` TOC.
+* Update ``bandit`` version and resolve flagged ``lxml`` uses with secured `XML` parsing utilities.
 
 .. _changes_3.21.0:
 
