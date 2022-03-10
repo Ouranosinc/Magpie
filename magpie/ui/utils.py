@@ -178,11 +178,41 @@ class BaseViews(object):
     Base methods for Magpie UI pages.
     """
     MAGPIE_FIXED_GROUP_MEMBERSHIPS = []
+    """
+    Special :term:`Group` memberships that cannot be edited.
+    """
+
     MAGPIE_FIXED_GROUP_EDITS = []
+    """
+    Special :term:`Group` details that cannot be edited.
+    """
+
     MAGPIE_FIXED_USERS = []
-    MAGPIE_USER_PWD_LOCKED = []  # used when user self-edit itself but is not supported since disabled
+    """
+    Special :term:`User` details that cannot be edited.
+    """
+
+    MAGPIE_FIXED_USERS_REFS = []
+    """
+    Special :term:`User` that cannot have any relationship edited.
+
+    This includes both :term:`Group` memberships and :term:`Permission` references.
+    """
+
+    MAGPIE_USER_PWD_LOCKED = []
+    """
+    Special :term:`User` that *could* self-edit themselves, but is disabled since conflicting with other policies.
+    """
+
     MAGPIE_USER_PWD_DISABLED = []
+    """
+    Special :term:`User` where password cannot be edited (managed by `Magpie` configuration settings).
+    """
+
     MAGPIE_ANONYMOUS_GROUP = None
+    """
+    Reference to :py:data:`magpie.constants.MAGPIE_ANONYMOUS_GROUP` for convenience in UI pages.
+    """
 
     def __init__(self, request):
         self.request = request
@@ -192,11 +222,12 @@ class BaseViews(object):
 
         anonym_grp = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=self.request)
         admin_grp = get_constant("MAGPIE_ADMIN_GROUP", settings_container=self.request)
-        self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonym_grp]  # special groups membership that cannot be edited
-        self.__class__.MAGPIE_FIXED_GROUP_EDITS = [anonym_grp, admin_grp]  # special groups that cannot be edited
+        self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonym_grp]
+        self.__class__.MAGPIE_FIXED_GROUP_EDITS = [anonym_grp, admin_grp]
         # special users that cannot be deleted
         anonym_usr = get_constant("MAGPIE_ANONYMOUS_USER", self.request)
         admin_usr = get_constant("MAGPIE_ADMIN_USER", self.request)
+        self.__class__.MAGPIE_FIXED_USERS_REFS = [anonym_usr]
         self.__class__.MAGPIE_FIXED_USERS = [admin_usr, anonym_usr]
         self.__class__.MAGPIE_USER_PWD_LOCKED = [admin_usr]
         self.__class__.MAGPIE_USER_PWD_DISABLED = [anonym_usr, admin_usr]
@@ -225,6 +256,7 @@ class BaseViews(object):
         all_data.setdefault("MAGPIE_FIXED_GROUP_MEMBERSHIPS", self.MAGPIE_FIXED_GROUP_MEMBERSHIPS)
         all_data.setdefault("MAGPIE_FIXED_GROUP_EDITS", self.MAGPIE_FIXED_GROUP_EDITS)
         all_data.setdefault("MAGPIE_FIXED_USERS", self.MAGPIE_FIXED_USERS)
+        all_data.setdefault("MAGPIE_FIXED_USERS_REFS", self.MAGPIE_FIXED_USERS_REFS)
         all_data.setdefault("MAGPIE_USER_PWD_LOCKED", self.MAGPIE_USER_PWD_LOCKED)
         all_data.setdefault("MAGPIE_USER_PWD_DISABLED", self.MAGPIE_USER_PWD_DISABLED)
         all_data.setdefault("MAGPIE_USER_REGISTRATION_ENABLED", self.MAGPIE_USER_REGISTRATION_ENABLED)

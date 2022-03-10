@@ -257,7 +257,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
 
     @classmethod
     def setUpClass(cls):
-        cls.version = __meta__.__version__
+        cls.version = utils.TestSetup.get_Version(cls)
         cls.settings = {}
         cls.app = None
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
@@ -550,8 +550,6 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
         could change request query parameters, headers, authentication tokens, etc.
         """
 
-        anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
-
         # create some test OWS service (WPS used, but could be any)
         svc_name = self.test_service_name + "_wps"
         svc_type = ServiceWPS.service_type
@@ -559,14 +557,26 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
         svc_info = utils.TestSetup.create_TestService(self,
                                                       override_service_name=svc_name,
                                                       override_service_type=svc_type)
-        utils.TestSetup.create_TestUserResourcePermission(self,
-                                                          resource_info=svc_info,
-                                                          override_user_name=anonymous,
-                                                          override_permission=Permission.GET_CAPABILITIES)
-        utils.TestSetup.create_TestUserResourcePermission(self,
-                                                          resource_info=svc_info,
-                                                          override_user_name=anonymous,
-                                                          override_permission=Permission.EXECUTE)
+        if utils.TestVersion(self.version) >= utils.TestVersion("3.22"):
+            anonymous = get_constant("MAGPIE_ANONYMOUS_GROUP")
+            utils.TestSetup.create_TestGroupResourcePermission(self,
+                                                               resource_info=svc_info,
+                                                               override_group_name=anonymous,
+                                                               override_permission=Permission.GET_CAPABILITIES)
+            utils.TestSetup.create_TestGroupResourcePermission(self,
+                                                               resource_info=svc_info,
+                                                               override_group_name=anonymous,
+                                                               override_permission=Permission.EXECUTE)
+        else:
+            anonymous = get_constant("MAGPIE_ANONYMOUS_USER")
+            utils.TestSetup.create_TestUserResourcePermission(self,
+                                                              resource_info=svc_info,
+                                                              override_user_name=anonymous,
+                                                              override_permission=Permission.GET_CAPABILITIES)
+            utils.TestSetup.create_TestUserResourcePermission(self,
+                                                              resource_info=svc_info,
+                                                              override_user_name=anonymous,
+                                                              override_permission=Permission.EXECUTE)
 
         utils.check_or_try_logout_user(self)  # anonymous
         self.test_headers = None
@@ -745,9 +755,15 @@ class TestAdapterCachingPartialRegions(TestAdapterCaching):
         svc_type = ServiceWPS.service_type
         utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
         info = utils.TestSetup.create_TestService(self, override_service_name=svc_name, override_service_type=svc_type)
-        utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info,
-                                                          override_user_name=anonymous,
-                                                          override_permission=Permission.GET_CAPABILITIES)
+
+        if utils.TestVersion(self.version) >= utils.TestVersion("3.22"):
+            utils.TestSetup.create_TestGroupResourcePermission(self, resource_info=info,
+                                                               override_group_name=anonymous,  # same as user (forced)
+                                                               override_permission=Permission.GET_CAPABILITIES)
+        else:
+            utils.TestSetup.create_TestUserResourcePermission(self, resource_info=info,
+                                                              override_user_name=anonymous,
+                                                              override_permission=Permission.GET_CAPABILITIES)
         utils.check_or_try_logout_user(self)
 
         svc_path_getcap = "/ows/proxy/{}?request=GetCapabilities&service=WPS".format(svc_name)  # allowed
