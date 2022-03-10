@@ -1,5 +1,5 @@
 """
-create ordering column.
+Create ordering column.
 
 Revision ID: 264049f80948
 Revises: 46a9c4fb9560
@@ -10,7 +10,8 @@ from __future__ import unicode_literals
 import sqlalchemy as sa  # noqa: F401
 from alembic import op  # noqa: F401
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "264049f80948"
 down_revision = "46a9c4fb9560"
 

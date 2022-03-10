@@ -16,7 +16,8 @@ from sqlalchemy.orm.session import sessionmaker
 from ziggurat_foundations.models.services.group_resource_permission import GroupResourcePermissionService
 from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "a2a039e2cff5"
 down_revision = "b739afcc91db"
 branch_labels = None
@@ -31,7 +32,7 @@ root_dir = os.path.dirname(root_dir)  # magpie
 root_dir = os.path.dirname(root_dir)  # root
 sys.path.insert(0, root_dir)
 
-from magpie.permissions import PermissionSet, Scope  # isort:skip # noqa: E402
+from magpie.permissions import PermissionSet, Scope  # isort:skip # pylint: disable=C0413 # noqa: E402
 
 
 def upgrade():

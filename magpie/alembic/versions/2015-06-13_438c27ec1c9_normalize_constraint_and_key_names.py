@@ -1,5 +1,5 @@
 """
-normalize constraint and key names correct keys for pre 0.5.6 naming convention.
+Normalize constraint and key names correct keys for pre 0.5.6 naming convention.
 
 Revision ID: 438c27ec1c9
 Revises: 439766f6104d
@@ -12,7 +12,8 @@ from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.engine.reflection import Inspector
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "438c27ec1c9"
 down_revision = "439766f6104d"
 
