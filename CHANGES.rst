@@ -9,7 +9,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Update linting configuration rules to validate all migration scripts employed by ``alembic``.
+* Apply applicable linting fixes over ``alembic`` migration scripts.
 
 .. _changes_3.22.0:
 
