@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.22.0:
+
+`3.22.0 <https://github.com/Ouranosinc/Magpie/tree/3.22.0>`_ (2022-03-10)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Remove auto-creation of ``GetCapabilities`` allowed ``Permission`` applied directly onto any ``Service`` type that
