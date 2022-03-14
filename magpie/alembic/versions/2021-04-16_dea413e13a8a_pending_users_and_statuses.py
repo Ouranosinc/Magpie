@@ -11,10 +11,10 @@ import datetime
 
 import sqlalchemy as sa
 from alembic import op
-from alembic.context import get_context  # noqa: F401
 from sqlalchemy.orm.session import sessionmaker
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "dea413e13a8a"
 down_revision = "954a9d7fe740"
 branch_labels = None

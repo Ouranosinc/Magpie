@@ -1,5 +1,5 @@
 """
-make password hash field bigger.
+Make password hash field longer.
 
 Revision ID: 46a9c4fb9560
 Revises: 5c84d7260c5
@@ -10,15 +10,16 @@ from __future__ import unicode_literals
 import sqlalchemy as sa
 from alembic import op
 
-# downgrade revision identifier, used by Alembic.
-revision = '46a9c4fb9560'
-down_revision = '5c84d7260c5'
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
+revision = "46a9c4fb9560"
+down_revision = "5c84d7260c5"
 
 
 def upgrade():
-    op.alter_column('users', 'user_password',
+    op.alter_column("users", "user_password",
                     type_=sa.Unicode(256), existing_type=sa.Unicode(40))
-    op.alter_column('users', 'security_code',
+    op.alter_column("users", "security_code",
                     type_=sa.Unicode(256), existing_type=sa.Unicode(40))
 
 

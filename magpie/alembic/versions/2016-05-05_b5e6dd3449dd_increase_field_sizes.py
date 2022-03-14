@@ -1,5 +1,5 @@
 """
-increase user and token field sized.
+Increase user and token field sized.
 
 Revision ID: b5e6dd3449dd
 Revises: 57bbf0c387c
@@ -10,7 +10,8 @@ from __future__ import unicode_literals
 import sqlalchemy as sa  # noqa: F401
 from alembic import op  # noqa: F401
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "b5e6dd3449dd"
 down_revision = "57bbf0c387c"
 

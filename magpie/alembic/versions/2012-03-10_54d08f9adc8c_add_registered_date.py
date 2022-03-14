@@ -1,5 +1,5 @@
 """
-add registered_date to user.
+Add registered_date to user.
 
 Revision ID: 54d08f9adc8c
 Revises: 2d472fe79b95
@@ -12,20 +12,21 @@ from alembic import op
 from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 
-# revision identifiers, used by Alembic.
-revision = '54d08f9adc8c'
-down_revision = '2d472fe79b95'
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
+revision = "54d08f9adc8c"
+down_revision = "2d472fe79b95"
 
 
 def upgrade():
     c = get_context()
     if isinstance(c.connection.engine.dialect, PGDialect):
-        op.add_column('users', sa.Column('registered_date',
+        op.add_column("users", sa.Column("registered_date",
                                          sa.TIMESTAMP(timezone=False),
                                          default=sa.sql.func.now(),
                                          server_default=sa.func.now()))
     else:
-        op.add_column('users', sa.Column('registered_date',
+        op.add_column("users", sa.Column("registered_date",
                                          sa.TIMESTAMP(timezone=False),
                                          default=sa.sql.func.now()))
 

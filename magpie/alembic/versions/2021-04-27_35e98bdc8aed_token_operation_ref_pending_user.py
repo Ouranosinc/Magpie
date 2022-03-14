@@ -9,7 +9,8 @@ Create Date: 2021-04-27 18:58:34.606126
 import sqlalchemy as sa
 from alembic import op
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "35e98bdc8aed"
 down_revision = "00c617174e54"
 branch_labels = None

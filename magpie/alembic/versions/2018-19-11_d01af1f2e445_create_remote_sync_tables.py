@@ -12,7 +12,8 @@ from sqlalchemy.orm.session import sessionmaker
 Session = sessionmaker()
 
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "d01af1f2e445"
 down_revision = "c352a98d570e"
 branch_labels = None

@@ -1,5 +1,5 @@
 """
-add lower() indexes to pg.
+Add lower() indexes to pg.
 
 Revision ID: 439766f6104d
 Revises: 20671b28c538
@@ -11,7 +11,8 @@ from alembic import op
 from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "439766f6104d"
 down_revision = "20671b28c538"
 

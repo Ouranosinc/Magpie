@@ -1,5 +1,5 @@
 """
-change all linking keys from chars to id's.
+Change all linking keys from chars to id's.
 
 Revision ID: 20671b28c538
 Revises: 4c10d97c509
@@ -13,7 +13,8 @@ from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.mysql.base import MySQLDialect
 from sqlalchemy.engine.reflection import Inspector
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "20671b28c538"
 down_revision = "4c10d97c509"
 

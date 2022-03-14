@@ -8,12 +8,12 @@ Create Date: 2022-03-04 23:13:39.987696
 
 import sqlalchemy as sa
 from alembic import op
-from alembic.context import get_context  # noqa: F401
 from sqlalchemy.orm.session import sessionmaker
 
 from magpie.constants import get_constant  # isort:skip # noqa: E402
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "0c6269f410cd"
 down_revision = "cb92ff1f81bb"
 branch_labels = None

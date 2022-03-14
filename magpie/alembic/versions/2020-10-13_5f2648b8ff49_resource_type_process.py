@@ -12,7 +12,8 @@ from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm.session import sessionmaker
 from ziggurat_foundations.models.services.resource import ResourceService
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "5f2648b8ff49"
 down_revision = "a2a039e2cff5"
 branch_labels = None
