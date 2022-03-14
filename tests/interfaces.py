@@ -4649,7 +4649,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/users/{}/groups".format(anon)
         data = {"group_name": self.test_group_name}
         resp = utils.test_request(self, "POST", path, data=data, expect_errors=True,
-                                  headers=self.test_headers, cookies=self.test_cookies)
+                                  headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, expected_method="POST", expected_code=403)
         utils.check_val_is_in("anonymous", body["detail"].lower())
 
@@ -4821,7 +4821,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         anon_grp = get_constant("MAGPIE_ANONYMOUS_GROUP")
         path = "/users/{}/groups/{}".format(anon_usr, anon_grp)
         resp = utils.test_request(self, "DELETE", path, expect_errors=True,
-                                  headers=self.test_headers, cookies=self.test_cookies)
+                                  headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp, expected_method="DELETE", expected_code=403)
         utils.check_val_is_in("anonymous", body["detail"].lower())
 
