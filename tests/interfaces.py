@@ -2271,6 +2271,73 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         utils.check_val_not_in(self.test_service_perm, body["permission_names"])
 
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_PatchPermissions(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestService(self, override_service_type="thredds")
+
+        resource_names = ["folder1", "folder2", "the-file"]
+        data = {
+            "permissions": [
+                {
+                    "resource_name": self.test_service_name,
+                    "resource_type": "service",
+                    "permission": None
+                },
+                {
+                    "resource_name": resource_names[0],
+                    "resource_type": "directory"
+                },
+                {
+                    "resource_name": resource_names[1],
+                    "resource_type": "directory",
+                    # "permission": "browse",
+                    # "group": self.test_group_name
+                },
+                {
+                    "resource_name": resource_names[2],
+                    "resource_type": "file",
+                    "permission": {
+                        "name": "read",
+                        "access": "deny",
+                        "scope": "match"
+                    },
+                    "user": self.test_user_name
+                }
+            ]
+        }
+        path = "/permissions"
+        resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, cookies=self.cookies, json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PATCH")
+
+        path = f"/services/{self.test_service_name}/resources"
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        resources = body[self.test_service_name]["resources"]
+        for res_name in resource_names:
+            target_res = None
+            for res_id, res in resources.items():
+                if res["resource_name"] == res_name:
+                    target_res = res
+                    break
+            # Check if resource was found
+            assert target_res
+
+            # if res with permission, get permissions and check
+            if res_name == resource_names[1]:
+                path = f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions"
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp)
+                # TODO: check if the right permission is found
+            elif res_name == resource_names[2]:
+                path = f"/users/{self.test_user_name}/resources/{target_res['resource_id']}/permissions"
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp)
+                # TODO: check if the right permission is found
+            resources = target_res["children"]
+
+
     def create_validate_permissions(self,
                                     test_user_name,                     # type: Str
                                     test_resource_id,                   # type: int # resource to validate perm against

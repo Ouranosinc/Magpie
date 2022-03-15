@@ -1,6 +1,8 @@
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPNotFound, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
+from ziggurat_foundations.models.services.group import GroupService
+from ziggurat_foundations.models.services.user import UserService
 
 from magpie import models
 from magpie.api import exception as ax
@@ -11,7 +13,7 @@ from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.permissions import PermissionType, format_permissions
-from magpie.register import sync_services_phoenix
+from magpie.register import sync_services_phoenix, magpie_register_permissions_from_config
 from magpie.services import SERVICE_TYPE_DICT, get_resource_child_allowed
 
 
@@ -162,3 +164,72 @@ def get_resource_types_view(request):
     }
     return ax.valid_http(http_success=HTTPOk, content=data,
                          detail=s.ResourceTypes_GET_OkResponseSchema.description)
+
+
+@s.PermissionsAPI.patch(schema=s.Permissions_PATCH_RequestSchema, tags=[s.PermissionTag],
+                        response_schema=s.Permissions_PATCH_responses)
+@view_config(route_name=s.PermissionsAPI.name, request_method="PATCH")
+def update_permissions(request):
+    """
+    Update the requested permissions.
+    """
+    permissions = ar.get_value_multiformat_body_checked(request, "permissions", check_type=list)
+    ax.verify_param(permissions, not_none=True, not_empty=True,
+                    http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+
+    for entry in permissions:
+        # Check if user/group exists for each permission
+        if "permission" in entry.keys() and entry["permission"]:
+            if "user" in entry.keys():
+                user = UserService.by_user_name(entry["user"], db_session=request.db)
+                if user is None:
+                    raise RuntimeError(f"User {entry['user']} not found in the database.")
+            if "group" in entry.keys():
+                group = GroupService.by_group_name(entry["group"], db_session=request.db)
+                if group is None:
+                    raise RuntimeError(f"Group {entry['group']} not found in the database.")
+
+    # Reformat permissions for function
+    permissions_cfg = {"permissions": []}
+    resource_full_path = ""
+    for i, entry in enumerate(permissions):
+        resource_name = entry.get("resource_name")
+        resource_type = entry.get("resource_type")
+        permission = entry.get("permission")  # TODO: should verify if either dict or string, should maybe verify other fields?
+        user = entry.get("user")
+        group = entry.get("group")
+        action = entry.get("action", "create")
+
+        ax.verify_param(resource_name, not_none=True,
+                        http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+        ax.verify_param(resource_type, not_none=True,
+                        http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+        if i == 0:
+            # First resource must be a service
+            ax.verify_param(resource_type, is_equal=True, param_compare="service",
+                            http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+            service_name = resource_name
+        else:
+            resource_full_path += "/" + resource_name
+        if permission:
+            # Check that a user and/or a group is defined
+            ax.verify_param(bool(user or group), is_true=True,
+                            http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+            cfg_entry = {
+                "service": service_name,
+                "resource": resource_full_path,
+                "type": resource_type,
+                "permission": permission,
+                "action": action
+            }
+            if user:
+                cfg_entry["user"] = user
+            if group:
+                cfg_entry["group"] = group
+
+            permissions_cfg["permissions"].append(cfg_entry)
+
+    # apply permission update
+    magpie_register_permissions_from_config(permissions_config=permissions_cfg, db_session=request.db)
+
+    return ax.valid_http(http_success=HTTPOk, detail=s.Permissions_PATCH_OkResponseSchema.description)

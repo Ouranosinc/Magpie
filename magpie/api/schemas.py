@@ -198,6 +198,9 @@ GroupResourcePermissionsAPI = Service(
 GroupResourcePermissionAPI = Service(
     path="/groups/{group_name}/resources/{resource_id}/permissions/{permission_name}",
     name="GroupResourcePermission")
+PermissionsAPI = Service(
+    path="/permissions",
+    name="Permissions")
 RegisterGroupsAPI = Service(
     path="/register/groups",
     name="RegisterGroups")
@@ -775,6 +778,63 @@ class PermissionNameListSchema(colander.SequenceSchema):
         description="Permissions applicable to the service/resource",
         example=Permission.READ.value
     )
+
+
+class PermissionPatchObjectSchema(colander.MappingSchema):
+    resource_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the resource to create."
+    )
+    resource_type = colander.SchemaNode(
+        colander.String(),
+        description="Type of the resource",
+        example="service"
+    )
+
+    user = UserNameParameter
+    user.missing = colander.drop
+
+    group = GroupNameParameter
+    group.missing = colander.drop
+
+    permission = PermissionObjectSchema(
+        missing=colander.drop
+    )
+
+    action = colander.SchemaNode(
+        colander.String(),
+        description="Action to apply on the permission.",
+        example="create",
+        default="create",
+        validator=colander.OneOf(["create", "delete"])
+    )
+
+
+class PermissionPatchListSchema(colander.SequenceSchema):
+    permission = PermissionPatchObjectSchema()
+
+
+class Permissions_PATCH_RequestBodySchema(colander.MappingSchema):
+    permissions = PermissionPatchListSchema()
+
+
+class Permissions_PATCH_RequestSchema(BaseRequestSchemaAPI):
+    body = Permissions_PATCH_RequestBodySchema()
+
+
+class Permissions_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Update permissions successful."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class Permissions_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Missing parameters to update permissions or parameters do not provide any modification."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class Permissions_PATCH_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Failed to update requested permissions."
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 class BaseUserInfoSchema(colander.MappingSchema):
@@ -3488,6 +3548,14 @@ ServiceResource_DELETE_responses = {
     "404": Resource_MatchDictCheck_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+Permissions_PATCH_responses = {
+    "200": Permissions_PATCH_OkResponseSchema(),
+    "400": Permissions_PATCH_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
+    "401": UnauthorizedResponseSchema(),
+    "403": Permissions_PATCH_ForbiddenResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Users_GET_responses = {
