@@ -235,6 +235,7 @@ def update_permissions(request):
             permissions_cfg["permissions"].append(cfg_entry)
 
     # Apply permission update
-    magpie_register_permissions_from_config(permissions_config=permissions_cfg, db_session=request.db)
+    magpie_register_permissions_from_config(permissions_config=permissions_cfg, db_session=request.db,
+                                            raise_errors=True)
 
     return ax.valid_http(http_success=HTTPOk, detail=s.Permissions_PATCH_OkResponseSchema.description)
