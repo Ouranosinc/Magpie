@@ -730,7 +730,7 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
 
     resource = None
     resource_path = permission_config_entry.get("resource", "")
-    resource_type = permission_config_entry.get("type")
+    resource_type_config = permission_config_entry.get("type")
     if resource_path.startswith("/"):
         resource_path = resource_path[1:]
     if resource_path.endswith("/"):
@@ -739,6 +739,17 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
         try:
             svc_name = service_info["service_name"]
             svc_type = service_info["service_type"]
+
+            # Prepare a list of types that fits with the list of resources
+            resource_type_list = resource_type_config.strip("/").split("/") if resource_type_config else [None]
+            resource_list = resource_path.split("/")
+            if len(resource_type_list) == 1:
+                # if only one type specified, assume every path of the resource uses the same resource type
+                resource_type_list = resource_type_list[0] * len(resource_list)
+            if len(resource_list) != len(resource_type_list):
+                raise RegistrationConfigurationError("Invalid resource type found in configuration : "
+                                                     f"{permission_config_entry.get('type')}")
+
             res_path = None
             if _use_request(cookies_or_session):
                 res_path = get_magpie_url() + ServiceResourcesAPI.path.format(service_name=svc_name)
@@ -750,7 +761,7 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                 res_dict = format_service_resources(svc, show_all_children=True, db_session=cookies_or_session)
             parent = res_dict["resource_id"]
             child_resources = res_dict["resources"]
-            for res in resource_path.split("/"):
+            for res, resource_type in zip(resource_list, resource_type_list):
                 # search in existing children resources
                 if len(child_resources):
                     res_id = list(filter(lambda r: res in [r, child_resources[r]["resource_name"]], child_resources))

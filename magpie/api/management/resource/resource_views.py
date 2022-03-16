@@ -192,6 +192,7 @@ def update_permissions(request):
     # Reformat permissions for function
     permissions_cfg = {"permissions": []}
     resource_full_path = ""
+    resource_full_type = ""
     for i, entry in enumerate(permissions):
         resource_name = entry.get("resource_name")
         resource_type = entry.get("resource_type")
@@ -211,6 +212,10 @@ def update_permissions(request):
             service_name = resource_name
         else:
             resource_full_path += "/" + resource_name
+            # Other resources must not be services
+            ax.verify_param(resource_type, not_equal=True, param_compare="service",
+                            http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+            resource_full_type += "/" + resource_type
         if permission:
             # Check that a user and/or a group is defined
             ax.verify_param(bool(user or group), is_true=True,
@@ -218,7 +223,7 @@ def update_permissions(request):
             cfg_entry = {
                 "service": service_name,
                 "resource": resource_full_path,
-                "type": resource_type,
+                "type": resource_type if resource_type == "service" else resource_full_type,
                 "permission": permission,
                 "action": action
             }
