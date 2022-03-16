@@ -52,7 +52,9 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
+    from magpie.models import User
     from magpie.typedefs import (
+        AnySettingsContainer,
         ResolvablePermissionType,
         ResourcePermissionMap,
         ServiceOrResourceType,
@@ -877,6 +879,21 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(group_name, matches=True, param_name="group_name", param_compare=ax.PARAM_REGEX,
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_GroupName_BadRequestResponseSchema.description)
+
+
+def check_user_editable(user, container):
+    # type: (User, AnySettingsContainer) -> None
+    """
+    Verify if the specified user is allowed to receive modifications (to it directly or any resource referring to it).
+
+    :param user: User to validate.
+    :param container: Any container to retrieve application settings.
+    :raises HTTPForbidden: When user is not allowed to be edited.
+    :return: Nothing if allowed edition.
+    """
+    ax.verify_param(user.user_name, not_equal=True, with_param=False,  # avoid leaking username details
+                    param_compare=get_constant("MAGPIE_ANONYMOUS_USER", container),
+                    http_error=HTTPForbidden, msg_on_fail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
 
 
 def get_user_groups_checked(user, db_session):

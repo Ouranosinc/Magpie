@@ -9,21 +9,40 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Update linting configuration rules to validate all migration scripts employed by ``alembic``.
+* Apply applicable linting fixes over ``alembic`` migration scripts.
+
+.. _changes_3.22.0:
+
+`3.22.0 <https://github.com/Ouranosinc/Magpie/tree/3.22.0>`_ (2022-03-10)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Remove auto-creation of ``GetCapabilities`` allowed ``Permission`` applied directly onto any ``Service`` type that
   supports it, for the ``MAGPIE_ANONYMOUS_USER``, for a ``Service`` registered at startup from a definition retrieved
   from ``providers.cfg`` configuration file. Platforms that desire to maintain a similar auto-creation of the public
   ``Permission`` should consider instead defining an entry in ``permissions.cfg`` for the targeted ``Service``.
+* Forbid the creation, edition or deletion of any ``Permission`` onto a ``Service`` or ``Resource`` associated
+  to ``MAGPIE_ANONYMOUS_USER``. Any such erroneous ``Permission`` that could already existing in the database will
+  be converted automatically to the corresponding ``MAGPIE_ANONYMOUS_GROUP`` with database migration at application
+  startup. If a conflict occurs, the existing ``Permission`` for ``MAGPIE_ANONYMOUS_GROUP`` will be prioritized and
+  the one for ``MAGPIE_ANONYMOUS_USER`` will be dropped.
+* Ignore any explicit entry in ``permissions.cfg`` (or any of its variants) that attempts to create or delete
+  any ``Permission`` for ``MAGPIE_ANONYMOUS_USER``.
+* Update UI to better represent disallowed operations for ``MAGPIE_ANONYMOUS_USER``.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * When the option is provided to auto-create ``GetCapabilities`` on a ``Service`` that supports it, the ``Permission``
   is now applied onto ``MAGPIE_ANONYMOUS_GROUP`` instead of ``MAGPIE_ANONYMOUS_USER``, as it was originally intended
-  and documented in function parameters. User ``MAGPIE_ANONYMOUS_USER`` is not accessible from the API, which caused
-  the auto-creation of allowed ``GetCapabilities`` to be impossible to remove. Given ``User``-level permission has
-  an higher priority in resolution order than ``Group``-level, it was also impossible to revert it with ``deny``.
+  and documented in function parameters. User ``MAGPIE_ANONYMOUS_USER`` will not be accessible from the API, which
+  would cause auto-creation of allowed ``GetCapabilities`` to be impossible to remove. Given ``User``-level permission
+  has an higher priority in resolution order than ``Group``-level, it was also impossible to revert it with ``deny``.
 * Fix missing link to *OpenAPI Specification* in generated `ReadTheDocs` TOC.
+* Update ``bandit`` version and resolve flagged ``lxml`` uses with secured `XML` parsing utilities.
 
 .. _changes_3.21.0:
 

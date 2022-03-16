@@ -18,7 +18,8 @@ from sqlalchemy.orm.session import sessionmaker
 from ziggurat_foundations.models.services.group_resource_permission import GroupResourcePermissionService
 from ziggurat_foundations.models.services.user_resource_permission import UserResourcePermissionService
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "9b8e5d37f684"
 down_revision = "5f2648b8ff49"
 branch_labels = None

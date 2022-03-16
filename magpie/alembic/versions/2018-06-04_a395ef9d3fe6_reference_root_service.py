@@ -1,5 +1,5 @@
 """
-reference root service.
+Reference root service.
 
 Revision ID: a395ef9d3fe6
 Revises: ae1a3c8c7860
@@ -12,7 +12,8 @@ from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm.session import sessionmaker
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "a395ef9d3fe6"
 down_revision = "ae1a3c8c7860"
 branch_labels = None

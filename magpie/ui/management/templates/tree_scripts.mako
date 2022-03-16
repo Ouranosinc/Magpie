@@ -31,7 +31,7 @@
     <form id="resources_permissions" action="${request.path}" method="post">
         <div class="permission-apply-container">
             <input type="submit" name="edit_permissions" value="Apply Permissions" title="Apply the permission changes"
-                %if inherit_groups_permissions:
+                %if inherit_groups_permissions or user_name in MAGPIE_FIXED_USERS_REFS:
                     disabled
                     class="button theme disabled"
                 %else:
@@ -110,7 +110,7 @@
         <label for="combobox_permission_resource_${resource_info['id']}">
         <select name="permission_resource_${resource_info['id']}"
                 id="combobox_permission_resource_${resource_info['id']}"
-            %if inherit_groups_permissions:
+            %if inherit_groups_permissions or user_name in MAGPIE_FIXED_USERS_REFS:
                 disabled
                 class="permission-combobox disabled"
             %else:

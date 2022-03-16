@@ -1046,6 +1046,7 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
         LOGGER.warning("Permissions configuration are empty.")
         return
 
+    anon_user = get_constant("MAGPIE_ANONYMOUS_USER")
     perm_count = len(permissions)
     LOGGER.log(logging.INFO if perm_count else logging.WARNING,
                "Found %s permissions to evaluate from configuration.", perm_count)
@@ -1065,6 +1066,9 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
         grp_name = perm_cfg.get("group")
         if not any([usr_name, grp_name]):
             _log_permission("Missing required user and/or group field.", i, raise_errors=raise_errors)
+            continue
+        if usr_name == anon_user:
+            _log_permission("Skipping forbidden user permission (reserved special user: {}).".format(anon_user), i)
             continue
         if "action" not in perm_cfg:
             _log_permission("Unspecified action", i, trail="using default (create)...", raise_errors=raise_errors)

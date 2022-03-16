@@ -563,7 +563,14 @@ class ManagementViews(AdminRequests, BaseViews):
     def edit_group(self):
         group_name = self.request.matchdict["group_name"]
         cur_svc_type = self.request.matchdict["cur_svc_type"]
-        group_info = {"edit_mode": "no_edit", "group_name": group_name, "cur_svc_type": cur_svc_type}
+        group_info = {
+            "edit_mode": "no_edit",
+            "group_name": group_name,
+            "cur_svc_type": cur_svc_type,
+            # user not used, but avoid error when checking against
+            # MAGPIE_FIXED_USERS_REFS since using same tree-view script
+            "user_name": None,
+        }
         error_message = ""
         edit_grp_users_info = {}
 

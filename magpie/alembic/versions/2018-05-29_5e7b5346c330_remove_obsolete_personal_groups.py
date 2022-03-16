@@ -1,5 +1,5 @@
 """
-remove obsolete personal groups.
+Remove obsolete personal groups.
 
 Revision ID: 5e7b5346c330
 Revises: 2a6c63397399
@@ -22,11 +22,12 @@ root_dir = os.path.dirname(root_dir)    # magpie
 root_dir = os.path.dirname(root_dir)    # root
 sys.path.insert(0, root_dir)
 
-from magpie.constants import get_constant  # isort:skip # noqa: E402
+from magpie.constants import get_constant  # isort:skip # pylint: disable=C0413 # noqa: E402
 
 Session = sessionmaker()
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "5e7b5346c330"
 down_revision = "2a6c63397399"
 branch_labels = None

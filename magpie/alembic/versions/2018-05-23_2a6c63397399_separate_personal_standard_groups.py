@@ -1,5 +1,5 @@
 """
-separate personal standard groups.
+Separate personal standard groups.
 
 Revision ID: 2a6c63397399
 Revises: 9fd4589cc82c
@@ -14,17 +14,18 @@ from sqlalchemy.orm.session import sessionmaker
 
 Session = sessionmaker()
 
-# revision identifiers, used by Alembic.
-revision = '2a6c63397399'
-down_revision = '9fd4589cc82c'
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
+revision = "2a6c63397399"
+down_revision = "9fd4589cc82c"
 branch_labels = None
 depends_on = None
 
 # OLD/NEW values must be different
-OLD_GROUP_USERS = 'user'
-NEW_GROUP_USERS = 'users'
-OLD_GROUP_ADMIN = 'admin'
-NEW_GROUP_ADMIN = 'administrators'
+OLD_GROUP_USERS = "user"
+NEW_GROUP_USERS = "users"
+OLD_GROUP_ADMIN = "admin"
+NEW_GROUP_ADMIN = "administrators"
 OLD_USER_USERS = OLD_GROUP_USERS
 OLD_USER_ADMIN = OLD_GROUP_ADMIN
 
@@ -111,8 +112,7 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
 
     if old_group is None:
         # create missing group
-        old_group = Group(group_name=old_name)   # noqa
-        db_session.add(old_group)
+        db_session.execute(groups.insert().value(group_name=old_name, member_count=0))
     if old_group is not None and new_group is not None:
         # transfer user-group references
         all_usr_grp = db_session.execute(sa.select(users_groups))
@@ -149,8 +149,8 @@ def clean_user_groups(db_session):
     all_groups = db_session.execute(sa.select([groups]))
     all_usr_grp = db_session.execute(sa.select([users_groups]))
 
-    all_usr_dict = dict([(usr.id, usr.user_name) for usr in all_users])
-    all_grp_dict = dict([(grp.id, grp.group_name) for grp in all_groups])
+    all_usr_dict = {usr.id: usr.user_name for usr in all_users}
+    all_grp_dict = {grp.id: grp.group_name for grp in all_groups}
 
     for usr_grp in all_usr_grp:
         # delete any missing user/group references (pointing to nothing...)

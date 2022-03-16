@@ -1,5 +1,5 @@
 """
-add id/parent id to resource structure.
+Add id/parent id to resource structure.
 
 Revision ID: 5c84d7260c5
 Revises: 24ab8d11f014
@@ -10,7 +10,8 @@ from __future__ import unicode_literals
 import sqlalchemy as sa  # noqa: F401
 from alembic import op  # noqa: F401
 
-# downgrade revision identifier, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "5c84d7260c5"
 down_revision = "24ab8d11f014"
 

@@ -1,5 +1,5 @@
 """
-project-api route resource.
+Add project-api route resource.
 
 Revision ID: c352a98d570e
 Revises: a395ef9d3fe6
@@ -7,11 +7,12 @@ Create Date: 2018-06-20 13:31:55.666240
 """
 import sqlalchemy as sa
 from alembic import op
-from alembic.context import get_context
+from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.orm.session import sessionmaker
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "c352a98d570e"
 down_revision = "a395ef9d3fe6"
 branch_labels = None

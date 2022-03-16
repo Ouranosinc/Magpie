@@ -50,7 +50,13 @@
                 %if user_name in users_pending:
                     <input type="submit" value="View" name="view-pending" class="list-button button theme">
                 %else:
-                    <input type="submit" value="Edit" name="edit" class="list-button button theme">
+                    <input type="submit" name="edit" class="list-button button theme"
+                    %if user_name in MAGPIE_FIXED_USERS and user_name in MAGPIE_FIXED_USERS_REFS:
+                        value="View"
+                    %else:
+                        value="Edit"
+                    %endif
+                    >
                 %endif
                 <input value="Delete"
                     %if user_name in MAGPIE_FIXED_USERS:

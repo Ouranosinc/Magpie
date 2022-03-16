@@ -1,5 +1,5 @@
 """
-transfer group users-admins users.
+Transfer group users-admins users.
 
 Revision ID: ae1a3c8c7860
 Revises: 5e7b5346c330
@@ -21,7 +21,8 @@ NEW_GROUP_USERS = "users"
 OLD_GROUP_ADMIN = "admin"
 NEW_GROUP_ADMIN = "administrators"
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "ae1a3c8c7860"
 down_revision = "5e7b5346c330"
 branch_labels = None
@@ -67,7 +68,6 @@ def upgrade():
 
                 # create new group if missing
                 if not new_group:
-                    new_group = Group(group_name=new_group_name)  # noqa
                     session.execute(groups.insert().value(group_name=new_group_name, member_count=0))
                     query = sa.select([groups]).where(groups.c.group_name == new_group_name)
                     new_group = session.execute(query).fetchone()

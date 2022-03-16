@@ -1,5 +1,5 @@
 """
-change primary key sizes.
+Change primary key sizes.
 
 Revision ID: 53927300c277
 Revises: 54d08f9adc8c
@@ -13,7 +13,8 @@ from alembic.context import get_context  # noqa: F401
 from sqlalchemy.dialects.mysql.base import MySQLDialect
 from sqlalchemy.engine.reflection import Inspector
 
-# revision identifiers, used by Alembic.
+# Revision identifiers, used by Alembic.
+# pylint: disable=C0103,invalid-name  # revision control variables not uppercase
 revision = "53927300c277"
 down_revision = "54d08f9adc8c"
 
