@@ -531,12 +531,12 @@ def test_register_process_permissions_from_multiple_files():
     expect_users = {"usr1": cfg1["users"][0], "usr2": cfg1["users"][1], "usr3": cfg2["users"][0]}
     expect_groups = {"grp1": cfg1["groups"][0], "grp2": cfg1["groups"][1]}
 
-    perms, _, _, users, groups = mock_process_perms.call_args_list[0].args
+    perms, _, _, users, groups, _ = mock_process_perms.call_args_list[0].args
     assert perms == cfg1["permissions"]
     assert users == expect_users
     assert groups == expect_groups
 
-    perms, _, _, users, groups = mock_process_perms.call_args_list[1].args
+    perms, _, _, users, groups, _ = mock_process_perms.call_args_list[1].args
     assert perms == cfg2["permissions"]
     assert users == expect_users
     assert groups == expect_groups

@@ -751,7 +751,7 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
             resource_list = resource_path.split("/")
             if len(resource_type_list) == 1:
                 # if only one type specified, assume every path of the resource uses the same resource type
-                resource_type_list = resource_type_list[0] * len(resource_list)
+                resource_type_list = resource_type_list * len(resource_list)
             if len(resource_list) != len(resource_type_list):
                 raise RegistrationConfigurationError("Invalid resource type found in configuration : "
                                                      f"{permission_config_entry.get('type')}")
