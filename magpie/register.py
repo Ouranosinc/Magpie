@@ -706,7 +706,7 @@ def _log_permission(message, permission_index, trail=", skipping...", detail=Non
     LOGGER.log(level, "%s [permission #%d]%s%s", message, permission_index, permission, trail)
 
     if raise_errors:
-        raise HTTPBadRequest(f"{message} [permission #{permission_index}]{permission}{trail}")
+        raise HTTPBadRequest("{} [permission #{}]{}{}".format(message, permission_index, permission, trail))
 
 
 def _use_request(cookies_or_session):
@@ -753,8 +753,8 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                 # if only one type specified, assume every path of the resource uses the same resource type
                 resource_type_list = resource_type_list * len(resource_list)
             if len(resource_list) != len(resource_type_list):
-                raise RegistrationConfigurationError("Invalid resource type found in configuration : "
-                                                     f"{permission_config_entry.get('type')}")
+                raise RegistrationConfigurationError("Invalid resource type found in configuration : " +
+                                                     permission_config_entry.get('type'))
 
             res_path = None
             if _use_request(cookies_or_session):
