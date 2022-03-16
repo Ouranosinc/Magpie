@@ -2303,22 +2303,39 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   cookies=self.cookies, json=data)
         utils.check_response_basic_info(resp, 200, expected_method="PATCH")
 
-        path = f"/services/{self.test_service_name}/resources"
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-        resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
-        for res_name in resource_names[0:2]:
-            target_res = [res for res in resources.values() if res["resource_name"] == res_name]
-            # target resource should exist
-            assert len(target_res) == 1
-            target_res = target_res[0]
+        def check_permissions(data):
+            """
+            Utility function that checks if resource and permissions found in data were succesfully create/removed.
+            """
+            path = f"/services/{self.test_service_name}/resources"
+            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+            resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
 
-            # if res with permission, get permissions and check if permission was created
-            if res_name == resource_names[1]:
-                path = f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions"
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                body = utils.check_response_basic_info(resp)
-                utils.check_val_is_in("browse", body["permission_names"])
-            resources = target_res["children"]
+            for perm_entry in data["permissions"][1:]:  # skip first resource, which is the service
+                target_res = [res for res in resources.values() if res["resource_name"] == perm_entry["resource_name"]]
+                # target resource should exist
+                assert len(target_res) == 1
+                target_res = target_res[0]
+
+                if perm_entry.get("permission"):
+                    perm = perm_entry["permission"]
+                    if type(perm) is dict:
+                        perm = f"{perm['name']}-{perm['access']}-{perm['scope']}"
+                    check_paths = []
+                    if perm_entry.get("user"):
+                        check_paths.append(f"/users/{self.test_user_name}/resources/{target_res['resource_id']}/permissions")
+                    if perm_entry.get("group"):
+                        check_paths.append(f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions")
+                    for path in check_paths:
+                        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                        body = utils.check_response_basic_info(resp)
+                        if perm_entry.get("action") and perm_entry["action"] == "remove":
+                            utils.check_val_not_in(perm, body["permission_names"])
+                        else:
+                            utils.check_val_is_in(perm, body["permission_names"])
+                resources = target_res["children"]
+
+        check_permissions(data)
 
         # Test second patch request, with additional resources/permissions
         data["permissions"].append({
@@ -2343,35 +2360,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
                                   cookies=self.cookies, json=data)
         utils.check_response_basic_info(resp, 200, expected_method="PATCH")
-
-        path = f"/services/{self.test_service_name}/resources"
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-        resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
-        for res_name in resource_names:
-            target_res = [res for res in resources.values() if res["resource_name"] == res_name]
-            # target resource should exist
-            assert len(target_res) == 1
-            target_res = target_res[0]
-
-            # if res with permission, get permissions and check if permission was created
-            if res_name == resource_names[1]:
-                # This permission was already created in the preceding request, but should still exist.
-                path = f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions"
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                body = utils.check_response_basic_info(resp)
-                utils.check_val_is_in("browse", body["permission_names"])
-            elif res_name == resource_names[2]:
-                for path in [f"/users/{self.test_user_name}/resources/{target_res['resource_id']}/permissions",
-                             f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions"]:
-                    resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                    body = utils.check_response_basic_info(resp)
-                    utils.check_val_is_in("browse", body["permission_names"])
-            elif res_name == resource_names[3]:
-                path = f"/users/{self.test_user_name}/resources/{target_res['resource_id']}/permissions"
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                body = utils.check_response_basic_info(resp)
-                utils.check_val_is_in("read-deny-match", body["permission_names"])
-            resources = target_res["children"]
+        check_permissions(data)
 
         # Delete permissions
         for i in range(len(data["permissions"])):
@@ -2379,34 +2368,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
                                   cookies=self.cookies, json=data)
         utils.check_response_basic_info(resp, 200, expected_method="PATCH")
-
-        path = f"/services/{self.test_service_name}/resources"
-        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-        resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
-        for res_name in resource_names:
-            target_res = [res for res in resources.values() if res["resource_name"] == res_name]
-            # target resource should exist and should be unique
-            assert len(target_res) == 1
-            target_res = target_res[0]
-
-            # if res with permission, get permissions and check if permission was deleted
-            if res_name == resource_names[1]:
-                path = f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions"
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                body = utils.check_response_basic_info(resp)
-                utils.check_val_not_in("browse", body["permission_names"])
-            elif res_name == resource_names[2]:
-                for path in [f"/users/{self.test_user_name}/resources/{target_res['resource_id']}/permissions",
-                             f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions"]:
-                    resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                    body = utils.check_response_basic_info(resp)
-                    utils.check_val_not_in("browse", body["permission_names"])
-            elif res_name == resource_names[3]:
-                path = f"/users/{self.test_user_name}/resources/{target_res['resource_id']}/permissions"
-                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                body = utils.check_response_basic_info(resp)
-                utils.check_val_not_in("read-deny-match", body["permission_names"])
-            resources = target_res["children"]
+        check_permissions(data)
 
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_PatchPermissions_InvalidUserGroup(self):
