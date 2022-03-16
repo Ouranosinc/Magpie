@@ -181,11 +181,13 @@ def update_permissions(request):
         # Check if user/group exists for each permission found
         if "permission" in entry.keys() and entry["permission"]:
             if "user" in entry.keys():
-                if not UserService.by_user_name(entry["user"], db_session=request.db):
-                    raise RuntimeError(f"User {entry['user']} not found in the database.")
+                ax.verify_param(UserService.by_user_name(entry["user"], db_session=request.db),
+                                not_none=True, http_error=HTTPBadRequest,
+                                msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
             if "group" in entry.keys():
-                if not GroupService.by_group_name(entry["group"], db_session=request.db):
-                    raise RuntimeError(f"Group {entry['group']} not found in the database.")
+                ax.verify_param(GroupService.by_group_name(entry["group"], db_session=request.db),
+                                not_none=True, http_error=HTTPBadRequest,
+                                msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
 
     # Reformat permissions config
     permissions_cfg = {"permissions": []}

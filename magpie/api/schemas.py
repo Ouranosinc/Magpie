@@ -828,7 +828,7 @@ class Permissions_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class Permissions_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Missing parameters to update permissions or parameters do not provide any modification."
+    description = "Missing or invalid parameters for permissions update."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
