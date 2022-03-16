@@ -754,7 +754,7 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                 resource_type_list = resource_type_list * len(resource_list)
             if len(resource_list) != len(resource_type_list):
                 raise RegistrationConfigurationError("Invalid resource type found in configuration : " +
-                                                     permission_config_entry.get('type'))
+                                                     permission_config_entry.get("type"))
 
             res_path = None
             if _use_request(cookies_or_session):
