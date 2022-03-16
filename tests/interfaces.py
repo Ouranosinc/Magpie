@@ -2296,30 +2296,52 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     "permission": "browse",
                     "group": self.test_group_name,
                     "action": "create"
-                },
-                {
-                    "resource_name": resource_names[2],
-                    "resource_type": "directory",
-                    "permission": "browse",
-                    "group": self.test_group_name,
-                    "user": self.test_user_name,
-                    "action": "create"
-                },
-                {
-                    "resource_name": resource_names[3],
-                    "resource_type": "file",
-                    "permission": {
-                        "name": "read",
-                        "access": "deny",
-                        "scope": "match"
-                    },
-                    "user": self.test_user_name,
-                    "action": "create"
                 }
             ]
         }
-        path = "/permissions"
-        resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, cookies=self.cookies, json=data)
+        resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
+                                  cookies=self.cookies, json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PATCH")
+
+        path = f"/services/{self.test_service_name}/resources"
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
+        for res_name in resource_names[0:2]:
+            target_res = [res for res in resources.values() if res["resource_name"] == res_name]
+            # target resource should exist
+            assert len(target_res) == 1
+            target_res = target_res[0]
+
+            # if res with permission, get permissions and check if permission was created
+            if res_name == resource_names[1]:
+                path = f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions"
+                resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                body = utils.check_response_basic_info(resp)
+                utils.check_val_is_in("browse", body["permission_names"])
+            resources = target_res["children"]
+
+        # Test second patch request, with additional resources/permissions
+        data["permissions"].append({
+            "resource_name": resource_names[2],
+            "resource_type": "directory",
+            "permission": "browse",
+            "group": self.test_group_name,
+            "user": self.test_user_name,
+            "action": "create"
+        })
+        data["permissions"].append({
+            "resource_name": resource_names[3],
+            "resource_type": "file",
+            "permission": {
+                "name": "read",
+                "access": "deny",
+                "scope": "match"
+            },
+            "user": self.test_user_name,
+            "action": "create"
+        })
+        resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
+                                  cookies=self.cookies, json=data)
         utils.check_response_basic_info(resp, 200, expected_method="PATCH")
 
         path = f"/services/{self.test_service_name}/resources"
@@ -2331,8 +2353,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             assert len(target_res) == 1
             target_res = target_res[0]
 
-            # if res with permission, get permissions and check
+            # if res with permission, get permissions and check if permission was created
             if res_name == resource_names[1]:
+                # This permission was already created in the preceding request, but should still exist.
                 path = f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions"
                 resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
                 body = utils.check_response_basic_info(resp)
@@ -2353,8 +2376,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         # Delete permissions
         for i in range(len(data["permissions"])):
             data["permissions"][i]["action"] = "remove"
-        path = "/permissions"
-        resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, cookies=self.cookies, json=data)
+        resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
+                                  cookies=self.cookies, json=data)
         utils.check_response_basic_info(resp, 200, expected_method="PATCH")
 
         path = f"/services/{self.test_service_name}/resources"
