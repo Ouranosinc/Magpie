@@ -1,4 +1,4 @@
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPNotFound, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
@@ -13,7 +13,7 @@ from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.permissions import PermissionType, format_permissions
-from magpie.register import sync_services_phoenix, magpie_register_permissions_from_config
+from magpie.register import magpie_register_permissions_from_config, sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT, get_resource_child_allowed
 
 
@@ -207,19 +207,19 @@ def update_permissions(request):
                         http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
         if i == 0:
             # First resource must be a service
-            ax.verify_param(resource_type, is_equal=True, param_compare="service",
-                            http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+            ax.verify_param(resource_type, is_equal=True, param_compare="service", http_error=HTTPBadRequest,
+                            msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
             service_name = resource_name
         else:
             resource_full_path += "/" + resource_name
             # Other resources must not be services
-            ax.verify_param(resource_type, not_equal=True, param_compare="service",
-                            http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+            ax.verify_param(resource_type, not_equal=True, param_compare="service", http_error=HTTPBadRequest,
+                            msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
             resource_full_type += "/" + resource_type
         if permission:
             # Check that a user and/or a group is defined
-            ax.verify_param(bool(user or group), is_true=True,
-                            http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+            ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
+                            msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
             cfg_entry = {
                 "service": service_name,
                 "resource": resource_full_path,

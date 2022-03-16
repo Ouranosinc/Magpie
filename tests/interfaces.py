@@ -2432,13 +2432,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
                 if perm_entry.get("permission"):
                     perm = perm_entry["permission"]
-                    if type(perm) is dict:
+                    if isinstance(perm, dict):
                         perm = f"{perm['name']}-{perm['access']}-{perm['scope']}"
                     check_paths = []
                     if perm_entry.get("user"):
-                        check_paths.append(f"/users/{self.test_user_name}/resources/{target_res['resource_id']}/permissions")
+                        check_paths.append(
+                            f"/users/{self.test_user_name}/resources/{target_res['resource_id']}/permissions")
                     if perm_entry.get("group"):
-                        check_paths.append(f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions")
+                        check_paths.append(
+                            f"/groups/{self.test_group_name}/resources/{target_res['resource_id']}/permissions")
                     for path in check_paths:
                         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
                         body = utils.check_response_basic_info(resp)
