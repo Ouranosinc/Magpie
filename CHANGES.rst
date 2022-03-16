@@ -9,6 +9,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``PATCH /permissions`` endpoint that updates permissions and creates related resources if necessary.
+* ``permissions.cfg`` now supports a new format for the ``type`` parameter, using multiple types separated
+  by a slash character, matching each type with each resource found in the ``resource`` parameter.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Update linting configuration rules to validate all migration scripts employed by ``alembic``.
