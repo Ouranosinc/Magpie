@@ -2292,8 +2292,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 {
                     "resource_name": resource_names[1],
                     "resource_type": "directory",
-                    # "permission": "browse",
-                    # "group": self.test_group_name
+                    "permission": "browse",
+                    "group": self.test_group_name
                 },
                 {
                     "resource_name": resource_names[2],
@@ -2303,7 +2303,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                         "access": "deny",
                         "scope": "match"
                     },
-                    "user": self.test_user_name
+                    "user": "blarg"#self.test_user_name
                 }
             ]
         }

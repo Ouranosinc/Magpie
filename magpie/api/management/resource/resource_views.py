@@ -178,25 +178,23 @@ def update_permissions(request):
                     http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
 
     for entry in permissions:
-        # Check if user/group exists for each permission
+        # Check if user/group exists for each permission found
         if "permission" in entry.keys() and entry["permission"]:
             if "user" in entry.keys():
-                user = UserService.by_user_name(entry["user"], db_session=request.db)
-                if user is None:
+                if not UserService.by_user_name(entry["user"], db_session=request.db):
                     raise RuntimeError(f"User {entry['user']} not found in the database.")
             if "group" in entry.keys():
-                group = GroupService.by_group_name(entry["group"], db_session=request.db)
-                if group is None:
+                if not GroupService.by_group_name(entry["group"], db_session=request.db):
                     raise RuntimeError(f"Group {entry['group']} not found in the database.")
 
-    # Reformat permissions for function
+    # Reformat permissions config
     permissions_cfg = {"permissions": []}
     resource_full_path = ""
     resource_full_type = ""
     for i, entry in enumerate(permissions):
         resource_name = entry.get("resource_name")
         resource_type = entry.get("resource_type")
-        permission = entry.get("permission")  # TODO: should verify if either dict or string, should maybe verify other fields?
+        permission = entry.get("permission")
         user = entry.get("user")
         group = entry.get("group")
         action = entry.get("action", "create")
@@ -234,7 +232,7 @@ def update_permissions(request):
 
             permissions_cfg["permissions"].append(cfg_entry)
 
-    # apply permission update
+    # Apply permission update
     magpie_register_permissions_from_config(permissions_config=permissions_cfg, db_session=request.db)
 
     return ax.valid_http(http_success=HTTPOk, detail=s.Permissions_PATCH_OkResponseSchema.description)
