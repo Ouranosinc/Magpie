@@ -9,6 +9,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Refactor `OpenAPI` schema definitions for query parameters to ensure proper names are reused across endpoints.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Update linting configuration rules to validate all migration scripts employed by ``alembic``.

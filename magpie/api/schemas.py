@@ -468,43 +468,90 @@ class QueryRequestSchemaAPI(colander.MappingSchema):
                                     "This formatting alternative by query parameter overrides the Accept header.")
 
 
-QueryEffectivePermissions = colander.SchemaNode(
-    colander.Boolean(), name="effective", default=False, missing=colander.drop,
-    description="Obtain user's effective permissions resolved with corresponding service inheritance functionality. "
-                "(Note: Group inheritance is enforced regardless of 'inherited' query parameter values.)")
-QueryInheritGroupsPermissions = colander.SchemaNode(
-    colander.Boolean(), name="inherited", default=False, missing=colander.drop,
-    description="Include the user's groups memberships inheritance to retrieve all possible permissions. "
-                "(Note: Duplicate, redundant and even conflicting permissions can be obtained when considering "
-                "multiple applied permissions individually applied from different group memberships or for the user "
-                "itself. See 'resolve' query parameter to reduce the set into a single highest priority permission).")
-QueryResolvedUserGroupsPermissions = colander.SchemaNode(
-    colander.Boolean(), name="resolve", default=False, missing=colander.drop,
-    description="Combines corresponding direct user and groups inherited permissions into one, and locally resolves "
-                "for every resource the applicable permission modifiers considering group precedence and priorities. "
-                "(Note: Group permissions retrieval is enforced when using this option regardless of 'inherited' query "
-                "parameter since they are required to perform resolution).")
-QueryFilterResources = colander.SchemaNode(
-    colander.Boolean(), name="filtered", default=False, missing=colander.drop,
-    description="Filter returned resources only where user has permissions on, either directly or inherited by groups "
-                "according to other query parameters. Otherwise (default), return all existing resources "
-                "with empty permission sets when user has no permission on them. Filtered view is enforced for "
-                "non-admin request user.")
-QueryCascadeResourcesPermissions = colander.SchemaNode(
-    colander.Boolean(), name="cascade", default=False, missing=colander.drop,
-    description="Display all services that has at least one permission at any level in his hierarchy "
-                "(including all children resources). Otherwise (default), only returns services that have permissions "
-                "explicitly set on them, ignoring permissions set on children resources.")
-QueryFlattenServices = colander.SchemaNode(
-    colander.Boolean(), name="flatten", default=False, missing=colander.drop,
-    description="Return elements as a flattened list of JSON objects instead of default response format. "
-                "Default is a nested JSON of service-type keys with children service-name keys, each containing "
-                "their respective service definition as JSON object.")
-QueryFilterServiceType = colander.SchemaNode(
-    colander.String(), name="type", missing=colander.drop,
-    example="api,thredds",
-    description="Comma-separated list of service-type for which to filter retrieved descriptions instead of all "
-                "available ones. Provided types matching is case insensitive. Unknown types are ignored.")
+class QueryEffectivePermissions(colander.MappingSchema):
+    effective = colander.SchemaNode(
+        colander.Boolean(), name="effective", default=False, missing=colander.drop,
+        description=(
+            "Obtain user's effective permissions resolved with corresponding service inheritance functionality. "
+            "(Note: Group inheritance is enforced regardless of 'inherited' query parameter values.)"
+        )
+    )
+
+
+class QueryInheritGroupsPermissions(colander.MappingSchema):
+    inherit = colander.SchemaNode(
+        colander.Boolean(), name="inherited", default=False, missing=colander.drop,
+        description=(
+            "Include the user's groups memberships inheritance to retrieve all possible permissions. "
+            "(Note: Duplicate, redundant and even conflicting permissions can be obtained when considering "
+            "multiple applied permissions individually applied from different group memberships or for the user "
+            "itself. See 'resolve' query parameter to reduce the set into a single highest priority permission)."
+        )
+    )
+
+
+class QueryResolvedUserGroupsPermissions(colander.MappingSchema):
+    resolve = colander.SchemaNode(
+        colander.Boolean(), name="resolve", default=False, missing=colander.drop,
+        description=(
+            "Combines corresponding direct user and groups inherited permissions into one, and locally resolves "
+            "for every resource the applicable permission modifiers considering group precedence and priorities. "
+            "(Note: Group permissions retrieval is enforced when using this option regardless of 'inherited' query "
+            "parameter since they are required to perform resolution)."
+        )
+    )
+
+
+class QueryFilterResources(colander.MappingSchema):
+    filtered = colander.SchemaNode(
+        colander.Boolean(), name="filtered", default=False, missing=colander.drop,
+        description=(
+            "Filter returned resources only where user has permissions on, either directly or inherited by groups "
+            "according to other query parameters. Otherwise (default), return all existing resources "
+            "with empty permission sets when user has no permission on them. Filtered view is enforced for "
+            "non-admin request user."
+        )
+    )
+
+
+class QueryParentResources(colander.MappingSchema):
+    parent = colander.SchemaNode(
+        colander.Boolean(), name="parent", default=False, missing=colander.drop,
+        description="Obtain resources ordered by parent instead of by children hierarchy."
+    )
+
+
+class QueryCascadeResourcesPermissions(colander.MappingSchema):
+    cascade = colander.SchemaNode(
+        colander.Boolean(), name="cascade", default=False, missing=colander.drop,
+        description=(
+            "Display all services that has at least one permission at any level in his hierarchy "
+            "(including all children resources). Otherwise (default), only returns services that have permissions "
+            "explicitly set on them, ignoring permissions set on children resources."
+        )
+    )
+
+
+class QueryFlattenServices(colander.MappingSchema):
+    flatten = colander.SchemaNode(
+        colander.Boolean(), name="flatten", default=False, missing=colander.drop,
+        description=(
+            "Return elements as a flattened list of JSON objects instead of default response format. "
+            "Default is a nested JSON of service-type keys with children service-name keys, each containing "
+            "their respective service definition as JSON object."
+        )
+    )
+
+
+class QueryFilterServiceType(colander.MappingSchema):
+    svc_type = colander.SchemaNode(
+        colander.String(), name="type", missing=colander.drop,
+        example="api,thredds",
+        description=(
+            "Comma-separated list of service-type for which to filter retrieved descriptions instead of all "
+            "available ones. Provided types matching is case insensitive. Unknown types are ignored."
+        )
+    )
 
 
 class PhoenixServicePushOption(colander.SchemaNode):
@@ -604,6 +651,7 @@ class ErrorCallBodySchema(ErrorFallbackBodySchema):
 
 class ErrorResponseBodySchema(BaseResponseBodySchema):
     def __init__(self, code, description, **kw):
+        # type: (int, str, Any) -> None
         super(ErrorResponseBodySchema, self).__init__(code, description, **kw)
         assert code >= 400  # nosec: B101
 
@@ -641,6 +689,7 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
 
 class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
     def __init__(self, **kw):
+        # type: (Any) -> None
         kw["code"] = HTTPInternalServerError.code
         super(InternalServerErrorResponseBodySchema, self).__init__(**kw)
 
@@ -652,6 +701,7 @@ class BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 class UnauthorizedResponseBodySchema(ErrorResponseBodySchema):
     def __init__(self, **kw):
+        # type: (Any) -> None
         kw["code"] = HTTPUnauthorized.code
         super(UnauthorizedResponseBodySchema, self).__init__(**kw)
 
@@ -1049,8 +1099,13 @@ class Resources_ResponseBodySchema(BaseResponseBodySchema):
     resources = ResourcesSchemaNode()
 
 
+class Resource_GET_RequestQuerySchema(QueryRequestSchemaAPI, QueryParentResources):
+    pass
+
+
 class Resource_GET_RequestSchema(BaseRequestSchemaAPI):
     path = Resource_RequestPathSchema()
+    querystring = Resource_GET_RequestQuerySchema()
 
 
 class Resource_MatchDictCheck_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -1343,8 +1398,8 @@ class ServiceTypesList(colander.SequenceSchema):
     )
 
 
-class ServiceListingQuerySchema(QueryRequestSchemaAPI):
-    flatten = QueryFlattenServices
+class ServiceListingQuerySchema(QueryRequestSchemaAPI, QueryFlattenServices):
+    pass
 
 
 class ServiceTypes_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -1404,9 +1459,8 @@ class Service_CheckConfig_UnprocessableEntityResponseSchema(BaseResponseSchemaAP
     body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
 
 
-class ServicesQuerySchema(QueryRequestSchemaAPI):
-    flatten = QueryFlattenServices
-    svc_type = QueryFilterServiceType
+class ServicesQuerySchema(QueryRequestSchemaAPI, QueryFlattenServices, QueryFilterServiceType):
+    pass
 
 
 class Services_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2150,11 +2204,14 @@ class UserGroup_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
-class UserResources_GET_QuerySchema(QueryRequestSchemaAPI):
-    inherited = QueryInheritGroupsPermissions
-    resolve = QueryResolvedUserGroupsPermissions
-    filtered = QueryFilterResources
-    svc_type = QueryFilterServiceType
+class UserResources_GET_QuerySchema(
+    QueryRequestSchemaAPI,
+    QueryInheritGroupsPermissions,
+    QueryResolvedUserGroupsPermissions,
+    QueryFilterResources,
+    QueryFilterServiceType
+):
+    pass
 
 
 class UserResources_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2196,10 +2253,13 @@ class UserResourcePermissions_Check_ErrorResponseSchema(BaseResponseSchemaAPI):
     )
 
 
-class UserResourcePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
-    inherited = QueryInheritGroupsPermissions
-    resolve = QueryResolvedUserGroupsPermissions
-    effective = QueryEffectivePermissions
+class UserResourcePermissions_GET_QuerySchema(
+    QueryRequestSchemaAPI,
+    QueryInheritGroupsPermissions,
+    QueryResolvedUserGroupsPermissions,
+    QueryEffectivePermissions
+):
+    pass
 
 
 class UserResourcePermissions_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2369,9 +2429,12 @@ class UserServiceResources_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = UserServiceResources_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class UserServiceResources_GET_QuerySchema(QueryRequestSchemaAPI):
-    inherited = QueryInheritGroupsPermissions
-    resolve = QueryResolvedUserGroupsPermissions
+class UserServiceResources_GET_QuerySchema(
+    QueryRequestSchemaAPI,
+    QueryInheritGroupsPermissions,
+    QueryResolvedUserGroupsPermissions
+):
+    pass
 
 
 class UserServiceResources_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2413,11 +2476,14 @@ class UserServicePermissionName_DELETE_RequestSchema(BaseRequestSchemaAPI):
     body = colander.MappingSchema(default={})
 
 
-class UserServices_GET_QuerySchema(QueryRequestSchemaAPI):
-    cascade = QueryCascadeResourcesPermissions
-    inherit = QueryInheritGroupsPermissions
-    flatten = QueryFlattenServices
-    svc_type = QueryFilterServiceType
+class UserServices_GET_QuerySchema(
+    QueryRequestSchemaAPI,
+    QueryCascadeResourcesPermissions,
+    QueryInheritGroupsPermissions,
+    QueryFlattenServices,
+    QueryFilterServiceType
+):
+    pass
 
 
 class UserServices_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2434,9 +2500,12 @@ class UserServices_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = UserServices_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class UserServicePermissions_GET_QuerySchema(QueryRequestSchemaAPI):
-    inherited = QueryInheritGroupsPermissions
-    resolve = QueryResolvedUserGroupsPermissions
+class UserServicePermissions_GET_QuerySchema(
+    QueryRequestSchemaAPI,
+    QueryInheritGroupsPermissions,
+    QueryResolvedUserGroupsPermissions
+):
+    pass
 
 
 class UserServicePermissions_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2643,8 +2712,8 @@ class GroupUsers_GET_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class GroupServices_GET_QuerySchema(QueryRequestSchemaAPI):
-    svc_type = QueryFilterServiceType
+class GroupServices_GET_QuerySchema(QueryRequestSchemaAPI, QueryFilterServiceType):
+    pass
 
 
 class GroupServices_GET_RequestSchema(BaseRequestSchemaAPI):
@@ -2816,8 +2885,8 @@ class GroupResourcePermissions_InternalServerErrorResponseSchema(BaseResponseSch
         code=HTTPInternalServerError.code, description=description)
 
 
-class GroupResources_GET_QuerySchema(QueryRequestSchemaAPI):
-    svc_type = QueryFilterServiceType
+class GroupResources_GET_QuerySchema(QueryRequestSchemaAPI, QueryFilterServiceType):
+    pass
 
 
 class GroupResources_GET_RequestSchema(BaseRequestSchemaAPI):
