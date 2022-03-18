@@ -515,9 +515,39 @@ class QueryFilterResources(colander.MappingSchema):
 
 
 class QueryParentResources(colander.MappingSchema):
-    parent = colander.SchemaNode(
+    parents = colander.SchemaNode(
         colander.Boolean(), name="parent", default=False, missing=colander.drop,
-        description="Obtain resources ordered by parent instead of by children hierarchy."
+        description=(
+            "Obtain parent resources of the requested resource by ID instead of its children hierarchy. "
+            "The requested resource by ID will be the top-most object with nested 'parents' field "
+            "(instead of 'children' when 'parents=false') going all the way down to the root service of that resource. "
+            "Contrary to children hierarchy representation that can branch out over multiple children resources, "
+            "parent resources are guaranteed to have a single branch (each resource can only have one parent). "
+            "For this reason, it is possible to combine this parameter with 'flatten' and 'invert' to list resources "
+            "in different orders and formats. These other queries are ignored when 'parents=false'."
+        )
+    )
+    flatten = colander.SchemaNode(
+        colander.Boolean(), name="flatten", default=False, missing=colander.drop,
+        description=(
+            "Only when 'parents=true', returns elements as a flattened list of JSON objects instead of default "
+            "response format as nested objects with resource ID keys and parent resource definitions under them. "
+            "Can be combined with 'invert' query to reverse the order of resource items in the returned list."
+        )
+    )
+    invert = colander.SchemaNode(
+        colander.Boolean(), name="invert", default=False, missing=colander.drop,
+        description=(
+            "Only when 'parents=true', returns elements in the inverse order, going from top-most service "
+            "down to the requested resource by ID listing all its intermediate children. This is different "
+            "than 'parents=false' where the complete children hierarchy *under the requested resource ID* are "
+            "returned, with all possible branches. When this option combined with 'parent', only the resources "
+            "on the specific branch linking the root service to the requested resource by ID are returned instead "
+            "of the full hierarchy, effectively returning the resource hierarchy *above the requested resource ID*. "
+            "Note that for this reason, the requested resource will always be the last/deepest item returned, even "
+            "if it does have children resources in reality."
+            "Can be combined with 'flatten' query to obtain a list instead of nested objects."
+        )
     )
 
 
@@ -1124,6 +1154,7 @@ class Resource_MatchDictCheck_BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 
 class Resource_GET_ResponseBodySchema(BaseResponseBodySchema):
+    # FIXME: OneOf required for alternatives (keys "parents" instead of "children", list representation)
     resource = Resource_ParentResourceWithChildrenContainerBodySchema()
 
 
@@ -1133,7 +1164,7 @@ class Resource_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class Resource_GET_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
-    description = "Failed building resource children json formatted tree."
+    description = "Failed building resource hierarchy into JSON formatted tree."
     body = InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
 
 

@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from ziggurat_foundations.models.services.resource_tree import ResourceTreeService
 
     from magpie.services import ServiceInterface
-    from magpie.typedefs import ChildrenResourceNodes, ServiceOrResourceType, Str
+    from magpie.typedefs import NestedResourceNodes, ServiceOrResourceType, Str
 
 
 def check_valid_service_or_resource_permission(permission_name, service_or_resource, db_session):
@@ -121,7 +121,7 @@ def check_unique_child_resource_name(resource_name, parent_id, error_message, db
 
 
 def crop_tree_with_permission(children, resource_id_list):
-    # type: (ChildrenResourceNodes, List[int]) -> Tuple[ChildrenResourceNodes, List[int]]
+    # type: (NestedResourceNodes, List[int]) -> Tuple[NestedResourceNodes, List[int]]
     """
     Recursively prunes all children resources from the tree hierarchy *except* listed ones matched by ID.
 
@@ -196,15 +196,31 @@ def get_service_or_resource_types(service_or_resource):
     return svc_res_type_cls, svc_res_type_str   # noqa: W804
 
 
+def get_resource_parents(resource, db_session, tree_service_builder=None):
+    # type: (ServiceOrResourceType, Session, Optional[ResourceTreeService]) -> List[ServiceOrResourceType]
+    """
+    Obtains the parent resource nodes of the input service or resource.
+
+    :param resource: Initial resource where to start building the list from.
+    :param db_session: Database connection to retrieve resources.
+    :param tree_service_builder: Utility that build the tree (default: :py:data:`models.RESOURCE_TREE_SERVICE`).
+    :returns: List of resources starting at input resource going all the way down to the root service.
+    """
+    if tree_service_builder is None:
+        tree_service_builder = models.RESOURCE_TREE_SERVICE
+    parents = tree_service_builder.path_upper(resource.resource_id, db_session=db_session)
+    return list(parents)
+
+
 def get_resource_children(resource, db_session, tree_service_builder=None):
-    # type: (ServiceOrResourceType, Session, Optional[ResourceTreeService]) -> ChildrenResourceNodes
+    # type: (ServiceOrResourceType, Session, Optional[ResourceTreeService]) -> NestedResourceNodes
     """
     Obtains the children resource node structure of the input service or resource.
 
-    :param resource: initial resource where to start building the tree from
-    :param db_session: database connection to retrieve resources
-    :param tree_service_builder: service that build the tree (default: :py:data:`RESOURCE_TREE_SERVICE`)
-    :returns: {node: Resource, children: {node_id: <recursive>}}
+    :param resource: Initial resource where to start building the tree from.
+    :param db_session: Database connection to retrieve resources.
+    :param tree_service_builder: Utility that build the tree (default: :py:data:`models.RESOURCE_TREE_SERVICE`).
+    :returns: ``{node: Resource, children: {node_id: <recursive>}}``
     """
     if tree_service_builder is None:
         tree_service_builder = models.RESOURCE_TREE_SERVICE
