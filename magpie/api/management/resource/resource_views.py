@@ -56,18 +56,13 @@ def get_resource_view(request):
                                        msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
                                        content={"resource": rf.format_resource(resource, basic_info=False)})
 
-        # When using nested objects, top-most is handled differently because of normal children hierarchy
-        # in order to report the service details. When using listing, they are all processed the same way.
         if invert:
             # listing of parents, but inverted to obtain "root-service -> ... -> requested-ressource"
             # therefore, nested items are back to being children once again
             nesting = "children"  # type: NestingKeyType
-            top_res = res_parents[-1]  # service
-            sub_res = reversed(res_parents[:-1])
+            res_parents = list(reversed(res_parents))
         else:
             nesting = "parent"
-            top_res = res_parents[0]
-            sub_res = res_parents[1:]
         if flatten:
             res_json = ax.evaluate_call(
                 lambda: rf.format_resources_listed(res_parents, db_session=request.db),
@@ -75,8 +70,12 @@ def get_resource_view(request):
                 msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
                 content={"resource": rf.format_resource(resource, basic_info=False)})
         else:
-            res_nested = {}  # nest resources bottom-up
-            for parent_res in reversed(list(sub_res)):  # in case reverse the reversed list... avoid error
+            # When using nested objects, top-most is handled differently because of normal children hierarchy
+            # in order to report the service details. When using listing, they are all processed the same way.
+            top_res = res_parents[0]
+            sub_res = res_parents[1:]
+            res_nested = {}  # nest resources bottom-up with expected structure for formatter
+            for parent_res in reversed(sub_res):
                 res_nested = {parent_res.resource_id: {"node": parent_res, "children": res_nested}}
             res_json = ax.evaluate_call(
                 lambda: rf.format_resources_nested(top_res, res_nested, nesting_key=nesting, db_session=request.db),

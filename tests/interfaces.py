@@ -6102,7 +6102,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_RESOURCES
-    def test_GetResource_ResponseFormat(self):
+    def test_GetResource_ResponseFormat_ChildrenNested(self):
         """
         Test format of nested resource tree.
 
@@ -6170,6 +6170,180 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         check_resource_node(res2_body, res2_id, svc_id, svc_id, res_perms, None)
         res3_body = res1_body["children"][str(res3_id)]
         check_resource_node(res3_body, res3_id, res1_id, svc_id, res_perms, None)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetResource_ResponseFormat_ParentNested_NormalAndInvert(self):
+        """
+        Test format of nested resource tree.
+
+        Test structure::
+
+            svc1
+              res1
+              res2
+                res3
+                  res4
+        """
+        utils.warn_version(self, "parent resources under resource with nested format", "3.23", skip=True)
+
+        svc1_name = "test-thredds-parent-nested"
+        type_dir = Directory.resource_type_name
+        type_file = File.resource_type_name
+        # last resource not used, but created to check last resource condition
+        svc1_id, res2_id, res3_id, _ = utils.TestSetup.create_TestServiceResourceTree(
+            self,
+            override_service_name=svc1_name, override_service_type=ServiceTHREDDS.service_type,
+            override_resource_names=["res" + str(i) for i in range(2, 5)],
+            override_resource_types=[type_dir, type_dir, type_file]
+        )
+        # extra sibling resource not checked, but just to make sure that it doesn't appear somewhere else
+        # all nested parent object should only contain 1 resource
+        utils.TestSetup.create_TestResource(self, parent_resource_id=svc1_id, override_resource_type=type_file)
+
+        path = "/resources/{}".format(res3_id)
+        query = {"parent": "true"}
+        body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
+        info = utils.check_response_basic_info(body)
+
+        utils.check_val_is_in("resource", info)
+        utils.check_val_not_in("children", info["resource"])
+        utils.check_val_is_in("parent", info["resource"])
+        utils.check_val_equal(len(info["resource"]["parent"]), 1)
+        utils.check_val_equal(info["resource"]["resource_id"], res3_id)
+        utils.check_val_equal(info["resource"]["parent_id"], res2_id)
+        utils.check_val_equal(info["resource"]["root_service_id"], svc1_id)
+        utils.check_val_is_in(str(res2_id), info["resource"]["parent"])
+        res2_parent = info["resource"]["parent"][str(res2_id)]
+        utils.check_val_not_in("children", res2_parent)
+        utils.check_val_is_in("parent", res2_parent)
+        utils.check_val_equal(len(res2_parent["parent"]), 1)
+        utils.check_val_equal(res2_parent["resource_id"], res2_id)
+        utils.check_val_equal(res2_parent["parent_id"], svc1_id)
+        utils.check_val_equal(res2_parent["root_service_id"], svc1_id)
+        utils.check_val_is_in(str(svc1_id), res2_parent["parent"])
+        svc1_parent = res2_parent["parent"][str(svc1_id)]
+        utils.check_val_not_in("children", svc1_parent)
+        utils.check_val_is_in("parent", svc1_parent)
+        utils.check_val_equal(len(svc1_parent["parent"]), 0)
+        utils.check_val_type(svc1_parent["parent"], dict)
+        utils.check_val_equal(svc1_parent["resource_id"], svc1_id)
+        utils.check_val_equal(svc1_parent["parent_id"], None)
+        utils.check_val_equal(svc1_parent["root_service_id"], None)
+
+        # verify inverted "parent" that should still make use of "children" field, since inverted
+        path = "/resources/{}".format(res3_id)
+        query = {"parent": "true", "invert": "true"}
+        body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
+        info = utils.check_response_basic_info(body)
+
+        err_one = (
+            "Even if service has more than one children, using parent query should only list "
+            "single child of the branch that leads to requested resource."
+        )
+        err_last = (
+            "Even if requested resource has a child, it is not returned because parent query "
+            "indicates it is the deepest resource for which to list its parents."
+        )
+        utils.check_val_is_in("resource", info)
+        utils.check_val_not_in("parent", info["resource"])
+        utils.check_val_is_in("children", info["resource"])
+        utils.check_val_equal(len(info["resource"]["children"]), 1, msg=err_one)
+        utils.check_val_equal(info["resource"]["resource_id"], svc1_id)
+        utils.check_val_equal(info["resource"]["parent_id"], None)
+        utils.check_val_equal(info["resource"]["root_service_id"], None)
+        utils.check_val_is_in(str(res2_id), info["resource"]["children"])
+        res2_child = info["resource"]["children"][str(res2_id)]
+        utils.check_val_not_in("parent", res2_child)
+        utils.check_val_is_in("children", res2_child)
+        utils.check_val_equal(len(res2_child["children"]), 1, msg=err_one)
+        utils.check_val_equal(res2_child["resource_id"], res2_id)
+        utils.check_val_equal(res2_child["parent_id"], svc1_id)
+        utils.check_val_equal(res2_child["root_service_id"], svc1_id)
+        utils.check_val_is_in(str(res3_id), res2_child["children"])
+        res3_child = res2_child["children"][str(res3_id)]
+        utils.check_val_not_in("parent", res3_child)
+        utils.check_val_is_in("children", res3_child)
+        utils.check_val_equal(len(res3_child["children"]), 0, msg=err_last)
+        utils.check_val_type(res3_child["children"], dict)
+        utils.check_val_equal(res3_child["resource_id"], res3_id)
+        utils.check_val_equal(res3_child["parent_id"], res2_id)
+        utils.check_val_equal(res3_child["root_service_id"], svc1_id)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetResource_ResponseFormat_ParentListing_NormalAndInvert(self):
+        """
+        Test format of nested resource tree.
+
+        Test structure::
+
+            svc1
+              res1
+              res2
+                res3
+                  res4
+        """
+        utils.warn_version(self, "parent resources under resource with list format", "3.23", skip=True)
+
+        svc1_name = "test-thredds-parent-listing"
+        type_dir = Directory.resource_type_name
+        type_file = File.resource_type_name
+        # last resource not used, but created to check last resource condition
+        svc1_id, res2_id, res3_id, _ = utils.TestSetup.create_TestServiceResourceTree(
+            self,
+            override_service_name=svc1_name, override_service_type=ServiceTHREDDS.service_type,
+            override_resource_names=["res" + str(i) for i in range(2, 5)],
+            override_resource_types=[type_dir, type_dir, type_file]
+        )
+        # extra sibling resource not checked, but just to make sure that it doesn't appear somewhere else
+        # all nested parent object should only contain 1 resource
+        utils.TestSetup.create_TestResource(self, parent_resource_id=svc1_id, override_resource_type=type_file)
+
+        path = "/resources/{}".format(res3_id)
+        query = {"parent": "true", "flatten": "true"}
+        body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
+        info = utils.check_response_basic_info(body)
+
+        utils.check_val_not_in("resource", info)
+        utils.check_val_is_in("resources", info)
+        utils.check_val_type(info["resources"], list)
+        utils.check_val_equal(len(info["resources"]), 3, msg="Should not include child resource under requested one.")
+        for res in info["resources"]:
+            utils.check_val_type(res, dict)
+            utils.check_val_not_in("children", res)
+            utils.check_val_not_in("parent", res)
+        utils.check_val_equal(info["resources"][0]["resource_id"], res3_id)
+        utils.check_val_equal(info["resources"][0]["parent_id"], res2_id)
+        utils.check_val_equal(info["resources"][0]["root_service_id"], svc1_id)
+        utils.check_val_equal(info["resources"][1]["resource_id"], res2_id)
+        utils.check_val_equal(info["resources"][1]["parent_id"], svc1_id)
+        utils.check_val_equal(info["resources"][1]["root_service_id"], svc1_id)
+        utils.check_val_equal(info["resources"][2]["resource_id"], svc1_id)
+        utils.check_val_equal(info["resources"][2]["parent_id"], None)
+        utils.check_val_equal(info["resources"][2]["root_service_id"], None)
+
+        # verify inverted list ordering
+        path = "/resources/{}".format(res3_id)
+        query = {"parent": "true", "flatten": "true", "invert": "true"}
+        body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
+        info = utils.check_response_basic_info(body)
+
+        utils.check_val_not_in("resource", info)
+        utils.check_val_is_in("resources", info)
+        utils.check_val_type(info["resources"], list)
+        utils.check_val_equal(len(info["resources"]), 3, msg="Should not include child resource under requested one.")
+        for res in info["resources"]:
+            utils.check_val_type(res, dict)
+            utils.check_val_not_in("children", res)
+            utils.check_val_not_in("parent", res)
+        utils.check_val_equal(info["resources"][0]["resource_id"], svc1_id)
+        utils.check_val_equal(info["resources"][0]["parent_id"], None)
+        utils.check_val_equal(info["resources"][0]["root_service_id"], None)
+        utils.check_val_equal(info["resources"][1]["resource_id"], res2_id)
+        utils.check_val_equal(info["resources"][1]["parent_id"], svc1_id)
+        utils.check_val_equal(info["resources"][1]["root_service_id"], svc1_id)
+        utils.check_val_equal(info["resources"][2]["resource_id"], res3_id)
+        utils.check_val_equal(info["resources"][2]["parent_id"], res2_id)
+        utils.check_val_equal(info["resources"][2]["root_service_id"], svc1_id)
 
     @runner.MAGPIE_TEST_RESOURCES
     def test_UpdateResource(self):
