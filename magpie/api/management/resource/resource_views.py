@@ -46,6 +46,7 @@ def get_resource_view(request):
     """
     resource = ar.get_resource_matchdict_checked(request)
     parents = asbool(ar.get_query_param(request, ["parents", "parent"], False))
+    flatten = False
     if parents:
         flatten = asbool(ar.get_query_param(request, ["flatten", "flattened", "list"], False))
         invert = asbool(ar.get_query_param(request, ["invert", "inverted"], False))
@@ -93,7 +94,8 @@ def get_resource_view(request):
             fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
             msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
             content={"resource": rf.format_resource(resource, basic_info=False)})
-    return ax.valid_http(http_success=HTTPOk, content={"resource": res_json},
+    res_key = "resources" if flatten else "resource"
+    return ax.valid_http(http_success=HTTPOk, content={res_key: res_json},
                          detail=s.Resource_GET_OkResponseSchema.description)
 
 

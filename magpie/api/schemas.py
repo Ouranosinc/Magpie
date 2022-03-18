@@ -516,21 +516,21 @@ class QueryFilterResources(colander.MappingSchema):
 
 class QueryParentResources(colander.MappingSchema):
     parents = colander.SchemaNode(
-        colander.Boolean(), name="parent", default=False, missing=colander.drop,
+        colander.Boolean(), name="parents", default=False, missing=colander.drop,
         description=(
             "Obtain parent resources of the requested resource by ID instead of its children hierarchy. "
-            "The requested resource by ID will be the top-most object with nested 'parents' field "
+            "The requested resource by ID will be the top-most object with nested 'parent' field "
             "(instead of 'children' when 'parents=false') going all the way down to the root service of that resource. "
             "Contrary to children hierarchy representation that can branch out over multiple children resources, "
             "parent resources are guaranteed to have a single branch (each resource can only have one parent). "
             "For this reason, it is possible to combine this parameter with 'flatten' and 'invert' to list resources "
-            "in different orders and formats. These other queries are ignored when 'parents=false'."
+            "in a different order and/or format. These other queries are ignored when 'parents=false'."
         )
     )
     flatten = colander.SchemaNode(
         colander.Boolean(), name="flatten", default=False, missing=colander.drop,
         description=(
-            "Only when 'parents=true', returns elements as a flattened list of JSON objects instead of default "
+            "Applies only when 'parents=true'. Returns elements as a flattened list of JSON objects instead of default "
             "response format as nested objects with resource ID keys and parent resource definitions under them. "
             "Can be combined with 'invert' query to reverse the order of resource items in the returned list."
         )
@@ -538,14 +538,14 @@ class QueryParentResources(colander.MappingSchema):
     invert = colander.SchemaNode(
         colander.Boolean(), name="invert", default=False, missing=colander.drop,
         description=(
-            "Only when 'parents=true', returns elements in the inverse order, going from top-most service "
-            "down to the requested resource by ID listing all its intermediate children. This is different "
-            "than 'parents=false' where the complete children hierarchy *under the requested resource ID* are "
-            "returned, with all possible branches. When this option combined with 'parent', only the resources "
-            "on the specific branch linking the root service to the requested resource by ID are returned instead "
-            "of the full hierarchy, effectively returning the resource hierarchy *above the requested resource ID*. "
-            "Note that for this reason, the requested resource will always be the last/deepest item returned, even "
-            "if it does have children resources in reality."
+            "Applies only when 'parents=true'. Returns elements in the inverse order, going from top-most service "
+            "down to (at most) the requested resource by ID listing all its intermediate children. This is different "
+            "than using 'parents=false' where the complete children hierarchy *under the requested resource ID* are "
+            "returned, with all possible branches. When this option is combined with 'parent', only the resources "
+            "on the specific branch directly linking the root service to the requested resource by ID are returned "
+            "instead of the full hierarchy, effectively only returning the resource "
+            "hierarchy *above the requested resource ID*. Note that for this reason, the requested resource will "
+            "always be the last/deepest item returned, even if it could have more children resources in reality. "
             "Can be combined with 'flatten' query to obtain a list instead of nested objects."
         )
     )
@@ -1155,6 +1155,7 @@ class Resource_MatchDictCheck_BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 class Resource_GET_ResponseBodySchema(BaseResponseBodySchema):
     # FIXME: OneOf required for alternatives (keys "parents" instead of "children", list representation)
+    #       When using list, 'resources' is used since many are under the same array field.
     resource = Resource_ParentResourceWithChildrenContainerBodySchema()
 
 
