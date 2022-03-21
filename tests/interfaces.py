@@ -2416,7 +2416,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   cookies=self.cookies, json=data)
         utils.check_response_basic_info(resp, 200, expected_method="PATCH")
 
-        def check_permissions(data):
+        def check_permissions(permissions_data):
             """
             Utility function that checks if resource and permissions found in data were succesfully create/removed.
             """
@@ -2424,7 +2424,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
             resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
 
-            for perm_entry in data["permissions"][1:]:  # skip first resource, which is the service
+            for perm_entry in permissions_data["permissions"][1:]:  # skip first resource, which is the service
                 target_res = [res for res in resources.values() if res["resource_name"] == perm_entry["resource_name"]]
                 # target resource should exist
                 assert len(target_res) == 1
