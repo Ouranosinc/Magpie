@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.23.0:
+
+`3.23.0 <https://github.com/Ouranosinc/Magpie/tree/3.23.0>`_ (2022-03-21)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``parents``, ``flatten`` and ``invert`` query parameters for request ``GET /resources/{id}`` allowing listing
