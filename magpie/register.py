@@ -675,7 +675,7 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
 
 def _log_permission(message, permission_index, trail=", skipping...", detail=None, permission=None, level=logging.WARN,
                     raise_errors=False):
-    # type: (Str, int, Str, Optional[Str], Optional[Str], Union[Str, int]) -> None
+    # type: (Str, int, Str, Optional[Str], Optional[Str], Union[Str, int], bool) -> None
     """
     Logs a message related to a 'permission' entry.
 
@@ -717,7 +717,7 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                          entry_index,               # type: int
                          service_info,              # type: JSON
                          cookies_or_session=None,   # type: CookiesOrSessionType
-                         magpie_url=None,           # type: Optional[Str],
+                         magpie_url=None,           # type: Optional[Str]
                          raise_errors=False         # type: bool
                          ):                         # type: (...) -> Tuple[Optional[int], bool]
     """
@@ -735,12 +735,8 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
         raise RegistrationValueError("cannot use cookies without corresponding request URL")
 
     resource = None
-    resource_path = permission_config_entry.get("resource", "")
+    resource_path = permission_config_entry.get("resource", "").strip("/")
     resource_type_config = permission_config_entry.get("type")
-    if resource_path.startswith("/"):
-        resource_path = resource_path[1:]
-    if resource_path.endswith("/"):
-        resource_path = resource_path[:-1]
     if resource_path:
         try:
             svc_name = service_info["service_name"]
@@ -916,7 +912,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
                 from magpie.api.management.group.group_utils import create_group
                 return create_group(**grp_data)
 
-    def _validate_response(operation, is_create, item_type="Permission", raise_errors=False):
+    def _validate_response(operation, is_create, item_type="Permission"):
         """
         Validate action/operation applied and handles raised ``HTTPException`` as returned response.
         """
@@ -934,21 +930,17 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         # validation according to status code returned
         if is_create:
             if _resp.status_code in [200, 201]:  # update/create
-                _log_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO, trail="",
-                                raise_errors=False)
+                _log_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO, trail="")
             elif _resp.status_code == 409:
-                _log_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO,
-                                raise_errors=False)
+                _log_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)
             else:
                 _log_permission("Unknown response [{}]".format(_resp.status_code), entry_index,
                                 permission=permission_config_entry, level=logging.ERROR, raise_errors=raise_errors)
         else:
             if _resp.status_code == 200:
-                _log_permission("{} successfully removed.".format(item_type), entry_index, level=logging.INFO, trail="",
-                                raise_errors=False)
+                _log_permission("{} successfully removed.".format(item_type), entry_index, level=logging.INFO, trail="")
             elif _resp.status_code == 404:
-                _log_permission("{} already removed.".format(item_type), entry_index, level=logging.INFO,
-                                raise_errors=False)
+                _log_permission("{} already removed.".format(item_type), entry_index, level=logging.INFO)
             else:
                 _log_permission("Unknown response [{}]".format(_resp.status_code), entry_index,
                                 permission=permission_config_entry, level=logging.ERROR, raise_errors=raise_errors)
@@ -960,14 +952,14 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
     perm = PermissionSet(perm_def)
 
     # process groups first as they can be referenced by user definitions
-    _validate_response(lambda: _apply_profile(None, grp_name), is_create=True, raise_errors=raise_errors)
-    _validate_response(lambda: _apply_profile(usr_name, None), is_create=True, raise_errors=raise_errors)
+    _validate_response(lambda: _apply_profile(None, grp_name), is_create=True)
+    _validate_response(lambda: _apply_profile(usr_name, None), is_create=True)
     if _use_request(cookies_or_session):
-        _validate_response(lambda: _apply_request(None, grp_name), is_create=create_perm, raise_errors=raise_errors)
-        _validate_response(lambda: _apply_request(usr_name, None), is_create=create_perm, raise_errors=raise_errors)
+        _validate_response(lambda: _apply_request(None, grp_name), is_create=create_perm)
+        _validate_response(lambda: _apply_request(usr_name, None), is_create=create_perm)
     else:
-        _validate_response(lambda: _apply_session(None, grp_name), is_create=create_perm, raise_errors=raise_errors)
-        _validate_response(lambda: _apply_session(usr_name, None), is_create=create_perm, raise_errors=raise_errors)
+        _validate_response(lambda: _apply_session(None, grp_name), is_create=create_perm)
+        _validate_response(lambda: _apply_session(usr_name, None), is_create=create_perm)
 
 
 def magpie_register_permissions_from_config(permissions_config, magpie_url=None, db_session=None, raise_errors=False):
