@@ -69,7 +69,7 @@ def get_services_runner(request):
     and query parameters.
     """
     service_type_filter = request.matchdict.get("service_type")  # no check because None/empty is for 'all services'
-    services_as_list = asbool(ar.get_query_param(request, ["flatten", "list"], False))
+    services_as_list = asbool(ar.get_query_param(request, ["flatten", "flattened", "list"], False))
     known_service_types = list(SERVICE_TYPE_DICT)
 
     # using '/services?type={}' query (allow many, no error if unknown)

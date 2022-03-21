@@ -9,6 +9,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``parents``, ``flatten`` and ``invert`` query parameters for request ``GET /resources/{id}`` allowing listing
+  of the hierarchy of *parent* resources leading down to that requested ``Resource``, rather than listing all possible
+  *children* resources branches under it. Combined with the ``flatten`` and/or ``invert`` parameters, the representation
+  format and order of returned resources can also be adjusted.
+* Refactor `OpenAPI` schema definitions for query parameters to ensure proper names are reused across endpoints.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Update linting configuration rules to validate all migration scripts employed by ``alembic``.

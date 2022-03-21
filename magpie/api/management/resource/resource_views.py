@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPOk
 from pyramid.settings import asbool
 from pyramid.view import view_config
@@ -13,6 +15,9 @@ from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.permissions import PermissionType, format_permissions
 from magpie.register import sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT, get_resource_child_allowed
+
+if TYPE_CHECKING:
+    from magpie.typedefs import NestingKeyType
 
 
 @s.ResourcesAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resources_GET_responses)
@@ -40,11 +45,56 @@ def get_resource_view(request):
     Get resource information.
     """
     resource = ar.get_resource_matchdict_checked(request)
-    res_json = ax.evaluate_call(lambda: rf.format_resource_with_children(resource, db_session=request.db),
-                                fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
-                                msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
-                                content={"resource": rf.format_resource(resource, basic_info=False)})
-    return ax.valid_http(http_success=HTTPOk, content={"resource": res_json},
+    parents = asbool(ar.get_query_param(request, ["parents", "parent"], False))
+    flatten = False
+    if parents:
+        flatten = asbool(ar.get_query_param(request, ["flatten", "flattened", "list"], False))
+        invert = asbool(ar.get_query_param(request, ["invert", "inverted"], False))
+        # listing as "requested-ressource -> ... -> root-service"
+        res_parents = ax.evaluate_call(lambda: ru.get_resource_parents(resource, db_session=request.db),
+                                       fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                                       msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
+                                       content={"resource": rf.format_resource(resource, basic_info=False)})
+
+        if invert:
+            # listing of parents, but inverted to obtain "root-service -> ... -> requested-ressource"
+            # therefore, nested items are back to being children once again
+            nesting = "children"  # type: NestingKeyType
+            res_parents = list(reversed(res_parents))
+        else:
+            nesting = "parent"
+        if flatten:
+            res_json = ax.evaluate_call(
+                lambda: rf.format_resources_listed(res_parents, db_session=request.db),
+                fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
+                content={"resource": rf.format_resource(resource, basic_info=False)})
+        else:
+            # When using nested objects, top-most is handled differently because of normal children hierarchy
+            # in order to report the service details. When using listing, they are all processed the same way.
+            top_res = res_parents[0]
+            sub_res = res_parents[1:]
+            res_nested = {}  # nest resources bottom-up with expected structure for formatter
+            for parent_res in reversed(sub_res):
+                res_nested = {parent_res.resource_id: {"node": parent_res, "children": res_nested}}
+            res_json = ax.evaluate_call(
+                lambda: rf.format_resources_nested(top_res, res_nested, nesting_key=nesting, db_session=request.db),
+                fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+                msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
+                content={"resource": rf.format_resource(resource, basic_info=False)})
+    else:
+        res_children = ax.evaluate_call(
+            lambda: ru.get_resource_children(resource, request.db),
+            fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+            msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
+            content={"resource": rf.format_resource(resource, basic_info=False)})
+        res_json = ax.evaluate_call(
+            lambda: rf.format_resources_nested(resource, res_children, nesting_key="children", db_session=request.db),
+            fallback=lambda: request.db.rollback(), http_error=HTTPInternalServerError,
+            msg_on_fail=s.Resource_GET_InternalServerErrorResponseSchema.description,
+            content={"resource": rf.format_resource(resource, basic_info=False)})
+    res_key = "resources" if flatten else "resource"
+    return ax.valid_http(http_success=HTTPOk, content={res_key: res_json},
                          detail=s.Resource_GET_OkResponseSchema.description)
 
 

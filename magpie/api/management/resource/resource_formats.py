@@ -8,7 +8,7 @@ from magpie.permissions import PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
 if TYPE_CHECKING:
-    from typing import Collection, Optional
+    from typing import Collection, List, Optional
 
     from sqlalchemy.orm.session import Session
 
@@ -16,9 +16,11 @@ if TYPE_CHECKING:
     from magpie.typedefs import (
         JSON,
         AnyPermissionType,
-        ChildrenResourceNodes,
+        NestedResourceNodes,
+        NestingKeyType,
         ResourcePermissionMap,
-        ServiceOrResourceType
+        ServiceOrResourceType,
+        Str
     )
 
 
@@ -42,7 +44,7 @@ def format_resource(resource, permissions=None, permission_type=None, basic_info
     .. seealso::
         :func:`magpie.api.management.service.service_formats.format_service`
     """
-    def fmt_res():
+    def fmt_res():  # type: () -> JSON
         sep = "." if dotted else "_"
         result = {
             "resource{}name".format(sep): str(resource.resource_name),
@@ -54,7 +56,6 @@ def format_resource(resource, permissions=None, permission_type=None, basic_info
             result.update({
                 "parent_id": resource.parent_id,
                 "root_service_id": resource.root_service_id,
-                "children": {},
             })
             result.update(format_permissions(permissions, permission_type))
         return result
@@ -67,16 +68,21 @@ def format_resource(resource, permissions=None, permission_type=None, basic_info
     )
 
 
-def format_resource_tree(children, db_session, resources_perms_dict=None, permission_type=None):
-    # type: (ChildrenResourceNodes, Session, Optional[ResourcePermissionMap], Optional[PermissionType]) -> JSON
+def format_resource_tree(
+    nested_resources,           # type: NestedResourceNodes
+    db_session,                 # type: Session
+    resources_perms_dict=None,  # type: Optional[ResourcePermissionMap]
+    permission_type=None,       # type: Optional[PermissionType]
+    nesting_key="children",     # type: NestingKeyType
+):                              # type: (...) -> JSON
     """
-    Generates the formatted resource tree under the provided children resources, with all of their children resources by
-    calling :func:`format_resource` recursively on them.
+    Generates the formatted resource tree under the provided nested resources
 
+    For all of the nested resources, formatting is applied by calling :func:`format_resource` recursively on them.
     Apply specific resource permissions as defined by :paramref:`resources_perms_dict` if provided.
 
-    :param children: service or resource for which to generate the formatted resource tree
-    :param db_session: connection to db
+    :param nested_resources: Service or resource for which to generate the formatted resource tree.
+    :param db_session: Connection to database.
     :param resources_perms_dict:
         Any pre-established :term:`Applied Permission` to set to corresponding resources by ID.
         When provided, these will define the :term:`User`, :term:`Group` or both
@@ -85,17 +91,24 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, permis
         caller function's context.
         Otherwise (``None``), defaults to extracting :term:`Allowed Permissions <Allowed Permission>` for the given
         :term:`Resource` scoped under the corresponding root :term:`Service`.
-    :return: formatted resource tree
+    :param permission_type:
+        Override :term:`Permission` type to indicate its provenance.
+        Type is applied recursively for all resources in the generated nested resource tree.
+    :param nesting_key:
+        Key to employ for nesting the formatted sub-tree resources according to the provided nested resources.
+    :return: Formatted nested resource tree with their details and permissions.
     """
     # optimization to avoid re-lookup of 'allowed permissions' when already fetched
     # unused when parsing 'applied permissions'
     __internal_svc_res_perm_dict = {}
 
-    def recursive_fmt_res_tree(children_dict):
+    def recursive_fmt_res_tree(nested_dict):  # type: (NestedResourceNodes) -> JSON
         fmt_res_tree = {}
-        for child_id, child_dict in children_dict.items():
+        for child_id, child_dict in nested_dict.items():
             resource = child_dict["node"]
-            new_children = child_dict["children"]
+            # nested nodes always use 'children' regardless of nested-key
+            # nested-key employed in the generated format will indicate the real resource parents/children relationship
+            new_nested = child_dict["children"]
             perms = []
 
             # case of pre-specified user/group-specific permissions
@@ -122,17 +135,38 @@ def format_resource_tree(children, db_session, resources_perms_dict=None, permis
                         res_type.resource_type_name: res_perms  # use str key to match below 'resource_type' field
                         for res_type, res_perms in SERVICE_TYPE_DICT[service.type].resource_types_permissions.items()
                     }
-                perms = __internal_svc_res_perm_dict[service_id][resource.resource_type]  # 'resource_type' is str here
+                # in case of inverse nesting, service could be at "bottom"
+                # retrieve its permissions directly since its type is never expected nested under itself
+                res_type_name = resource.resource_type  # type: Str
+                if res_type_name == "service":
+                    perms = SERVICE_TYPE_DICT[service.type].permissions
+                else:
+                    perms = __internal_svc_res_perm_dict[service_id][resource.resource_type]
 
             fmt_res_tree[child_id] = format_resource(resource, perms, permission_type)
-            fmt_res_tree[child_id]["children"] = recursive_fmt_res_tree(new_children)
+            fmt_res_tree[child_id][nesting_key] = recursive_fmt_res_tree(new_nested)
         return fmt_res_tree
 
-    return recursive_fmt_res_tree(children)
+    return recursive_fmt_res_tree(nested_resources)
 
 
-def format_resource_with_children(resource, db_session):
-    # type: (ServiceOrResourceType, Session) -> JSON
+def format_resources_listed(resources, db_session):
+    # type: (List[ServiceOrResourceType], Session) -> List[JSON]
+    """
+    Obtains the formatted :term:`Resource` list with their applicable permissions.
+    """
+    from magpie.api.management.resource import resource_utils as ru
+
+    res_list = []
+    for res in resources:
+        res_perms = ru.get_resource_permissions(res, db_session=db_session)
+        res_json = format_resource(res, permissions=res_perms)
+        res_list.append(res_json)
+    return res_list
+
+
+def format_resources_nested(resource, nested_resources, nesting_key, db_session):
+    # type: (ServiceOrResourceType, NestedResourceNodes, NestingKeyType, Session) -> JSON
     """
     Obtains the formatted :term:`Resource` tree with all its formatted children hierarchy.
     """
@@ -140,9 +174,7 @@ def format_resource_with_children(resource, db_session):
 
     resource_permissions = ru.get_resource_permissions(resource, db_session=db_session)
     resource_formatted = format_resource(resource, permissions=resource_permissions)
-
-    resource_formatted["children"] = format_resource_tree(
-        ru.get_resource_children(resource, db_session),
-        db_session=db_session
+    resource_formatted[nesting_key] = format_resource_tree(
+        nested_resources, nesting_key=nesting_key, db_session=db_session
     )
     return resource_formatted
