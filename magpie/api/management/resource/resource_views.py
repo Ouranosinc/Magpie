@@ -12,6 +12,7 @@ from magpie.api.management.resource import resource_formats as rf
 from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service_resources
 from magpie.api.management.service.service_utils import get_services_by_type
+from magpie.api.management.user import user_utils as uu
 from magpie.permissions import PermissionType, format_permissions
 from magpie.register import magpie_register_permissions_from_config, sync_services_phoenix
 from magpie.services import SERVICE_TYPE_DICT, get_resource_child_allowed
@@ -171,23 +172,31 @@ def get_resource_types_view(request):
 @view_config(route_name=s.PermissionsAPI.name, request_method="PATCH")
 def update_permissions(request):
     """
-    Update the requested permissions.
+    Update the requested permissions and create missing related resources if necessary.
     """
     permissions = ar.get_value_multiformat_body_checked(request, "permissions", check_type=list)
-    ax.verify_param(permissions, not_none=True, not_empty=True,
-                    http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+    ax.verify_param(permissions, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                    msg_on_fail="No permissions to update (empty `permissions` parameter.)")
 
     for entry in permissions:
-        # Check if user/group exists for each permission found
-        if "permission" in entry.keys() and entry["permission"]:
-            if "user" in entry.keys():
-                ax.verify_param(UserService.by_user_name(entry["user"], db_session=request.db),
-                                not_none=True, http_error=HTTPBadRequest,
-                                msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
-            if "group" in entry.keys():
+        ax.verify_param(entry, is_type=True, param_compare=dict, http_error=HTTPBadRequest,
+                        msg_on_fail="Permission entry should be of `dict` type, but type `{}` was found instead".format(
+                            type(entry)),
+                        content={"param_content": entry})
+        if "permission" in entry and entry["permission"]:
+            if "user" in entry:
+                user = UserService.by_user_name(entry["user"], db_session=request.db)
+                ax.verify_param(user, not_none=True, http_error=HTTPBadRequest,
+                                msg_on_fail="Permission's user `{}` could not be found in the database.".format(
+                                    entry["user"]),
+                                content={"param_content": entry})
+                uu.check_user_editable(user, request)
+            if "group" in entry:
                 ax.verify_param(GroupService.by_group_name(entry["group"], db_session=request.db),
                                 not_none=True, http_error=HTTPBadRequest,
-                                msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+                                msg_on_fail="Permission's group `{}` could not be found in the database.".format(
+                                    entry["group"]),
+                                content={"param_content": entry})
 
     # Reformat permissions config
     permissions_cfg = {"permissions": []}
@@ -201,25 +210,28 @@ def update_permissions(request):
         group = entry.get("group")
         action = entry.get("action", "create")
 
-        ax.verify_param(resource_name, not_none=True,
-                        http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
-        ax.verify_param(resource_type, not_none=True,
-                        http_error=HTTPBadRequest, msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+        ax.verify_param(resource_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                        msg_on_fail="Missing `resource_name` parameter for permissions update.",
+                        content={"param_content": entry})
+        ax.verify_param(resource_type, not_none=True, not_empty=True, http_error=HTTPBadRequest,
+                        msg_on_fail="Missing `resource_type` parameter for permissions update.",
+                        content={"param_content": entry})
         if i == 0:
-            # First resource must be a service
             ax.verify_param(resource_type, is_equal=True, param_compare="service", http_error=HTTPBadRequest,
-                            msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+                            msg_on_fail="First resource in the permissions list should have a `service` type but has "
+                                        "a `{}` type instead.".format(resource_type),
+                            content={"param_content": entry})
             service_name = resource_name
         else:
             resource_full_path += "/" + resource_name
-            # Other resources must not be services
             ax.verify_param(resource_type, not_equal=True, param_compare="service", http_error=HTTPBadRequest,
-                            msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+                            msg_on_fail="Only the first resource in the permissions list should be of `service` type.",
+                            content={"param_content": entry})
             resource_full_type += "/" + resource_type
         if permission:
-            # Check that a user and/or a group is defined
             ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
-                            msg_on_fail=s.Permissions_PATCH_BadRequestResponseSchema.description)
+                            msg_on_fail="No user or group defined with the permission to update.",
+                            content={"param_content": entry})
             cfg_entry = {
                 "service": service_name,
                 "resource": resource_full_path,
