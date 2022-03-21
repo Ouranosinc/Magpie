@@ -783,20 +783,30 @@ class PermissionNameListSchema(colander.SequenceSchema):
 class PermissionPatchObjectSchema(colander.MappingSchema):
     resource_name = colander.SchemaNode(
         colander.String(),
-        description="Name of the resource to create."
+        description="Name of the resource associated with the permission. This resource will be created if missing."
     )
     resource_type = colander.SchemaNode(
         colander.String(),
-        description="Type of the resource",
+        description="Type of the resource. The first resource must be of the `service` type, and children "
+                    "resources must have a relevant resource type that is not of the `service` type.",
         example="service"
     )
 
-    user = UserNameParameter
-    user.missing = colander.drop
+    user = colander.SchemaNode(
+        colander.String(),
+        description="Registered local user associated with the permission.",
+        example="toto",
+        missing=colander.drop
+    )
+    group = colander.SchemaNode(
+        colander.String(),
+        description="Registered user group associated with the permission.",
+        example="users",
+        missing=colander.drop
+    )
 
-    group = GroupNameParameter
-    group.missing = colander.drop
-
+    # FIXME: support oneOf(string, object), permission can actually be either a string or a PermissionObjectSchema(dict)
+    # Currently not possible to have multiple type options with colander.
     permission = PermissionObjectSchema(
         missing=colander.drop
     )
@@ -806,7 +816,7 @@ class PermissionPatchObjectSchema(colander.MappingSchema):
         description="Action to apply on the permission.",
         example="create",
         default="create",
-        validator=colander.OneOf(["create", "delete"])
+        validator=colander.OneOf(["create", "remove"])
     )
 
 
