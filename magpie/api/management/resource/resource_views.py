@@ -178,25 +178,39 @@ def update_permissions(request):
     ax.verify_param(permissions, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     msg_on_fail="No permissions to update (empty `permissions` parameter.)")
 
+    required_users = set()
+    required_groups = set()
+    has_permission_to_update = False
     for entry in permissions:
         ax.verify_param(entry, is_type=True, param_compare=dict, http_error=HTTPBadRequest,
                         msg_on_fail="Permission entry should be of `dict` type, but type `{}` was found instead".format(
                             type(entry)),
                         content={"param_content": entry})
         if "permission" in entry and entry["permission"]:
-            if "user" in entry:
-                user = UserService.by_user_name(entry["user"], db_session=request.db)
-                ax.verify_param(user, not_none=True, http_error=HTTPBadRequest,
-                                msg_on_fail="Permission's user `{}` could not be found in the database.".format(
-                                    entry["user"]),
-                                content={"param_content": entry})
-                uu.check_user_editable(user, request)
-            if "group" in entry:
-                ax.verify_param(GroupService.by_group_name(entry["group"], db_session=request.db),
-                                not_none=True, http_error=HTTPBadRequest,
-                                msg_on_fail="Permission's group `{}` could not be found in the database.".format(
-                                    entry["group"]),
-                                content={"param_content": entry})
+            user = entry.get("user")
+            group = entry.get("group")
+            ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
+                            msg_on_fail="No user or group defined with the permission to update.",
+                            content={"param_content": entry})
+            has_permission_to_update = True
+            if user:
+                required_users.add(user)
+            if group:
+                required_groups.add(group)
+
+    for user_name in required_users:
+        user = UserService.by_user_name(user_name, db_session=request.db)
+        ax.verify_param(user, not_none=True, http_error=HTTPBadRequest,
+                        msg_on_fail="Permission's user `{}` could not be found in the database.".format(user_name))
+        uu.check_user_editable(user, request)
+    for group_name in required_groups:
+        ax.verify_param(GroupService.by_group_name(group_name, db_session=request.db),
+                        not_none=True, http_error=HTTPBadRequest,
+                        msg_on_fail="Permission's group `{}` could not be found in the database.".format(group_name))
+
+    ax.verify_param(has_permission_to_update, is_true=True, http_error=HTTPBadRequest,
+                    msg_on_fail="No permissions to update (none of the input entries has a defined permission.)",
+                    content={"param_content": permissions})
 
     # Reformat permissions config
     permissions_cfg = {"permissions": []}
@@ -229,9 +243,6 @@ def update_permissions(request):
                             content={"param_content": entry})
             resource_full_type += "/" + resource_type
         if permission:
-            ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
-                            msg_on_fail="No user or group defined with the permission to update.",
-                            content={"param_content": entry})
             cfg_entry = {
                 "service": service_name,
                 "resource": resource_full_path,
