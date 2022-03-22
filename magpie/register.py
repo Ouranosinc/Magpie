@@ -11,7 +11,7 @@ import requests
 import six
 import transaction
 import yaml
-from pyramid.httpexceptions import HTTPBadRequest, HTTPException
+from pyramid.httpexceptions import HTTPException
 from sqlalchemy.orm.session import Session
 from ziggurat_foundations.models.services.group import GroupService
 from ziggurat_foundations.models.services.resource import ResourceService
@@ -673,11 +673,11 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
     return merged_service_configs
 
 
-def _log_permission(message, permission_index, trail=", skipping...", detail=None, permission=None, level=logging.WARN,
-                    raise_errors=False):
+def _handle_permission(message, permission_index, trail=", skipping...", detail=None, permission=None,
+                       level=logging.WARN, raise_errors=False):
     # type: (Str, int, Str, Optional[Str], Optional[Str], Union[Str, int], bool) -> None
     """
-    Logs a message related to a 'permission' entry.
+    Logs a message related to a 'permission' entry and raises an error if required.
 
     Log message format is as follows (detail portion omitted if none provided)::
 
@@ -706,7 +706,8 @@ def _log_permission(message, permission_index, trail=", skipping...", detail=Non
     LOGGER.log(level, "%s [permission #%d]%s%s", message, permission_index, permission, trail)
 
     if raise_errors:
-        raise HTTPBadRequest("{} [permission #{}]{}{}".format(message, permission_index, permission, trail))
+        raise RegistrationConfigurationError(
+            "{} [permission #{}]{}{}".format(message, permission_index, permission, trail))
 
 
 def _use_request(cookies_or_session):
@@ -776,24 +777,21 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                 svc_res_types = SERVICE_TYPE_DICT[svc_type].resource_type_names
                 type_count = len(svc_res_types)
                 if type_count == 0:
-                    _log_permission("Cannot generate resource", entry_index, raise_errors=raise_errors,
-                                    detail="Service [{!s}] of type [{!s}] doesn't allows any sub-resource types. "
-                                           .format(svc_name, svc_type))
-                    raise RegistrationConfigurationError("Invalid resource not allowed to apply permission.")
+                    _handle_permission("Cannot generate resource", entry_index, raise_errors=True,
+                                       detail="Service [{!s}] of type [{!s}] doesn't allows any sub-resource types. "
+                                       .format(svc_name, svc_type))
                 if type_count != 1 and not (isinstance(resource_type, six.string_types) and resource_type):
-                    _log_permission("Cannot automatically generate resource", entry_index, raise_errors=raise_errors,
-                                    detail="Service [{!s}] of type [{!s}] allows more than 1 sub-resource types ({}). "
-                                           "Type must be explicitly specified for auto-creation. "
-                                           "Available choices are: {}"
-                                           .format(svc_name, svc_type, type_count, svc_res_types))
-                    raise RegistrationConfigurationError("Missing resource 'type' to apply permission.")
+                    _handle_permission("Cannot automatically generate resource", entry_index, raise_errors=True,
+                                       detail="Service [{!s}] of type [{!s}] allows more than 1 sub-resource "
+                                              "types ({}). Type must be explicitly specified for auto-creation. "
+                                              "Available choices are: {}"
+                                       .format(svc_name, svc_type, type_count, svc_res_types))
                 if type_count != 1 and resource_type not in svc_res_types:
-                    _log_permission("Cannot generate resource", entry_index, raise_errors=raise_errors,
-                                    detail="Service [{!s}] of type [{!s}] allows more than 1 sub-resource types ({}). "
-                                           "Specified type [{!s}] doesn't match any of the allowed resource types. "
-                                           "Available choices are: {}"
-                                           .format(svc_name, svc_type, type_count, resource_type, svc_res_types))
-                    raise RegistrationConfigurationError("Invalid resource 'type' not allowed to apply permission.")
+                    _handle_permission("Cannot generate resource", entry_index, raise_errors=True,
+                                       detail="Service [{!s}] of type [{!s}] allows more than 1 sub-resource "
+                                              "types ({}). Specified type [{!s}] doesn't match any of the allowed "
+                                              "resource types. Available choices are: {}"
+                                       .format(svc_name, svc_type, type_count, resource_type, svc_res_types))
                 res_type = resource_type or svc_res_types[0]
                 if _use_request(cookies_or_session):
                     body = {"resource_name": res, "resource_type": res_type, "parent_id": parent}
@@ -810,10 +808,10 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                 raise RegistrationConfigurationError("Could not extract child resource from resource path.")
         except HTTPException as exc:
             detail = "{} ({}), {!s}".format(type(exc).__name__, exc.code, exc)
-            _log_permission("Failed resources parsing.", entry_index, detail=detail, raise_errors=raise_errors)
+            _handle_permission("Failed resources parsing.", entry_index, detail=detail, raise_errors=raise_errors)
             return None, False
         except Exception as exc:
-            _log_permission("Failed resources parsing.", entry_index, detail=repr(exc), raise_errors=raise_errors)
+            _handle_permission("Failed resources parsing.", entry_index, detail=repr(exc), raise_errors=raise_errors)
             return None, False
     return resource, True
 
@@ -930,20 +928,22 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         # validation according to status code returned
         if is_create:
             if _resp.status_code in [200, 201]:  # update/create
-                _log_permission("{} successfully created.".format(item_type), entry_index, level=logging.INFO, trail="")
+                _handle_permission("{} successfully created.".format(item_type), entry_index,
+                                   level=logging.INFO, trail="")
             elif _resp.status_code == 409:
-                _log_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)
+                _handle_permission("{} already exists.".format(item_type), entry_index, level=logging.INFO)
             else:
-                _log_permission("Unknown response [{}]".format(_resp.status_code), entry_index,
-                                permission=permission_config_entry, level=logging.ERROR, raise_errors=raise_errors)
+                _handle_permission("Unknown response [{}]".format(_resp.status_code), entry_index,
+                                   permission=permission_config_entry, level=logging.ERROR, raise_errors=raise_errors)
         else:
             if _resp.status_code == 200:
-                _log_permission("{} successfully removed.".format(item_type), entry_index, level=logging.INFO, trail="")
+                _handle_permission("{} successfully removed.".format(item_type), entry_index,
+                                   level=logging.INFO, trail="")
             elif _resp.status_code == 404:
-                _log_permission("{} already removed.".format(item_type), entry_index, level=logging.INFO)
+                _handle_permission("{} already removed.".format(item_type), entry_index, level=logging.INFO)
             else:
-                _log_permission("Unknown response [{}]".format(_resp.status_code), entry_index,
-                                permission=permission_config_entry, level=logging.ERROR, raise_errors=raise_errors)
+                _handle_permission("Unknown response [{}]".format(_resp.status_code), entry_index,
+                                   permission=permission_config_entry, level=logging.ERROR, raise_errors=raise_errors)
 
     create_perm = permission_config_entry["action"] == "create"
     perm_def = permission_config_entry["permission"]  # name or object
@@ -1045,28 +1045,28 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
     for i, perm_cfg in enumerate(permissions):
         # parameter validation
         if not isinstance(perm_cfg, dict) or not all(f in perm_cfg for f in ["permission", "service"]):
-            _log_permission("Invalid permission format for [{!s}]".format(perm_cfg), i, raise_errors=raise_errors)
+            _handle_permission("Invalid permission format for [{!s}]".format(perm_cfg), i, raise_errors=raise_errors)
             continue
         try:
             perm = PermissionSet(perm_cfg["permission"])
         except (ValueError, TypeError):
             perm = None
         if not perm:
-            _log_permission("Unknown permission [{!s}]".format(perm_cfg["permission"]), i, raise_errors=raise_errors)
+            _handle_permission("Unknown permission [{!s}]".format(perm_cfg["permission"]), i, raise_errors=raise_errors)
             continue
         usr_name = perm_cfg.get("user")
         grp_name = perm_cfg.get("group")
         if not any([usr_name, grp_name]):
-            _log_permission("Missing required user and/or group field.", i, raise_errors=raise_errors)
+            _handle_permission("Missing required user and/or group field.", i, raise_errors=raise_errors)
             continue
         if usr_name == anon_user:
-            _log_permission("Skipping forbidden user permission (reserved special user: {}).".format(anon_user), i)
+            _handle_permission("Skipping forbidden user permission (reserved special user: {}).".format(anon_user), i)
             continue
         if "action" not in perm_cfg:
-            _log_permission("Unspecified action", i, trail="using default (create)...", raise_errors=raise_errors)
+            _handle_permission("Unspecified action", i, trail="using default (create)...", raise_errors=raise_errors)
             perm_cfg["action"] = "create"
         if perm_cfg["action"] not in ["create", "remove"]:
-            _log_permission("Unknown action [{!s}]".format(perm_cfg["action"]), i, raise_errors=raise_errors)
+            _handle_permission("Unknown action [{!s}]".format(perm_cfg["action"]), i, raise_errors=raise_errors)
             continue
 
         # retrieve service for permissions validation
@@ -1075,15 +1075,15 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
             svc_path = magpie_url + ServiceAPI.path.format(service_name=svc_name)
             svc_resp = requests.get(svc_path, cookies=cookies_or_session)
             if svc_resp.status_code != 200:
-                _log_permission("Unknown service [{!s}]".format(svc_name), i, raise_errors=raise_errors)
+                _handle_permission("Unknown service [{!s}]".format(svc_name), i, raise_errors=raise_errors)
                 continue
             service_info = get_json(svc_resp)[svc_name]
         else:
             transaction.commit()    # force any pending transaction to be applied to find possible dependencies
             svc = models.Service.by_service_name(svc_name, db_session=cookies_or_session)
             if not svc:
-                _log_permission("Unknown service [{!s}]. Can't edit permissions without service.".format(svc_name), i,
-                                raise_errors=raise_errors)
+                _handle_permission("Unknown service [{!s}]. Can't edit permissions without service.".format(svc_name),
+                                   i, raise_errors=raise_errors)
                 continue
             from magpie.api.management.service.service_formats import format_service
             service_info = format_service(svc)
