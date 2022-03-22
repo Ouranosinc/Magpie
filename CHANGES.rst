@@ -15,6 +15,19 @@ Features / Changes
 * ``permissions.cfg`` now supports a new format for the ``type`` parameter, using multiple types separated
   by a slash character, matching each type with each resource found in the ``resource`` parameter.
 
+.. _changes_3.23.0:
+
+`3.23.0 <https://github.com/Ouranosinc/Magpie/tree/3.23.0>`_ (2022-03-21)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``parents``, ``flatten`` and ``invert`` query parameters for request ``GET /resources/{id}`` allowing listing
+  of the hierarchy of *parent* resources leading down to that requested ``Resource``, rather than listing all possible
+  *children* resources branches under it. Combined with the ``flatten`` and/or ``invert`` parameters, the representation
+  format and order of returned resources can also be adjusted.
+* Refactor `OpenAPI` schema definitions for query parameters to ensure proper names are reused across endpoints.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Update linting configuration rules to validate all migration scripts employed by ``alembic``.

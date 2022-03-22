@@ -35,6 +35,10 @@ if TYPE_CHECKING:
         from typing import TypedDict  # pylint: disable=E0611,no-name-in-module
     else:
         from typing_extensions import TypedDict  # noqa
+    if hasattr(typing, "Literal"):
+        from typing import Literal  # pylint: disable=E0611,no-name-in-module
+    else:
+        from typing_extensions import Literal  # noqa
 
     # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 
@@ -63,17 +67,22 @@ if TYPE_CHECKING:
     BaseJSON = Union[AnyValue, List["JSON"], Dict[AnyKey, "JSON"]]
     JSON = Union[Dict[Str, Union[BaseJSON, "JSON"]], List[BaseJSON]]
 
-    # recursive nodes structure employed by functions for listing children resources hierarchy
-    # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
-    ChildrenResourceNodes = Dict[int, Dict[Str, Union[models.Resource, "ChildrenResourceNodes"]]]
-    ResourcePermissionMap = Dict[int, List[PermissionSet]]  # raw mapping of permission-names applied per resource ID
-
     GroupPriority = Union[int, Type[math.inf]]
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
     PermissionDict = TypedDict("PermissionDict",
                                {"name": Str, "access": Optional[Str], "scope": Optional[Str],
                                 "type": Optional[Str], "reason": Optional[Str]}, total=False)
+    # recursive nodes structure employed by functions for listing children resources hierarchy
+    # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
+    NestedResourceNodes = Dict[int, "ResourceNode"]
+    ResourceNode = TypedDict("ResourceNode", {
+        "node": ServiceOrResourceType,
+        "children": NestedResourceNodes
+    }, total=True)
+    ResourcePermissionMap = Dict[int, List[PermissionSet]]  # raw mapping of permission-names applied per resource ID
+    NestingKeyType = Literal["children", "parent"]
+
     AnyZigguratPermissionType = Union[
         models.GroupPermission,
         models.UserPermission,

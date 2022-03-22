@@ -352,7 +352,7 @@ def get_user_services_view(request):
     cascade_resources = asbool(ar.get_query_param(request, "cascade"))
     inherit_groups_perms = asbool(ar.get_query_param(request, ["inherit", "inherited"]))
     resolve_groups_perms = asbool(ar.get_query_param(request, ["resolve", "resolved"]))
-    format_as_list = asbool(ar.get_query_param(request, ["flatten", "list"]))
+    format_as_list = asbool(ar.get_query_param(request, ["flatten", "flattened", "list"]))
     service_types = ar.get_query_param(request, ["type", "types"], default="")
     service_types = su.filter_service_types(service_types)  # don't use default service types to populate response
 
