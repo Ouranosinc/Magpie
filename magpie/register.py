@@ -703,11 +703,11 @@ def _handle_permission(message, permission_index, trail=", skipping...", detail=
     """
     trail = "{}\nDetail: [{!s}]".format(trail, detail) if detail else (trail or "")
     permission = " [{!s}]".format(permission) if permission else ""
-    LOGGER.log(level, "%s [permission #%d]%s%s", message, permission_index, permission, trail)
+    msg = "{} [permission #{}]{}{}".format(message, permission_index, permission, trail)
+    LOGGER.log(level, msg)
 
     if raise_errors:
-        raise RegistrationConfigurationError(
-            "{} [permission #{}]{}{}".format(message, permission_index, permission, trail))
+        raise RegistrationConfigurationError(msg)
 
 
 def _use_request(cookies_or_session):

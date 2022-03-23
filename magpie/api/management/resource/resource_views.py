@@ -226,7 +226,7 @@ def update_permissions(request):
     """
     permissions = ar.get_value_multiformat_body_checked(request, "permissions", check_type=list)
     ax.verify_param(permissions, not_none=True, not_empty=True, http_error=HTTPBadRequest,
-                    msg_on_fail="No permissions to update (empty `permissions` parameter.)")
+                    msg_on_fail="No permissions to update (empty `permissions` parameter).")
 
     required_users = set()
     required_groups = set()
@@ -235,13 +235,13 @@ def update_permissions(request):
         ax.verify_param(entry, is_type=True, param_compare=dict, http_error=HTTPBadRequest,
                         msg_on_fail="Permission entry should be of `dict` type, but type `{}` was found instead".format(
                             type(entry)),
-                        content={"param_content": entry})
+                        param_content={"value": entry})
         if "permission" in entry and entry["permission"]:
             user = entry.get("user")
             group = entry.get("group")
             ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
                             msg_on_fail="No user or group defined with the permission to update.",
-                            content={"param_content": entry})
+                            param_content={"value": entry})
             has_permission_to_update = True
             if user:
                 required_users.add(user)
@@ -259,8 +259,8 @@ def update_permissions(request):
                         msg_on_fail="Permission's group `{}` could not be found in the database.".format(group_name))
 
     ax.verify_param(has_permission_to_update, is_true=True, http_error=HTTPBadRequest,
-                    msg_on_fail="No permissions to update (none of the input entries has a defined permission.)",
-                    content={"param_content": permissions})
+                    msg_on_fail="No permissions to update (none of the input entries has a defined permission).",
+                    param_content={"value": permissions})
 
     # Reformat permissions config
     permissions_cfg = {"permissions": []}
@@ -276,21 +276,21 @@ def update_permissions(request):
 
         ax.verify_param(resource_name, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                         msg_on_fail="Missing `resource_name` parameter for permissions update.",
-                        content={"param_content": entry})
+                        param_name="resource_name", param_content={"value": entry})
         ax.verify_param(resource_type, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                         msg_on_fail="Missing `resource_type` parameter for permissions update.",
-                        content={"param_content": entry})
+                        param_name="resource_type", param_content={"value": entry})
         if i == 0:
             ax.verify_param(resource_type, is_equal=True, param_compare="service", http_error=HTTPBadRequest,
                             msg_on_fail="First resource in the permissions list should have a `service` type but has "
                                         "a `{}` type instead.".format(resource_type),
-                            content={"param_content": entry})
+                            param_name="resource_type", param_content={"value": entry})
             service_name = resource_name
         else:
             resource_full_path += "/" + resource_name
             ax.verify_param(resource_type, not_equal=True, param_compare="service", http_error=HTTPBadRequest,
                             msg_on_fail="Only the first resource in the permissions list should be of `service` type.",
-                            content={"param_content": entry})
+                            param_name="resource_type", param_content={"value": entry})
             resource_full_type += "/" + resource_type
         if permission:
             cfg_entry = {

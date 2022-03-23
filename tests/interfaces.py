@@ -2501,7 +2501,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/permissions"
         resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, expect_errors=True,
                                   cookies=self.cookies, json=data)
-        utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        body = utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        utils.check_error_param_structure(body)
 
         # Test with invalid user
         data = {
@@ -2517,7 +2518,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/permissions"
         resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, expect_errors=True,
                                   cookies=self.cookies, json=data)
-        utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        body = utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        utils.check_error_param_structure(body)
 
     @runner.MAGPIE_TEST_PERMISSIONS
     def test_PatchPermissions_InvalidResourceType(self):
@@ -2533,7 +2535,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/permissions"
         resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, expect_errors=True,
                                   cookies=self.cookies, json=data)
-        utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        body = utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        utils.check_error_param_structure(body, param_value=data["permissions"])
 
         # Test with invalid resource
         data = {
@@ -2552,7 +2555,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/permissions"
         resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, expect_errors=True,
                                   cookies=self.cookies, json=data)
-        utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        body = utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        utils.check_error_param_structure(body, param_value=data["permissions"])
 
     def create_validate_permissions(self,
                                     test_user_name,                     # type: Str
