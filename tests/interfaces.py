@@ -2384,6 +2384,180 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp, 403, expected_method="DELETE")
         utils.check_val_is_in("anonymous", body["detail"].lower())
 
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_PatchPermissions(self):
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self)
+        utils.TestSetup.create_TestService(self, override_service_type="thredds")
+
+        resource_names = ["folder1", "folder2", "folder3", "the-file"]
+
+        data = {
+            "permissions": [
+                {
+                    "resource_name": self.test_service_name,
+                    "resource_type": "service",
+                    "permission": None
+                },
+                {
+                    "resource_name": resource_names[0],
+                    "resource_type": "directory"
+                },
+                {
+                    "resource_name": resource_names[1],
+                    "resource_type": "directory",
+                    "permission": "browse",
+                    "group": self.test_group_name,
+                    "action": "create"
+                }
+            ]
+        }
+        resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
+                                  cookies=self.cookies, json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PATCH")
+
+        def check_permissions(permissions_data):
+            """
+            Utility function that checks if resource and permissions found in data were succesfully create/removed.
+            """
+            path = "/services/{}/resources".format(self.test_service_name)
+            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+            resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
+
+            for perm_entry in permissions_data["permissions"][1:]:  # skip first resource, which is the service
+                target_res = [res for res in resources.values() if res["resource_name"] == perm_entry["resource_name"]]
+                # target resource should exist
+                assert len(target_res) == 1
+                target_res = target_res[0]
+
+                if perm_entry.get("permission"):
+                    perm = perm_entry["permission"]
+                    if isinstance(perm, dict):
+                        perm = "{}-{}-{}".format(perm["name"], perm["access"], perm["scope"])
+                    check_paths = []
+                    if perm_entry.get("user"):
+                        check_paths.append(
+                            "/users/{}/resources/{}/permissions".format(self.test_user_name, target_res["resource_id"]))
+                    if perm_entry.get("group"):
+                        check_paths.append("/groups/{}/resources/{}/permissions".format(
+                            self.test_group_name, target_res["resource_id"]))
+                    for path in check_paths:
+                        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+                        body = utils.check_response_basic_info(resp)
+                        if perm_entry.get("action") and perm_entry["action"] == "remove":
+                            utils.check_val_not_in(perm, body["permission_names"])
+                        else:
+                            utils.check_val_is_in(perm, body["permission_names"])
+                resources = target_res["children"]
+
+        check_permissions(data)
+
+        # Test second patch request, with additional resources/permissions
+        data["permissions"].append({
+            "resource_name": resource_names[2],
+            "resource_type": "directory",
+            "permission": "browse",
+            "group": self.test_group_name,
+            "user": self.test_user_name,
+            "action": "create"
+        })
+        data["permissions"].append({
+            "resource_name": resource_names[3],
+            "resource_type": "file",
+            "permission": {
+                "name": "read",
+                "access": "deny",
+                "scope": "match"
+            },
+            "user": self.test_user_name,
+            "action": "create"
+        })
+        resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
+                                  cookies=self.cookies, json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PATCH")
+        check_permissions(data)
+
+        # Delete permissions
+        for i in range(len(data["permissions"])):
+            data["permissions"][i]["action"] = "remove"
+        resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
+                                  cookies=self.cookies, json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="PATCH")
+        check_permissions(data)
+
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_PatchPermissions_InvalidUserGroup(self):
+        # Test with invalid group
+        data = {
+            "permissions": [
+                {
+                    "resource_name": self.test_service_name,
+                    "resource_type": "service",
+                    "permission": "browse",
+                    "group": "invalid_group",
+                }
+            ]
+        }
+        path = "/permissions"
+        resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, expect_errors=True,
+                                  cookies=self.cookies, json=data)
+        body = utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        utils.check_error_param_structure(body)
+
+        # Test with invalid user
+        data = {
+            "permissions": [
+                {
+                    "resource_name": self.test_service_name,
+                    "resource_type": "service",
+                    "permission": "browse",
+                    "user": "invalid_user",
+                }
+            ]
+        }
+        path = "/permissions"
+        resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, expect_errors=True,
+                                  cookies=self.cookies, json=data)
+        body = utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        utils.check_error_param_structure(body)
+
+    @runner.MAGPIE_TEST_PERMISSIONS
+    def test_PatchPermissions_InvalidResourceType(self):
+        # Test with invalid service
+        data = {
+            "permissions": [
+                {
+                    "resource_name": self.test_service_name,
+                    "resource_type": "directory"  # 1st resource should always have the `service` type
+                }
+            ]
+        }
+        path = "/permissions"
+        resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, expect_errors=True,
+                                  cookies=self.cookies, json=data)
+        body = utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        utils.check_error_param_structure(body, param_value=data["permissions"])
+
+        # Test with invalid resource
+        data = {
+            "permissions": [
+                {
+                    "resource_name": self.test_service_name,
+                    "resource_type": "service",
+                    "permission": None
+                },
+                {
+                    "resource_name": "resource",
+                    "resource_type": "service"  # only the 1st resource should have the `service` type
+                }
+            ]
+        }
+        path = "/permissions"
+        resp = utils.test_request(self, "PATCH", path, headers=self.json_headers, expect_errors=True,
+                                  cookies=self.cookies, json=data)
+        body = utils.check_response_basic_info(resp, 400, expected_method="PATCH")
+        utils.check_error_param_structure(body, param_value=data["permissions"])
+
     def create_validate_permissions(self,
                                     test_user_name,                     # type: Str
                                     test_resource_id,                   # type: int # resource to validate perm against

@@ -9,7 +9,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``PATCH /permissions`` endpoint that updates permissions and creates related resources if necessary.
+* Add support of new format for ``permissions.cfg`` for the ``type`` parameter, using multiple types separated
+  by a slash character, matching each type with each resource found in the ``resource`` parameter.
 
 .. _changes_3.23.0:
 
