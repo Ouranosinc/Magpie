@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.24.0:
+
+`3.24.0 <https://github.com/Ouranosinc/Magpie/tree/3.24.0>`_ (2022-03-23)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``PATCH /permissions`` endpoint that updates permissions and creates related resources if necessary.
