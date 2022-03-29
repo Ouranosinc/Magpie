@@ -9,7 +9,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix typo in UI edit user page when listing order of resolution of permissions.
 
 .. _changes_3.24.0:
 
