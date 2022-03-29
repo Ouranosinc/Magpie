@@ -332,7 +332,7 @@ ${membership_alerts.edit_membership_alerts()}
                     <li>User [allow]</li>
                     <li>Group (generic) [deny]</li>
                     <li>Group (generic) [allow]</li>
-                    <li>Group (${MAGPIE_ANONYMOUS_GROUP}}) [deny]</li>
+                    <li>Group (${MAGPIE_ANONYMOUS_GROUP}) [deny]</li>
                     <li>Group (${MAGPIE_ANONYMOUS_GROUP}) [allow]</li>
                 </ol>
             </div>
