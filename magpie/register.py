@@ -190,7 +190,8 @@ def _phoenix_login_check(cookies):
     """
     no_access_error = "<ExceptionText>Unauthorized: Services failed permission check</ExceptionText>"
     svc_url = get_phoenix_url() + "/services"
-    with subprocess.Popen(["curl", "-s", "--cookie", cookies, svc_url], stdout=subprocess.PIPE) as curl_process: # nosec
+    command = ["curl", "-s", "--cookie", cookies, svc_url]
+    with subprocess.Popen(command, stdout=subprocess.PIPE) as curl_process:  # nosec
         curl_http_resp = curl_process.communicate()  # nosec
     has_access = no_access_error not in curl_http_resp[0]
     return has_access
