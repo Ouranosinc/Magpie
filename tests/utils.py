@@ -523,7 +523,7 @@ def get_json_body(response):
 
 def get_service_types_for_version(version):
     # type: (Str) -> List[ServiceInterface]
-    available_service_types = set(services.SERVICE_TYPE_DICT.keys())
+    available_service_types = set(services.SERVICE_TYPE_DICT)
     if TestVersion(version) <= TestVersion("0.6.1"):
         available_service_types = available_service_types - {ServiceAccess.service_type}
     return list(sorted(available_service_types))
@@ -650,7 +650,7 @@ def mock_request(request_path_query="",     # type: Str
     """
     parts = request_path_query.split("?")
     path = parts[0]
-    query = dict()
+    query = {}
     if len(parts) > 1 and parts[1]:
         for part in parts[1].split("&"):
             kv = part.split("=")  # handle trailing keyword query arguments without values
@@ -2577,7 +2577,7 @@ class TestSetup(object):
         json_body = check_response_basic_info(resp, 200, expected_method="GET")
 
         # prepare a flat list of registered services
-        services_list = list()
+        services_list = []
         for svc_type in json_body["services"]:
             services_of_type = json_body["services"][svc_type]
             services_list.extend(services_of_type.values())

@@ -729,9 +729,9 @@ def test_webhook_multiple_files():
 
     settings = {}  # inplace edited by 'setup_webhooks'
     with tempfile2.TemporaryDirectory() as tmpdir:
-        with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
+        with open(os.path.join(tmpdir, "cfg1.json"), mode="w", encoding="utf-8") as cfg1_file:
             yaml.safe_dump(cfg1, cfg1_file, default_flow_style=False)
-        with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
+        with open(os.path.join(tmpdir, "cfg2.json"), mode="w", encoding="utf-8") as cfg2_file:
             yaml.safe_dump(cfg2, cfg2_file, default_flow_style=False)
         setup_webhooks(tmpdir, settings)
 

@@ -43,6 +43,8 @@ else:
     from twitcher.store import ServiceStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
 
 if TYPE_CHECKING:
+    from typing import Any, List, NoReturn
+
     from pyramid.request import Request
 
     from magpie.typedefs import Str
@@ -56,7 +58,6 @@ class MagpieServiceStore(ServiceStoreInterface):
 
     Uses magpie to fetch service url and attributes.
     """
-    # pylint: disable=W0221
 
     def __init__(self, request):
         # type: (Request) -> None
@@ -68,7 +69,8 @@ class MagpieServiceStore(ServiceStoreInterface):
         self.twitcher_ssl_verify = asbool(self.settings.get("twitcher.ows_proxy_ssl_verify", True))
         self.magpie_admin_token = get_admin_cookies(self.settings, self.twitcher_ssl_verify)
 
-    def save_service(self, service=None, name=None, url=None, overwrite=True, request=None):  # noqa: F811
+    def save_service(self, name, url, *args, **kwargs):  # noqa: F811
+        # type: (Str, Str, Any, Any) -> NoReturn
         """
         Store is read-only, use `Magpie` :term:`API` to add services.
 
@@ -86,7 +88,8 @@ class MagpieServiceStore(ServiceStoreInterface):
         LOGGER.error(msg)
         raise NotImplementedError(msg)
 
-    def delete_service(self, name, request=None):
+    def delete_service(self, name, *args, **kwargs):  # noqa: F811
+        # type: (Str, Any, Any) -> NoReturn
         """
         Store is read-only, use :mod:`Magpie` :term:`API` to delete services.
         """
@@ -97,7 +100,8 @@ class MagpieServiceStore(ServiceStoreInterface):
         LOGGER.error(msg)
         raise NotImplementedError(msg)
 
-    def list_services(self, request=None):  # noqa: F811
+    def list_services(self):
+        # type: () -> List[TwitcherService]
         """
         Lists all services registered in `Magpie`.
         """
@@ -169,17 +173,19 @@ class MagpieServiceStore(ServiceStoreInterface):
         service = self._fetch_by_name_cached(name)
         return service
 
-    def fetch_by_url(self, url, request=None):
+    def fetch_by_url(self, url):
+        # type: (Str) -> TwitcherService
         """
         Gets service for given ``url`` from mongodb storage.
         """
-        services = self.list_services(request=request)
+        services = self.list_services()
         for service in services:
             if service.url == url:
                 return service
         raise ServiceNotFound
 
-    def clear_services(self, request=None):
+    def clear_services(self):
+        # type: () -> NoReturn
         """
         Magpie store is read-only, use magpie api to delete services.
         """

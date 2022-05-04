@@ -1,5 +1,5 @@
 from inspect import cleandoc
-from secrets import compare_digest
+from secrets import compare_digest  # noqa 'python2-secrets'
 from typing import TYPE_CHECKING
 
 import six
@@ -634,7 +634,7 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
     if not format_as_list:
         return services
 
-    services_list = list()
+    services_list = []
     for svc_type in services:
         for svc_name in services[svc_type]:
             services_list.append(services[svc_type][svc_name])
@@ -766,8 +766,8 @@ def regroup_permissions_by_resource(resource_permissions, resolve=False):
 
     # remove any duplicates that could be incorporated by multiple groups as requested
     if resolve:
-        for res_id in resources_permissions_dict:
-            resources_permissions_dict[res_id] = resolve_user_group_permissions(resources_permissions_dict[res_id])
+        for res_id, perms in resources_permissions_dict.items():
+            resources_permissions_dict[res_id] = resolve_user_group_permissions(perms)
     return resources_permissions_dict
 
 

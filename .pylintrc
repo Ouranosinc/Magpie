@@ -60,8 +60,11 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
+# Notes:
+#   - C0209: disabled due to backward compatible Py2.7
 disable=C0111,missing-docstring,
         C0122,misplaced-comparison-constant,
+        C0209,consider-using-f-string,
         C0302,too-many-lines,
         C0330,bad-continuation,
         C0411,wrong-import-order,

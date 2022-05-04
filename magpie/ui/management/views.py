@@ -990,8 +990,8 @@ class ManagementViews(AdminRequests, BaseViews):
         # TODO: use an API request instead of direct access to `RESOURCE_TYPE_DICT`
         service_info["resources"] = resources
         service_info["resources_id_type"] = resources_id_type
-        service_info["resources_no_child"] = [res for res in RESOURCE_TYPE_DICT
-                                              if not RESOURCE_TYPE_DICT[res].child_resource_allowed]
+        service_info["resources_no_child"] = [name for name, res in RESOURCE_TYPE_DICT.items()
+                                              if not res.child_resource_allowed]
         service_info["service_no_child"] = not svc_body["resource_child_allowed"]
         return self.add_template_data(service_info)
 

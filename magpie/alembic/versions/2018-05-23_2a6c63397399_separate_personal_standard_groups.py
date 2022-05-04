@@ -154,7 +154,7 @@ def clean_user_groups(db_session):
 
     for usr_grp in all_usr_grp:
         # delete any missing user/group references (pointing to nothing...)
-        if usr_grp.user_id not in all_usr_dict.keys() or usr_grp.group_id not in all_grp_dict.keys():
+        if usr_grp.user_id not in all_usr_dict or usr_grp.group_id not in all_grp_dict:
             db_session.delete(usr_grp)
             continue
         # delete any user/personal-group reference of different names

@@ -33,10 +33,10 @@ LOGGER.setLevel(logging.INFO)
 LOGGER.info("starting setup")
 
 
-with open("README.rst") as readme_file:
+with open("README.rst", mode="r", encoding="utf-8") as readme_file:
     README = readme_file.read()
 
-with open("CHANGES.rst") as changes_file:
+with open("CHANGES.rst", mode="r", encoding="utf-8") as changes_file:
     CHANGES = changes_file.read().replace(".. :changelog:", "")
 
 
@@ -114,7 +114,7 @@ def _parse_requirements(file_path, requirements, links):
     :param links: pre-initialized set in which to store extracted link reference requirements.
     :returns: None
     """
-    with open(file_path, "r") as requirements_file:
+    with open(file_path, mode="r", encoding="utf-8") as requirements_file:
         for line in requirements_file:
             # ignore empty line, comment line or reference to other requirements file (-r flag)
             if not line or line.startswith("#") or line.startswith("-"):

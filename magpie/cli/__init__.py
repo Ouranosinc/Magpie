@@ -42,7 +42,7 @@ def magpie_helper_cli(args=None):
     subparsers = parser.add_subparsers(title="Helper", dest="helper", description="Name of the helper to execute.")
     helpers_dir = os.path.dirname(__file__)
     helper_mods = os.listdir(helpers_dir)
-    helpers = dict()
+    helpers = {}
     for module_item in sorted(helper_mods):
         helper_path = os.path.join(helpers_dir, module_item)
         if os.path.isfile(helper_path) and "__init__" not in module_item and module_item.endswith(".py"):

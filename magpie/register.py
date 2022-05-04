@@ -150,9 +150,9 @@ def _request_curl(url, cookie_jar=None, cookies=None, form_params=None, msg="Res
     if form_params is not None:
         params.extend(["--data", form_params])
     params.extend([url])
-    curl_out = subprocess.Popen(params, stdout=subprocess.PIPE)  # nosec
-    curl_msg = curl_out.communicate()[0]    # type: Str
-    curl_err = curl_out.returncode          # type: int
+    with subprocess.Popen(params, stdout=subprocess.PIPE) as curl_proc:  # nosec
+        curl_msg = curl_proc.communicate()[0]    # type: Str
+        curl_err = curl_proc.returncode          # type: int
     http_code = int(six.ensure_text(curl_msg).split(msg_sep)[1])
     print_log("[{url}] {response}".format(response=curl_msg, url=url), logger=LOGGER)
     return curl_err, http_code
@@ -190,8 +190,8 @@ def _phoenix_login_check(cookies):
     """
     no_access_error = "<ExceptionText>Unauthorized: Services failed permission check</ExceptionText>"
     svc_url = get_phoenix_url() + "/services"
-    curl_process = subprocess.Popen(["curl", "-s", "--cookie", cookies, svc_url], stdout=subprocess.PIPE)  # nosec
-    curl_http_resp = curl_process.communicate()  # nosec
+    with subprocess.Popen(["curl", "-s", "--cookie", cookies, svc_url], stdout=subprocess.PIPE) as curl_process: # nosec
+        curl_http_resp = curl_process.communicate()  # nosec
     has_access = no_access_error not in curl_http_resp[0]
     return has_access
 
@@ -222,7 +222,7 @@ def _phoenix_register_services(services_dict, allowed_service_types=None):
     # type: (Dict[Str, Dict[Str, Any]], Optional[List[Str]]) -> Tuple[bool, Dict[Str, int]]
 
     success = False
-    statuses = dict()
+    statuses = {}
     try:
         with NamedTemporaryFile() as phoenix_cookies_file:
             allowed_service_types = SERVICES_PHOENIX_ALLOWED if allowed_service_types is None else allowed_service_types
@@ -258,7 +258,7 @@ def _register_services(where,                           # type: Optional[Str]
     """
     success = True
     svc_url = None
-    statuses = dict()
+    statuses = {}
     if where == SERVICES_MAGPIE:
         svc_url_tag = "service_url"
         register_service_url = get_magpie_url() + ServicesAPI.path
@@ -383,7 +383,7 @@ def _magpie_update_services_conflict(conflict_services, services_dict, request_c
     Resolve conflicting services by name during registration by updating them only if pointing to different URL.
     """
     magpie_url = get_magpie_url()
-    statuses = dict()
+    statuses = {}
     for svc_name in conflict_services:
         statuses[svc_name] = 409
         svc_url_new = services_dict[svc_name]["url"]
@@ -539,7 +539,8 @@ def _load_config(path_or_dict, section, allow_missing=False):
     """
     try:
         if isinstance(path_or_dict, six.string_types):
-            cfg = yaml.safe_load(open(path_or_dict, "r"))
+            with open(path_or_dict, mode="r", encoding="utf-8") as yml_file:
+                cfg = yaml.safe_load(yml_file)
         else:
             cfg = path_or_dict
         return _expand_all(cfg[section])

@@ -172,9 +172,9 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     action_webhooks = webhooks[action]
     if len(action_webhooks) > 0:
         # Execute all webhook requests
-        pool = multiprocessing.Pool(processes=len(action_webhooks))
-        args = [(webhook, params, update_user_status_on_error) for webhook in action_webhooks]
-        pool.starmap_async(send_webhook_request, args)
+        with multiprocessing.Pool(processes=len(action_webhooks)) as pool:
+            args = [(webhook, params, update_user_status_on_error) for webhook in action_webhooks]
+            pool.starmap_async(send_webhook_request, args)
 
 
 def generate_callback_url(operation, db_session, user=None, group=None):

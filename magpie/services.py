@@ -445,9 +445,9 @@ class ServiceInterface(object):
         """
         Obtains the allowed permissions of the service's child resource fetched by resource type name.
         """
-        for res in cls.resource_types_permissions:
+        for res, res_perms in cls.resource_types_permissions.items():
             if res.resource_type_name == resource_type_name:
-                return cls.resource_types_permissions[res]
+                return res_perms
         return []
 
     @classmethod
@@ -533,7 +533,7 @@ class ServiceInterface(object):
         if not permissions:
             permissions = self.allowed_permissions(resource)
         requested_perms = set(permissions)  # type: Set[Permission]
-        effective_perms = dict()            # type: Dict[Permission, PermissionSet]
+        effective_perms = {}                # type: Dict[Permission, PermissionSet]
 
         db_session = get_connected_session(self.request)
         user = self._get_connected_object(user)  # groups dynamically populated fail if not connected (for admin check)
@@ -553,7 +553,7 @@ class ServiceInterface(object):
 
         # level at which last permission was found, -1 if not found
         # employed to resolve with *closest* scope and for applicable 'reason' combination on same level
-        effective_level = dict()  # type: Dict[Permission, Optional[int]]
+        effective_level = {}  # type: Dict[Permission, Optional[int]]
         current_level = 1   # one-based to avoid ``if level:`` check failing with zero
         full_break = False
         # current and parent resource(s) recursive-scope
@@ -937,7 +937,7 @@ class ServiceGeoserverBase(ServiceOWS):
 
     @classproperty
     @abc.abstractmethod
-    def resource_multi(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def resource_multi(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> bool
         """
         Indicates if the :term:`Service` supports multiple simultaneous :term:`Resource` references.
@@ -954,7 +954,7 @@ class ServiceGeoserverBase(ServiceOWS):
 
     @classproperty
     @abc.abstractmethod
-    def resource_param(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def resource_param(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> Union[Str, List[Str]]
         """
         Name of the request query parameter(s) to access requested leaf children resource.
@@ -973,7 +973,7 @@ class ServiceGeoserverBase(ServiceOWS):
 
     @classproperty
     @abc.abstractmethod
-    def resource_types_permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def resource_types_permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> ResourceTypePermissions
         """
         Explicit permissions provided for resources for a given :term:`OWS` implementation.
@@ -981,7 +981,7 @@ class ServiceGeoserverBase(ServiceOWS):
         raise NotImplementedError
 
     @classproperty
-    def params_expected(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def params_expected(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> List[Str]
         """
         Specify typical `Geoserver` request query parameters expected for any sub-service implementation.
@@ -1363,7 +1363,7 @@ class ServiceTHREDDS(ServiceInterface):
             full_path = "/".join(path_parts)
             skip_prefix = skip_prefix.lstrip("/").rstrip("/")
             if full_path.startswith(skip_prefix):
-                path_parts = full_path.split(skip_prefix)[-1].split("/")
+                path_parts = full_path.rsplit(skip_prefix, 1)[-1].split("/")
                 return path_parts[1:]  # remove extra '' added by split
         return path_parts
 
@@ -1472,7 +1472,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
     }
 
     @classproperty
-    def service_ows_supported(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def service_ows_supported(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> Set[Type[ServiceOWS]]
         return set(cls.service_map.values())
 
@@ -1517,7 +1517,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
         return self._config
 
     @classproperty
-    def params_expected(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def params_expected(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> List[Str]
         params = set()
         for svc in cls.service_ows_supported:
@@ -1528,7 +1528,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
         return list(params)
 
     @classproperty
-    def permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> List[Permission]
         perms = set()
         for svc in cls.service_ows_supported:
@@ -1539,7 +1539,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
         return list(perms)
 
     @classproperty
-    def resource_types_permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def resource_types_permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> ResourceTypePermissions
         perms = {}  # type: ResourceTypePermissions
         for svc in cls.service_ows_supported:
@@ -1590,19 +1590,19 @@ class ServiceGeoserver(ServiceGeoserverBase):
         return self._service_requested
 
     @classproperty
-    def resource_scoped(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def resource_scoped(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> bool
         svc = cls.service_requested()
         return svc.resource_scoped if svc else False
 
     @classproperty
-    def resource_multi(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def resource_multi(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> bool
         svc = cls.service_requested()
         return svc.resource_multi if svc else False
 
     @classproperty
-    def resource_param(cls):  # noqa  # pylint: disable=E0213,no-self-argument
+    def resource_param(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> Union[Str, List[Str]]
         svc = cls.service_requested()
         return cls.resource_param if svc else []
@@ -1634,7 +1634,7 @@ SERVICE_TYPES = frozenset([
     ServiceWFS,
     ServiceWPS
 ])
-SERVICE_TYPE_DICT = dict()
+SERVICE_TYPE_DICT = {}
 for _svc in SERVICE_TYPES:
     if _svc.service_type in SERVICE_TYPE_DICT:
         raise KeyError("Duplicate resource type identifiers not allowed")
@@ -1651,7 +1651,7 @@ def service_factory(service, request):
                     msg_on_fail="Cannot process invalid service object.")
     service_type = ax.evaluate_call(lambda: service.type, http_error=HTTPInternalServerError,
                                     msg_on_fail="Cannot retrieve service type from object.")
-    ax.verify_param(service_type, is_in=True, param_compare=SERVICE_TYPE_DICT.keys(),
+    ax.verify_param(service_type, is_in=True, param_compare=list(SERVICE_TYPE_DICT),
                     http_error=HTTPNotImplemented, content={"service_type": service_type},
                     msg_on_fail="Undefined service type mapping to service object.")
 
