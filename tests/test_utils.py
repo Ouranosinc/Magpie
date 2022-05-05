@@ -306,7 +306,7 @@ class TestUtils(unittest.TestCase):
         try:
             app = utils.get_test_magpie_app()
             with mock.patch("magpie.api.exception.generate_response_http_format", side_effect=mock_raise):
-                with mock.patch("magpie.api.login.login.get_session", side_effect=mock_lambda_call):
+                with mock.patch("magpie.api.login.login.get_session_view", side_effect=mock_lambda_call):
                     # Call request that ends up calling the response formatter via 'evaluate_call' itself raising to
                     # trigger 'mock_raise' recursively within 'raise_http' function.
                     # Since tweens are set up to format all response prior to return, the raised error will itself
