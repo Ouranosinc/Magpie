@@ -7,6 +7,7 @@ test_utils
 
 Tests for the various utility operations employed by Magpie.
 """
+import inspect
 import os
 import unittest
 from distutils.version import LooseVersion
@@ -20,13 +21,28 @@ from magpie import __meta__, constants
 from magpie.api import exception as ax
 from magpie.api import generic as ag
 from magpie.api import requests as ar
-from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header, get_magpie_url
+from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header, get_magpie_url, import_target
 from tests import runner, utils
 
 
 class DummyEnum(ExtendedEnum):
     TEST_VALUE_1 = "value-1"
     TEST_VALUE_2 = "value-2"
+
+
+@runner.MAGPIE_TEST_UTILS
+def test_import_target():
+    func = import_target("tests/hooks/request_hooks.py:add_x_wps_output_context")
+    assert func is not None
+    assert inspect.isfunction(func)
+    assert func.__name__ == "add_x_wps_output_context"
+
+    here = os.path.abspath(os.path.dirname(__file__))
+    _cls = import_target("test_utils.py:DummyEnum", here)
+    assert _cls is not None
+    assert _cls.__module__ != DummyEnum.__module__, "imported target should have its own file-based module reference"
+    assert _cls is not DummyEnum, "since different module references, should be considered different references"
+    assert _cls.TEST_VALUE_1.value == DummyEnum.TEST_VALUE_1.value
 
 
 @runner.MAGPIE_TEST_LOCAL

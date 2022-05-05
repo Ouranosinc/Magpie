@@ -192,6 +192,28 @@ field.
     Variable :envvar:`MAGPIE_WEBHOOKS_CONFIG_PATH` was added and will act in a similar fashion as their providers and
     permissions counterparts, to load definitions from multiple configuration files.
 
+.. _config_service_hooks:
+
+Service Hooks
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3.25
+
+Under each :term:`Service` within `providers.cfg`_ or the :ref:`config_file`, it is possible to provide a ``hooks``
+section that lists additional pre/post request/response processing operations to apply when matched against the given
+request filter conditions. These hooks are plugin-based Python scripts that can modify the proxied request and responses
+when `Magpie` and `Twitcher`_ work together using the :ref:`utilities_adapter<Magpie Adapter>`.
+
+More specifically, when a :term:`Service` or children :term:`Resource` is accessed, triggering a proxied request
+through `Twitcher`_, the authenticated and authorized request goes through a hooks processing chain that can adjust
+certain request and response parameters (e.g.: add headers, filter the body, etc.), or even substitute the request
+definition entirely based on target implementations. The plugin scripts can therefore apply some advanced logic to
+improve the synergy between the protected services. They can also be employed to apply some :term:`Service` specific
+operations such as filtering protected contents that `Magpie` and `Twitcher`_ cannot themselves process evidently.
+
+.. seealso::
+    File `providers.cfg`_ presents in detail the schema of ``hooks`` and providers more contextual information
+    as well as an explicit example.
 
 .. _config_constants:
 

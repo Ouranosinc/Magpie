@@ -9,6 +9,15 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add JSON schema validation of loaded `Service` configuration (``providers.cfg``).
+* Add optional ``hooks`` section under each `Service` definition of the ``providers.cfg`` or combined configuration
+  file that allows pre/post request/response processing operations using plugin Python scripts.
+* Store the validated `Service` configuration in ``magpie.services`` settings for later access to ``hooks`` definitions
+  by the ``MagpieAdapter``.
+* Rename the ``webhooks`` section stored in settings to ``magpie.webhooks`` to avoid possible name clashes.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix typo in UI edit user page when listing order of resolution of permissions.

@@ -110,6 +110,12 @@ if TYPE_CHECKING:
     PermissionRequested = Optional[Union[Permission, Collection[Permission]]]
     ResourceTypePermissions = Dict[Type[models.Resource], List[Permission]]
 
+    AnyRequestMethod = Literal[
+        "HEAD", "GET", "POST", "PUT", "PATCH", "DELETE",
+        "head", "get", "post", "put", "patch", "delete",
+        "*"
+    ]
+
     # note:
     #   For all following items 'Settings' suffix refer to loaded definitions AFTER resolution.
     #   When 'Config' suffix is used, it instead refers to raw definitions BEFORE resolution.
@@ -122,7 +128,7 @@ if TYPE_CHECKING:
     WebhookConfigItem = TypedDict("WebhookConfigItem", {
         "name": Str,
         "action": Str,
-        "method": Str,
+        "method": RequestMethod,
         "url": Str,
         "format": Str,
         "payload": WebhookPayload
@@ -149,6 +155,13 @@ if TYPE_CHECKING:
         "email": Optional[Str],
         "group": Optional[Str],
     }, total=False)
+    ServiceHookConfig = TypedDict("ServiceHookConfig", {
+        "type": Literal["request", "response"],
+        "path": str,
+        "query": Optional[str],
+        "method": RequestMethod,
+        "target": str
+    }, total=True)
     # generic 'configuration' field under a service that supports it
     ServiceConfiguration = Dict[Str, Union[Str, List[JSON], JSON]]
     ServiceConfigItem = TypedDict("ServiceConfigItem", {
@@ -160,6 +173,7 @@ if TYPE_CHECKING:
         "public": bool,
         "c4i": bool,
         "configuration": Optional[ServiceConfiguration],
+        "hooks": Optional[List[ServiceHookConfig]]
     })
 
     # individual sections directly loaded from config files (BEFORE resolution)

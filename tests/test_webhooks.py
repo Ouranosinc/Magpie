@@ -13,6 +13,7 @@ import os
 import tempfile
 import unittest
 from time import sleep
+from typing import TYPE_CHECKING
 
 import requests
 import six
@@ -38,6 +39,9 @@ if six.PY2:
     from backports import tempfile as tempfile2  # noqa  # pylint: disable=E0611,no-name-in-module  # Python 2
 else:
     tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
+
+if TYPE_CHECKING:
+    from magpie.api.webhooks import WebhookSettings
 
 WEBHOOK_TEST_DELAY = 0.25  # small delay to let webhook being processed before resuming tests
 
@@ -735,16 +739,16 @@ def test_webhook_multiple_files():
             yaml.safe_dump(cfg2, cfg2_file, default_flow_style=False)
         setup_webhooks(tmpdir, settings)
 
-    webhooks = settings["webhooks"]
+    webhooks = settings["magpie.webhooks"]  # type: WebhookSettings
     assert len(webhooks) == 3, "overridden webhook should have been dropped"
     expect_actions = [WebhookAction.CREATE_USER, WebhookAction.DELETE_USER_PERMISSION, WebhookAction.UPDATE_USER_STATUS]
     assert all(action in webhooks for action in expect_actions)
 
     expect_cfg1 = copy.deepcopy(cfg1)
-    for cfg in expect_cfg1["webhooks"]:  # type: dict
+    for cfg in expect_cfg1["webhooks"]:
         cfg.setdefault("format", None)
     expect_cfg2 = copy.deepcopy(cfg2)
-    for cfg in expect_cfg2["webhooks"]:  # type: dict
+    for cfg in expect_cfg2["webhooks"]:
         cfg.setdefault("format", None)
 
     assert len(webhooks[WebhookAction.CREATE_USER]) == 2
@@ -834,4 +838,4 @@ class TestFailingWebhooks(unittest.TestCase):
                 settings = {}
                 utils.check_no_raise(lambda: setup_webhooks(webhook_tmp_config.name, settings))
                 for key in WEBHOOK_KEYS:
-                    utils.check_val_is_in(key, settings["webhooks"][action][0])
+                    utils.check_val_is_in(key, settings["magpie.webhooks"][action][0])

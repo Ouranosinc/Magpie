@@ -30,6 +30,7 @@ from magpie.api.schemas import (
     UserResourcePermissionsAPI,
     UsersAPI
 )
+from magpie.config import validate_services_config
 from magpie.constants import get_constant
 from magpie.permissions import Permission, PermissionSet
 from magpie.services import SERVICE_TYPE_DICT, ServiceWPS
@@ -657,20 +658,23 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
             for svc, svc_cfg in services.items():
                 merged_service_configs.setdefault(svc, svc_cfg)
 
-        # register services using API POSTs
-        if db_session is None:
-            admin_usr = get_constant("MAGPIE_ADMIN_USER")
-            admin_pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
-            local_provider = get_constant("MAGPIE_DEFAULT_PROVIDER")
-            _magpie_register_services_with_requests(services, push_to_phoenix, admin_usr, admin_pwd, local_provider,
-                                                    force_update=force_update,
-                                                    disable_getcapabilities=disable_getcapabilities)
+    merged_service_configs = validate_services_config(merged_service_configs)
 
-        # register services directly to db using session
-        else:
-            _magpie_register_services_with_db_session(services, db_session,
-                                                      push_to_phoenix=push_to_phoenix, force_update=force_update,
-                                                      update_getcapabilities_permissions=not disable_getcapabilities)
+    # register services using API POSTs
+    if db_session is None:
+        admin_usr = get_constant("MAGPIE_ADMIN_USER")
+        admin_pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
+        local_provider = get_constant("MAGPIE_DEFAULT_PROVIDER")
+        _magpie_register_services_with_requests(merged_service_configs, push_to_phoenix,
+                                                admin_usr, admin_pwd, local_provider,
+                                                force_update=force_update,
+                                                disable_getcapabilities=disable_getcapabilities)
+
+    # register services directly to db using session
+    else:
+        _magpie_register_services_with_db_session(merged_service_configs, db_session,
+                                                  push_to_phoenix=push_to_phoenix, force_update=force_update,
+                                                  update_getcapabilities_permissions=not disable_getcapabilities)
     LOGGER.info("All services processed.")
     return merged_service_configs
 

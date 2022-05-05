@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import re
+
+import importlib.util
 import inspect
 import json
 import logging
@@ -635,6 +638,61 @@ def get_settings(container, app=False):
         registry = get_current_registry()
         return registry.settings
     raise TypeError("Could not retrieve settings from container object [{}]".format(type(container)))
+
+
+def import_target(target, default_root=None):
+    # type: (Str, Optional[Str]) -> Optional[Any]
+    """
+    Imports a target resource from a Python script as module.
+
+    The Python script does not need to be defined within a module directory (i.e.: with ``__init__.py``).
+    Files can be imported from virtually anywhere. To avoid name conflicts in generated module references,
+    each imported target employs its full escaped file path as module name.
+
+    Format expected as follows:
+
+    .. code-block:: python
+
+        "path/to/script.py:function"
+
+    :param target: Resource to be imported.
+    :param default_root: Root directory to employ if target is relative (default :data:`magpie.constants.MAGPIE_ROOT`).
+    :return: Found and imported resource or None.
+    """
+    if ":" not in target:
+        return None
+    mod_path, target = target.rsplit(":", 1)
+    if not mod_path.startswith("/"):
+        if default_root and os.path.isdir(default_root):
+            mod_root = default_root
+        else:
+            mod_root = get_constant("MAGPIE_ROOT")
+        mod_path = os.path.join(mod_root, mod_path)
+    mod_path = os.path.abspath(mod_path)
+    if not os.path.isfile(mod_path):
+        return None
+    mod_name = re.sub(r"\W", "_", mod_path)
+    mod_spec = importlib.util.spec_from_file_location(mod_name, mod_path)
+    if not mod_spec:
+        return None
+    mod = importlib.util.module_from_spec(mod_spec)
+    mod_spec.loader.exec_module(mod)
+    return getattr(mod, target, None)
+
+
+def normalize_field_pattern(pattern):
+    # type: (Str) -> Str
+    """
+    Escapes necessary regex pattern characters and applies start/end-of-line control characters.
+    """
+    pattern = re.escape(pattern)
+    if not pattern:
+        pattern = r".*"
+    if pattern[0] != "^":
+        pattern = "^" + pattern
+    if pattern[-1] != "$":
+        pattern = pattern + "$"
+    return pattern
 
 
 def patch_magpie_url(container):

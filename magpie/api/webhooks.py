@@ -166,7 +166,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     # ignore if triggered during application startup, settings not yet loaded
     if not settings:
         return
-    webhooks = settings.get("webhooks", {})  # type: WebhookSettings
+    webhooks = settings.get("magpie.webhooks", {})  # type: WebhookSettings
     if not webhooks:
         return
     action_webhooks = webhooks[action]
@@ -299,8 +299,8 @@ def setup_webhooks(config_path, settings):
     :param settings: modified settings in-place with added valid webhooks.
     """
 
-    settings["webhooks"] = defaultdict(lambda: [])
-    webhooks_settings = settings["webhooks"]  # type: WebhookSettings
+    settings["magpie.webhooks"] = defaultdict(lambda: [])
+    webhooks_settings = settings["magpie.webhooks"]  # type: WebhookSettings
     if not config_path:
         LOGGER.info("No configuration file provided to load webhook definitions.")
     else:

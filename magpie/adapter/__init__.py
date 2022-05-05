@@ -1,3 +1,4 @@
+import re
 import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
@@ -32,7 +33,9 @@ from magpie.utils import (
     get_logger,
     get_magpie_url,
     get_settings,
+    import_target,
     is_json_body,
+    normalize_field_pattern,
     setup_cache_settings,
     setup_session_config
 )
@@ -48,10 +51,17 @@ from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
     from twitcher.owsregistry import OWSRegistry  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.x
 
-    if LooseVersion(twitcher_version) >= LooseVersion("0.7.0"):
+    if LooseVersion(twitcher_version) >= LooseVersion("0.8.0"):
         warnings.warn(
             "Magpie version is not guaranteed to work with newer versions of Twitcher. "
-            "This Magpie version offers compatibility with Twitcher 0.6.x. "
+            "This Magpie version offers compatibility with Twitcher 0.6.x and 0.7.x."
+            "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
+            ImportWarning
+        )
+    elif LooseVersion(twitcher_version) < LooseVersion("0.7.0"):
+        warnings.warn(
+            "Magpie version offers more capabilities than Twitcher 0.6.x is able to provide. "
+            "Consider updating to more recent Twitcher 0.7.x to make use of new functionalities. "
             "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
             ImportWarning
         )
@@ -79,9 +89,11 @@ if TYPE_CHECKING:
     from pyramid.authentication import AuthTktCookieHelper
     from pyramid.config import Configurator
     from pyramid.request import Request
+    from pyramid.response import Response
 
     from magpie.typedefs import JSON, AnyResponseType, AnySettingsContainer, Str
 
+    from twitcher.models.service import ServiceConfig     # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.3
     from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
 
 LOGGER = get_logger("TWITCHER|{}".format(__name__))
@@ -243,3 +255,79 @@ class MagpieAdapter(AdapterInterface):
         config.add_view(verify_user, route_name="verify-user")
 
         return config
+
+    def request_hook(self, request, service):
+        # type: (Request, ServiceConfig) -> Request
+        """
+        Apply modifications onto the request before sending it.
+
+        .. versionadded:: 3.25
+            Requires ``Twitcher >= 0.7.x``.
+
+        Request members employed after this hook is called include:
+        - :meth:`Request.headers`
+        - :meth:`Request.method`
+        - :meth:`Request.body`
+
+        This method can modified those members to adapt the request for specific service logic.
+        """
+        svc_name = service["name"]
+        svc_hooks = self.settings.get("magpie.services", {}).get(svc_name, {}).get("hooks", [])
+        # save initial matching parameters in case of modification by hooks
+        req_path = request.path
+        req_meth = request.method
+        req_query = request.query_string
+        for hook_cfg in svc_hooks:
+            if hook_cfg["type"] != "request":
+                continue
+            if hook_cfg["method"] not in ["*", req_meth]:
+                continue
+            hook_path = normalize_field_pattern(hook_cfg["path"])
+            if not re.match(hook_path, req_path):
+                continue
+            hook_query = normalize_field_pattern(hook_cfg["query"])
+            if not re.match(hook_query, req_query):
+                continue
+            hook_target = import_target(hook_cfg["target"])
+            if not hook_target:
+                LOGGER.warning("Hook matched request (%s %s%s) but specified target [%s] could not be loaded.",
+                               req_meth, req_path, "?" + req_query if req_query else "", hook_cfg["target"])
+                continue
+            request = hook_target(hook_target)
+        return request
+
+    def response_hook(self, response, service):
+        # type: (Response, ServiceConfig) -> Response
+        """
+        Apply modifications onto the response from sent request.
+
+        .. versionadded:: 3.25
+            Requires ``Twitcher >= 0.7.x``.
+
+        The received response from the proxied service is normally returned directly.
+        This method can modify the response to adapt it for specific service logic.
+        """
+        svc_name = service["name"]
+        svc_hooks = self.settings.get("magpie.services", {}).get(svc_name, {}).get("hooks", [])
+        # save initial matching parameters in case of modification by hooks
+        req_path = response.request.path
+        req_meth = response.request.method
+        req_query = response.request.query_string
+        for hook_cfg in svc_hooks:
+            if hook_cfg["type"] != "response":
+                continue
+            if hook_cfg["method"] not in ["*", req_meth]:
+                continue
+            hook_path = normalize_field_pattern(hook_cfg["path"])
+            if not re.match(hook_path, req_path):
+                continue
+            hook_query = normalize_field_pattern(hook_cfg["query"])
+            if not re.match(hook_query, req_query):
+                continue
+            hook_target = import_target(hook_cfg["target"])
+            if not hook_target:
+                LOGGER.warning("Hook matched response (%s %s%s) but specified target [%s] could not be loaded.",
+                               req_meth, req_path, "?" + req_query if req_query else "", hook_cfg["target"])
+                continue
+            response = hook_target(hook_target)
+        return response
