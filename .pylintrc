@@ -62,6 +62,7 @@ confidence=
 # --disable=W".
 # Notes:
 #   - C0209: disabled due to backward compatible Py2.7
+#   - E0012: because of different PyLint/Python versions, some codes used to disable in comments might not exist yet
 disable=C0111,missing-docstring,
         C0122,misplaced-comparison-constant,
         C0209,consider-using-f-string,
@@ -92,7 +93,8 @@ disable=C0111,missing-docstring,
         W0703,broad-except,
         W0706,try-except-raise,
         W0707,raise-missing-from,
-        W1508,invalid-envvar-default
+        W1508,invalid-envvar-default,
+        E0012,bad-option-value
 
 # note: following errors are managed via isort tool, ignore false positives
 #   C0411,wrong-import-order
