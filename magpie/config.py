@@ -65,16 +65,11 @@ def extend_with_default(validator_class):
     def set_defaults(validator, properties, instance, schema):
         for prop, child_schema in properties.items():
             if "default" in child_schema:
-                instance.setdefault(property, prop["default"])
-
-        for error in validate_properties(
-            validator, properties, instance, schema,
-        ):
+                instance.setdefault(prop, child_schema["default"])
+        for error in validate_properties(validator, properties, instance, schema):
             yield error
 
-    return validators.extend(
-        validator_class, {"properties": set_defaults},
-    )
+    return validators.extend(validator_class, {"properties": set_defaults})
 
 
 JsonSchemaDefaultValidator = extend_with_default(validators.Draft7Validator)  # noqa
