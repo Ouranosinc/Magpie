@@ -38,7 +38,7 @@ SERVICE_CONFIG_ITEM_SCHEMA = {
         "url": {"type": "string", "pattern": r"^https?:\/\/.*$"},
         "title": {"type": "string"},
         "type": {"type": "string", "enum": list(SERVICE_TYPE_DICT)},
-        "sync_type":  {"type": "string", "enum": list(set(SYNC_SERVICES_TYPES) | set(SERVICE_TYPE_DICT))},
+        "sync_type": {"type": "string", "enum": list(set(SYNC_SERVICES_TYPES) | set(SERVICE_TYPE_DICT))},
         "public": {"type": "boolean", "default": True},
         "c4i": {"type": "boolean", "default": False},
         "configuration": {"type": "object", "additionalProperties": True},

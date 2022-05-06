@@ -128,7 +128,7 @@ if TYPE_CHECKING:
     WebhookConfigItem = TypedDict("WebhookConfigItem", {
         "name": Str,
         "action": Str,
-        "method": RequestMethod,
+        "method": AnyRequestMethod,
         "url": Str,
         "format": Str,
         "payload": WebhookPayload
@@ -159,7 +159,7 @@ if TYPE_CHECKING:
         "type": Literal["request", "response"],
         "path": str,
         "query": Optional[str],
-        "method": RequestMethod,
+        "method": AnyRequestMethod,
         "target": str
     }, total=True)
     # generic 'configuration' field under a service that supports it
