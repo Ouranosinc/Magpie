@@ -31,6 +31,10 @@ if TYPE_CHECKING:
     from magpie.api.webhooks import WEBHOOK_TEMPLATE_PARAMS, WebhookAction
     from magpie.permissions import Permission, PermissionSet
 
+    if hasattr(typing, "TypeAlias"):
+        from typing import TypeAlias  # pylint: disable=E0611,no-name-in-module  # Python >= 3.10
+    else:
+        from typing_extensions import TypeAlias
     if hasattr(typing, "TypedDict"):
         from typing import TypedDict  # pylint: disable=E0611,no-name-in-module
     else:
@@ -64,15 +68,20 @@ if TYPE_CHECKING:
 
     AnyKey = Union[Str, int]
     AnyValue = Union[Str, Number, bool, None]
-    BaseJSON = Union[AnyValue, List["JSON"], Dict[AnyKey, "JSON"]]
-    JSON = Union[Dict[Str, Union[BaseJSON, "JSON"]], List[BaseJSON]]
+    _JSONType = "JSON"  # type: TypeAlias   # pylint: disable=C0103
+    BaseJSON = Union[AnyValue, List[_JSONType], Dict[AnyKey, _JSONType]]
+    JSON = Union[Dict[Str, Union[BaseJSON, _JSONType]], List[BaseJSON]]
 
     GroupPriority = Union[int, Type[math.inf]]
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
     ServiceOrResourceType = Union[models.Service, models.Resource]
-    PermissionDict = TypedDict("PermissionDict",
-                               {"name": Str, "access": Optional[Str], "scope": Optional[Str],
-                                "type": Optional[Str], "reason": Optional[Str]}, total=False)
+    PermissionDict = TypedDict("PermissionDict", {
+        "name": Str,
+        "access": Optional[Str],
+        "scope": Optional[Str],
+        "type": Optional[Str],
+        "reason": Optional[Str]
+    }, total=False)
     # recursive nodes structure employed by functions for listing children resources hierarchy
     # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
     NestedResourceNodes = Dict[int, "ResourceNode"]
@@ -111,8 +120,13 @@ if TYPE_CHECKING:
         param: AnyValue for param in WEBHOOK_TEMPLATE_PARAMS
     })
     WebhookConfigItem = TypedDict("WebhookConfigItem", {
-        "name": Str, "action": Str, "method": Str, "url": Str, "format": Str, "payload": WebhookPayload
-    })
+        "name": Str,
+        "action": Str,
+        "method": Str,
+        "url": Str,
+        "format": Str,
+        "payload": WebhookPayload
+    }, total=False)
 
     # registered configurations
     PermissionConfigItem = TypedDict("PermissionConfigItem", {
@@ -123,18 +137,18 @@ if TYPE_CHECKING:
         "group": Optional[Str],
         "permission": Union[Str, PermissionDict],
         "action": Optional[Str],  # create/remove
-    })
+    }, total=False)
     GroupConfigItem = TypedDict("GroupConfigItem", {
         "name": Str,
         "description": Optional[Str],
         "discoverable": bool,  # must use 'asbool' since technically a bool-like string from config
-    })
+    }, total=False)
     UserConfigItem = TypedDict("UserConfigItem", {
         "username": Str,
         "password": Optional[Str],
         "email": Optional[Str],
         "group": Optional[Str],
-    })
+    }, total=False)
     # generic 'configuration' field under a service that supports it
     ServiceConfiguration = Dict[Str, Union[Str, List[JSON], JSON]]
     ServiceConfigItem = TypedDict("ServiceConfigItem", {
@@ -172,7 +186,7 @@ if TYPE_CHECKING:
         "users": Optional[UsersConfig],
         "groups": Optional[GroupsConfig],
         "webhooks": Optional[WebhooksConfig],
-    })
+    }, total=False)
 
     # mappings after loading of multiple files for relevant sections (AFTER resolution)
     PermissionsSettings = Dict[Str, PermissionConfigItem]

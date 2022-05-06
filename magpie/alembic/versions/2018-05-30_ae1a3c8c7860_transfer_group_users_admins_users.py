@@ -61,7 +61,7 @@ def upgrade():
         map_groups = {OLD_GROUP_ADMIN: NEW_GROUP_ADMIN, OLD_GROUP_USERS: NEW_GROUP_USERS}
 
         for group in all_groups:
-            if group.group_name in map_groups.keys():
+            if group.group_name in map_groups:
                 new_group_name = map_groups[group.group_name]
                 query = sa.select([groups]).where(groups.c.group_name == new_group_name)
                 new_group = session.execute(query).fetchone()

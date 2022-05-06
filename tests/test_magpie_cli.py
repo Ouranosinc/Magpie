@@ -36,11 +36,11 @@ KNOWN_HELPERS = [
 
 
 def run_and_get_output(command, trim=True):
-    if isinstance(command, (list, tuple)):
-        command = " ".join(command)
+    cmd = " ".join(command) if isinstance(command, (list, tuple)) else command
     env = {"PATH": os.path.expandvars(os.environ["PATH"])}  # when debugging, explicit expand of install path required
-    proc = subprocess.Popen(command, shell=True, env=env, universal_newlines=True, stdout=subprocess.PIPE)  # nosec
-    out, err = proc.communicate()
+    pipe = subprocess.PIPE
+    with subprocess.Popen(cmd, shell=True, env=env, universal_newlines=True, stdout=pipe) as proc:  # nosec # noqa
+        out, err = proc.communicate()
     assert not err, "process returned with error code {}".format(err)
     # when no output is present, it is either because CLI was not installed correctly, or caused by some other error
     assert out != "", "process did not execute as expected, no output available"
@@ -130,7 +130,7 @@ def run_batch_update_user_command(test_app, expected_users, create_command_xargs
                     file = os.path.join(tmpdir, os.listdir(tmpdir)[0])
                     utils.check_val_is_in(operation_name, file)
                     assert os.path.isfile(file)
-                    with open(file, "r") as fd:
+                    with open(file, mode="r", encoding="utf-8") as fd:
                         file_text = fd.read()
                     assert all([test_user in file_text for test_user in expected_users]), \
                         "all users should have been processed and logged in output result file"

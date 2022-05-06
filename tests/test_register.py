@@ -472,14 +472,14 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_REGISTER
 def test_register_resolve_config_registry():
-    # pylint: disable=W0212
+    # pylint: disable=C1803,W0212
     assert register._resolve_config_registry(None, "whatever") == {}
     assert register._resolve_config_registry([], "whatever") == {}
     assert register._resolve_config_registry([{}], "whatever") == {}
     assert register._resolve_config_registry([None], "whatever") == {}  # noqa
     config = [{"key": "val1", "name": "name1"}, {"key": "val2"}]
     mapped = {"val1": {"key": "val1", "name": "name1"}, "val2": {"key": "val2"}}
-    assert register._resolve_config_registry(config, "key") == mapped
+    assert register._resolve_config_registry(config, "key") == mapped  # type: ignore
 
 
 @runner.MAGPIE_TEST_LOCAL
@@ -519,9 +519,9 @@ def test_register_process_permissions_from_multiple_files():
     }
 
     with tempfile2.TemporaryDirectory() as tmpdir:
-        with open(os.path.join(tmpdir, "cfg1.json"), "w") as cfg1_file:
+        with open(os.path.join(tmpdir, "cfg1.json"), mode="w", encoding="utf-8") as cfg1_file:
             json.dump(cfg1, cfg1_file)
-        with open(os.path.join(tmpdir, "cfg2.json"), "w") as cfg2_file:
+        with open(os.path.join(tmpdir, "cfg2.json"), mode="w", encoding="utf-8") as cfg2_file:
             json.dump(cfg2, cfg2_file)
         with utils.wrapped_call("magpie.register._process_permissions") as mock_process_perms:
             with utils.wrapped_call("magpie.register.get_admin_cookies", side_effect=lambda *_, **__: {}):

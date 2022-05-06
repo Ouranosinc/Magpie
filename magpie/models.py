@@ -41,11 +41,14 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.query import Query
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import JSON, AccessControlListType, AnySettingsContainer, GroupPriority, Str
+    from magpie.typedefs import JSON, AccessControlListType, AnySettingsContainer, GroupPriority, Str, TypeAlias
 
     # for convenience of methods using both, using strings because of future definition
-    AnyUser = Union["User", "UserPending"]
-    AnyUserStatus = Union["UserGroupStatus", int, Str]
+    _UserType = "User"                      # type: TypeAlias   # pylint: disable=C0103
+    _UserPendingType = "UserPending"        # type: TypeAlias   # pylint: disable=C0103
+    _UserGroupStatus = "UserGroupStatus"    # type: TypeAlias   # pylint: disable=C0103
+    AnyUser = Union[_UserType, _UserPendingType]
+    AnyUserStatus = Union[_UserGroupStatus, int, Str]
 
 # backward compat enums
 try:
@@ -353,7 +356,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
         return None
 
     @classmethod
-    def get(cls,
+    def get(cls,            # pylint: disable=W0237,arguments-renamed
             status,         # type: Union[None, int, Str, UserStatuses, Iterable[None, int, Str, UserStatuses]]
             default=None,   # type: Optional[UserStatuses]
             ):              # type: (...) -> Optional[UserStatuses]
@@ -465,7 +468,7 @@ class UserSearchService(UserService):
         return users
 
     @classmethod
-    def by_user_name(cls, user_name, status=None, db_session=None):  # pylint: disable=W0221,arguments-differ
+    def by_user_name(cls, user_name, status=None, db_session=None):  # pylint: disable=W0237,W0221
         # type: (Str, Optional[UserStatuses], Optional[Session]) -> Optional[AnyUser]
         """
         Retrieves the user matching the given name.
@@ -579,7 +582,7 @@ class UserFactory(RootFactory):
         self.path_user = None
 
     def __getitem__(self, user_name):
-        # type: (Str) -> None
+        # type: (Str) -> UserFactory
         context = UserFactory(self.request)
         if user_name == get_constant("MAGPIE_LOGGED_USER", self.request):
             self.path_user = self.request.user
@@ -860,12 +863,12 @@ class RemoteResourceTreeServicePostgresSQL(ResourceTreeServicePostgreSQL):
         :return:
         """
         items = list(result)
-        root_elem = {"node": None, "children": dict()}
+        root_elem = {"node": None, "children": {}}
         if len(items) == 0:
             return root_elem
         for _, node in enumerate(items):
             node_res = getattr(node, cls.model.__name__)
-            new_elem = {"node": node_res, "children": dict()}
+            new_elem = {"node": node_res, "children": {}}
             path = list(map(int, node.path.split("/")))
             parent_node = root_elem
             normalized_path = path[:-1]
@@ -1000,7 +1003,7 @@ RESOURCE_TREE_SERVICE = ResourceTreeService(ResourceTreeServicePostgreSQL)
 REMOTE_RESOURCE_TREE_SERVICE = RemoteResourceTreeService(RemoteResourceTreeServicePostgresSQL)
 
 RESOURCE_TYPES = frozenset([Service, Directory, File, Layer, Workspace, Route, Process])
-RESOURCE_TYPE_DICT = dict()  # type: Dict[Str, Type[Resource]]
+RESOURCE_TYPE_DICT = {}  # type: Dict[Str, Type[Resource]]
 for res in RESOURCE_TYPES:
     if res.resource_type_name in RESOURCE_TYPE_DICT:  # pragma: no cover
         raise KeyError("Duplicate resource type identifiers not allowed")

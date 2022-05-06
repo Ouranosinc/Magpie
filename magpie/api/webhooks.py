@@ -172,7 +172,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     action_webhooks = webhooks[action]
     if len(action_webhooks) > 0:
         # Execute all webhook requests
-        pool = multiprocessing.Pool(processes=len(action_webhooks))
+        pool = multiprocessing.Pool(processes=len(action_webhooks))  # pylint: disable=R1732
         args = [(webhook, params, update_user_status_on_error) for webhook in action_webhooks]
         pool.starmap_async(send_webhook_request, args)
 

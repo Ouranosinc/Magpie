@@ -35,7 +35,7 @@ from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
 from magpie.constants import get_constant
-from magpie.security import authomatic_setup, get_provider_names
+from magpie.security import authomatic_setup, get_providers
 from magpie.utils import (
     CONTENT_TYPE_JSON,
     convert_response,
@@ -54,8 +54,8 @@ LOGGER = get_logger(__name__)
 # dictionaries of {'provider_id': 'provider_display_name'}
 MAGPIE_DEFAULT_PROVIDER = get_constant("MAGPIE_DEFAULT_PROVIDER")
 MAGPIE_INTERNAL_PROVIDERS = {MAGPIE_DEFAULT_PROVIDER: MAGPIE_DEFAULT_PROVIDER.capitalize()}
-MAGPIE_EXTERNAL_PROVIDERS = get_provider_names()
-MAGPIE_PROVIDER_KEYS = list(MAGPIE_INTERNAL_PROVIDERS.keys()) + list(MAGPIE_EXTERNAL_PROVIDERS.keys())
+MAGPIE_EXTERNAL_PROVIDERS = get_providers()
+MAGPIE_PROVIDER_KEYS = frozenset(set(MAGPIE_INTERNAL_PROVIDERS) | set(MAGPIE_EXTERNAL_PROVIDERS))
 
 
 # FIXME: use provider enum
@@ -80,13 +80,13 @@ def process_sign_in_external(request, username, provider):
 def verify_provider(provider_name):
     # type: (Str) -> None
     """:raises HTTPNotFound: if provider name is not one of known providers."""
-    ax.verify_param(provider_name, param_name="provider_name", param_compare=MAGPIE_PROVIDER_KEYS, is_in=True,
+    ax.verify_param(provider_name, param_name="provider_name", param_compare=list(MAGPIE_PROVIDER_KEYS), is_in=True,
                     http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
 
 
 @s.SigninAPI.get(schema=s.Signin_GET_RequestSchema, tags=[s.SessionTag], response_schemas=s.Signin_GET_responses)
 @view_config(route_name=s.SigninAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
-def signin_in_param(request):
+def signin_in_param_view(request):
     """
     Signs in a user session using query parameters.
     """
@@ -108,7 +108,7 @@ def signin_in_param(request):
 
 @s.SigninAPI.post(schema=s.Signin_POST_RequestSchema, tags=[s.SessionTag], response_schemas=s.Signin_POST_responses)
 @view_config(route_name=s.SigninAPI.name, request_method="POST", permission=NO_PERMISSION_REQUIRED)
-def sign_in(request):
+def sign_in_view(request):
     """
     Signs in a user session.
     """
@@ -133,7 +133,7 @@ def sign_in(request):
         return http_error
     verify_provider(provider_name)
 
-    if provider_name in MAGPIE_INTERNAL_PROVIDERS.keys():
+    if provider_name in MAGPIE_INTERNAL_PROVIDERS:
         # password can be None for external login, validate only here as it is required for internal login
         password = ar.get_value_multiformat_body_checked(request, "password", pattern=None)
         # check manually to avoid inserting value in result body
@@ -145,9 +145,9 @@ def sign_in(request):
         signin_response = request.invoke_subrequest(signin_sub_request, use_tweens=True)
         if signin_response.status_code == HTTPOk.code:
             return convert_response(signin_response)
-        login_failure(request, s.Signin_POST_UnauthorizedResponseSchema.description)
+        login_failure_view(request, s.Signin_POST_UnauthorizedResponseSchema.description)
 
-    elif provider_name in MAGPIE_EXTERNAL_PROVIDERS.keys():
+    elif provider_name in MAGPIE_EXTERNAL_PROVIDERS:
         return ax.evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
                                 http_error=HTTPInternalServerError,
                                 content={"user_name": user_name, "provider_name": provider_name},
@@ -155,7 +155,7 @@ def sign_in(request):
 
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)
-def login_success_ziggurat(request):
+def login_success_ziggurat_view(request):
     """
     Response from redirect upon successful login with valid user credentials.
 
@@ -170,7 +170,7 @@ def login_success_ziggurat(request):
 
 
 @view_config(context=ZigguratSignInBadAuth, permission=NO_PERMISSION_REQUIRED)
-def login_failure(request, reason=None):
+def login_failure_view(request, reason=None):
     """
     Response from redirect upon login failure, either because of invalid or incorrect user credentials.
 
@@ -269,7 +269,7 @@ def login_success_external(request, external_user_name, external_id, email, prov
 @s.ProviderSigninAPI.get(schema=s.ProviderSignin_GET_RequestSchema, tags=[s.SessionTag],
                          response_schemas=s.ProviderSignin_GET_responses)
 @view_config(route_name=s.ProviderSigninAPI.name, permission=NO_PERMISSION_REQUIRED)
-def authomatic_login(request):
+def authomatic_login_view(request):
     """
     Signs in a user session using an external provider.
     """
@@ -307,7 +307,7 @@ def authomatic_login(request):
                 # Login procedure finished with an error.
                 error = result.error.to_dict() if hasattr(result.error, "to_dict") else result.error
                 LOGGER.debug("Login failure with error. [%r]", error)
-                return login_failure(request, reason=result.error.message)
+                return login_failure_view(request, reason=result.error.message)
             if result.user:
                 # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
                 # update the user to get more info.
@@ -341,7 +341,7 @@ def authomatic_login(request):
 
 @s.SignoutAPI.get(tags=[s.SessionTag], response_schemas=s.Signout_GET_responses)
 @view_config(context=ZigguratSignOut, permission=NO_PERMISSION_REQUIRED)
-def sign_out(request):
+def sign_out_view(request):
     """
     Signs out the current user session.
     """
@@ -351,7 +351,7 @@ def sign_out(request):
 
 @s.SessionAPI.get(tags=[s.SessionTag], response_schemas=s.Session_GET_responses)
 @view_config(route_name=s.SessionAPI.name, permission=NO_PERMISSION_REQUIRED)
-def get_session(request):
+def get_session_view(request):
     """
     Get information about current session.
     """
@@ -371,7 +371,7 @@ def get_session(request):
 
 @s.ProvidersAPI.get(tags=[s.SessionTag], response_schemas=s.Providers_GET_responses)
 @view_config(route_name=s.ProvidersAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
-def get_providers(request):     # noqa: F811
+def get_providers_view(request):     # noqa: F811
     """
     Get list of login providers.
     """

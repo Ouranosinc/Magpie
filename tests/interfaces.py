@@ -1744,12 +1744,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @classmethod
     def setup_test_values(cls):
         provider_file = os.path.join(MAGPIE_ROOT, "config", "providers.cfg")
-        with open(provider_file, "r") as providers_fd:
+        with open(provider_file, mode="r", encoding="utf-8") as providers_fd:
             services_cfg = yaml.safe_load(providers_fd)
         provider_services_info = services_cfg["providers"]
         # filter impossible providers from possible previous version of remote server
         possible_service_types = utils.get_service_types_for_version(cls.version)
-        cls.test_services_info = dict()
+        cls.test_services_info = {}
         for svc_name in provider_services_info:
             if provider_services_info[svc_name]["type"] in possible_service_types:
                 cls.test_services_info[svc_name] = provider_services_info[svc_name]

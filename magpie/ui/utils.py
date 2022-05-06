@@ -1,5 +1,5 @@
 import json
-from secrets import compare_digest
+from secrets import compare_digest  # noqa 'python2-secrets'
 from typing import TYPE_CHECKING
 
 import six
@@ -375,7 +375,7 @@ class AdminRequests(BaseViews):
 
     @handle_errors
     def get_user_groups(self, user_name, user_group_status=UserGroupStatus.ACTIVE):
-        # type: (UserGroupStatus) -> List[str]
+        # type: (Str, UserGroupStatus) -> List[Str]
         path = schemas.UserGroupsAPI.path.format(user_name=user_name)
         resp = request_api(self.request, path + "?status={}".format(user_group_status.value), "GET")
         check_response(resp)
@@ -392,7 +392,7 @@ class AdminRequests(BaseViews):
 
     @handle_errors
     def get_user_statuses(self, status=0):
-        # type: (Union[str, int]) -> List[str]
+        # type: (Union[Str, int]) -> List[Str]
         """
         Obtains all user names that have the corresponding status value.
         """
@@ -403,7 +403,7 @@ class AdminRequests(BaseViews):
     @handle_errors
     def get_user_emails(self):
         user_names = self.get_user_names()
-        emails = list()
+        emails = []
         for user in user_names:
             path = schemas.UserAPI.path.format(user_name=user)
             resp = request_api(self.request, path, "GET")
@@ -458,7 +458,7 @@ class AdminRequests(BaseViews):
             return
         for res in resource_node.values():
             AdminRequests.flatten_tree_resource(res, resource_dict)
-        if "resource_id" in resource_node.keys() and "resource_type" in resource_node.keys():
+        if "resource_id" in resource_node and "resource_type" in resource_node:
             resource_dict[resource_node["resource_id"]] = resource_node["resource_type"]
 
     @handle_errors

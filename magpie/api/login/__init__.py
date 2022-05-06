@@ -5,7 +5,7 @@ LOGGER = get_logger(__name__)
 
 def includeme(config):
     from magpie.api import schemas as s
-    LOGGER.info("Adding api login...")
+    LOGGER.info("Adding API login...")
     # Add all the rest api routes
     config.add_route(**s.service_api_route_info(s.SessionAPI))
     config.add_route(**s.service_api_route_info(s.SigninAPI))

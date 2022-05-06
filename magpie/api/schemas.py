@@ -28,7 +28,7 @@ from magpie import __meta__
 from magpie.constants import get_constant
 from magpie.models import UserGroupStatus, UserStatuses
 from magpie.permissions import Access, Permission, PermissionType, Scope
-from magpie.security import get_provider_names
+from magpie.security import get_providers
 from magpie.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
@@ -291,7 +291,7 @@ ProviderNameParameter = colander.SchemaNode(
     colander.String(),
     description="External identity provider.",
     example="DKRZ",
-    validator=colander.OneOf(get_provider_names()))
+    validator=colander.OneOf(list(get_providers())))
 PermissionNameParameter = colander.SchemaNode(
     colander.String(),
     description="Permissions applicable to the service/resource.",
@@ -613,8 +613,6 @@ class BaseResponseBodySchema(colander.MappingSchema):
         super(BaseResponseBodySchema, self).__init__(**kw)
         assert isinstance(code, int)                        # nosec: B101
         assert isinstance(description, six.string_types)    # nosec: B101
-        self.__code = code
-        self.__desc = description
 
         # update the values
         child_nodes = getattr(self, "children", [])

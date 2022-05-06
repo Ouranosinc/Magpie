@@ -197,10 +197,11 @@ def authomatic_config(request=None):
     return config
 
 
-def get_provider_names():
-    provider_names = {}
+def get_providers():
+    # type: () -> JSON
+    provider_configs = {}
     config = authomatic_config()
-    for provider in config:
+    for provider, provider_cfg in config.items():
         if provider != "__defaults__":
-            provider_names[provider.lower()] = config[provider].get("display_name", provider)
-    return provider_names
+            provider_configs[provider.lower()] = provider_cfg.get("display_name", provider)
+    return provider_configs

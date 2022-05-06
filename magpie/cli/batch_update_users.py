@@ -133,7 +133,7 @@ def make_output(user_results, is_delete, output_location=None):
         if not os.path.exists(output_location):
             os.makedirs(output_location)
         filename = os.path.join(output_location, filename)
-    with open(filename, "w") as file:
+    with open(filename, mode="w", encoding="utf-8") as file:
         file.write(output)
         LOGGER.info("Output results sent to [%s]", filename)
 
