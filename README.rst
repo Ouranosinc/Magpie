@@ -14,7 +14,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 .. start-badges
 
 .. list-table::
+    :header-rows: 0
     :stub-columns: 1
+    :widths: 10,90
 
     * - dependencies
       - | |py_ver| |dependencies|

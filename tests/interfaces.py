@@ -7512,9 +7512,11 @@ class SetupMagpieAdapter(ConfigTestCase):
     to the ones that would be received by the proxy. This allows to test handling of the requests be the various
     components defined in the adapter.
     """
-    session = None          # type: Optional[Session]
-    cache_enabled = False   # type: bool
-    cache_expire = None     # type: Optional[int]
+    session = None              # type: Optional[Session]
+    cache_enabled = False       # type: bool
+    cache_expire = None         # type: Optional[int]
+    test_twitcher = False       # type: bool
+    test_twitcher_app = None    # type: Optional[TestApp]
 
     @classmethod
     def setup_adapter(cls, setup_cache=True):
@@ -7529,6 +7531,8 @@ class SetupMagpieAdapter(ConfigTestCase):
         cls.test_adapter_app = TestApp(config.make_wsgi_app())
         cls.ows = adapter.owssecurity_factory(settings)
         cls.adapter = adapter
+        if cls.test_twitcher:
+            cls.test_twitcher_app = utils.get_test_twitcher_app(settings)
 
     @utils.mocked_get_settings
     def mock_request(self, *args, **kwargs):

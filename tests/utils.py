@@ -1,3 +1,5 @@
+import inspect
+
 import contextlib
 import difflib
 import functools
@@ -52,6 +54,7 @@ if TYPE_CHECKING:
     from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
 
     from pyramid.request import Request
+    from pyramid.router import Router
     from six.moves.urllib.parse import ParseResult
     from webtest.forms import BeautifulSoup
 
@@ -107,12 +110,14 @@ class RunOption(object):
     __name__ = "RunOption"  # backward fix for Python 2 and 'functools.wraps'
 
     def __init__(self, name, marker=None, description=None):
+        # type: (Str, Optional[Str], Optional[Str]) -> None
         self._name = name
         self._marker = marker if marker else name.lower().replace("magpie_test_", "")
         self._enabled = self._default_run()
         self._description = description
 
     def __call__(self, *args, **kwargs):
+        # type: (Any, Any) -> Tuple[bool, Str]
         """
         Return (condition, reason) matching ``unittest.skipUnless`` decorator.
         """
@@ -125,6 +130,7 @@ class RunOption(object):
         return "{}[{}]".format(type(self).__name__, self.message)
 
     def _default_run(self):
+        # type: () -> bool
         option_value = asbool(get_constant(self._name, default_value=True,
                                            raise_missing=False, raise_not_set=False, print_missing=True))
         return True if option_value is None else option_value
@@ -177,6 +183,7 @@ def make_run_option_decorator(run_option):
     """
     @functools.wraps(run_option)
     def wrap(test_func, *_, **__):
+        # type: (Callable, Any, Any) -> Callable
         pytest_marker = pytest.mark.__getattr__(run_option.marker)
         unittest_skip = unittest.skipUnless(*run_option())
         test_func = pytest_marker(test_func)
@@ -197,6 +204,7 @@ class RunOptionDecorator(object):
         RunOptionDecorator("MAGPIE_TEST_CUSTOM_MARKER")
     """
     def __new__(cls, name, description=None):
+        # type: (Type[RunOptionDecorator], Str, Optional[Str]) -> RunOptionDecorator
         return make_run_option_decorator(RunOption(name, description=description))
 
 
@@ -211,6 +219,7 @@ class TestVersion(LooseVersion):
     __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
 
     def __init__(self, vstring):
+        # type: (Str) -> None
         if isinstance(vstring, (TestVersion, LooseVersion)):
             self.version = vstring.version
             return
@@ -220,6 +229,7 @@ class TestVersion(LooseVersion):
         super(TestVersion, self).__init__(vstring)
 
     def _cmp(self, other):
+        # type: (Any) -> int
         if not isinstance(other, TestVersion):
             other = TestVersion(other)
         if self.version == "latest" and other.version == "latest":
@@ -252,10 +262,12 @@ null = NullType()  # pylint: disable=C0103,invalid-name
 
 
 def is_null(item):
+    # type: (Any) -> bool
     return isinstance(item, NullType) or item is null
 
 
 def config_setup_from_ini(config_ini_file_path):
+    # type: (Str) -> Configurator
     settings = get_settings_from_config_ini(config_ini_file_path)
     config = PyramidSetUp(settings=settings)
     return config
@@ -281,6 +293,24 @@ def get_test_magpie_app(settings=None):
     return magpie_app
 
 
+def get_test_twitcher_app(settings=None):
+    # type: (Optional[SettingsType]) -> TestApp
+    """
+    Instantiate a Twitcher local test application.
+    """
+    _settings = {
+        "sqlalchemy.url": "sqlite:///:memory:",
+        "magpie.secret": get_constant("MAGPIE_SECRET", settings),
+        "twitcher.adapter": "magpie.adapter.MagpieAdapter",
+    }
+    _settings.update(settings or {})
+    config = PyramidSetUp(settings=_settings)
+    config.include("twitcher.models")
+    config.include("twitcher.owsproxy")
+    test_app = TestApp(config.make_wsgi_app(), extra_environ={"tm.active": True})
+    return test_app
+
+
 # shared handles to monkey-patch caches over test cases
 TEST_CACHE_HANDLES = {}
 TEST_CACHE_REGIONS_FUNCTIONS = {
@@ -290,6 +320,7 @@ TEST_CACHE_REGIONS_FUNCTIONS = {
 
 
 def patch_cache_handles():
+    # type: () -> None
     """
     Monkey-patch :mod:`beaker` caches employed with different settings over multiple test cases.
 
@@ -364,6 +395,7 @@ def get_app_or_url(test_item):
 
 
 def get_test_webhook_app(webhook_url):
+    # type: (Str) -> Router
     """
     Instantiate a local test application used to simulate a receiving middleware.
     """
@@ -388,12 +420,14 @@ def get_test_webhook_app(webhook_url):
         return Response("Failing webhook url with user " + user + " and callback_url " + body["callback_url"])
 
     def get_status(*_):
+        # type: (Any) -> Response
         """
         Returns the number of times a webhook request was received.
         """
         return Response(str(settings["webhook_status"]))
 
     def get_callback_url(*_):
+        # type: (Any) -> Response
         """
         Returns the temporary URL assigned by the webhook as ``callback_url``.
         """
@@ -404,6 +438,7 @@ def get_test_webhook_app(webhook_url):
         return Response(json=_payload_json())
 
     def _payload_json():
+        # type: () -> JSON
         payload = settings["payload"]
         if isinstance(payload, list):
             payload = payload[0]
@@ -412,6 +447,7 @@ def get_test_webhook_app(webhook_url):
         return payload
 
     def check_payload(request):
+        # type: (Request) -> Response
         """
         Checks if the input payload is present in the webhook app saved payload.
         """
@@ -420,6 +456,7 @@ def get_test_webhook_app(webhook_url):
         return Response("Content is correct")
 
     def reset(*_):
+        # type: (Any) -> Response
         """
         Resets the middleware for future webhook requests.
         """
@@ -429,6 +466,7 @@ def get_test_webhook_app(webhook_url):
         return Response("Webhook app has been reset.")
 
     def error_body(exc, *_):
+        # type: (Exception, Any) -> HTTPException
         """
         Make the assertion error text available as webhook response text.
         """
@@ -459,6 +497,7 @@ def get_test_webhook_app(webhook_url):
         webhook_app_instance = config.make_wsgi_app()
 
     def webhook_app():
+        # type: () -> None
         try:
             webhook_url_info = urlparse(webhook_url)
             serve(webhook_app_instance, host=webhook_url_info.hostname, port=webhook_url_info.port)
@@ -571,6 +610,7 @@ def json_msg(json_body, msg=null):
 
 
 def mocked_get_settings(test_func=None, settings=None):
+    # type: (Callable[[...], None], Optional[SettingsType]) -> Callable[[Callable[[...], None]], Callable]
     """
     Mocks :func:`magpie.utils.get_settings` to allow retrieval of different settings during tests.
 
@@ -593,6 +633,7 @@ def mocked_get_settings(test_func=None, settings=None):
     :param settings: Additional settings to override the values retrieved from the request or application.
     """
     def mocked_get_settings_decorator(test=None):
+        # type: (Optional[Callable[[Callable], Any]]) -> Callable
         from magpie.utils import get_settings as real_get_settings
 
         def mocked(container, *args, **kwargs):
@@ -964,6 +1005,13 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         kwargs["headers"]["Content-Length"] = str(len(kwargs["params"]))
         if status and status >= 300:
             kwargs["expect_errors"] = True
+
+        # cleanup unknown parameters
+        sig = inspect.signature(app_or_url._gen_request)
+        unknown_params = set(kwargs) - set(sig.parameters)
+        for param in unknown_params:
+            kwargs.pop(param)
+
         err_code = None
         err_msg = None
         err_exc = None
@@ -1111,6 +1159,7 @@ def check_or_try_logout_user(test_item, msg=None):
     app_or_url = get_app_or_url(test_item)
 
     def _is_logged_out():
+        # type: () -> bool
         resp = get_session_user(app_or_url)
         body = get_json_body(resp)
         auth = body.get("authenticated", False)
@@ -1209,6 +1258,7 @@ def generate_diff(val, ref, val_name="Test", ref_name="Reference"):
 
 
 def format_test_val_ref(val, ref, pre="Fail", msg=None, diff=False):
+    # type: (Any, Any, Str, Optional[Str], bool) -> Str
     if is_null(msg):
         _msg = "({}) Failed condition between test and reference values.".format(pre)
     else:
@@ -1288,7 +1338,7 @@ def check_val_not_in(val, ref, msg=None):
 
 
 def check_val_type(val, ref, msg=None):
-    # type: (Any, Union[Type[Any], Tuple[Type[Any]], NullType], Optional[Str]) -> None
+    # type: (Any, Union[Type[Any], Tuple[Type[Any], ...], NullType], Optional[Str]) -> None
     """:raises AssertionError: if :paramref:`val` is not an instanced of :paramref:`ref`."""
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 
@@ -1348,7 +1398,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
     :param version: perform conditional checks according to test instance version (default to latest if not provided).
     :return: json body of the response for convenience.
     """
-    def _(_msg):
+    def _(_msg):  # type: (Str) -> Str
         return _msg + " " + extra_message if extra_message else _msg
 
     check_val_is_in("Content-Type", dict(response.headers), msg=_("Response doesn't define 'Content-Type' header."))

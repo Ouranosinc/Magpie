@@ -601,7 +601,8 @@ def get_admin_cookies(container, verify=True, raise_message=None):
     magpie_login_url = "{}{}".format(magpie_url, SigninAPI.path)
     cred = {"user_name": get_constant("MAGPIE_ADMIN_USER", container),
             "password": get_constant("MAGPIE_ADMIN_PASSWORD", container)}
-    resp = requests.post(magpie_login_url, data=cred, headers={"Accept": CONTENT_TYPE_JSON}, verify=verify)
+    headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
+    resp = requests.post(magpie_login_url, data=cred, headers=headers, verify=verify)
     if resp.status_code != HTTPOk.code:
         if raise_message:
             raise_log(raise_message, logger=LOGGER)
@@ -627,6 +628,8 @@ def get_settings(container, app=False):
     :return: found application settings dictionary.
     :raise TypeError: when no application settings could be found or unsupported container.
     """
+    if isinstance(container, Response):
+        container = container.request
     if isinstance(container, (Configurator, Request)):
         return container.registry.settings  # noqa
     if isinstance(container, Registry):
@@ -810,6 +813,7 @@ def get_twitcher_url(container=None, hostname=None):
 
 
 def get_twitcher_protected_service_url(magpie_service_name, container=None, hostname=None):
+    # type: (Str, Optional[AnySettingsContainer], Optional[Str]) -> Str
     """
     Obtains the protected service URL behind Twitcher Proxy based on combination of supported configuration settings.
 

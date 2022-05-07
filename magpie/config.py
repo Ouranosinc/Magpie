@@ -29,6 +29,7 @@ SERVICE_HOOK_ITEM_SCHEMA = {
     "required": [
         "type",
         "path",
+        "target",
     ],
     "additionalProperties": False
 }

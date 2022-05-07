@@ -1,23 +1,26 @@
 import random
 import time
 import unittest
+import uuid
 from typing import TYPE_CHECKING
 
 import mock
 import pytest
 import six
 from pyramid.httpexceptions import HTTPNotFound
+from pyramid.response import Response
 from six.moves.urllib.parse import urlparse
 
 from magpie import __meta__
 from magpie.constants import get_constant
 from magpie.permissions import Permission
 from magpie.services import ServiceAPI, ServiceInterface, ServiceWPS, invalidate_service
+from magpie.utils import CONTENT_TYPE_JSON, get_magpie_url, get_twitcher_protected_service_url
 from tests import interfaces as ti
 from tests import runner, utils
 
 if six.PY3:
-    from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
+    from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden  # noqa: F401
 
 if TYPE_CHECKING:
     from typing import Any, Callable, Tuple
@@ -228,6 +231,93 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                     resp = utils.test_request(self.test_adapter_app, "GET", "/verify", params=data, expect_errors=True,
                                               headers=other_headers, cookies=other_cookies)
                     utils.check_response_basic_info(resp, expected_method="GET", expected_code=403)
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_ADAPTER
+@runner.MAGPIE_TEST_FUNCTIONAL
+class TestAdapterHooks(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
+
+    __test__ = True
+    test_twitcher = True
+
+    @classmethod
+    @utils.mocked_get_settings
+    def setUpClass(cls):
+        cls.version = __meta__.__version__
+        cls.app = utils.get_test_magpie_app()
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+        cls.settings = utils.get_app_or_url(cls).app.registry.settings
+
+        # following will be wiped on setup
+        cls.test_user_name = "unittest-adapter-hooks-user"
+        cls.test_group_name = "unittest-adapter-hooks-group"
+
+        cls.setup_adapter()
+        cls.setup_admin()
+        cls.login_admin()
+
+    def test_request_response_hooks(self):
+        """
+        Validate hooks functionalities using examples defined in ``config/providers.cfg`` loaded by default.
+        """
+        utils.warn_version(self, "adapter hooks functionality", "3.25", skip=True)
+
+        assert "magpie.services" in self.settings
+        assert "weaver" in self.settings["magpie.services"]
+        assert self.settings["magpie.services"]["weaver"]["hooks"]
+        magpie_url = get_magpie_url(self.settings)
+        weaver_url = self.settings["magpie.services"]["weaver"]["url"]
+        proxy_weaver_url = get_twitcher_protected_service_url("weaver", self.settings)
+
+        def mock_requests(*args, **kwargs):
+            # type: (Any, Any) -> AnyResponseType
+            if args:
+                method, url, args = args[0], args[1], args[2:]
+            else:
+                method = kwargs.pop("method")
+                url = kwargs.pop("url")
+            path = urlparse(url).path
+            if url.startswith(magpie_url):
+                return utils.test_request(self.app, method, path, *args, **kwargs, expect_errors=True)
+            if url.startswith(weaver_url):
+                if path.endswith("jobs") and method.upper() == "POST":
+                    # retrieve the header that should have been applied by the request hook
+                    # forward it in the response body for testing result
+                    x_wps_out_context = kwargs.get("headers", {}).get("X-WPS-Output-Context")
+                    wps_job_id = str(uuid.uuid4())
+                    wps_job_url = proxy_weaver_url + "/jobs" + wps_job_id
+                    return Response(
+                        {"status": "accepted", "jobID": wps_job_id, "context": x_wps_out_context},
+                        status=201, headers={"Content-Type": CONTENT_TYPE_JSON, "Location": wps_job_url}
+                    )
+                parts = path.rsplit("/", 2)
+                if parts[-2] == "jobs" and method.upper() == "GET":
+                    return Response(
+                        {"status": "succeeded", "jobID": parts[-1]},
+                        status=200, headers={"Content-Type": CONTENT_TYPE_JSON}
+                    )
+            raise ValueError("Unknown location for mock request: [{}]".format(url))
+
+        test_user = utils.TestSetup.get_UserInfo(self)
+        test_user_id = test_user["user_id"]
+
+        with mock.patch("requests.Session.request", side_effect=mock_requests):
+            with mock.patch("requests.request", side_effect=mock_requests):
+                resp = utils.test_request(self.test_twitcher_app, "POST", "/ows/proxy/weaver/jobs", json={},
+                                          headers=self.test_headers, cookies=self.test_cookies)
+                assert resp.status_code == 201
+                assert "X-WPS-Output-Context" in resp.json
+                assert resp.json["X-WPS-Output-Context"] == "user-" + str(test_user_id)
+                job_url = resp.headers["Location"]
+
+                resp = utils.test_request(self.test_twitcher_app, "GET", job_url,
+                                          headers=self.test_headers, cookies=self.test_cookies)
+                assert resp.status_code == 200
+                assert "X-WPS-Output-Context" in resp.json
+                assert resp.json["X-WPS-Output-Context"] == "user-" + str(test_user_id)
 
 
 @runner.MAGPIE_TEST_LOCAL

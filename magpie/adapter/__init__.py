@@ -1,3 +1,5 @@
+import copy
+import inspect
 import re
 import warnings
 from distutils.version import LooseVersion
@@ -91,7 +93,7 @@ if TYPE_CHECKING:
     from pyramid.request import Request
     from pyramid.response import Response
 
-    from magpie.typedefs import JSON, AnyResponseType, AnySettingsContainer, Str
+    from magpie.typedefs import JSON, AnyResponseType, AnySettingsContainer, ServiceHookType, Str
 
     from twitcher.models.service import ServiceConfig     # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.3
     from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
@@ -256,6 +258,48 @@ class MagpieAdapter(AdapterInterface):
 
         return config
 
+    def _apply_hooks(self, instance, service_name, hook_type, method, path, query):
+        # type: (Union[Request, Response], Str, ServiceHookType, Str, Str, Str) -> Union[Request, Response]
+        """
+        Executes the hooks processing chain.
+        """
+        svc_config = self.settings.get("magpie.services", {}).get(service_name, {})
+        svc_hooks = svc_config.get("hooks", [])
+        # copy to avoid (un)intentional modifications to configurations
+        svc_config = copy.deepcopy(svc_config)
+        for hook_cfg in svc_hooks:
+            if hook_cfg["type"] != hook_type:
+                continue
+            if hook_cfg["method"] not in ["*", method]:
+                continue
+            hook_path = normalize_field_pattern(hook_cfg["path"])
+            if not re.match(hook_path, path):
+                continue
+            hook_query = normalize_field_pattern(hook_cfg["query"])
+            if not re.match(hook_query, query):
+                continue
+            hook_target = import_target(hook_cfg["target"])
+            hook_qs = "?" + query if query else ""
+            if not hook_target:
+                LOGGER.warning("Hook matched %s (%s %s%s) but specified target [%s] could not be loaded.",
+                               hook_type, method, path, hook_qs, hook_cfg["target"])
+                continue
+            LOGGER.debug("Hook matched %s (%s %s%s) [%s]", hook_type, method, path, hook_qs, hook_cfg["target"])
+            signature = inspect.Signature(hook_target)
+            kwargs = {}
+            if len(signature.parameters) > 1:
+                hook = copy.deepcopy(hook_cfg)
+                for key, val in [("service", svc_config), ("hook", hook)]:
+                    if key in signature.parameters:
+                        kwargs[key] = val
+            try:
+                instance = hook_target(instance, **kwargs)
+            except Exception as exc:
+                LOGGER.error("Hook failed %s (%s %s%s) [%s]",
+                             hook_type, method, path, hook_qs, hook_cfg["target"], exc_info=exc)
+                raise exc
+        return instance
+
     def request_hook(self, request, service):
         # type: (Request, ServiceConfig) -> Request
         """
@@ -271,29 +315,10 @@ class MagpieAdapter(AdapterInterface):
 
         This method can modified those members to adapt the request for specific service logic.
         """
-        svc_name = service["name"]
-        svc_hooks = self.settings.get("magpie.services", {}).get(svc_name, {}).get("hooks", [])
-        # save initial matching parameters in case of modification by hooks
-        req_path = request.path
-        req_meth = request.method
-        req_query = request.query_string
-        for hook_cfg in svc_hooks:
-            if hook_cfg["type"] != "request":
-                continue
-            if hook_cfg["method"] not in ["*", req_meth]:
-                continue
-            hook_path = normalize_field_pattern(hook_cfg["path"])
-            if not re.match(hook_path, req_path):
-                continue
-            hook_query = normalize_field_pattern(hook_cfg["query"])
-            if not re.match(hook_query, req_query):
-                continue
-            hook_target = import_target(hook_cfg["target"])
-            if not hook_target:
-                LOGGER.warning("Hook matched request (%s %s%s) but specified target [%s] could not be loaded.",
-                               req_meth, req_path, "?" + req_query if req_query else "", hook_cfg["target"])
-                continue
-            request = hook_target(hook_target)
+        request = self._apply_hooks(
+            request, service["name"], "request",
+            request.method, request.path, request.query_string
+        )
         return request
 
     def response_hook(self, response, service):
@@ -307,27 +332,8 @@ class MagpieAdapter(AdapterInterface):
         The received response from the proxied service is normally returned directly.
         This method can modify the response to adapt it for specific service logic.
         """
-        svc_name = service["name"]
-        svc_hooks = self.settings.get("magpie.services", {}).get(svc_name, {}).get("hooks", [])
-        # save initial matching parameters in case of modification by hooks
-        req_path = response.request.path
-        req_meth = response.request.method
-        req_query = response.request.query_string
-        for hook_cfg in svc_hooks:
-            if hook_cfg["type"] != "response":
-                continue
-            if hook_cfg["method"] not in ["*", req_meth]:
-                continue
-            hook_path = normalize_field_pattern(hook_cfg["path"])
-            if not re.match(hook_path, req_path):
-                continue
-            hook_query = normalize_field_pattern(hook_cfg["query"])
-            if not re.match(hook_query, req_query):
-                continue
-            hook_target = import_target(hook_cfg["target"])
-            if not hook_target:
-                LOGGER.warning("Hook matched response (%s %s%s) but specified target [%s] could not be loaded.",
-                               req_meth, req_path, "?" + req_query if req_query else "", hook_cfg["target"])
-                continue
-            response = hook_target(hook_target)
+        response = self._apply_hooks(
+            response, service["name"], "response",
+            response.request.path, response.request.path, response.request.query_string
+        )
         return response

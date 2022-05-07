@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]
     SettingsType = Dict[Str, SettingValue]
-    AnySettingsContainer = Union[Configurator, Registry, PyramidRequest, SettingsType]
+    AnySettingsContainer = Union[Configurator, Registry, PyramidRequest, PyramidResponse, SettingsType]
 
     ParamsType = Dict[Str, Any]
     CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
@@ -155,8 +155,9 @@ if TYPE_CHECKING:
         "email": Optional[Str],
         "group": Optional[Str],
     }, total=False)
-    ServiceHookConfig = TypedDict("ServiceHookConfig", {
-        "type": Literal["request", "response"],
+    ServiceHookType = Literal["request", "response"]
+    ServiceHookConfigItem = TypedDict("ServiceHookConfigItem", {
+        "type": ServiceHookType,
         "path": str,
         "query": Optional[str],
         "method": AnyRequestMethod,
@@ -173,7 +174,7 @@ if TYPE_CHECKING:
         "public": bool,
         "c4i": bool,
         "configuration": Optional[ServiceConfiguration],
-        "hooks": Optional[List[ServiceHookConfig]]
+        "hooks": Optional[List[ServiceHookConfigItem]]
     })
 
     # individual sections directly loaded from config files (BEFORE resolution)
