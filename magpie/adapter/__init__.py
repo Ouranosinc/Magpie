@@ -272,10 +272,10 @@ class MagpieAdapter(AdapterInterface):
                 continue
             if hook_cfg["method"] not in ["*", method]:
                 continue
-            hook_path = normalize_field_pattern(hook_cfg["path"])
+            hook_path = normalize_field_pattern(hook_cfg["path"], escape=False)
             if not re.match(hook_path, path):
                 continue
-            hook_query = normalize_field_pattern(hook_cfg["query"])
+            hook_query = normalize_field_pattern(hook_cfg["query"], escape=False)
             if not re.match(hook_query, query):
                 continue
             hook_target = import_target(hook_cfg["target"])
@@ -285,7 +285,7 @@ class MagpieAdapter(AdapterInterface):
                                hook_type, method, path, hook_qs, hook_cfg["target"])
                 continue
             LOGGER.debug("Hook matched %s (%s %s%s) [%s]", hook_type, method, path, hook_qs, hook_cfg["target"])
-            signature = inspect.Signature(hook_target)
+            signature = inspect.signature(hook_target)
             kwargs = {}
             if len(signature.parameters) > 1:
                 hook = copy.deepcopy(hook_cfg)
@@ -299,6 +299,17 @@ class MagpieAdapter(AdapterInterface):
                              hook_type, method, path, hook_qs, hook_cfg["target"], exc_info=exc)
                 raise exc
         return instance
+
+    @staticmethod
+    def _proxied_service_path(request):
+        # type: (Request) -> Str
+        """
+        Extract the request extra path of the proxied service without :term:`Twitcher` proxy prefix.
+        """
+        # employ the same parameter added by 'owsproxy_extra' view and used to call the proxied request
+        extra_path = request.matchdict.get("extra_path", "")
+        extra_path = "/" + extra_path if extra_path else ""
+        return extra_path
 
     def request_hook(self, request, service):
         # type: (Request, ServiceConfig) -> Request
@@ -315,9 +326,10 @@ class MagpieAdapter(AdapterInterface):
 
         This method can modified those members to adapt the request for specific service logic.
         """
+        request_path = self._proxied_service_path(request)
         request = self._apply_hooks(
             request, service["name"], "request",
-            request.method, request.path, request.query_string
+            request.method, request_path, request.query_string
         )
         return request
 
@@ -332,8 +344,9 @@ class MagpieAdapter(AdapterInterface):
         The received response from the proxied service is normally returned directly.
         This method can modify the response to adapt it for specific service logic.
         """
+        request_path = self._proxied_service_path(response.request)
         response = self._apply_hooks(
             response, service["name"], "response",
-            response.request.path, response.request.path, response.request.query_string
+            response.request.method, request_path, response.request.query_string
         )
         return response

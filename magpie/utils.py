@@ -602,7 +602,7 @@ def get_admin_cookies(container, verify=True, raise_message=None):
     cred = {"user_name": get_constant("MAGPIE_ADMIN_USER", container),
             "password": get_constant("MAGPIE_ADMIN_PASSWORD", container)}
     headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
-    resp = requests.post(magpie_login_url, data=cred, headers=headers, verify=verify)
+    resp = requests.post(magpie_login_url, json=cred, headers=headers, verify=verify)
     if resp.status_code != HTTPOk.code:
         if raise_message:
             raise_log(raise_message, logger=LOGGER)
@@ -683,12 +683,13 @@ def import_target(target, default_root=None):
     return getattr(mod, target, None)
 
 
-def normalize_field_pattern(pattern):
-    # type: (Str) -> Str
+def normalize_field_pattern(pattern, escape=True):
+    # type: (Str, bool) -> Str
     """
     Escapes necessary regex pattern characters and applies start/end-of-line control characters.
     """
-    pattern = re.escape(pattern)
+    if escape:
+        pattern = re.escape(pattern)
     if not pattern:
         pattern = r".*"
     if pattern[0] != "^":

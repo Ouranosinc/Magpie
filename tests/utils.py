@@ -23,13 +23,15 @@ import six
 from beaker.cache import cache_managers, cache_regions
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPException
-from pyramid.response import Response
+from pyramid.response import Response as PyramidResponse
 from pyramid.settings import asbool
 from pyramid.testing import DummyRequest
 from pyramid.testing import setUp as PyramidSetUp
+from requests.cookies import RequestsCookieJar, create_cookie
+from requests.models import Response as RequestsResponse
 from six.moves.urllib.parse import urlparse
 from waitress import serve
-from webtest.app import AppError, TestApp  # noqa
+from webtest.app import AppError, TestApp, TestRequest  # noqa
 from webtest.forms import Form
 from webtest.response import TestResponse
 
@@ -67,6 +69,7 @@ if TYPE_CHECKING:
         AnyKey,
         AnyPermissionType,
         AnyResponseType,
+        AnySettingsContainer,
         CookiesType,
         HeadersType,
         SettingsType,
@@ -302,6 +305,7 @@ def get_test_twitcher_app(settings=None):
         "sqlalchemy.url": "sqlite:///:memory:",
         "magpie.secret": get_constant("MAGPIE_SECRET", settings),
         "twitcher.adapter": "magpie.adapter.MagpieAdapter",
+        "twitcher.basicauth": False,  # avoid override by twitcher, MagpieAdapter will set AuthTkt policy with cookie
     }
     _settings.update(settings or {})
     config = PyramidSetUp(settings=_settings)
@@ -408,7 +412,7 @@ def get_test_webhook_app(webhook_url):
         # Status is incremented to count the number of successful test webhooks
         settings["webhook_status"] += 1
         settings["payload"].append(request.text)
-        return Response(json=data)
+        return PyramidResponse(json=data)
 
     def webhook_fail_request(request):
         """
@@ -417,25 +421,25 @@ def get_test_webhook_app(webhook_url):
         body = json_pkg.loads(request.text)
         user = body["user_name"]
         settings["payload"] = body
-        return Response("Failing webhook url with user " + user + " and callback_url " + body["callback_url"])
+        return PyramidResponse("Failing webhook url with user " + user + " and callback_url " + body["callback_url"])
 
     def get_status(*_):
-        # type: (Any) -> Response
+        # type: (Any) -> PyramidResponse
         """
         Returns the number of times a webhook request was received.
         """
-        return Response(str(settings["webhook_status"]))
+        return PyramidResponse(str(settings["webhook_status"]))
 
     def get_callback_url(*_):
-        # type: (Any) -> Response
+        # type: (Any) -> PyramidResponse
         """
         Returns the temporary URL assigned by the webhook as ``callback_url``.
         """
         payload = _payload_json()
-        return Response(str(payload["callback_url"]))
+        return PyramidResponse(str(payload["callback_url"]))
 
     def get_payload(*_):
-        return Response(json=_payload_json())
+        return PyramidResponse(json=_payload_json())
 
     def _payload_json():
         # type: () -> JSON
@@ -447,23 +451,23 @@ def get_test_webhook_app(webhook_url):
         return payload
 
     def check_payload(request):
-        # type: (Request) -> Response
+        # type: (Request) -> PyramidResponse
         """
         Checks if the input payload is present in the webhook app saved payload.
         """
         msg = "Request Body not in Payload settings\nbody: {}\npayload: {}".format(request.text, settings["payload"])
         assert request.text in settings["payload"], msg
-        return Response("Content is correct")
+        return PyramidResponse("Content is correct")
 
     def reset(*_):
-        # type: (Any) -> Response
+        # type: (Any) -> PyramidResponse
         """
         Resets the middleware for future webhook requests.
         """
         settings["webhook_status"] = 0
         settings["payload"] = []
         settings["callback_url"] = ""
-        return Response("Webhook app has been reset.")
+        return PyramidResponse("Webhook app has been reset.")
 
     def error_body(exc, *_):
         # type: (Exception, Any) -> HTTPException
@@ -637,6 +641,7 @@ def mocked_get_settings(test_func=None, settings=None):
         from magpie.utils import get_settings as real_get_settings
 
         def mocked(container, *args, **kwargs):
+            # type: (Optional[AnySettingsContainer], Any, Any) -> SettingsType
             if isinstance(container, DummyRequest):
                 _settings = container.registry.settings
             else:
@@ -647,14 +652,14 @@ def mocked_get_settings(test_func=None, settings=None):
 
         if not test:
             @contextlib.contextmanager
-            def wrapped(*_, **__):
+            def wrapped(*_, **__):  # type: (Any, Any) -> Any
                 with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
                      mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked), \
                      mock.patch("magpie.adapter.magpieservice.get_settings", side_effect=mocked):
                     yield mock_settings
         else:
             # decorator variant
-            def wrapped(*_, **__):
+            def wrapped(*_, **__):  # type: (Any, Any) -> Any
                 with mock.patch("magpie.utils.get_settings", side_effect=mocked), \
                      mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked), \
                      mock.patch("magpie.adapter.magpieservice.get_settings", side_effect=mocked):
@@ -677,11 +682,12 @@ def mocked_get_settings(test_func=None, settings=None):
 def mock_request(request_path_query="",     # type: Str
                  method="GET",              # type: Str
                  params=None,               # type: Optional[Dict[Str, Str]]
-                 body="",                   # type: Union[Str, JSON]
+                 body=b"",                  # type: Union[bytes, Str, JSON]
                  content_type=None,         # type: Optional[Str]
                  headers=None,              # type: Optional[AnyHeadersType]
                  cookies=None,              # type: Optional[AnyCookiesType]
                  settings=None,             # type: SettingsType
+                 **kwargs,                  # type: Any
                  ):                         # type: (...) -> Request
     """
     Generates a fake request with provided arguments.
@@ -699,10 +705,11 @@ def mock_request(request_path_query="",     # type: Str
                 query[kv[0]] = kv[1] if len(kv) > 1 else None
     elif params:
         query = params
-    request = DummyRequest(path=path, params=query)
+    # handle common name for body due to 'requests' using it as parameter input when using library functions
+    body = kwargs.pop("data", None) or body
+    request = DummyRequest(path=path, params=query, **kwargs)
     request.path_qs = request_path_query
     request.method = method
-    request.content_type = content_type
     request.headers = headers or {}
     request.cookies = cookies or {}
     request.matched_route = None  # cornice method
@@ -717,8 +724,41 @@ def mock_request(request_path_query="",     # type: Str
             request.json = json_pkg.loads(body)
     except (TypeError, ValueError):
         pass
+    request.content_type = content_type
+    request.content_length = len(request.body)
+    request.app_iter = [body]
     request.registry.settings = settings or {}
     return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
+
+
+def mock_response(body=None, status=200, **kwargs):
+    # type: (Optional[Union[bytes, Str, JSON]], int, Any) -> AnyResponseType
+    """
+    Generates a fake response with provided arguments and expected handlers applied for common use by applications.
+    """
+    class MockedAnyResponse(RequestsResponse, PyramidResponse):
+        _status = None
+        status_code = None   # avoid conflict between RequestsResponse's None init and Webob disallowing it
+
+        def __init__(self, **_):
+            # type: (Any) -> None
+            status_code = _.get("status_code") or _.get("status") or _.get("code") or 200
+            RequestsResponse.__init__(self)  # generate internal control fields
+            setattr(self, "status_code", PyramidResponse.status_code)  # reapply property now that they are initialized
+            self._status = str(status_code)
+            PyramidResponse.__init__(self, **_)  # assigns fields by name
+
+    json = None
+    if isinstance(body, (list, dict)):
+        json = body
+        body = None
+    resp = MockedAnyResponse(body=body, json=json, status=status, **kwargs)
+    resp.content_length = len(resp.body)
+    # following avoids nested iterators from TestApp and Twitcher BufferedResponse
+    # since TestApp already iterates contents, buffered iterator causes webob to attempt 2nd read after close (error)
+    resp._content = resp.body
+    resp._content_consumed = True
+    return resp
 
 
 def mocked_send_email(func):
@@ -736,7 +776,7 @@ def mocked_send_email(func):
         return True  # "success" email
 
     @functools.wraps(func)
-    def wrapped(*_, **__):
+    def wrapped(*_, **__):  # type: (Any, Any) -> Any
         # mock both direct reference if imported and places that use it to globally mock email notifications
         with wrapped_call("magpie.api.management.register.register_utils.send_email", side_effect=no_email):
             with wrapped_call("magpie.api.management.user.user_utils.send_email", side_effect=no_email):
@@ -982,9 +1022,11 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
     if isinstance(app_or_url, TestApp):
         # set 'cookies' handled by the 'TestApp' instance if not present or different
         if cookies is not None:
-            cookies = dict(cookies)  # convert tuple-list as needed
-            if not app_or_url.cookies or app_or_url.cookies != cookies:
-                app_or_url.cookies.update(cookies)
+            cookies_dict = dict(cookies)  # convert tuple-list as needed
+            cookies_list = cookies if isinstance(cookies, list) else list(cookies_dict.items())
+            if not app_or_url.cookies or app_or_url.cookies != cookies_dict:
+                for name, cookie in cookies_list:
+                    app_or_url.set_cookie(name, cookie)
 
         # obtain Content-Type header if specified to ensure it is properly applied
         kwargs["content_type"] = content_type if content_type else get_header("Content-Type", headers)
@@ -1043,6 +1085,17 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         assert max_redirect >= 0, "Maximum follow redirects reached."
         # test status accordingly if specified
         assert resp.status_code == status or status is None, "Response not matching the expected status code."
+
+        # set cookies in case test request was a login
+        # returned test response does not set it automatically
+        # (see: 'magpie.utils.get_admin_cookies')
+        cookie_headers = [cookie for header, cookie in resp.headers.items() if header.lower() == "set-cookie"]
+        if cookie_headers and not getattr(resp, "cookies", []):
+            resp.cookies = RequestsCookieJar()
+            for cookie in cookie_headers:
+                cookie_name, cookie_token = cookie.split("=", 1)
+                cookie_value = create_cookie(cookie_name, cookie_token)
+                resp.cookies.set_cookie(cookie_value)
         return resp
 
     kwargs.pop("expect_errors", None)  # remove keyword specific to TestApp
@@ -1377,7 +1430,7 @@ def check_no_raise(func, msg=None):
 
 
 def check_response_basic_info(response,                         # type: AnyResponseType
-                              expected_code=200,                # type: int
+                              expected_code=200,                # type: Union[int, Iterable[int]]
                               expected_type=CONTENT_TYPE_JSON,  # type: Optional[Str]
                               expected_method="GET",            # type: Optional[Str]
                               extra_message=None,               # type: Optional[Str]
@@ -1391,7 +1444,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
     of content-type is done.
 
     :param response: response to validate.
-    :param expected_code: status code to validate from the response.
+    :param expected_code: status code to validate from the response. If multiple values provided, must match any.
     :param expected_type: Content-Type to validate from the response. Ignored if non-string is passed.
     :param expected_method: HTTP method 'GET', 'POST', etc. to validate from the response if an error and is a string.
     :param extra_message: additional message to append to every specific test message if provided.
@@ -1409,14 +1462,16 @@ def check_response_basic_info(response,                         # type: AnyRespo
     if expected_type == CONTENT_TYPE_JSON:
         # provide more details about mismatching code since to help debug cause of error
         code_message += "\nReason:\n{}".format(json_msg(get_json_body(response)))
-    check_val_equal(response.status_code, expected_code, msg=_(code_message))
+    if not hasattr(expected_code, "__iter__"):
+        expected_code = [expected_code]
+    check_val_is_in(response.status_code, expected_code, msg=_(code_message))
 
     if expected_type == CONTENT_TYPE_JSON:
         body = get_json_body(response)
         check_val_is_in("code", body, msg=_("Parameter 'code' should be in response JSON body."))
         check_val_is_in("type", body, msg=_("Parameter 'type' should be in response JSON body."))
         check_val_is_in("detail", body, msg=_("Parameter 'detail' should be in response JSON body."))
-        check_val_equal(body["code"], expected_code, msg=_("Parameter 'code' should match HTTP status code."))
+        check_val_is_in(body["code"], expected_code, msg=_("Parameter 'code' should match HTTP status code."))
         check_val_equal(body["type"], expected_type, msg=_("Parameter 'type' should match HTTP Content-Type header."))
         check_val_not_equal(body["detail"], "", msg=_("Parameter 'detail' should not be empty."))
     else:
@@ -1440,7 +1495,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
 
 def check_ui_response_basic_info(response, expected_code=200, expected_type=CONTENT_TYPE_HTML,
                                  expected_title="Magpie Administration"):
-    # type: (AnyResponseType, int, Str, Optional[Str]) -> Str
+    # type: (AnyResponseType, Union[int, Iterable[int]], Str, Optional[Str]) -> Str
     """
     Validates minimal expected elements in a `Magpie` UI page.
 
@@ -2139,6 +2194,7 @@ class TestSetup(object):
                                    override_data=null,              # type: Optional[JSON]
                                    override_headers=null,           # type: Optional[HeadersType]
                                    override_cookies=null,           # type: Optional[CookiesType]
+                                   ignore_conflict=False,           # type: bool
                                    ):                               # type: (...) -> JSON
         """
         Creates a two-level tree with the test resource nested *immediately* under the test service.
@@ -2154,17 +2210,32 @@ class TestSetup(object):
         app_or_url = get_app_or_url(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
         svc_type = override_service_type if override_service_type is not null else test_case.test_service_type
-        TestSetup.create_TestService(test_case,
-                                     override_service_name=svc_name, override_service_type=svc_type,
-                                     override_headers=override_headers, override_cookies=override_cookies)
+        svc_json = TestSetup.create_TestService(test_case,
+                                                override_service_name=svc_name, override_service_type=svc_type,
+                                                override_headers=override_headers, override_cookies=override_cookies)
         path = "/services/{svc}/resources".format(svc=svc_name)
         data = override_data if override_data is not null else {
             "resource_name": override_resource_name or test_case.test_resource_name,
             "resource_type": override_resource_type or test_case.test_resource_type,
         }
-        resp = test_request(app_or_url, "POST", path, json=data,
+        resp = test_request(app_or_url, "POST", path, json=data, expect_errors=True,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        if ignore_conflict and resp.status_code == 409:
+            svc_info = TestSetup.get_ExistingTestServiceInfo(test_case,
+                                                             override_service_info=svc_json,
+                                                             override_headers=override_headers,
+                                                             override_cookies=override_cookies)
+            svc_res = TestSetup.get_TestServiceDirectResources(test_case,
+                                                               override_service_name=svc_info["service_name"],
+                                                               override_headers=override_headers,
+                                                               override_cookies=override_cookies)
+            res_found = [
+                res for res in svc_res
+                if res["resource_name"] == data["resource_name"] and res["resource_type"] == data["resource_type"]
+            ]
+            check_val_equal(len(res_found), 1, msg="Could not find requested conflicting resource under service.")
+            return res_found[0]
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
@@ -2313,10 +2384,14 @@ class TestSetup(object):
         resp = test_request(test_case, method, path, data=data,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
-        if method == "DELETE":
+        code = 200
+        if method == "PUT":
+            code = [200, 201]
+        elif method == "POST":
+            code = 201
+        elif method == "DELETE":
             code = 200 if resp.status_code != 404 else 404
-            return check_response_basic_info(resp, code, expected_method=method)
-        return check_response_basic_info(resp, 201, expected_method=method)
+        return check_response_basic_info(resp, code, expected_method=method)
 
     @staticmethod
     def create_TestUserResourcePermission(test_case,                        # type: AnyMagpieTestCaseType
@@ -2326,6 +2401,7 @@ class TestSetup(object):
                                           override_user_name=null,          # type: Optional[Str]
                                           override_headers=null,            # type: Optional[HeadersType]
                                           override_cookies=null,            # type: Optional[CookiesType]
+                                          override_exist=null,              # type: Optional[bool]
                                           ):                                # type: (...) -> JSON
         """
         Utility method to create a permission on given resource for the user.
@@ -2337,8 +2413,9 @@ class TestSetup(object):
 
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
+        method = "PUT" if override_exist else "POST"
         return TestSetup.update_TestAnyResourcePermission(
-            test_case, "user", "POST", resource_info=resource_info,
+            test_case, "user", method, resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_user_name, override_headers=override_headers, override_cookies=override_cookies
         )
@@ -2351,6 +2428,7 @@ class TestSetup(object):
                                            override_group_name=null,         # type: Optional[Str]
                                            override_headers=null,            # type: Optional[HeadersType]
                                            override_cookies=null,            # type: Optional[CookiesType]
+                                           override_exist=null,              # type: Optional[bool]
                                            ):                                # type: (...) -> JSON
         """
         Utility method to create a permission on given resource for the group.
@@ -2362,8 +2440,9 @@ class TestSetup(object):
 
         If resource information container is not provided, all desired values must be given as parameter for creation.
         """
+        method = "PUT" if override_exist else "POST"
         return TestSetup.update_TestAnyResourcePermission(
-            test_case, "group", "POST", resource_info=resource_info,
+            test_case, "group", method, resource_info=resource_info,
             override_resource_id=override_resource_id, override_permission=override_permission,
             override_item_name=override_group_name, override_headers=override_headers, override_cookies=override_cookies
         )
@@ -2433,6 +2512,7 @@ class TestSetup(object):
     @staticmethod
     def get_ExistingTestServiceInfo(test_case,                      # type: AnyMagpieTestCaseType
                                     override_service_name=null,     # type: Optional[Str]
+                                    override_service_info=null,     # type: Optional[JSON]
                                     override_headers=null,          # type: Optional[HeadersType]
                                     override_cookies=null,          # type: Optional[CookiesType]
                                     ):                              # type: (...) -> JSON
@@ -2441,13 +2521,16 @@ class TestSetup(object):
 
         :raises AssertionError: if the response correspond to missing service or failure to retrieve it.
         """
-        app_or_url = get_app_or_url(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
-        path = "/services/{svc}".format(svc=svc_name)
-        resp = test_request(app_or_url, "GET", path,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
-        json_body = get_json_body(resp)
+        if override_service_info:
+            json_body = override_service_info
+        else:
+            app_or_url = get_app_or_url(test_case)
+            path = "/services/{svc}".format(svc=svc_name)
+            resp = test_request(app_or_url, "GET", path,
+                                headers=override_headers if override_headers is not null else test_case.json_headers,
+                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            json_body = get_json_body(resp)
         svc_getter = "service"
         if TestVersion(test_case.version) < TestVersion("0.9.1"):
             svc_getter = svc_name

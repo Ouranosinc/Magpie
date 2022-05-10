@@ -7533,6 +7533,12 @@ class SetupMagpieAdapter(ConfigTestCase):
         cls.adapter = adapter
         if cls.test_twitcher:
             cls.test_twitcher_app = utils.get_test_twitcher_app(settings)
+            if not cls.settings:
+                cls.settings = {}
+            cls.settings.update({
+                key: value for key, value in cls.test_twitcher_app.app.registry.settings.items()
+                if key.startswith("twitcher.")
+            })
 
     @utils.mocked_get_settings
     def mock_request(self, *args, **kwargs):
