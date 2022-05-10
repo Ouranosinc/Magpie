@@ -1023,6 +1023,9 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         if cookies is not None:
             cookies_dict = dict(cookies)  # convert tuple-list as needed
             cookies_list = cookies if isinstance(cookies, list) else list(cookies_dict.items())
+            # filter possible extra parameters (e.g.: Path, Domain, Expire, etc.)
+            cookies_list = [(name, cookie.split(";", 1)[0]) for name, cookie in cookies_list]
+            cookies_dict = dict(cookies_list)
             if not app_or_url.cookies or app_or_url.cookies != cookies_dict:
                 for name, cookie in cookies_list:
                     app_or_url.set_cookie(name, cookie)
