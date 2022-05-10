@@ -95,7 +95,7 @@ if TYPE_CHECKING:
 
     from magpie.typedefs import JSON, AnyResponseType, AnySettingsContainer, ServiceHookType, Str
 
-    from twitcher.models.service import ServiceConfig     # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.3
+    from twitcher.models.service import ServiceConfig  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.3
     from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
 
 LOGGER = get_logger("TWITCHER|{}".format(__name__))
