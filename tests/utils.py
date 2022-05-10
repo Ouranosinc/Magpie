@@ -686,7 +686,7 @@ def mock_request(request_path_query="",     # type: Str
                  headers=None,              # type: Optional[AnyHeadersType]
                  cookies=None,              # type: Optional[AnyCookiesType]
                  settings=None,             # type: SettingsType
-                 **kwargs,                  # type: Any
+                 **kwargs                   # type: Any
                  ):                         # type: (...) -> Request
     """
     Generates a fake request with provided arguments.
