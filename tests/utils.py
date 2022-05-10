@@ -1097,6 +1097,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
             resp.cookies = RequestsCookieJar()
             for cookie in cookie_headers:
                 cookie_name, cookie_token = cookie.split("=", 1)
+                cookie_token = cookie_token.split(";")[0]
                 cookie_value = create_cookie(cookie_name, cookie_token)
                 resp.cookies.set_cookie(cookie_value)
         return resp

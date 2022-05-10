@@ -210,6 +210,8 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                                               headers=self.test_headers, cookies=self.test_cookies)
                     utils.check_response_basic_info(resp, expected_method="GET", expected_code=400)
 
+                    utils.check_or_try_logout_user(self)
+                    self.test_adapter_app.reset()  # clear saved logins
                     data = {"user_name": self.test_user_name, "password": self.test_user_name}
                     resp = utils.test_request(self.test_adapter_app, "POST", "/verify", json=data, expect_errors=True,
                                               headers={}, cookies={})
