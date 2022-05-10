@@ -209,7 +209,7 @@ Each hook must be configured using the following parameters.
 .. list-table::
     :header-rows: 1
     :stub-columns: 1
-    :widths: 10,10,10,70
+    :widths: 10,10,80
 
     * - Field
       - Requirement

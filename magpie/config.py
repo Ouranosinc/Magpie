@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING
 
 from jsonschema import validators
 
-from magpie.utils import get_logger, print_log
-from magpie.services import SERVICE_TYPE_DICT
 from magpie.cli.sync_services import SYNC_SERVICES_TYPES
+from magpie.services import SERVICE_TYPE_DICT
+from magpie.utils import get_logger, print_log
 
 if TYPE_CHECKING:
     from magpie.typedefs import JSON, ServicesConfig

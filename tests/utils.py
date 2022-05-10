@@ -1,9 +1,8 @@
-import inspect
-
 import contextlib
 import difflib
 import functools
 import importlib
+import inspect
 import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import threading
@@ -31,7 +30,7 @@ from requests.cookies import RequestsCookieJar, create_cookie
 from requests.models import Response as RequestsResponse
 from six.moves.urllib.parse import urlparse
 from waitress import serve
-from webtest.app import AppError, TestApp, TestRequest  # noqa
+from webtest.app import AppError, TestApp
 from webtest.forms import Form
 from webtest.response import TestResponse
 
@@ -756,8 +755,8 @@ def mock_response(body=None, status=200, **kwargs):
     resp.content_length = len(resp.body)
     # following avoids nested iterators from TestApp and Twitcher BufferedResponse
     # since TestApp already iterates contents, buffered iterator causes webob to attempt 2nd read after close (error)
-    resp._content = resp.body
-    resp._content_consumed = True
+    resp._content = resp.body       # pylint: disable=W0212
+    resp._content_consumed = True   # pylint: disable=W0212
     return resp
 
 
@@ -1049,7 +1048,8 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
             kwargs["expect_errors"] = True
 
         # cleanup unknown parameters
-        sig = inspect.signature(app_or_url._gen_request)
+        req_func = app_or_url._gen_request  # pylint: disable=W0212  # noqa: W0212
+        sig = inspect.signature(req_func)
         unknown_params = set(kwargs) - set(sig.parameters)
         for param in unknown_params:
             kwargs.pop(param)
@@ -1058,7 +1058,7 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
         err_msg = None
         err_exc = None
         try:
-            resp = app_or_url._gen_request(method, path, **kwargs)  # pylint: disable=W0212  # noqa: W0212
+            resp = req_func(method, path, **kwargs)
         except AppError as exc:
             err_code = exc
             err_msg = str(exc)
@@ -1242,6 +1242,7 @@ def create_or_assign_user_group_with_terms(test_case,               # type: AnyM
     """
     Executes a request to create or assign a user to a group with terms and conditions, and accepts the terms and
     conditions automatically if enabled.
+
     Returns the input query's response.
     """
     # custom app settings, smtp_host must exist when getting configs, but not used because email mocked

@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import re
-
 import importlib.util
 import inspect
 import json
 import logging
 import os
+import re
 import sys
 import time
 import types

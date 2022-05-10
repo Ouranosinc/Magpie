@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Iterable, List, Optional, Tuple
 
-    from pyramid.httpexceptions import HTTPException
+    from pyramid.httpexceptions import HTTPException, HTTPSuccessful
     from pyramid.request import Request
     from pyramid.response import Response
     from sqlalchemy.orm.session import Session
@@ -314,10 +314,12 @@ def assign_user_group(user, group, db_session):
 
 
 def send_group_terms_email(user, group, db_session):
-    # type: (models.User, models.Group, Session) -> None
+    # type: (models.User, models.Group, Session) -> HTTPSuccessful
     """
-    Sends an email for terms and conditions confirmation, in the case of a request for the creation of
-    a user-group relationship where the group requires a terms and conditions confirmation.
+    Sends an email for terms and conditions confirmation.
+
+    Terms and conditions email are sent in the case of a request for the creation of a user-group
+    relationship where the group requires a terms and conditions confirmation.
 
     :returns: valid HTTP response on successful operations.
     :raises HTTPError: corresponding error matching problem encountered.
@@ -344,11 +346,13 @@ def send_group_terms_email(user, group, db_session):
 
 
 def create_pending_or_assign_user_group(user, group, db_session):
-    # type: (models.User, models.Group, Session) -> None
+    # type: (models.User, models.Group, Session) -> HTTPSuccessful
     """
+    Associates the pending user or existing user to the group.
+
     Creates either a new user-group relationship (user membership to a group) or a pending terms and conditions
-    confirmation. If the group requires a T&C confirmation, sends an email for T&C confirmation,
-    else, the user is assigned directly to the group.
+    confirmation. If the group requires a T&C confirmation, sends an email for T&C confirmation, else, the user is
+    assigned directly to the group.
 
     :returns: valid HTTP response on successful operations.
     :raises HTTPError: corresponding error matching problem encountered.
@@ -463,7 +467,7 @@ def get_similar_user_resource_permission(user, resource, permission, db_session)
     err_content = {"resource_id": resource.resource_id, "user_id": user.id,
                    "permission_name": str(permission), "permission": permission.json()}
 
-    def is_similar_permission():
+    def is_similar_permission():  # type: () -> List[PermissionSet]
         perms_list = ResourceService.direct_perms_for_user(resource, user, db_session=db_session)
         perms_list = [PermissionSet(perm) for perm in perms_list]
         return [perm for perm in perms_list if perm.like(permission)]
