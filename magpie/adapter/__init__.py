@@ -182,6 +182,11 @@ class MagpieAdapter(AdapterInterface):
         self._owssecurity = None
         super(MagpieAdapter, self).__init__(container)  # pylint: disable=E1101,no-member
 
+    def reset(self):
+        # type: () -> None
+        self._servicestore = None
+        self._owssecurity = None
+
     @property
     def name(self):
         # type: () -> Str

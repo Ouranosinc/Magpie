@@ -26,6 +26,7 @@ _TEST_MODULES = [os.path.splitext(f)[0] for f in filter(lambda i: filter_test_fi
 # run test options, correspond to known pytest markers
 MAGPIE_TEST_DEFAULTS = RunOptionDecorator("MAGPIE_TEST_DEFAULTS", "default users, providers and views")
 MAGPIE_TEST_ADAPTER = RunOptionDecorator("MAGPIE_TEST_ADAPTER", "magpie adapter functional operations")
+MAGPIE_TEST_CACHING = RunOptionDecorator("MAGPIE_TEST_CACHING", "magpie caching functional operations")
 MAGPIE_TEST_REGISTER = RunOptionDecorator("MAGPIE_TEST_REGISTER", "magpie methods employed in 'register' module")
 MAGPIE_TEST_REGISTRATION = RunOptionDecorator("MAGPIE_TEST_REGISTRATION", "magpie methods for user/group registration")
 MAGPIE_TEST_LOGIN = RunOptionDecorator("MAGPIE_TEST_LOGIN", "magpie login operations")

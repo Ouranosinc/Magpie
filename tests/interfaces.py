@@ -59,7 +59,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, Str
+    from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, SettingsType, Str
 
 
 @six.add_metaclass(ABCMeta)
@@ -7512,11 +7512,10 @@ class SetupMagpieAdapter(ConfigTestCase):
     to the ones that would be received by the proxy. This allows to test handling of the requests be the various
     components defined in the adapter.
     """
+    adapter = None              # type: Optional[MagpieAdapter]
     session = None              # type: Optional[Session]
     cache_enabled = False       # type: bool
     cache_expire = None         # type: Optional[int]
-    test_twitcher = False       # type: bool
-    test_twitcher_app = None    # type: Optional[TestApp]
 
     @classmethod
     def setup_adapter(cls, setup_cache=True):
@@ -7531,14 +7530,9 @@ class SetupMagpieAdapter(ConfigTestCase):
         cls.test_adapter_app = TestApp(config.make_wsgi_app())
         cls.ows = adapter.owssecurity_factory(settings)
         cls.adapter = adapter
-        if cls.test_twitcher:
-            cls.test_twitcher_app = utils.get_test_twitcher_app(settings)
-            if not cls.settings:
-                cls.settings = {}
-            cls.settings.update({
-                key: value for key, value in cls.test_twitcher_app.app.registry.settings.items()
-                if key.startswith("twitcher.")
-            })
+        # rebuild sub-classes and handles from scratch, ensure that nothing is persisted between tests
+        # different adapter/twitcher cache/no-cache settings combinations are otherwsie propagated inconsistently
+        cls.adapter.reset()
 
     @utils.mocked_get_settings
     def mock_request(self, *args, **kwargs):
@@ -7582,3 +7576,42 @@ class SetupMagpieAdapter(ConfigTestCase):
                 prop = reify.wrapped(request) if hasattr(reify, "wrapped") else reify.fget(request)
                 setattr(request, meth, prop)
         return request
+
+
+@unittest.skipIf(six.PY2, "Unsupported Twitcher with MagpieAdapter in Python 2")
+@pytest.mark.skipif(six.PY2, reason="Unsupported Twitcher with MagpieAdapter in Python 2")
+class SetupTwitcher(ConfigTestCase):
+    """
+    Configures a `Twitcher` web-test instance with configured :class:`MagpieAdapter` components.
+    """
+    test_twitcher_app = None    # type: Optional[TestApp]
+
+    @property
+    def magpie_settings(self):
+        # type: () -> SettingsType
+        test_app = utils.get_app_or_url(self)
+        if test_app and not isinstance(test_app, str):
+            return test_app.app.registry.settings
+        return {}
+
+    @property
+    def twitcher_settings(self):
+        # type: () -> SettingsType
+        test_app = self.test_twitcher_app
+        if test_app and not isinstance(test_app, str):
+            return test_app.app.registry.settings
+        return {}
+
+    @property
+    def settings(self):
+        settings = deepcopy(self.magpie_settings)
+        settings.update({
+            key: value for key, value in self.twitcher_settings.items()
+            if key.startswith("twitcher.")
+        })
+        return settings
+
+    @classmethod
+    def setup_twitcher(cls):
+        settings = cls.settings.fget(cls())
+        cls.test_twitcher_app = utils.get_test_twitcher_app(settings)

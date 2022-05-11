@@ -3,6 +3,7 @@ import random
 import time
 import unittest
 import uuid
+from copy import deepcopy
 from typing import TYPE_CHECKING
 
 import mock
@@ -240,10 +241,9 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_ADAPTER
 @runner.MAGPIE_TEST_FUNCTIONAL
-class TestAdapterHooks(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
+class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
 
     __test__ = True
-    test_twitcher = True
 
     @classmethod
     @utils.mocked_get_settings
@@ -253,13 +253,12 @@ class TestAdapterHooks(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
         cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
         cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
-        cls.settings = utils.get_app_or_url(cls).app.registry.settings
 
         # following will be wiped on setup
         cls.test_user_name = "unittest-adapter-hooks-user"
         cls.test_group_name = "unittest-adapter-hooks-group"
 
-        cls.setup_adapter()
+        cls.setup_twitcher()
         cls.setup_admin()
         cls.login_admin()
 
@@ -377,8 +376,9 @@ class TestAdapterHooks(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_ADAPTER
+@runner.MAGPIE_TEST_CACHING
 @runner.MAGPIE_TEST_FUNCTIONAL
-class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
+class BaseTestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
     """
     Base methods for testing requests parsing and :term:`ACL` resolution when caching is enabled.
 
@@ -412,7 +412,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         # following will be wiped on setup
         cls.test_user_name = "unittest-adapter-cache-user"
         cls.test_group_name = "unittest-adapter-cache-group"
-        cls.test_service_name = "unittest-adapter-service"
+        cls.test_service_name = "unittest-adapter-cache-service"
         cls.test_service_type = ServiceAPI.service_type
         cls.test_resource_type = "route"
 
@@ -430,7 +430,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
 
     @classmethod
     def reset_cached_app(cls, settings=None):
-        cache_settings = cls.settings.copy()
+        cache_settings = deepcopy(cls.settings)
         if not settings:
             utils.setup_cache_settings(cache_settings, force=True, enabled=cls.cache_enabled, expire=cls.cache_expire)
         else:
@@ -474,7 +474,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         return mock_service_cached, mock_service_factory, mock_acl_cached, mock_acl_resolve
 
 
-class TestAdapterCachingAllRegions(TestAdapterCaching):
+class TestAdapterCachingAllRegions(BaseTestAdapterCaching):
     __test__ = True
     test_headers = None
     test_cookies = None
@@ -873,7 +873,7 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
                               msg="Real ACL call not expected since caches should remain valid (after reset)")
 
 
-class TestAdapterCachingPartialRegions(TestAdapterCaching):
+class TestAdapterCachingPartialRegions(BaseTestAdapterCaching):
     __test__ = True
     test_headers = None
     test_cookies = None
