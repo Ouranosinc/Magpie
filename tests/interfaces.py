@@ -2420,11 +2420,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         def check_permissions(permissions_data):
             """
-            Utility function that checks if resource and permissions found in data were succesfully create/removed.
+            Utility function that checks if resource and permissions found in data were successfully create/removed.
             """
-            path = "/services/{}/resources".format(self.test_service_name)
-            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-            resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
+            _path = "/services/{}/resources".format(self.test_service_name)
+            _resp = utils.test_request(self, "GET", _path, headers=self.json_headers, cookies=self.cookies)
+            _info = utils.check_response_basic_info(_resp)  # type: JSON
+            resources = _info[self.test_service_name]["resources"]
 
             for perm_entry in permissions_data["permissions"][1:]:  # skip first resource, which is the service
                 target_res = [res for res in resources.values() if res["resource_name"] == perm_entry["resource_name"]]
@@ -2443,13 +2444,13 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     if perm_entry.get("group"):
                         check_paths.append("/groups/{}/resources/{}/permissions".format(
                             self.test_group_name, target_res["resource_id"]))
-                    for path in check_paths:
-                        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                        body = utils.check_response_basic_info(resp)
+                    for _path in check_paths:
+                        _resp = utils.test_request(self, "GET", _path, headers=self.json_headers, cookies=self.cookies)
+                        _body = utils.check_response_basic_info(_resp)
                         if perm_entry.get("action") and perm_entry["action"] == "remove":
-                            utils.check_val_not_in(perm, body["permission_names"])
+                            utils.check_val_not_in(perm, _body["permission_names"])
                         else:
-                            utils.check_val_is_in(perm, body["permission_names"])
+                            utils.check_val_is_in(perm, _body["permission_names"])
                 resources = target_res["children"]
 
         check_permissions(data)
@@ -6379,7 +6380,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{}".format(res3_id)
         query = {"parent": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
-        info = utils.check_response_basic_info(body)
+        info = utils.check_response_basic_info(body)  # type: JSON
 
         utils.check_val_is_in("resource", info)
         utils.check_val_not_in("children", info["resource"])
@@ -6410,7 +6411,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{}".format(res3_id)
         query = {"parent": "true", "invert": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
-        info = utils.check_response_basic_info(body)
+        info = utils.check_response_basic_info(body)  # type: JSON
 
         err_one = (
             "Even if service has more than one children, using parent query should only list "
@@ -6477,7 +6478,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{}".format(res3_id)
         query = {"parent": "true", "flatten": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
-        info = utils.check_response_basic_info(body)
+        info = utils.check_response_basic_info(body)  # type: JSON
 
         utils.check_val_not_in("resource", info)
         utils.check_val_is_in("resources", info)
@@ -7533,7 +7534,7 @@ class SetupMagpieAdapter(ConfigTestCase):
         cls.ows = adapter.owssecurity_factory(settings)
         cls.adapter = adapter
         # rebuild sub-classes and handles from scratch, ensure that nothing is persisted between tests
-        # different adapter/twitcher cache/no-cache settings combinations are otherwsie propagated inconsistently
+        # different adapter/twitcher cache/no-cache settings combinations are otherwise propagated inconsistently
         cls.adapter.reset()
 
     @utils.mocked_get_settings
