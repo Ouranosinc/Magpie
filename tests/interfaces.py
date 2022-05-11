@@ -81,9 +81,11 @@ class ConfigTestCase(object):
     cookies = None                  # type: Optional[CookiesType]
     headers = None                  # type: Optional[HeadersType]
     json_headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
+    # parameters for testing, extracted automatically within 'utils.TestSetup' methods
+    # test cookies/headers can match above admin cookies/headers for test suites targeting administrative operations
+    # for other access level operations, they should correspond to another appropriate test user
     test_headers = None             # type: Optional[HeadersType]
     test_cookies = None             # type: Optional[CookiesType]
-    # parameters for testing, extracted automatically within 'utils.TestSetup' methods
     test_service_type = None        # type: Optional[Str]
     test_service_name = None        # type: Optional[Str]
     test_resource_name = None       # type: Optional[Str]

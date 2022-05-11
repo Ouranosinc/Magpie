@@ -1921,6 +1921,7 @@ class TestSetup(object):
                          expected_code=200,                 # type: int
                          expected_type=CONTENT_TYPE_HTML,   # type: Str
                          expect_errors=False,               # type: bool
+                         override_headers=null,             # type: Optional[HeadersType]
                          override_cookies=null,             # type: Optional[CookiesType]
                          ):                                 # type: (...) -> AnyResponseType
         """
@@ -1958,19 +1959,21 @@ class TestSetup(object):
         :param expected_code: validate the HTTP status code from the response (returned or provided one).
         :param expected_type: validate the content-type of the response (returned or provided one).
         :param expect_errors: indicate if error HTTP status codes (>=400) are considered normal in the response.
-        :param override_cookies: enforce some cookies in the request.
+        :param override_headers: headers for request to override any stored ones from Test Suite.
+        :param override_cookies: cookies for request to override any stored ones from Test Suite.
 
         :returns: response from the rendered page for further tests
         :raises AssertionError: if any check along the ways results into error or unexpected state.
         """
         app_or_url = get_app_or_url(test_case)
         if not isinstance(app_or_url, TestApp):
-            test_case.skipTest(reason="test form submit with remote URL not implemented")
+            test_case.fail(msg="test form submit with remote URL not implemented")
         if isinstance(previous_response, TestResponse):
             resp = previous_response
         else:
             resp = test_request(app_or_url, method, path, timeout=timeout,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+                                headers=override_headers if override_headers is not null else test_case.test_headers,
+                                cookies=override_cookies if override_cookies is not null else test_case.test_cookies)
         check_val_equal(resp.status_code, 200, msg="Cannot test form submission, initial page returned an error.")
         form = find_html_form(resp.forms, form_match)
         if not form:

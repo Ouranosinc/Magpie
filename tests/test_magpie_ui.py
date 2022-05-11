@@ -636,7 +636,7 @@ class TestCase_MagpieUI_UserRegistration_Local(ti.UserTestCase, unittest.TestCas
                 utils.check_or_try_logout_user(self)  # return to pending user not logged in
                 utils.check_or_try_login_user(self, username=test_register_user, password=test_register_user,
                                               use_ui_form_submit=True)
-                resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=self.cookies)
+                resp = utils.test_request(self, "GET", "/session")
                 body = utils.check_response_basic_info(resp, 200)
                 utils.check_val_true(body["authenticated"])
                 utils.check_val_equal(body["user"]["user_name"], test_register_user)
