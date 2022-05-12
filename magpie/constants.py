@@ -35,6 +35,7 @@ MAGPIE_ROOT = os.path.dirname(MAGPIE_MODULE_DIR)
 MAGPIE_CONFIG_DIR = os.getenv("MAGPIE_CONFIG_DIR") or os.path.join(MAGPIE_ROOT, "config")  # default also if empty
 MAGPIE_PROVIDERS_CONFIG_PATH = os.getenv(
     "MAGPIE_PROVIDERS_CONFIG_PATH", "{}/providers.cfg".format(MAGPIE_CONFIG_DIR))
+MAGPIE_PROVIDERS_HOOKS_PATH = os.getenv("MAGPIE_PROVIDERS_HOOKS_PATH", MAGPIE_ROOT)
 MAGPIE_PERMISSIONS_CONFIG_PATH = os.getenv(
     "MAGPIE_PERMISSIONS_CONFIG_PATH", "{}/permissions.cfg".format(MAGPIE_CONFIG_DIR))
 MAGPIE_WEBHOOKS_CONFIG_PATH = os.getenv("MAGPIE_WEBHOOKS_CONFIG_PATH")
@@ -67,6 +68,7 @@ except IOError:
 
 
 def _get_default_log_level():
+    # type: () -> Str
     """
     Get logging level from INI configuration file or fallback to default ``INFO`` if it cannot be retrieved.
     """
@@ -170,6 +172,7 @@ _REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
 
 
 def get_constant_setting_name(name):
+    # type: (Str) -> Str
     """
     Find the equivalent setting name of the provided environment variable name.
 

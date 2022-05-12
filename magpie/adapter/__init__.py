@@ -26,6 +26,8 @@ from magpie.adapter.magpieservice import MagpieServiceStore
 from magpie.api.exception import evaluate_call, raise_http, valid_http, verify_param
 from magpie.api.generic import get_request_info
 from magpie.api.schemas import SigninAPI
+from magpie.app import setup_magpie_configs
+from magpie.constants import get_constant
 from magpie.security import get_auth_config
 from magpie.utils import (
     CONTENT_TYPE_JSON,
@@ -249,6 +251,17 @@ class MagpieAdapter(AdapterInterface):
         setup_cache_settings(settings)  # default 'cache=off' if missing since 'pyramid_beaker' enables it otherwise
         set_cache_regions_from_settings(settings)  # parse/convert cache settings into regions understood by beaker
 
+        # load any settings or configuration file that could provide service hook definitions
+        # no need to register them since Magpie will have already done so
+        # since this code runs under Twitcher, it must know about Magpie's configuration
+        setup_magpie_configs(
+            settings,
+            setup_permissions=False,
+            setup_webhooks=False,
+            setup_providers=True,  # obtain "magpie.services" if any
+            skip_registration=True,
+        )
+
         # disable rpcinterface which is conflicting with postgres db
         settings["twitcher.rpcinterface"] = False
 
@@ -283,7 +296,7 @@ class MagpieAdapter(AdapterInterface):
             hook_query = normalize_field_pattern(hook_cfg["query"], escape=False)
             if not re.match(hook_query, query):
                 continue
-            hook_target = import_target(hook_cfg["target"])
+            hook_target = import_target(hook_cfg["target"], default_root=get_constant("MAGPIE_PROVIDERS_HOOKS_PATH"))
             hook_qs = "?" + query if query else ""
             if not hook_target:
                 LOGGER.warning("Hook matched %s (%s %s%s) but specified target [%s] could not be loaded.",

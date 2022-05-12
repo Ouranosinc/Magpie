@@ -5,6 +5,8 @@
 Usage
 ========
 
+.. _usage_package:
+
 Package
 ----------------------
 

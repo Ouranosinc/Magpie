@@ -8,6 +8,10 @@ from magpie.services import SERVICE_TYPE_DICT
 from magpie.utils import get_logger, print_log
 
 if TYPE_CHECKING:
+    from typing import Any, Dict
+
+    from jsonschema.protocols import Validator  # noqa
+
     from magpie.typedefs import JSON, ServicesConfig
 
 LOGGER = get_logger(__name__)
@@ -58,12 +62,14 @@ SERVICES_CONFIGURATION_SCHEMA = {
 
 
 def extend_with_default(validator_class):
+    # type: (Validator) -> Validator
     """
     Validator that applies inplace defaults in the instance when provided by the schema.
     """
     validate_properties = validator_class.VALIDATORS["properties"]
 
     def set_defaults(validator, properties, instance, schema):
+        # type: (Validator, Dict[str, Any], Dict[str, Any], JSON) -> Validator
         for prop, child_schema in properties.items():
             if "default" in child_schema:
                 instance.setdefault(prop, child_schema["default"])

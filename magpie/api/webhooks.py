@@ -128,6 +128,20 @@ class WebhookAction(ExtendedEnum):
     """
 
 
+if TYPE_CHECKING:
+    from typing import Literal
+
+    WebhookActionNames = Literal[
+        WebhookAction.CREATE_USER,
+        WebhookAction.CREATE_USER_PERMISSION,
+        WebhookAction.CREATE_GROUP_PERMISSION,
+        WebhookAction.DELETE_USER,
+        WebhookAction.DELETE_USER_PERMISSION,
+        WebhookAction.DELETE_GROUP_PERMISSION,
+    ]
+    AnyWebhookAction = Union[WebhookAction, WebhookActionNames]
+
+
 def get_permission_update_params(target,         # type: Union[models.User, models.Group]
                                  resource,       # type: ServiceOrResourceType
                                  permission,     # type: PermissionSet

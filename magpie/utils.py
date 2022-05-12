@@ -43,7 +43,7 @@ else:
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
-    from typing import Any, List, NoReturn, Optional, Type, Union
+    from typing import Any, Callable, List, NoReturn, Optional, Type, Union
 
     from pyramid.events import NewRequest
     from pyramid_retry import BeforeRetry
@@ -223,6 +223,7 @@ def make_dirs(path):
 
 
 def get_settings_from_config_ini(config_ini_path, ini_main_section_name="app:magpie_app"):
+    # type: (Str, Str) -> SettingsType
     parser = configparser.ConfigParser()
     parser.optionxform = lambda option: option  # preserve case of config (ziggurat requires it for 'User' model)
     result = parser.read([config_ini_path])
@@ -254,7 +255,7 @@ def setup_cache_settings(settings, force=False, enabled=False, expire=0):
     if force:
         LOGGER.warning("Enforcing cache settings (enabled=%s, expire=%s)", enabled, expire)
 
-    def _set(key, value):
+    def _set(key, value):  # type: (Str, Any) -> None
         if force:
             settings[key] = value
         elif key not in settings:
@@ -276,6 +277,10 @@ def setup_cache_settings(settings, force=False, enabled=False, expire=0):
 
 
 def setup_session_config(config):
+    # type: (Configurator) -> None
+    """
+    Setup database :class:`Session` transaction handlers and :class:`Request` properties for active :term:`User`.
+    """
     from magpie.db import get_engine, get_session_factory, get_tm_session
 
     settings = get_settings(config)
@@ -468,6 +473,7 @@ def get_header(header_name,         # type: Str
     :param header_container: where to look for `header_name`.
     :param default: value to returned if `header_container` is invalid or `header_name` could not be found.
     :param split: character(s) to use to split the *found* `header_name`.
+    :param multi: return extracted header as array of multiple values or return a single value on fist match.
     """
     def fuzzy_name(name):
         # type: (Str) -> Str
@@ -894,12 +900,14 @@ def log_request(event):
 
 
 def log_exception_tween(handler, registry):  # noqa: F811
+    # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
     """
     Tween factory that logs any exception before re-raising it.
 
     Application errors are marked as ``ERROR`` while non critical HTTP errors are marked as ``WARNING``.
     """
     def log_exc(request):
+        # type: (Request) -> Response
         try:
             return handler(request)
         except Exception as err:

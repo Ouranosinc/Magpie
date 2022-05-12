@@ -346,6 +346,19 @@ These settings can be used to specify where to find other settings through custo
     .. warning::
         This setting is ignored if :envvar:`MAGPIE_CONFIG_PATH` is specified.
 
+.. envvar:: MAGPIE_PROVIDERS_HOOKS_PATH
+
+    (Default: :envvar:`MAGPIE_ROOT`)
+
+    Defines the root directory were to look for ``target`` references in :ref:`config_service_hooks` when the
+    provided path is relative.
+
+    .. note::
+        When using the :ref:`Docker <usage_docker>` image, the default :envvar:`MAGPIE_ROOT` corresponds to the
+        source location. When using the installed :ref:`package <usage_package>` (unless ``-e`` was provided to
+        ``pip`` for development installation), this :envvar:`MAGPIE_ROOT` will be located in site-packages of the
+        target `Python` environment.
+
 .. envvar:: MAGPIE_PERMISSIONS_CONFIG_PATH
 
     (Default: ``${MAGPIE_CONFIG_DIR}/permissions.cfg``)

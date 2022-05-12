@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
     from magpie import models
-    from magpie.api.webhooks import WEBHOOK_TEMPLATE_PARAMS, WebhookAction
+    from magpie.api.webhooks import WEBHOOK_TEMPLATE_PARAMS, WebhookAction, WebhookActionNames
     from magpie.permissions import Permission, PermissionSet
 
     if hasattr(typing, "TypeAlias"):
@@ -127,7 +127,7 @@ if TYPE_CHECKING:
     })
     WebhookConfigItem = TypedDict("WebhookConfigItem", {
         "name": Str,
-        "action": Str,
+        "action": WebhookActionNames,
         "method": AnyRequestMethod,
         "url": Str,
         "format": Str,
@@ -135,6 +135,7 @@ if TYPE_CHECKING:
     }, total=False)
 
     # registered configurations
+    PermissionAction = Literal["create", "remove"]
     PermissionConfigItem = TypedDict("PermissionConfigItem", {
         "service": Str,
         "resource": Optional[Str],
@@ -142,7 +143,7 @@ if TYPE_CHECKING:
         "user": Optional[Str],
         "group": Optional[Str],
         "permission": Union[Str, PermissionDict],
-        "action": Optional[Str],  # create/remove
+        "action": Optional[PermissionAction],
     }, total=False)
     GroupConfigItem = TypedDict("GroupConfigItem", {
         "name": Str,
