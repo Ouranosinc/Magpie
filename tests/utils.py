@@ -945,7 +945,7 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
                     mock.patch(func, side_effect=lambda *_, **__: real(*_, **__)))
         return __WRAPPED_INSTANCES__[target]
 
-    def wrapped_func(*_, **__):
+    def wrapped_func(*_, **__):  # type: (Any, Any) -> Any
         if instance is None:
             return real(*_, **__)
         if type(real) is property:  # pylint: disable=C0123
@@ -958,8 +958,8 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
         """
         def _execute_mock_call(self, *args, **kwargs):  # type: (Any, Any) -> Any
             result = super(MockPatcher, self)._execute_mock_call(*args, **kwargs)
-            if self.call_args_list and self.call_args_list[-1].args == args and self.call_args_list[-1].kwargs == kwargs:
-                setattr(self.call_args_list[-1], "return_value", result)
+            if self.call_args and self.call_args.args == args and self.call_args.kwargs == kwargs:
+                setattr(self.call_args, "return_value", result)
             return result
 
     if method and instance:
@@ -2088,7 +2088,7 @@ class TestSetup(object):
         for resource_id in resource_children:
             check_val_type(resource_id, six.string_types)
             resource_int_id = int(resource_id)  # should by an 'int' string, no error raised
-            resource_info = resource_children[resource_id]
+            resource_info = resource_children[resource_id]  # type: JSON
             check_val_is_in("root_service_id", resource_info)
             check_val_type(resource_info["root_service_id"], int)
             check_val_equal(resource_info["root_service_id"], root_service_id)
@@ -2195,12 +2195,12 @@ class TestSetup(object):
         resp = test_request(app_or_url, "GET", path,
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
-        json_body = check_response_basic_info(resp, 200, expected_method="GET")
+        json_body = check_response_basic_info(resp, 200, expected_method="GET")  # type: JSON
         check_val_is_in("services", json_body)
         check_val_is_in(svc_type, json_body["services"])
         check_val_not_equal(len(json_body["services"][svc_type]), 0,
                             msg="Missing any required service of type: '{}'".format(test_case.test_service_type))
-        services_dict = json_body["services"][svc_type]
+        services_dict = json_body["services"][svc_type]  # type: JSON
         return list(services_dict.values())[0]
 
     @staticmethod
@@ -2575,8 +2575,8 @@ class TestSetup(object):
                             expect_errors=ignore_missing_service)
         if ignore_missing_service and resp.status_code == 404:
             return []
-        json_body = get_json_body(resp)
-        resources = json_body[svc_name]["resources"]  # type: Dict[str, JSON]
+        json_body = get_json_body(resp)  # type: Dict[str, JSON]
+        resources = json_body[svc_name]["resources"]
         return [resources[res] for res in resources]
 
     @staticmethod
@@ -2725,12 +2725,12 @@ class TestSetup(object):
         resp = test_request(app_or_url, "GET", "/services",
                             headers=override_headers if override_headers is not null else test_case.json_headers,
                             cookies=override_cookies if override_cookies is not null else test_case.cookies)
-        json_body = check_response_basic_info(resp, 200, expected_method="GET")
+        json_body = check_response_basic_info(resp, 200, expected_method="GET")  # type: JSON
 
         # prepare a flat list of registered services
         services_list = []
         for svc_type in json_body["services"]:
-            services_of_type = json_body["services"][svc_type]
+            services_of_type = json_body["services"][svc_type]  # type: JSON
             services_list.extend(services_of_type.values())
         return services_list
 
