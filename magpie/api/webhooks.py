@@ -129,7 +129,7 @@ class WebhookAction(ExtendedEnum):
 
 
 if TYPE_CHECKING:
-    from typing import Literal
+    from typing import Literal, Union  # noqa: F811
 
     WebhookActionNames = Literal[
         WebhookAction.CREATE_USER,
@@ -139,7 +139,7 @@ if TYPE_CHECKING:
         WebhookAction.DELETE_USER_PERMISSION,
         WebhookAction.DELETE_GROUP_PERMISSION,
     ]
-    AnyWebhookAction = Union[WebhookAction, WebhookActionNames]
+    AnyWebhookAction = Union[WebhookAction, WebhookActionNames]  # pylint: disable=E0601
 
 
 def get_permission_update_params(target,         # type: Union[models.User, models.Group]
