@@ -340,9 +340,15 @@ class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
 
         with mock.patch("requests.Session.request", side_effect=mock_requests):
             with mock.patch("requests.request", side_effect=mock_requests) as mock_req:
-                path = twitcher_proxy_path + "/weaver/jobs"
-                resp = utils.test_request(self.test_twitcher_app, "POST", path, json={},
-                                          headers=self.test_headers, cookies=self.test_cookies)
+                with utils.wrapped_call("magpie.adapter.import_target") as import_hook_target:
+                    path = twitcher_proxy_path + "/weaver/jobs"
+                    resp = utils.test_request(self.test_twitcher_app, "POST", path, json={},
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                utils.check_val_equal(import_hook_target.call_count, 1,
+                                      msg="Only a single hook expected to be matched against request parameters.")
+                utils.check_val_not_equal(import_hook_target.call_args_list[-1].return_value, None,
+                                          msg="Imported target expected to have succeeded and found the function.")
+
                 # check request hook called
                 utils.check_val_equal(resp.status_code, 201)
                 utils.check_val_is_in("context", resp.json)
@@ -355,9 +361,14 @@ class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
                 utils.check_val_is_in("data", mock_kwargs)
                 utils.check_val_equal(mock_kwargs["data"], expect_data)
 
-                path = twitcher_proxy_path + job_url.rsplit(twitcher_proxy_path, 1)[-1]
-                resp = utils.test_request(self.test_twitcher_app, "GET", path,
-                                          headers=self.test_headers, cookies=self.test_cookies)
+                with utils.wrapped_call("magpie.adapter.import_target") as import_hook_target:
+                    path = twitcher_proxy_path + job_url.rsplit(twitcher_proxy_path, 1)[-1]
+                    resp = utils.test_request(self.test_twitcher_app, "GET", path,
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                utils.check_val_equal(import_hook_target.call_count, 2,
+                                      msg="Two hooks expected to be matched against request parameters.")
+                utils.check_val_not_equal(import_hook_target.call_args_list[-1].return_value, None,
+                                          msg="Imported target expected to have succeeded and found the function.")
                 # check response hook called
                 utils.check_val_equal(resp.status_code, 200)
                 utils.check_val_equal(mock_req.call_count, 2)  # previous + current request

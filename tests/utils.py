@@ -952,12 +952,22 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
             return real.fget(instance)
         return real(instance, *_, **__)
 
+    class MockPatcher(mock.MagicMock):
+        """
+        Magic mock with injected return value from the wrapped call by the patched function.
+        """
+        def _execute_mock_call(self, *args, **kwargs):  # type: (Any, Any) -> Any
+            result = super(MockPatcher, self)._execute_mock_call(*args, **kwargs)
+            if self.call_args_list and self.call_args_list[-1].args == args and self.call_args_list[-1].kwargs == kwargs:
+                setattr(self.call_args_list[-1], "return_value", result)
+            return result
+
     if method and instance:
         mocked = mock.patch.object(target, func, side_effect=wrapped_func)
     elif method:
         mocked = mock.patch.object(target, func, new=make_ref)
     else:
-        mocked = mock.patch(func, side_effect=side_effect or wrapped_func)
+        mocked = mock.patch(func, side_effect=side_effect or wrapped_func, new_callable=MockPatcher)
     return mocked  # noqa
 
 
