@@ -945,7 +945,8 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
                     mock.patch(func, side_effect=lambda *_, **__: real(*_, **__)))
         return __WRAPPED_INSTANCES__[target]
 
-    def wrapped_func(*_, **__):  # type: (Any, Any) -> Any
+    def wrapped_func(*_, **__):
+        # type: (Any, Any) -> Any
         if instance is None:
             return real(*_, **__)
         if type(real) is property:  # pylint: disable=C0123
@@ -956,7 +957,8 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
         """
         Magic mock with injected return value from the wrapped call by the patched function.
         """
-        def _execute_mock_call(self, *args, **kwargs):  # type: (Any, Any) -> Any
+        def _execute_mock_call(self, *args, **kwargs):  # pylint: disable=W0221
+            # type: (Any, Any) -> Any
             result = super(MockPatcher, self)._execute_mock_call(*args, **kwargs)
             if self.call_args and self.call_args.args == args and self.call_args.kwargs == kwargs:
                 setattr(self.call_args, "return_value", result)
