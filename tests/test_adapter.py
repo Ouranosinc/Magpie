@@ -1,4 +1,5 @@
 import json
+import os
 import random
 import time
 import unittest
@@ -344,10 +345,17 @@ class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
                     path = twitcher_proxy_path + "/weaver/jobs"
                     resp = utils.test_request(self.test_twitcher_app, "POST", path, json={},
                                               headers=self.test_headers, cookies=self.test_cookies)
-                utils.check_val_equal(import_hook_target.call_count, 1,
-                                      msg="Only a single hook expected to be matched against request parameters.")
-                utils.check_val_not_equal(import_hook_target.call_args_list[-1].return_value, None,
-                                          msg="Imported target expected to have succeeded and found the function.")
+                err_msg = (
+                    "Single hook expected to be matched against request parameters.\n" +
+                    "Imported target expected to have succeeded and found the function.\n" +
+                    "Maybe invalid environment variable or setting definition caused invalid resolution?\n" +
+                    "MAGPIE_PROVIDERS_HOOKS_PATH={}\n".format(os.getenv("MAGPIE_PROVIDERS_HOOKS_PATH")) +
+                    "twitcher settings: {}\n".format(json.dumps(self.twitcher_settings, indent=2, ensure_ascii=False)) +
+                    "magpie settings: {}\n".format(json.dumps(self.magpie_settings, indent=2, ensure_ascii=False)) +
+                    "current file: {}".format(os.path.realpath(__file__))
+                )
+                utils.check_val_equal(import_hook_target.call_count, 1, msg=err_msg)
+                utils.check_val_not_equal(import_hook_target.call_args_list[-1].return_value, None, msg=err_msg)
 
                 # check request hook called
                 utils.check_val_equal(resp.status_code, 201)
