@@ -671,17 +671,22 @@ def import_target(target, default_root=None):
         return None
     mod_path, target = target.rsplit(":", 1)
     if not mod_path.startswith("/"):
-        if default_root and os.path.isdir(default_root):
+        if default_root:
             mod_root = default_root
         else:
             mod_root = get_constant("MAGPIE_ROOT")
+        if not os.path.isdir(mod_root):
+            LOGGER.warning("Cannot import relative target, root directory not found: [%s]", mod_root)
+            return None
         mod_path = os.path.join(mod_root, mod_path)
     mod_path = os.path.abspath(mod_path)
     if not os.path.isfile(mod_path):
+        LOGGER.warning("Cannot import target reference, file not found: [%s]", mod_path)
         return None
     mod_name = re.sub(r"\W", "_", mod_path)
     mod_spec = importlib.util.spec_from_file_location(mod_name, mod_path)
     if not mod_spec:
+        LOGGER.warning("Cannot import target reference [%s], not found in file: [%s]", mod_name, mod_path)
         return None
     mod = importlib.util.module_from_spec(mod_spec)
     mod_spec.loader.exec_module(mod)
