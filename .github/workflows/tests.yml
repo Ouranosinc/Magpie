@@ -107,7 +107,7 @@ jobs:
           hash -r
           env | sort
       - name: Run Tests
-        run: make stop ${{ matrix.test-case }}
+        run: make stop ${{ matrix.test-case }} TEST_LOG_LEVEL=WARNING
       - name: Upload coverage report
         uses: codecov/codecov-action@v2
         if: ${{ success() && matrix.test-case == 'coverage' }}
