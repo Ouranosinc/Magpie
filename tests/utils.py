@@ -960,8 +960,9 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
         def _execute_mock_call(self, *args, **kwargs):  # pylint: disable=W0221
             # type: (Any, Any) -> Any
             result = super(MockPatcher, self)._execute_mock_call(*args, **kwargs)
-            if self.call_args and self.call_args.args == args and self.call_args.kwargs == kwargs:
-                setattr(self.call_args, "return_value", result)
+            if self.call_args_list:
+                if self.call_args_list[-1].args == args and self.call_args_list[-1].kwargs == kwargs:
+                    setattr(self.call_args_list[-1], "return_value", result)
             return result
 
     if method and instance:

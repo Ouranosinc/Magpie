@@ -259,7 +259,10 @@ class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
         cls.test_user_name = "unittest-adapter-hooks-user"
         cls.test_group_name = "unittest-adapter-hooks-group"
 
-        cls.setup_twitcher()
+        cls.setup_twitcher(settings={
+            # ensure base path is relative to repository to find hooks
+            "magpie.providers_hooks_path": os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        })
         cls.setup_admin()
         cls.login_admin()
 

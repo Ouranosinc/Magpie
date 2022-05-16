@@ -7615,6 +7615,8 @@ class SetupTwitcher(ConfigTestCase):
         return settings
 
     @classmethod
-    def setup_twitcher(cls):
-        settings = cls.settings.fget(cls())  # pylint: disable=E1111
-        cls.test_twitcher_app = utils.get_test_twitcher_app(settings)
+    def setup_twitcher(cls, settings=None):
+        # type: (Optional[SettingsType]) -> None
+        _settings = cls.settings.fget(cls())  # pylint: disable=E1111
+        _settings.update(settings or {})
+        cls.test_twitcher_app = utils.get_test_twitcher_app(_settings)
