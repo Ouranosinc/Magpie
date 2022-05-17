@@ -41,7 +41,6 @@ from magpie.utils import (
 if TYPE_CHECKING:
     from typing import Optional
 
-    from pyramid.config import Configurator
     from pyramid.router import Router
     from sqlalchemy.orm.session import Session
 
@@ -96,7 +95,7 @@ def setup_magpie_configs(settings, db_session=None,
 
 
 def main(global_config=None, **settings):  # noqa: F811
-    # type: (Optional[Configurator], SettingsType) -> Router
+    # type: (Optional[SettingsType], SettingsType) -> Router
     """
     This function returns a Pyramid WSGI application.
     """

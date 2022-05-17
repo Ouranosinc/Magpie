@@ -23,6 +23,8 @@ from magpie.utils import CONTENT_TYPE_JSON, get_magpie_url, get_twitcher_protect
 from tests import interfaces as ti
 from tests import runner, utils
 
+from twitcher.__version__ import __version__ as twitcher_version  # noqa
+
 if six.PY3:
     from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden  # noqa: F401
 
@@ -270,7 +272,8 @@ class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
         """
         Validate hooks functionalities using examples defined in ``config/providers.cfg`` loaded by default.
         """
-        utils.warn_version(self, "adapter hooks functionality", "3.25", skip=True)
+        utils.warn_version(self, "Magpie adapter hooks feature", "3.25", skip=True)
+        utils.warn_version(self, "Twitcher adapter hooks feature", "0.7", fail=True, test_version=twitcher_version)
 
         assert "magpie.services" in self.settings
         assert "weaver" in self.settings["magpie.services"]

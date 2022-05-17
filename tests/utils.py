@@ -571,22 +571,25 @@ def get_service_types_for_version(version):
     return list(sorted(available_service_types))
 
 
-def warn_version(test, functionality, version, skip=True, older=False):
-    # type: (Union[AnyMagpieTestCaseType, Str], Str, Str, bool, bool) -> None
+def warn_version(test, functionality, version, test_version=None, skip=True, fail=False, older=False):
+    # type: (AnyMagpieTestCaseType, Str, Str, Str, bool, bool, bool) -> None
     """
-    Verifies that ``test.version`` value *minimally* has :paramref:`version` requirement to execute a test.
-    (ie: ``test.version >= version``).
+    Verifies that test version value *minimally* has :paramref:`version` requirement to execute a test.
 
-    If :paramref:`older` is ``True``, instead verifies that the instance is older then :paramref:`version`.
-    (ie: ``test.version < version``).
+    Test version is extracted either from ``test.version`` (via :class:`TestApp` or URL) or :paramref:`test_version`.
+    Succeeds if ``test.version >= version``, otherwise warning is emitted, and optionally test is skipped or failed.
 
-    If version condition is not met, a warning is emitted and the test is skipped according to ``skip`` value.
-
-    Optionally, the reference version can be directly provided as string using :paramref:`test` instead of `Test Case`.
+    :param test: `Test Case` reference to extract the version, and to skip or fail the test, all as needed.
+    :param functionality: Message that describe the missing feature in case requirement is not met.
+    :param version: Version that must be met to pass the test.
+    :param test_version: Override test version requirement to employ instead of extracted one from `Test Case`.
+    :param skip: Skip the test that does not meet the requirement.
+    :param fail: Fail the test that does not meet the requirement.
+    :param older:
+        When ``True``, instead verifies that the instance is older than :paramref:`version` .
+        (ie: ``test.version < version``).
     """
-    if isinstance(test, six.string_types):
-        test_version = test
-    else:
+    if not isinstance(test_version, six.string_types):
         test_version = TestSetup.get_Version(test)
     min_req = TestVersion(test_version) < TestVersion(version)
     if min_req or (not min_req and older):
@@ -599,6 +602,8 @@ def warn_version(test, functionality, version, skip=True, older=False):
         warnings.warn(msg, FutureWarning)
         if skip:
             test.skipTest(reason=msg)   # noqa: F401
+        if fail:
+            test.fail(msg)
 
 
 def json_msg(json_body, msg=null):

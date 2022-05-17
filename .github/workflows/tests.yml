@@ -52,6 +52,7 @@ jobs:
         python-version: ["3.6", "3.7", "3.8"]
         allow-failure: [false]
         test-case: [test-local]
+        # can use below option to set environment variables or makefile settings applied during test execution
         test-option: [""]
         include:
           # linter tests
@@ -85,11 +86,11 @@ jobs:
             allow-failure: true
             test-case: test-docker
           # --- debug ---
-          - os: ubuntu-latest
-            python-version: 3.7
-            allow-failure: false
-            test-case: test-custom
-            test-option: MAGPIE_LOG_LEVEL=DEBUG TEST_LOG_LEVEL=DEBUG SPEC='test_import_target or TestAdapterHooks'
+          # - os: ubuntu-latest
+          #   python-version: 3.7
+          #   allow-failure: false
+          #   test-case: test-custom
+          #   test-option: MAGPIE_LOG_LEVEL=DEBUG TEST_LOG_LEVEL=DEBUG SPEC='test_import_target or TestAdapterHooks'
     steps:
       - uses: actions/checkout@v2
         with:
