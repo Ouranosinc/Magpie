@@ -600,10 +600,10 @@ def warn_version(test, functionality, version, test_version=None, skip=True, fai
             msg = "Functionality [{}] was deprecated in version [{}], downgrade [<{}] required to test." \
                   .format(functionality, test_version, version)
         warnings.warn(msg, FutureWarning)
-        if skip:
-            test.skipTest(reason=msg)   # noqa: F401
         if fail:
             test.fail(msg)
+        if skip:
+            test.skipTest(reason=msg)   # noqa: F401
 
 
 def json_msg(json_body, msg=null):
