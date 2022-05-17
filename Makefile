@@ -663,7 +663,7 @@ TEST_VERBOSITY ?= -vv
 # log calls will be collected if greater or equal to this value during tests
 TEST_LOG_LEVEL ?=
 ifneq ($(TEST_LOG_LEVEL),)
-  TEST_LOG_LEVEL = --log-cli-level $(TEST_LOG_LEVEL)
+  override TEST_LOG_LEVEL := --log-cli-level $(shell echo $(TEST_LOG_LEVEL) | tr '[:lower:]' '[:upper:]')
 endif
 
 # autogen tests variants with pre-install of dependencies using the '-only' target references
@@ -694,7 +694,7 @@ test-cli-only: 		## run only CLI tests with the environment Python
 .PHONY: test-local-only
 test-local-only: 		## run only local tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
+	bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
  		-m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-remote-only
