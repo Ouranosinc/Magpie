@@ -1,5 +1,10 @@
 import logging
+import warnings
 from typing import TYPE_CHECKING
+
+# openid warnings about deprecated 'defusedxml.cElementTree' when trying to find any available implementation
+# explicitly marked as safe by openid package
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="openid")  # isort:skip # noqa: E402
 
 from authomatic import Authomatic, provider_id
 from authomatic.providers import oauth2, openid

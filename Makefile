@@ -695,7 +695,7 @@ test-cli-only: 		## run only CLI tests with the environment Python
 test-local-only: 		## run only local tests with the environment Python
 	@echo "Running local tests..."
 	bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
- 		-m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+		-m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-remote-only
 test-remote-only:		## run only remote tests with the environment Python
@@ -703,12 +703,14 @@ test-remote-only:		## run only remote tests with the environment Python
 	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
 		-m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+# https://docs.pytest.org/en/7.1.x/example/markers.html#mark-examples
+# https://docs.pytest.org/en/7.1.x/example/markers.html#using-k-expr-to-select-tests-based-on-their-name
 .PHONY: test-custom-only
-test-custom-only:		## run custom marker tests using SPEC="<marker-specification>"
+test-custom-only:		## run custom tests [example: SPEC="<marker1> or (<marker2> and not test_func or TestClass)"]
 	@echo "Running custom tests..."
 	@[ "${SPEC}" ] || ( echo ">> 'SPEC' is not set"; exit 1 )
 	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
- 		-m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
+		-k "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
 test-docker: docker-test  ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
