@@ -113,8 +113,9 @@ jobs:
         run: |
           hash -r
           env | sort
+      # run '-only' test variations since dependencies are preinstalled, skip some resolution time
       - name: Run Tests
-        run: ${{ matrix.test-option }} make stop ${{ matrix.test-case }}
+        run: ${{ matrix.test-option }} make stop ${{ matrix.test-case }}-only
       - name: Upload coverage report
         uses: codecov/codecov-action@v2
         if: ${{ success() && matrix.test-case == 'coverage' }}

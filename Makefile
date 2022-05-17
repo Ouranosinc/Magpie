@@ -715,6 +715,9 @@ test-custom-only:		## run custom tests [example: SPEC="<marker1> or (<marker2> a
 .PHONY: test-docker
 test-docker: docker-test  ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
 
+# for consistency only with other test
+test-docker-only: test-docker ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
+
 # coverage file location cannot be changed
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
 COVERAGE_HTML_DIR := $(REPORTS_DIR)/coverage
