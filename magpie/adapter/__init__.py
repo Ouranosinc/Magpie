@@ -57,14 +57,14 @@ if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
 
     if LooseVersion(twitcher_version) >= LooseVersion("0.8.0"):
         warnings.warn(
-            "Magpie version is not guaranteed to work with newer versions of Twitcher. "
+            "This Magpie version is not guaranteed to work with newer versions of Twitcher. "
             "This Magpie version offers compatibility with Twitcher 0.6.x and 0.7.x."
             "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
             ImportWarning
         )
     elif LooseVersion(twitcher_version) < LooseVersion("0.7.0"):
         warnings.warn(
-            "Magpie version offers more capabilities than Twitcher 0.6.x is able to provide. "
+            "This Magpie version offers more capabilities than Twitcher 0.6.x is able to provide. "
             "Consider updating to more recent Twitcher 0.7.x to make use of new functionalities. "
             "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
             ImportWarning
@@ -72,7 +72,7 @@ if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
 
 if LooseVersion(twitcher_version) < LooseVersion("0.6.0"):
     warnings.warn(
-        "Magpie version is not guaranteed to work with versions prior to Twitcher 0.6.x. "
+        "This Magpie version is not guaranteed to work with versions prior to Twitcher 0.6.x. "
         "It is recommended to either use more recent Twitcher 0.6.x version or revert back "
         "to older Magpie < 3.18 in order to use Twitcher 0.5.x versions. "
         "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
