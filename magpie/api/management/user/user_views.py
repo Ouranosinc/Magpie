@@ -127,6 +127,7 @@ def delete_user_view(request):
 def get_user_groups_view(request):
     """
     List all groups a user belongs to.
+
     Groups can be filtered by status depending of input arguments.
     """
     user = ar.get_user_matchdict_checked_or_logged(request)

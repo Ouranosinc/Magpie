@@ -98,6 +98,8 @@ follow parameters for parsing :term:`OWS` requests.
 .. list-table::
     :header-rows: 1
 
+    * - Attribute
+      - Description
     * - :attr:`ServiceOWS.params_expected` |br| (``List[str]``)
       - Represents specific parameter names that can be preprocessed during HTTP request parsing to ease following
         resolution of :term:`ACL` use cases.
@@ -110,6 +112,8 @@ Furthermore, some :term:`Services <Service>` specifically implement extended :te
 .. list-table::
     :header-rows: 1
 
+    * - Attribute
+      - Description
     * - :attr:`ServiceGeoserverBase.resource_scoped` |br| (``bool``)
       - Indicates if the :term:`Service` is allowed to employ scoped :class:`models.Workspace` naming, meaning that
         a :term:`Resource` of that type can be extracted either from the request path or the specific request parameter

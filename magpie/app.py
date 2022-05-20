@@ -5,6 +5,7 @@
 Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
 import logging
+from typing import TYPE_CHECKING
 
 from pyramid.events import NewRequest
 from pyramid.settings import asbool
@@ -19,7 +20,7 @@ from magpie.api.generic import (
     unauthorized_or_forbidden,
     validate_accept_header_tween
 )
-from magpie.api.webhooks import setup_webhooks
+from magpie.api.webhooks import setup_webhooks as setup_webhooks_config
 from magpie.cli.register_defaults import register_defaults
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
@@ -37,10 +38,64 @@ from magpie.utils import (
     setup_ziggurat_config
 )
 
+if TYPE_CHECKING:
+    from typing import Optional
+
+    from pyramid.router import Router
+    from sqlalchemy.orm.session import Session
+
+    from magpie.typedefs import SettingsType
+
 LOGGER = get_logger(__name__)
 
 
+def setup_magpie_configs(settings, db_session=None,
+                         setup_providers=True, setup_permissions=True, setup_webhooks=True,
+                         skip_registration=False):
+    # type: (SettingsType, Optional[Session], bool, bool, bool, bool) -> None
+    """
+    Resolve known configuration file paths from settings or environment variables and process them for the application.
+
+    .. seealso::
+        - https://pavics-magpie.readthedocs.io/en/latest/configuration.html#file-providers-cfg
+        - https://pavics-magpie.readthedocs.io/en/latest/configuration.html#file-permissions-cfg
+        - https://pavics-magpie.readthedocs.io/en/latest/configuration.html#configuration-file-formats
+        - https://pavics-magpie.readthedocs.io/en/latest/configuration.html#combined-configuration-file
+    """
+    print_log("Register service providers...", logger=LOGGER)
+    combined_config = get_constant("MAGPIE_CONFIG_PATH", settings, default_value=None,
+                                   raise_missing=False, raise_not_set=False, print_missing=True)
+    if combined_config:
+        print_log("Setting 'MAGPIE_CONFIG_PATH' detected for single file configuration, "
+                  "following settings for multi-file configuration will be ignored: "
+                  "[MAGPIE_PROVIDERS_CONFIG_PATH, MAGPIE_PERMISSIONS_CONFIG_PATH, MAGPIE_WEBHOOKS_CONFIG_PATH]",
+                  logger=LOGGER, level=logging.WARNING)
+
+    if setup_providers:
+        push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="phoenix.push", default_value=False,
+                                           raise_missing=False, raise_not_set=False, print_missing=True))
+        prov_cfg = combined_config or get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", settings, default_value="",
+                                                   raise_missing=False, raise_not_set=False, print_missing=True)
+        svc_cfg = magpie_register_services_from_config(prov_cfg, skip_registration=skip_registration,
+                                                       push_to_phoenix=push_phoenix, force_update=True,
+                                                       disable_getcapabilities=True, db_session=db_session)
+        settings["magpie.services"] = svc_cfg
+
+    if setup_permissions:
+        print_log("Register configuration permissions...", LOGGER)
+        perm_cfg = combined_config or get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", settings, default_value="",
+                                                   raise_missing=False, raise_not_set=False, print_missing=True)
+        magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
+
+    if setup_webhooks:
+        print_log("Register webhook configurations...", LOGGER)
+        webhook_cfg = combined_config or get_constant("MAGPIE_WEBHOOKS_CONFIG_PATH", settings, default_value="",
+                                                      raise_missing=False, raise_not_set=False, print_missing=True)
+        setup_webhooks_config(webhook_cfg, settings)
+
+
 def main(global_config=None, **settings):  # noqa: F811
+    # type: (Optional[SettingsType], SettingsType) -> Router
     """
     This function returns a Pyramid WSGI application.
     """
@@ -81,31 +136,7 @@ def main(global_config=None, **settings):  # noqa: F811
     print_log("Register default users...", LOGGER)
     register_defaults(db_session=db_session, settings=settings)
 
-    print_log("Register service providers...", logger=LOGGER)
-    combined_config = get_constant("MAGPIE_CONFIG_PATH", settings, default_value=None,
-                                   raise_missing=False, raise_not_set=False, print_missing=True)
-    if combined_config:
-        print_log("Setting 'MAGPIE_CONFIG_PATH' detected for single file configuration, "
-                  "following settings for multi-file configuration will be ignored: "
-                  "[MAGPIE_PROVIDERS_CONFIG_PATH, MAGPIE_PERMISSIONS_CONFIG_PATH, MAGPIE_WEBHOOKS_CONFIG_PATH]",
-                  logger=LOGGER, level=logging.WARNING)
-
-    push_phoenix = asbool(get_constant("PHOENIX_PUSH", settings, settings_name="phoenix.push", default_value=False,
-                                       raise_missing=False, raise_not_set=False, print_missing=True))
-    prov_cfg = combined_config or get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", settings, default_value="",
-                                               raise_missing=False, raise_not_set=False, print_missing=True)
-    magpie_register_services_from_config(prov_cfg, push_to_phoenix=push_phoenix, force_update=True,
-                                         disable_getcapabilities=True, db_session=db_session)
-
-    print_log("Register configuration permissions...", LOGGER)
-    perm_cfg = combined_config or get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", settings, default_value="",
-                                               raise_missing=False, raise_not_set=False, print_missing=True)
-    magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
-
-    print_log("Register webhook configurations...", LOGGER)
-    webhook_cfg = combined_config or get_constant("MAGPIE_WEBHOOKS_CONFIG_PATH", settings, default_value="",
-                                                  raise_missing=False, raise_not_set=False, print_missing=True)
-    setup_webhooks(webhook_cfg, settings)
+    setup_magpie_configs(settings, db_session)
 
     print_log("Running configurations setup...", LOGGER)
     patch_magpie_url(settings)

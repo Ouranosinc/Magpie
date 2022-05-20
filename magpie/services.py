@@ -27,7 +27,7 @@ from magpie.permissions import (
     PermissionType,
     Scope
 )
-from magpie.utils import classproperty, fully_qualified_name, get_logger
+from magpie.utils import classproperty, fully_qualified_name, get_logger, get_request_user
 
 LOGGER = get_logger(__name__)
 if TYPE_CHECKING:
@@ -240,7 +240,17 @@ class ServiceInterface(object):
         raise NotImplementedError
 
     def user_requested(self):
+        """
+        Obtain the :term:`User` that was identified to obtain protected :term:`Resource` access.
+        """
         user = self.request.user
+
+        # fallback lookup in case cookies exists but request method did not evaluate user
+        # this can happen in situations where 'request.user' was pre-resolved when interacting with Twitcher
+        if user is None:
+            user = get_request_user(self.request)
+            self.request.user = user  # fix for future references using the expected location
+
         if not user:
             session = get_connected_session(self.request)
             anonymous = get_constant("MAGPIE_ANONYMOUS_USER", self.request)

@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
     from magpie import models
-    from magpie.api.webhooks import WEBHOOK_TEMPLATE_PARAMS, WebhookAction
+    from magpie.api.webhooks import WEBHOOK_TEMPLATE_PARAMS, WebhookAction, WebhookActionNames
     from magpie.permissions import Permission, PermissionSet
 
     if hasattr(typing, "TypeAlias"):
@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]
     SettingsType = Dict[Str, SettingValue]
-    AnySettingsContainer = Union[Configurator, Registry, PyramidRequest, SettingsType]
+    AnySettingsContainer = Union[Configurator, Registry, PyramidRequest, PyramidResponse, SettingsType]
 
     ParamsType = Dict[Str, Any]
     CookiesType = Union[Dict[Str, Str], List[Tuple[Str, Str]]]
@@ -70,7 +70,7 @@ if TYPE_CHECKING:
     AnyValue = Union[Str, Number, bool, None]
     _JSONType = "JSON"  # type: TypeAlias   # pylint: disable=C0103
     BaseJSON = Union[AnyValue, List[_JSONType], Dict[AnyKey, _JSONType]]
-    JSON = Union[Dict[Str, Union[BaseJSON, _JSONType]], List[BaseJSON]]
+    JSON = Union[Dict[Str, Union[_JSONType]], List[_JSONType]]
 
     GroupPriority = Union[int, Type[math.inf]]
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
@@ -110,6 +110,12 @@ if TYPE_CHECKING:
     PermissionRequested = Optional[Union[Permission, Collection[Permission]]]
     ResourceTypePermissions = Dict[Type[models.Resource], List[Permission]]
 
+    AnyRequestMethod = Literal[
+        "HEAD", "GET", "POST", "PUT", "PATCH", "DELETE",
+        "head", "get", "post", "put", "patch", "delete",
+        "*"
+    ]
+
     # note:
     #   For all following items 'Settings' suffix refer to loaded definitions AFTER resolution.
     #   When 'Config' suffix is used, it instead refers to raw definitions BEFORE resolution.
@@ -121,14 +127,15 @@ if TYPE_CHECKING:
     })
     WebhookConfigItem = TypedDict("WebhookConfigItem", {
         "name": Str,
-        "action": Str,
-        "method": Str,
+        "action": WebhookActionNames,
+        "method": AnyRequestMethod,
         "url": Str,
         "format": Str,
         "payload": WebhookPayload
     }, total=False)
 
     # registered configurations
+    PermissionAction = Literal["create", "remove"]
     PermissionConfigItem = TypedDict("PermissionConfigItem", {
         "service": Str,
         "resource": Optional[Str],
@@ -136,7 +143,7 @@ if TYPE_CHECKING:
         "user": Optional[Str],
         "group": Optional[Str],
         "permission": Union[Str, PermissionDict],
-        "action": Optional[Str],  # create/remove
+        "action": Optional[PermissionAction],
     }, total=False)
     GroupConfigItem = TypedDict("GroupConfigItem", {
         "name": Str,
@@ -149,6 +156,14 @@ if TYPE_CHECKING:
         "email": Optional[Str],
         "group": Optional[Str],
     }, total=False)
+    ServiceHookType = Literal["request", "response"]
+    ServiceHookConfigItem = TypedDict("ServiceHookConfigItem", {
+        "type": ServiceHookType,
+        "path": str,
+        "query": Optional[str],
+        "method": AnyRequestMethod,
+        "target": str
+    }, total=True)
     # generic 'configuration' field under a service that supports it
     ServiceConfiguration = Dict[Str, Union[Str, List[JSON], JSON]]
     ServiceConfigItem = TypedDict("ServiceConfigItem", {
@@ -160,6 +175,7 @@ if TYPE_CHECKING:
         "public": bool,
         "c4i": bool,
         "configuration": Optional[ServiceConfiguration],
+        "hooks": Optional[List[ServiceHookConfigItem]]
     })
 
     # individual sections directly loaded from config files (BEFORE resolution)

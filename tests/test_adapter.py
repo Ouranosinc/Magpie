@@ -1,23 +1,33 @@
+import json
+import os
 import random
+import sys
 import time
 import unittest
+import uuid
+from copy import deepcopy
 from typing import TYPE_CHECKING
 
 import mock
 import pytest
 import six
 from pyramid.httpexceptions import HTTPNotFound
+from requests.structures import CaseInsensitiveDict
 from six.moves.urllib.parse import urlparse
 
 from magpie import __meta__
 from magpie.constants import get_constant
-from magpie.permissions import Permission
+from magpie.models import Route
+from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAPI, ServiceInterface, ServiceWPS, invalidate_service
+from magpie.utils import CONTENT_TYPE_JSON, get_magpie_url, get_twitcher_protected_service_url
 from tests import interfaces as ti
 from tests import runner, utils
 
+from twitcher.__version__ import __version__ as twitcher_version  # noqa
+
 if six.PY3:
-    from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
+    from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden  # noqa: F401
 
 if TYPE_CHECKING:
     from typing import Any, Callable, Tuple
@@ -25,6 +35,8 @@ if TYPE_CHECKING:
     from mock import MagicMock
 
     from magpie.typedefs import AnyRequestType, AnyResponseType, CookiesType
+
+PYTHON_VERSION = sys.version_info
 
 
 @unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
@@ -205,6 +217,8 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                                               headers=self.test_headers, cookies=self.test_cookies)
                     utils.check_response_basic_info(resp, expected_method="GET", expected_code=400)
 
+                    utils.check_or_try_logout_user(self)
+                    self.test_adapter_app.reset()  # clear saved logins
                     data = {"user_name": self.test_user_name, "password": self.test_user_name}
                     resp = utils.test_request(self.test_adapter_app, "POST", "/verify", json=data, expect_errors=True,
                                               headers={}, cookies={})
@@ -233,7 +247,169 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_ADAPTER
 @runner.MAGPIE_TEST_FUNCTIONAL
-class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
+class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
+
+    __test__ = True
+
+    @classmethod
+    @utils.mocked_get_settings
+    def setUpClass(cls):
+        cls.version = __meta__.__version__
+        cls.app = utils.get_test_magpie_app()
+        cls.grp = get_constant("MAGPIE_ADMIN_GROUP")
+        cls.usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME")
+        cls.pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD")
+
+        # following will be wiped on setup
+        cls.test_user_name = "unittest-adapter-hooks-user"
+        cls.test_group_name = "unittest-adapter-hooks-group"
+
+        cls.setup_twitcher(settings={
+            # ensure base path is relative to repository to find hooks
+            "magpie.providers_hooks_path": os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        })
+        cls.setup_admin()
+        cls.login_admin()
+
+    def test_request_response_hooks(self):
+        """
+        Validate hooks functionalities using examples defined in ``config/providers.cfg`` loaded by default.
+        """
+        # first two requirements are package versions when hooks become available
+        # last is a valid combination of package versions, but insufficient to test this feature (test bound to fail)
+        utils.warn_version(self, "Twitcher package with adapter hooks", "3.6", skip=True, test_version=PYTHON_VERSION)
+        utils.warn_version(self, "Magpie adapter hooks feature", "3.25", skip=True)
+        utils.warn_version(self, "Twitcher adapter hooks feature", "0.7", fail=True, test_version=twitcher_version)
+
+        assert "magpie.services" in self.settings
+        assert "weaver" in self.settings["magpie.services"]
+        assert self.settings["magpie.services"]["weaver"]["hooks"]
+        magpie_url = get_magpie_url(self.settings)
+        weaver_url = self.settings["magpie.services"]["weaver"]["url"]
+        weaver_proxy_url = get_twitcher_protected_service_url("weaver", self.settings)
+        twitcher_proxy_path = "/ows/proxy"  # default
+
+        def mock_requests(*args, **kwargs):
+            # type: (Any, Any) -> AnyResponseType
+            if args:
+                _method, url, args = args[0], args[1], args[2:]
+            else:
+                _method = kwargs.pop("method")
+                url = kwargs.pop("url")
+            _method = _method.upper()
+            _path = urlparse(url).path
+            if url.startswith(magpie_url):
+                return utils.test_request(self.app, _method, _path, *args, **kwargs, expect_errors=True)
+            if url.startswith(weaver_url):
+                # generate request object that is expected to be stored in the response for reference
+                # - 'owsproxy_extra' normally sets the following, but due to our mocks they are missing
+                #   those are required for Twitcher to perform appropriate service request proxying
+                # - forward test application settings combining magpie+twitcher definitions
+                #   since many request/response are mocked with direct objects, full reference to registry/settings
+                #   are not auto-populated from the original application otherwise
+                ows_proxy_params = {"extra_path": _path, "service_name": "weaver"}
+                req_kwargs = {"matchdict": ows_proxy_params, "settings": self.settings}
+                req_kwargs.update(kwargs)
+                request = utils.mock_request(_path, _method, **req_kwargs)
+                if _path.endswith("jobs") and _method == "POST":
+                    # retrieve the header that should have been applied by the request hook
+                    # forward it in the response body for testing result
+                    headers = CaseInsensitiveDict(kwargs.get("headers", {}))
+                    x_wps_out_context = headers.get("X-WPS-Output-Context")
+                    wps_job_id = str(uuid.uuid4())
+                    wps_job_url = weaver_proxy_url + "/jobs/" + wps_job_id
+                    return utils.mock_response(
+                        {"status": "accepted", "jobID": wps_job_id, "context": x_wps_out_context},
+                        status=201, headers={"Content-Type": CONTENT_TYPE_JSON, "Location": wps_job_url},
+                        request=request,
+                    )
+                parts = _path.rsplit("/", 2)
+                if parts[-2] == "jobs" and _method == "GET":
+                    return utils.mock_response(
+                        {"status": "succeeded", "jobID": parts[-1]},
+                        status=200, headers={"Content-Type": CONTENT_TYPE_JSON},
+                        request=request
+                    )
+            raise ValueError("Unknown location for mock request: [{}]".format(url))
+
+        test_user = utils.TestSetup.get_UserInfo(self, override_username=self.test_user_name)
+        test_user_id = test_user["user_id"]
+
+        # setup user to be allowed access to following operations
+        self.login_admin()
+        job_json = utils.TestSetup.create_TestServiceResource(
+            self, "weaver", ServiceAPI.service_type, "jobs", Route.resource_type_name, ignore_conflict=True
+        )
+        job_info = utils.TestSetup.get_ResourceInfo(self, override_body=job_json)
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, job_info, override_user_name=test_user["user_name"], override_exist=True,
+            override_permission=PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)
+        )
+        utils.TestSetup.create_TestUserResourcePermission(
+            self, job_info, override_user_name=test_user["user_name"], override_exist=True,
+            override_permission=PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)
+        )
+        self.login_test_user()
+
+        with mock.patch("requests.Session.request", side_effect=mock_requests):
+            with mock.patch("requests.request", side_effect=mock_requests) as mock_req:
+                with utils.wrapped_call("magpie.adapter.import_target") as import_hook_target:
+                    path = twitcher_proxy_path + "/weaver/jobs"
+                    resp = utils.test_request(self.test_twitcher_app, "POST", path, json={},
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                err_msg = (
+                    "Single hook expected to be matched against request parameters.\n" +
+                    "Imported target expected to have succeeded and found the function.\n" +
+                    "Maybe invalid environment variable or setting definition caused invalid resolution?\n" +
+                    "MAGPIE_PROVIDERS_HOOKS_PATH={}\n".format(os.getenv("MAGPIE_PROVIDERS_HOOKS_PATH")) +
+                    "twitcher settings: {}\n".format(json.dumps(self.twitcher_settings, indent=2, ensure_ascii=False)) +
+                    "magpie settings: {}\n".format(json.dumps(self.magpie_settings, indent=2, ensure_ascii=False)) +
+                    "current file: {}".format(os.path.realpath(__file__))
+                )
+                utils.check_val_equal(import_hook_target.call_count, 1, msg=err_msg)
+                utils.check_val_not_equal(import_hook_target.call_args_list[-1].return_value, None, msg=err_msg)
+
+                # check request hook called
+                utils.check_val_equal(resp.status_code, 201)
+                utils.check_val_is_in("context", resp.json)
+                utils.check_val_equal(resp.json["context"], "user-" + str(test_user_id))
+                job_url = resp.headers["Location"]
+                assert job_url and twitcher_proxy_path in job_url and "weaver/jobs" in job_url
+                utils.check_val_equal(mock_req.call_count, 1)
+                mock_kwargs = mock_req.call_args_list[0].kwargs
+                expect_data = json.dumps({"hooks": 5, "hook": "add_x_wps_output_context"}).encode("utf-8")
+                utils.check_val_is_in("data", mock_kwargs)
+                utils.check_val_equal(mock_kwargs["data"], expect_data)
+
+                with utils.wrapped_call("magpie.adapter.import_target") as import_hook_target:
+                    path = twitcher_proxy_path + job_url.rsplit(twitcher_proxy_path, 1)[-1]
+                    resp = utils.test_request(self.test_twitcher_app, "GET", path,
+                                              headers=self.test_headers, cookies=self.test_cookies)
+                utils.check_val_equal(import_hook_target.call_count, 2,
+                                      msg="Two hooks expected to be matched against request parameters.")
+                utils.check_val_not_equal(import_hook_target.call_args_list[-1].return_value, None,
+                                          msg="Imported target expected to have succeeded and found the function.")
+                # check response hook called
+                utils.check_val_equal(resp.status_code, 200)
+                utils.check_val_equal(mock_req.call_count, 2)  # previous + current request
+                utils.check_val_is_in("X-WPS-Output-Location", resp.headers)
+                utils.check_val_is_in("X-WPS-Output-Context", resp.headers)
+                utils.check_val_is_in("X-WPS-Output-Link", resp.headers)
+                utils.check_val_is_in("X-Magpie-Hook-Name", resp.headers)
+                utils.check_val_is_in("X-Magpie-Hook-Index", resp.headers)
+                utils.check_val_is_in("X-Magpie-Hook-Target", resp.headers)
+                utils.check_val_equal(resp.headers["X-WPS-Output-Context"], "user-" + str(test_user_id))
+                utils.check_val_equal(resp.headers["X-Magpie-Hook-Name"], "add_x_wps_output_link")
+                test_hook = self.settings["magpie.services"]["weaver"]["hooks"][3]
+                utils.check_val_equal(resp.headers["X-Magpie-Hook-Target"], test_hook["target"])
+                utils.check_val_equal(resp.headers["X-Magpie-Hook-Index"], "4")  # string because header requires it
+
+
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_ADAPTER
+@runner.MAGPIE_TEST_CACHING
+@runner.MAGPIE_TEST_FUNCTIONAL
+class BaseTestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
     """
     Base methods for testing requests parsing and :term:`ACL` resolution when caching is enabled.
 
@@ -267,7 +443,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         # following will be wiped on setup
         cls.test_user_name = "unittest-adapter-cache-user"
         cls.test_group_name = "unittest-adapter-cache-group"
-        cls.test_service_name = "unittest-adapter-service"
+        cls.test_service_name = "unittest-adapter-cache-service"
         cls.test_service_type = ServiceAPI.service_type
         cls.test_resource_type = "route"
 
@@ -285,7 +461,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
 
     @classmethod
     def reset_cached_app(cls, settings=None):
-        cache_settings = cls.settings.copy()
+        cache_settings = deepcopy(cls.settings)
         if not settings:
             utils.setup_cache_settings(cache_settings, force=True, enabled=cls.cache_enabled, expire=cls.cache_expire)
         else:
@@ -329,7 +505,7 @@ class TestAdapterCaching(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase
         return mock_service_cached, mock_service_factory, mock_acl_cached, mock_acl_resolve
 
 
-class TestAdapterCachingAllRegions(TestAdapterCaching):
+class TestAdapterCachingAllRegions(BaseTestAdapterCaching):
     __test__ = True
     test_headers = None
     test_cookies = None
@@ -728,7 +904,7 @@ class TestAdapterCachingAllRegions(TestAdapterCaching):
                               msg="Real ACL call not expected since caches should remain valid (after reset)")
 
 
-class TestAdapterCachingPartialRegions(TestAdapterCaching):
+class TestAdapterCachingPartialRegions(BaseTestAdapterCaching):
     __test__ = True
     test_headers = None
     test_cookies = None

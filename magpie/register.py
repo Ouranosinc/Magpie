@@ -30,6 +30,7 @@ from magpie.api.schemas import (
     UserResourcePermissionsAPI,
     UsersAPI
 )
+from magpie.config import validate_services_config
 from magpie.constants import get_constant
 from magpie.permissions import Permission, PermissionSet
 from magpie.services import SERVICE_TYPE_DICT, ServiceWPS
@@ -49,12 +50,13 @@ from magpie.utils import (
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+    from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
     from magpie.typedefs import (
         JSON,
         AnyCookiesType,
         AnyResolvedSettings,
+        AnyResponseType,
         CombinedConfig,
         CookiesOrSessionType,
         GroupsConfig,
@@ -314,7 +316,7 @@ def sync_services_phoenix(services, services_as_dicts=False):
     services_dict = {}
     for svc in services:
         if services_as_dicts:
-            svc_dict = services[svc]
+            svc_dict = services[svc]  # type: JSON
             services_dict[svc] = {"url": svc_dict["public_url"], "title": svc_dict["service_name"],
                                   "type": svc_dict["service_type"], "c4i": False, "public": True}
         else:
@@ -619,9 +621,9 @@ def _expand_all(config):
     return config
 
 
-def magpie_register_services_from_config(service_config_path, push_to_phoenix=False,
+def magpie_register_services_from_config(service_config_path, push_to_phoenix=False, skip_registration=False,
                                          force_update=False, disable_getcapabilities=False, db_session=None):
-    # type: (Str, bool, bool, bool, Optional[Session]) -> ServicesSettings
+    # type: (Str, bool, bool, bool, bool, Optional[Session]) -> ServicesSettings
     """
     Registers Magpie services from one or many `providers.cfg` file.
 
@@ -630,6 +632,7 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
 
     :param service_config_path: where to look for `providers` configuration(s). Directory or file path.
     :param push_to_phoenix: whether to push loaded service definitions to remote `Phoenix` service.
+    :param skip_registration: Load, validate and combine :term:`Service` configurations, but don't register them.
     :param force_update: override service definitions that conflict by name with registered ones.
     :param disable_getcapabilities:
         Skip `GetCapabilities` request validation and permission update.
@@ -657,18 +660,22 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
             for svc, svc_cfg in services.items():
                 merged_service_configs.setdefault(svc, svc_cfg)
 
+    merged_service_configs = validate_services_config(merged_service_configs)
+
+    if not skip_registration:
         # register services using API POSTs
         if db_session is None:
             admin_usr = get_constant("MAGPIE_ADMIN_USER")
             admin_pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
             local_provider = get_constant("MAGPIE_DEFAULT_PROVIDER")
-            _magpie_register_services_with_requests(services, push_to_phoenix, admin_usr, admin_pwd, local_provider,
+            _magpie_register_services_with_requests(merged_service_configs, push_to_phoenix,
+                                                    admin_usr, admin_pwd, local_provider,
                                                     force_update=force_update,
                                                     disable_getcapabilities=disable_getcapabilities)
 
         # register services directly to db using session
         else:
-            _magpie_register_services_with_db_session(services, db_session,
+            _magpie_register_services_with_db_session(merged_service_configs, db_session,
                                                       push_to_phoenix=push_to_phoenix, force_update=force_update,
                                                       update_getcapabilities_permissions=not disable_getcapabilities)
     LOGGER.info("All services processed.")
@@ -759,13 +766,14 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
             if _use_request(cookies_or_session):
                 res_path = get_magpie_url() + ServiceResourcesAPI.path.format(service_name=svc_name)
                 res_resp = requests.get(res_path, cookies=cookies_or_session)
-                res_dict = get_json(res_resp)[svc_name]["resources"]
+                svc_json = get_json(res_resp)[svc_name]  # type: JSON
+                res_dict = svc_json["resources"]
             else:
                 from magpie.api.management.service.service_formats import format_service_resources
                 svc = models.Service.by_service_name(svc_name, db_session=cookies_or_session)
                 res_dict = format_service_resources(svc, show_all_children=True, db_session=cookies_or_session)
             parent = res_dict["resource_id"]
-            child_resources = res_dict["resources"]
+            child_resources = res_dict["resources"]  # type: Dict[Str, JSON]
             for res, resource_type in zip(resource_list, resource_type_list):
                 # search in existing children resources
                 if len(child_resources):
@@ -835,6 +843,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
     """
 
     def _apply_request(_usr_name=None, _grp_name=None):
+        # type: (Optional[Str], Optional[Str]) -> Optional[AnyResponseType]
         """
         Apply operation using HTTP request.
         """
@@ -852,6 +861,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         return action_resp
 
     def _apply_session(_usr_name=None, _grp_name=None):
+        # type: (Optional[Str], Optional[Str]) -> AnyResponseType
         """
         Apply operation using db session.
         """
@@ -879,6 +889,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
                                                                     db_session=cookies_or_session)
 
     def _apply_profile(_usr_name=None, _grp_name=None):
+        # type: (Optional[Str], Optional[Str]) -> AnyResponseType
         """
         Creates the user/group profile as required.
         """
@@ -913,6 +924,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
                 return create_group(**grp_data)
 
     def _validate_response(operation, is_create, item_type="Permission"):
+        # type: (Callable[[], Optional[AnyResponseType]], bool, str) -> None
         """
         Validate action/operation applied and handles raised ``HTTPException`` as returned response.
         """
@@ -965,7 +977,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
 
 
 def magpie_register_permissions_from_config(permissions_config, magpie_url=None, db_session=None, raise_errors=False):
-    # type: (Union[Str, PermissionsConfig], Optional[Str], Optional[Session]) -> None
+    # type: (Union[Str, PermissionsConfig], Optional[Str], Optional[Session], bool) -> None
     """
     Applies `permissions` specified in configuration(s) defined as file, directory with files or literal configuration.
 
@@ -1032,7 +1044,7 @@ def _resolve_config_registry(config_files, key):
 
 
 def _process_permissions(permissions, magpie_url, cookies_or_session, users=None, groups=None, raise_errors=False):
-    # type: (PermissionsConfig, Str, Session, Optional[UsersSettings], Optional[GroupsSettings]) -> None
+    # type: (PermissionsConfig, Str, Session, Optional[UsersSettings], Optional[GroupsSettings], bool) -> None
     """
     Processes a single `permissions` configuration.
     """

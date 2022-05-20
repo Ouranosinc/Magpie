@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import importlib.util
 import inspect
 import json
 import logging
 import os
+import re
 import sys
 import time
 import types
@@ -41,7 +43,7 @@ else:
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
-    from typing import Any, List, NoReturn, Optional, Type, Union
+    from typing import Any, Callable, List, NoReturn, Optional, Type, Union
 
     from pyramid.events import NewRequest
     from pyramid_retry import BeforeRetry
@@ -221,6 +223,7 @@ def make_dirs(path):
 
 
 def get_settings_from_config_ini(config_ini_path, ini_main_section_name="app:magpie_app"):
+    # type: (Str, Str) -> SettingsType
     parser = configparser.ConfigParser()
     parser.optionxform = lambda option: option  # preserve case of config (ziggurat requires it for 'User' model)
     result = parser.read([config_ini_path])
@@ -252,7 +255,7 @@ def setup_cache_settings(settings, force=False, enabled=False, expire=0):
     if force:
         LOGGER.warning("Enforcing cache settings (enabled=%s, expire=%s)", enabled, expire)
 
-    def _set(key, value):
+    def _set(key, value):  # type: (Str, Any) -> None
         if force:
             settings[key] = value
         elif key not in settings:
@@ -274,6 +277,10 @@ def setup_cache_settings(settings, force=False, enabled=False, expire=0):
 
 
 def setup_session_config(config):
+    # type: (Configurator) -> None
+    """
+    Setup database :class:`Session` transaction handlers and :class:`Request` properties for active :term:`User`.
+    """
     from magpie.db import get_engine, get_session_factory, get_tm_session
 
     settings = get_settings(config)
@@ -466,6 +473,7 @@ def get_header(header_name,         # type: Str
     :param header_container: where to look for `header_name`.
     :param default: value to returned if `header_container` is invalid or `header_name` could not be found.
     :param split: character(s) to use to split the *found* `header_name`.
+    :param multi: return extracted header as array of multiple values or return a single value on fist match.
     """
     def fuzzy_name(name):
         # type: (Str) -> Str
@@ -598,7 +606,8 @@ def get_admin_cookies(container, verify=True, raise_message=None):
     magpie_login_url = "{}{}".format(magpie_url, SigninAPI.path)
     cred = {"user_name": get_constant("MAGPIE_ADMIN_USER", container),
             "password": get_constant("MAGPIE_ADMIN_PASSWORD", container)}
-    resp = requests.post(magpie_login_url, data=cred, headers={"Accept": CONTENT_TYPE_JSON}, verify=verify)
+    headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
+    resp = requests.post(magpie_login_url, json=cred, headers=headers, verify=verify)
     if resp.status_code != HTTPOk.code:
         if raise_message:
             raise_log(raise_message, logger=LOGGER)
@@ -624,6 +633,8 @@ def get_settings(container, app=False):
     :return: found application settings dictionary.
     :raise TypeError: when no application settings could be found or unsupported container.
     """
+    if isinstance(container, Response):
+        container = container.request
     if isinstance(container, (Configurator, Request)):
         return container.registry.settings  # noqa
     if isinstance(container, Registry):
@@ -635,6 +646,67 @@ def get_settings(container, app=False):
         registry = get_current_registry()
         return registry.settings
     raise TypeError("Could not retrieve settings from container object [{}]".format(type(container)))
+
+
+def import_target(target, default_root=None):
+    # type: (Str, Optional[Str]) -> Optional[Any]
+    """
+    Imports a target resource from a Python script as module.
+
+    The Python script does not need to be defined within a module directory (i.e.: with ``__init__.py``).
+    Files can be imported from virtually anywhere. To avoid name conflicts in generated module references,
+    each imported target employs its full escaped file path as module name.
+
+    Format expected as follows:
+
+    .. code-block:: python
+
+        "path/to/script.py:function"
+
+    :param target: Resource to be imported.
+    :param default_root: Root directory to employ if target is relative (default :data:`magpie.constants.MAGPIE_ROOT`).
+    :return: Found and imported resource or None.
+    """
+    if ":" not in target:
+        return None
+    mod_path, target = target.rsplit(":", 1)
+    if not mod_path.startswith("/"):
+        if default_root:
+            mod_root = default_root
+        else:
+            mod_root = get_constant("MAGPIE_ROOT")
+        if not os.path.isdir(mod_root):
+            LOGGER.warning("Cannot import relative target, root directory not found: [%s]", mod_root)
+            return None
+        mod_path = os.path.join(mod_root, mod_path)
+    mod_path = os.path.abspath(mod_path)
+    if not os.path.isfile(mod_path):
+        LOGGER.warning("Cannot import target reference, file not found: [%s]", mod_path)
+        return None
+    mod_name = re.sub(r"\W", "_", mod_path)
+    mod_spec = importlib.util.spec_from_file_location(mod_name, mod_path)
+    if not mod_spec:
+        LOGGER.warning("Cannot import target reference [%s], not found in file: [%s]", mod_name, mod_path)
+        return None
+    mod = importlib.util.module_from_spec(mod_spec)
+    mod_spec.loader.exec_module(mod)
+    return getattr(mod, target, None)
+
+
+def normalize_field_pattern(pattern, escape=True):
+    # type: (Str, bool) -> Str
+    """
+    Escapes necessary regex pattern characters and applies start/end-of-line control characters.
+    """
+    if escape:
+        pattern = re.escape(pattern)
+    if not pattern:
+        pattern = r".*"
+    if pattern[0] != "^":
+        pattern = "^" + pattern
+    if pattern[-1] != "$":
+        pattern = pattern + "$"
+    return pattern
 
 
 def patch_magpie_url(container):
@@ -752,6 +824,7 @@ def get_twitcher_url(container=None, hostname=None):
 
 
 def get_twitcher_protected_service_url(magpie_service_name, container=None, hostname=None):
+    # type: (Str, Optional[AnySettingsContainer], Optional[Str]) -> Str
     """
     Obtains the protected service URL behind Twitcher Proxy based on combination of supported configuration settings.
 
@@ -832,12 +905,14 @@ def log_request(event):
 
 
 def log_exception_tween(handler, registry):  # noqa: F811
+    # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
     """
     Tween factory that logs any exception before re-raising it.
 
     Application errors are marked as ``ERROR`` while non critical HTTP errors are marked as ``WARNING``.
     """
     def log_exc(request):
+        # type: (Request) -> Response
         try:
             return handler(request)
         except Exception as err:

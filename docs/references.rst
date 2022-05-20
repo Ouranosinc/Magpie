@@ -64,6 +64,6 @@
 .. _Magpie Security: https://github.com/Ouranosinc/Magpie/tree/master/magpie/security.py
 .. _permissions.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
 .. _postgres.env.example: https://github.com/Ouranosinc/Magpie/tree/master/env/postgres.env.example
-.. _providers.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/permissions.cfg
+.. _providers.cfg: https://github.com/Ouranosinc/Magpie/tree/master/config/providers.cfg
 .. _themes: https://github.com/Ouranosinc/Magpie/tree/master/magpie/ui/home/static/themes
 .. _tests: https://github.com/Ouranosinc/Magpie/tree/master/tests

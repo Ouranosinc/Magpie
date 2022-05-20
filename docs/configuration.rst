@@ -192,6 +192,91 @@ field.
     Variable :envvar:`MAGPIE_WEBHOOKS_CONFIG_PATH` was added and will act in a similar fashion as their providers and
     permissions counterparts, to load definitions from multiple configuration files.
 
+.. _config_service_hooks:
+
+Service Hooks
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 3.25
+
+.. warning::
+    Requires `Twitcher`_ version ``0.7.0`` minimally to use this feature. Versions ``0.6.x`` of `Twitcher`_ remain
+    compatible but will not call the adapter hooks as the feature did not exist at that point.
+
+Under each :term:`Service` within `providers.cfg`_ or the :ref:`config_file`, it is possible to provide a section
+named``hooks`` that lists additional pre/post request/response processing operations to apply when matched against
+the given request filter conditions. These hooks are plugin-based Python scripts that can modify the proxied request
+and responses when `Magpie` and `Twitcher`_ work together using the :ref:`utilities_adapter<Magpie Adapter>`.
+Each hook must be configured using the following parameters.
+
+
+.. list-table::
+    :header-rows: 1
+    :stub-columns: 1
+    :widths: 10,10,80
+
+    * - Field
+      - Requirement
+      - Description
+    * - ``type``
+      - **required**
+      - Literal string ``{ request | response }`` of the desired instance where to invoke the hook.
+    * - ``path``
+      - **required**
+      - :term:`Service`-specific request path or regular expression pattern to be matched for invoking the hook.
+        Path starts after `Twitcher`_ proxy prefix path and :term:`Service` name (i.e.: path as if there was no proxy).
+    * - ``method``
+      - *optional*
+      - Literal string ``{ HEAD | GET | POST | PUT | PATCH | DELETE | * }`` (default: ``*`` representing any method).
+        HTTP method that must be matched for invoking the hook.
+    * - ``query``
+      - *optional*
+      - Request query string or regular expression pattern to be matched for invoking the hook (default: ``.*``).
+        Matches anything if not specified. To match explicitly no-query condition, provide an empty string (``""``).
+    * - ``target``
+      - **required**
+      - Location of the function that will handle hook processing when request matching conditions are met.
+        Path should be absolute or relative to :envvar:`MAGPIE_ROOT` and must be a valid Python file.
+        Path should include the function name using format: ``some/path/script.py:func``.
+
+More specifically, when a :term:`Service` or children :term:`Resource` is accessed, triggering a proxied request
+through `Twitcher`_, the authenticated and authorized request goes through ``hooks`` processing chain that can adjust
+certain request and response parameters (e.g.: add headers, filter the body, etc.), or even substitute the request
+definition entirely based on ``target`` implementations. Hooks are applied in the same order as they are defined in
+the configuration when they match the inbound request, propagating the request/response across each call.
+Plugin scripts can therefore apply some advanced logic to improve the synergy between the protected services.
+They can also be employed to apply some :term:`Service` specific operations such as filtering protected contents
+that `Magpie` and `Twitcher`_ cannot themselves process evidently.
+
+Permitted signatures of hook functions are as presented below.
+The first argument (``request`` or ``response`` accordingly) is always required. Its modified definition must be
+returned as well. The other parameters (``service``, ``hook``) are optional. They represent the specific configurations
+that triggered the ``target`` call. Optional arguments can be specified in any order or combination, but **MUST** use
+the exact argument names indicated below.
+
+.. code-block:: python
+
+    def request_hook(request: pyramid.request.Request) -> pyramid.request.Request: ...
+
+    def request_hook(request: pyramid.request.Request,
+                     service: magpie.typedefs.ServiceConfigItem,
+                     hook: magpie.typedefs.ServiceHookConfigItem) -> pyramid.request.Request: ...
+
+    def response_hook(response: pyramid.response.Response) -> pyramid.response.Response: ...
+
+    def response_hook(response: pyramid.response.Response,
+                      service: magpie.typedefs.ServiceConfigItem,
+                      hook: magpie.typedefs.ServiceHookConfigItem) -> pyramid.response.Response: ...
+
+.. seealso::
+    File `providers.cfg`_ presents contextual information and location of the ``hooks`` schema under
+    example provider definitions.
+
+    File |test-hooks|_ presents some examples of hook ``target`` functions with common operations to
+    update request and response parameters.
+
+.. |test-hooks| replace:: tests/hooks/request_hooks.py
+.. _test-hooks: https://github.com/Ouranosinc/Magpie/blob/master/tests/hooks/request_hooks.py
 
 .. _config_constants:
 
@@ -264,6 +349,19 @@ These settings can be used to specify where to find other settings through custo
 
     .. warning::
         This setting is ignored if :envvar:`MAGPIE_CONFIG_PATH` is specified.
+
+.. envvar:: MAGPIE_PROVIDERS_HOOKS_PATH
+
+    (Default: :envvar:`MAGPIE_ROOT`)
+
+    Defines the root directory were to look for ``target`` references in :ref:`config_service_hooks` when the
+    provided path is relative.
+
+    .. note::
+        When using the :ref:`Docker <usage_docker>` image, the default :envvar:`MAGPIE_ROOT` corresponds to the
+        source location. When using the installed :ref:`package <usage_package>` (unless ``-e`` was provided to
+        ``pip`` for development installation), this :envvar:`MAGPIE_ROOT` will be located in site-packages of the
+        target `Python` environment.
 
 .. envvar:: MAGPIE_PERMISSIONS_CONFIG_PATH
 
@@ -1409,7 +1507,9 @@ User Creation
 ~~~~~~~~~~~~~~~
 
 .. list-table::
+    :header-rows: 0
     :stub-columns: 1
+    :widths: 10,90
 
     * - Action
       - :attr:`WebhookAction.CREATE_USER`
@@ -1434,7 +1534,9 @@ User Deletion
 ~~~~~~~~~~~~~~~
 
 .. list-table::
+    :header-rows: 0
     :stub-columns: 1
+    :widths: 10,90
 
     * - Action
       - :attr:`WebhookAction.DELETE_USER`
@@ -1450,7 +1552,9 @@ User Status Update
 ~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
+    :header-rows: 0
     :stub-columns: 1
+    :widths: 10,90
 
     * - Action
       - :attr:`WebhookAction.UPDATE_USER_STATUS`
@@ -1477,7 +1581,9 @@ Below :term:`Webhook` implementations can all be configured for any combination 
 :term:`Permission` for a :term:`User` or :term:`Group`, and targeting either a :term:`Service` or a :term:`Resource`.
 
 .. list-table::
+    :header-rows: 0
     :stub-columns: 1
+    :widths: 10,90
 
     * - Action
       - :attr:`WebhookAction.CREATE_USER_PERMISSION`, :attr:`WebhookAction.DELETE_USER_PERMISSION`,

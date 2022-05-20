@@ -23,7 +23,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Iterable, List, Optional, Union
+    from typing import Any, Dict, Iterable, List, Optional, Union
 
     from pyramid.request import Request
 
@@ -53,7 +53,12 @@ def check_value(value, param_name, check_type=six.string_types, pattern=ax.PARAM
 
 
 def get_request_method_content(request):
-    # 'request' object stores GET content into 'GET' property, while other methods are in 'POST' property
+    # type: (Request) -> Dict[Str, Any]
+    """
+    Obtain request content from property according to submitted method.
+
+    Requests with HTTP ``GET`` store content into ``GET`` property, while other methods are in ``POST`` property.
+    """
     method_property = "GET" if request.method == "GET" else "POST"
     return getattr(request, method_property)
 

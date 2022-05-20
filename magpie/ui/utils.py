@@ -27,7 +27,7 @@ from magpie.utils import CONTENT_TYPE_JSON, get_header, get_json, get_logger, ge
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Dict, List, Optional, Union
+    from typing import Any, Callable, Dict, List, Optional, Union
 
     from pyramid.response import Response
 
@@ -132,6 +132,7 @@ def redirect_error(request, code=None, content=None):
 
 
 def handle_errors(func):
+    # type: (Callable) -> Callable
     """
     Decorator that encapsulates the operation in a try/except block, and redirects the response to the UI error page
     with API error contents.
@@ -143,6 +144,7 @@ def handle_errors(func):
         :func:`redirect_error`
     """
     def wrap(*args, **kwargs):
+        # type: (Any, Any) -> Callable[[...], Any]
         view_container = None if not args and not isinstance(args[0], BaseViews) else args[0]
         try:
             return func(*args, **kwargs)
@@ -346,6 +348,7 @@ class AdminRequests(BaseViews):
 
     @handle_errors
     def get_group_info(self, group_name):
+        # type: (Str) -> JSON
         path = schemas.GroupAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
@@ -353,7 +356,7 @@ class AdminRequests(BaseViews):
 
     @handle_errors
     def get_group_users(self, group_name, user_group_status=UserGroupStatus.ACTIVE):
-        # type: (UserGroupStatus) -> List[str]
+        # type: (Str, UserGroupStatus) -> List[Str]
         path = schemas.GroupUsersAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path + "?status={}".format(user_group_status.value), "GET")
         check_response(resp)
@@ -361,6 +364,7 @@ class AdminRequests(BaseViews):
 
     @handle_errors
     def update_group_info(self, group_name, group_info):
+        # type: (Str, JSON) -> JSON
         path = schemas.GroupAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "PATCH", data=group_info)
         check_response(resp)
@@ -368,6 +372,7 @@ class AdminRequests(BaseViews):
 
     @handle_errors
     def delete_group(self, group_name):
+        # type: (Str) -> JSON
         path = schemas.GroupAPI.path.format(group_name=group_name)
         resp = request_api(self.request, path, "DELETE")
         check_response(resp)

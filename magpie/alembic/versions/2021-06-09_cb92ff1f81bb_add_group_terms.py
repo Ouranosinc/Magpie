@@ -1,5 +1,5 @@
 """
-Add group terms
+Add group terms.
 
 Revision ID: cb92ff1f81bb
 Revises: 35e98bdc8aed

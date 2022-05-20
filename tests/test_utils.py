@@ -7,7 +7,9 @@ test_utils
 
 Tests for the various utility operations employed by Magpie.
 """
+import inspect
 import os
+import tempfile
 import unittest
 from distutils.version import LooseVersion
 
@@ -20,13 +22,62 @@ from magpie import __meta__, constants
 from magpie.api import exception as ax
 from magpie.api import generic as ag
 from magpie.api import requests as ar
-from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header, get_magpie_url
+from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header, get_magpie_url, import_target
 from tests import runner, utils
+
+if six.PY2:
+    from backports import tempfile as tempfile2  # noqa  # pylint: disable=E0611,no-name-in-module  # Python 2
+else:
+    tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 
 
 class DummyEnum(ExtendedEnum):
     TEST_VALUE_1 = "value-1"
     TEST_VALUE_2 = "value-2"
+
+
+@runner.MAGPIE_TEST_UTILS
+def test_import_target():
+    func = import_target("tests/hooks/request_hooks.py:add_x_wps_output_context")
+    assert func is not None
+    assert inspect.isfunction(func)
+    assert func.__name__ == "add_x_wps_output_context"
+
+    here = os.path.abspath(os.path.dirname(__file__))
+    _cls = import_target("test_utils.py:DummyEnum", here)
+    assert _cls is not None
+    assert _cls.__module__ != DummyEnum.__module__, "imported target should have its own file-based module reference"
+    assert _cls is not DummyEnum, "since different module references, should be considered different references"
+    assert _cls.TEST_VALUE_1.value == DummyEnum.TEST_VALUE_1.value
+
+    root = os.path.abspath(os.path.join(here, ".."))
+    with mock.patch("magpie.utils.get_constant", return_value=root):
+        func = import_target("tests/hooks/request_hooks.py:add_x_wps_output_context")
+        assert func is not None
+        assert inspect.isfunction(func)
+        assert func.__name__ == "add_x_wps_output_context"
+        # if invalid default root dir does not exist, it should also fail (must not suddenly find relative path)
+        rand_dir = os.path.join(root, "random")
+        func = import_target("tests/hooks/request_hooks.py:add_x_wps_output_context", rand_dir)
+        assert func is None
+
+    # validate variable was employed, and not just that path happened to match
+    with tempfile2.TemporaryDirectory() as tmp_dir:
+        with mock.patch("magpie.utils.get_constant", return_value=tmp_dir):
+            func = import_target("tests/hooks/request_hooks.py:add_x_wps_output_context")
+            assert func is None
+            # even if root path is invalid, if default is provided, it is prioritized
+            func = import_target("tests/hooks/request_hooks.py:add_x_wps_output_context", root)
+            assert func is not None
+            assert inspect.isfunction(func)
+            assert func.__name__ == "add_x_wps_output_context"
+            # but if this default root (dir exists) produces an invalid path, then fails to locate the hooks
+            func = import_target("tests/hooks/request_hooks.py:add_x_wps_output_context", tmp_dir)
+            assert func is None
+            # if invalid default root dir does not exist, it should also fail (no sudden success)
+            rand_dir = os.path.join(tmp_dir, "random")
+            func = import_target("tests/hooks/request_hooks.py:add_x_wps_output_context", rand_dir)
+            assert func is None
 
 
 @runner.MAGPIE_TEST_LOCAL

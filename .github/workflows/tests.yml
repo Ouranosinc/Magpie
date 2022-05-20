@@ -52,6 +52,8 @@ jobs:
         python-version: ["3.6", "3.7", "3.8"]
         allow-failure: [false]
         test-case: [test-local]
+        # can use below option to set environment variables or makefile settings applied during test execution
+        test-option: [""]
         include:
           # linter tests
           - os: ubuntu-latest
@@ -83,6 +85,12 @@ jobs:
             python-version: none
             allow-failure: true
             test-case: test-docker
+          # --- debug ---
+          # - os: ubuntu-latest
+          #   python-version: 3.7
+          #   allow-failure: false
+          #   test-case: test-custom
+          #   test-option: MAGPIE_LOG_LEVEL=DEBUG TEST_LOG_LEVEL=DEBUG SPEC='test_import_target or TestAdapterHooks'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -106,8 +114,9 @@ jobs:
         run: |
           hash -r
           env | sort
+      # run '-only' test variations since dependencies are preinstalled, skip some resolution time
       - name: Run Tests
-        run: make stop ${{ matrix.test-case }}
+        run: ${{ matrix.test-option }} make stop ${{ matrix.test-case }}-only
       - name: Upload coverage report
         uses: codecov/codecov-action@v2
         if: ${{ success() && matrix.test-case == 'coverage' }}

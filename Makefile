@@ -659,6 +659,12 @@ fix-css-only: mkdir-reports install-npm		## fix CSS styles problems automaticall
 # -v:  list of test names with PASS/FAIL/SKIP/ERROR/etc. next to it
 # -vv: extended collection of stdout/stderr on top of test results
 TEST_VERBOSITY ?= -vv
+# any valid log level: DEBUG|INFO|WARNING|ERROR|FATAL|CRITICAL
+# log calls will be collected if greater or equal to this value during tests
+TEST_LOG_LEVEL ?=
+ifneq ($(TEST_LOG_LEVEL),)
+  override TEST_LOG_LEVEL := --log-cli-level $(shell echo $(TEST_LOG_LEVEL) | tr '[:lower:]' '[:upper:]')
+endif
 
 # autogen tests variants with pre-install of dependencies using the '-only' target references
 TESTS := cli local remote custom
@@ -675,32 +681,42 @@ test-all: install install-dev test-only  ## run all tests (including long runnin
 .PHONY: test-only
 test-only: mkdir-reports		 ## run all tests combinations without pre-installation of dependencies
 	@echo "Running tests..."
-	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
+		--junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-cli-only
 test-cli-only: 		## run only CLI tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
+		-m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 # note: use 'not remote' instead of 'local' to capture other low-level tests like 'utils' unittests
 .PHONY: test-local-only
 test-local-only: 		## run only local tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
+		-m "not remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-remote-only
 test-remote-only:		## run only remote tests with the environment Python
 	@echo "Running remote tests..."
-	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
+		-m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+# https://docs.pytest.org/en/7.1.x/example/markers.html#mark-examples
+# https://docs.pytest.org/en/7.1.x/example/markers.html#using-k-expr-to-select-tests-based-on-their-name
 .PHONY: test-custom-only
-test-custom-only:		## run custom marker tests using SPEC="<marker-specification>"
+test-custom-only:		## run custom tests [example: SPEC="<marker1> or (<marker2> and not test_func or TestClass)"]
 	@echo "Running custom tests..."
 	@[ "${SPEC}" ] || ( echo ">> 'SPEC' is not set"; exit 1 )
-	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
+		-k "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
 test-docker: docker-test  ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
+
+# for consistency only with other test
+test-docker-only: test-docker ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
 
 # coverage file location cannot be changed
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
@@ -709,7 +725,7 @@ COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html
 $(COVERAGE_FILE): install-dev
 	@echo "Running coverage analysis..."
 	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
-		`which pytest` tests -m "not remote" || true'
+		`which pytest` tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) -m "not remote" || true'
 	@bash -c '$(CONDA_CMD) coverage xml -i -o "$(REPORTS_DIR)/coverage.xml"'
 	@bash -c '$(CONDA_CMD) coverage report -m'
 	@bash -c '$(CONDA_CMD) coverage html -d "$(COVERAGE_HTML_DIR)"'

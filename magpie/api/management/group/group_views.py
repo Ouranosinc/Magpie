@@ -119,6 +119,7 @@ def delete_group_view(request):
 def get_group_users_view(request):
     """
     List all users from a group.
+
     Users can be filtered by status depending of input arguments.
     """
     group = ar.get_group_matchdict_checked(request)

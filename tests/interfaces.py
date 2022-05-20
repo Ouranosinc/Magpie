@@ -59,7 +59,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, Str
+    from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, SettingsType, Str
 
 
 @six.add_metaclass(ABCMeta)
@@ -81,9 +81,11 @@ class ConfigTestCase(object):
     cookies = None                  # type: Optional[CookiesType]
     headers = None                  # type: Optional[HeadersType]
     json_headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
+    # parameters for testing, extracted automatically within 'utils.TestSetup' methods
+    # test cookies/headers can match above admin cookies/headers for test suites targeting administrative operations
+    # for other access level operations, they should correspond to another appropriate test user
     test_headers = None             # type: Optional[HeadersType]
     test_cookies = None             # type: Optional[CookiesType]
-    # parameters for testing, extracted automatically within 'utils.TestSetup' methods
     test_service_type = None        # type: Optional[Str]
     test_service_name = None        # type: Optional[Str]
     test_resource_name = None       # type: Optional[Str]
@@ -2418,11 +2420,12 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         def check_permissions(permissions_data):
             """
-            Utility function that checks if resource and permissions found in data were succesfully create/removed.
+            Utility function that checks if resource and permissions found in data were successfully create/removed.
             """
-            path = "/services/{}/resources".format(self.test_service_name)
-            resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-            resources = utils.check_response_basic_info(resp)[self.test_service_name]["resources"]
+            _path = "/services/{}/resources".format(self.test_service_name)
+            _resp = utils.test_request(self, "GET", _path, headers=self.json_headers, cookies=self.cookies)
+            _info = utils.check_response_basic_info(_resp)  # type: JSON
+            resources = _info[self.test_service_name]["resources"]
 
             for perm_entry in permissions_data["permissions"][1:]:  # skip first resource, which is the service
                 target_res = [res for res in resources.values() if res["resource_name"] == perm_entry["resource_name"]]
@@ -2441,13 +2444,13 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     if perm_entry.get("group"):
                         check_paths.append("/groups/{}/resources/{}/permissions".format(
                             self.test_group_name, target_res["resource_id"]))
-                    for path in check_paths:
-                        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-                        body = utils.check_response_basic_info(resp)
+                    for _path in check_paths:
+                        _resp = utils.test_request(self, "GET", _path, headers=self.json_headers, cookies=self.cookies)
+                        _body = utils.check_response_basic_info(_resp)
                         if perm_entry.get("action") and perm_entry["action"] == "remove":
-                            utils.check_val_not_in(perm, body["permission_names"])
+                            utils.check_val_not_in(perm, _body["permission_names"])
                         else:
-                            utils.check_val_is_in(perm, body["permission_names"])
+                            utils.check_val_is_in(perm, _body["permission_names"])
                 resources = target_res["children"]
 
         check_permissions(data)
@@ -6377,7 +6380,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{}".format(res3_id)
         query = {"parent": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
-        info = utils.check_response_basic_info(body)
+        info = utils.check_response_basic_info(body)  # type: JSON
 
         utils.check_val_is_in("resource", info)
         utils.check_val_not_in("children", info["resource"])
@@ -6408,7 +6411,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{}".format(res3_id)
         query = {"parent": "true", "invert": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
-        info = utils.check_response_basic_info(body)
+        info = utils.check_response_basic_info(body)  # type: JSON
 
         err_one = (
             "Even if service has more than one children, using parent query should only list "
@@ -6475,7 +6478,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         path = "/resources/{}".format(res3_id)
         query = {"parent": "true", "flatten": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
-        info = utils.check_response_basic_info(body)
+        info = utils.check_response_basic_info(body)  # type: JSON
 
         utils.check_val_not_in("resource", info)
         utils.check_val_is_in("resources", info)
@@ -7512,9 +7515,10 @@ class SetupMagpieAdapter(ConfigTestCase):
     to the ones that would be received by the proxy. This allows to test handling of the requests be the various
     components defined in the adapter.
     """
-    session = None          # type: Optional[Session]
-    cache_enabled = False   # type: bool
-    cache_expire = None     # type: Optional[int]
+    adapter = None              # type: Optional[MagpieAdapter]
+    session = None              # type: Optional[Session]
+    cache_enabled = False       # type: bool
+    cache_expire = None         # type: Optional[int]
 
     @classmethod
     def setup_adapter(cls, setup_cache=True):
@@ -7529,6 +7533,9 @@ class SetupMagpieAdapter(ConfigTestCase):
         cls.test_adapter_app = TestApp(config.make_wsgi_app())
         cls.ows = adapter.owssecurity_factory(settings)
         cls.adapter = adapter
+        # rebuild sub-classes and handles from scratch, ensure that nothing is persisted between tests
+        # different adapter/twitcher cache/no-cache settings combinations are otherwise propagated inconsistently
+        cls.adapter.reset()
 
     @utils.mocked_get_settings
     def mock_request(self, *args, **kwargs):
@@ -7572,3 +7579,44 @@ class SetupMagpieAdapter(ConfigTestCase):
                 prop = reify.wrapped(request) if hasattr(reify, "wrapped") else reify.fget(request)
                 setattr(request, meth, prop)
         return request
+
+
+@unittest.skipIf(six.PY2, "Unsupported Twitcher with MagpieAdapter in Python 2")
+@pytest.mark.skipif(six.PY2, reason="Unsupported Twitcher with MagpieAdapter in Python 2")
+class SetupTwitcher(ConfigTestCase):
+    """
+    Configures a `Twitcher` web-test instance with configured :class:`MagpieAdapter` components.
+    """
+    test_twitcher_app = None    # type: Optional[TestApp]
+
+    @property
+    def magpie_settings(self):
+        # type: () -> SettingsType
+        test_app = utils.get_app_or_url(self)
+        if test_app and not isinstance(test_app, str):
+            return test_app.app.registry.settings
+        return {}
+
+    @property
+    def twitcher_settings(self):
+        # type: () -> SettingsType
+        test_app = self.test_twitcher_app
+        if test_app and not isinstance(test_app, str):
+            return test_app.app.registry.settings
+        return {}
+
+    @property
+    def settings(self):
+        settings = deepcopy(self.magpie_settings)
+        settings.update({
+            key: value for key, value in self.twitcher_settings.items()
+            if key.startswith("twitcher.")
+        })
+        return settings
+
+    @classmethod
+    def setup_twitcher(cls, settings=None):
+        # type: (Optional[SettingsType]) -> None
+        _settings = cls.settings.fget(cls())  # pylint: disable=E1111
+        _settings.update(settings or {})
+        cls.test_twitcher_app = utils.get_test_twitcher_app(_settings)

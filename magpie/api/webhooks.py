@@ -128,6 +128,20 @@ class WebhookAction(ExtendedEnum):
     """
 
 
+if TYPE_CHECKING:
+    from typing import Literal, Union  # noqa: F811
+
+    WebhookActionNames = Literal[
+        WebhookAction.CREATE_USER,
+        WebhookAction.CREATE_USER_PERMISSION,
+        WebhookAction.CREATE_GROUP_PERMISSION,
+        WebhookAction.DELETE_USER,
+        WebhookAction.DELETE_USER_PERMISSION,
+        WebhookAction.DELETE_GROUP_PERMISSION,
+    ]
+    AnyWebhookAction = Union[WebhookAction, WebhookActionNames]  # pylint: disable=E0601
+
+
 def get_permission_update_params(target,         # type: Union[models.User, models.Group]
                                  resource,       # type: ServiceOrResourceType
                                  permission,     # type: PermissionSet
@@ -166,7 +180,7 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     # ignore if triggered during application startup, settings not yet loaded
     if not settings:
         return
-    webhooks = settings.get("webhooks", {})  # type: WebhookSettings
+    webhooks = settings.get("magpie.webhooks", {})  # type: WebhookSettings
     if not webhooks:
         return
     action_webhooks = webhooks[action]
@@ -299,8 +313,8 @@ def setup_webhooks(config_path, settings):
     :param settings: modified settings in-place with added valid webhooks.
     """
 
-    settings["webhooks"] = defaultdict(lambda: [])
-    webhooks_settings = settings["webhooks"]  # type: WebhookSettings
+    settings["magpie.webhooks"] = defaultdict(lambda: [])
+    webhooks_settings = settings["magpie.webhooks"]  # type: WebhookSettings
     if not config_path:
         LOGGER.info("No configuration file provided to load webhook definitions.")
     else:

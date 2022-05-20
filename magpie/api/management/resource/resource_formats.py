@@ -76,7 +76,7 @@ def format_resource_tree(
     nesting_key="children",     # type: NestingKeyType
 ):                              # type: (...) -> JSON
     """
-    Generates the formatted resource tree under the provided nested resources
+    Generates the formatted resource tree under the provided nested resources.
 
     For all of the nested resources, formatting is applied by calling :func:`format_resource` recursively on them.
     Apply specific resource permissions as defined by :paramref:`resources_perms_dict` if provided.
