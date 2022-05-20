@@ -71,8 +71,10 @@ if TYPE_CHECKING:
         AnySettingsContainer,
         CookiesType,
         HeadersType,
+        Literal,
         SettingsType,
         Str,
+        TypeAlias,
         TypedDict
     )
 
@@ -87,6 +89,10 @@ if TYPE_CHECKING:
     HTMLSearchElement = TypedDict("HTMLSearchElement", {"name": Str, "class": List[Str], "index": int})
     HTMLSearch = List[HTMLSearchElement]
     FormSearch = Union[Form, Str, Dict[Str, Str]]
+
+    _TestVersion = "TestVersion"  # type: TypeAlias   # pylint: disable=C0103
+    LatestVersion = Literal["latest"]
+    AnyTestVersion = Union[Str, Iterable[Str], LooseVersion, _TestVersion, LatestVersion]
 
 OPTIONAL_STRING_TYPES = six.string_types + tuple([type(None)])
 
@@ -221,7 +227,9 @@ class TestVersion(LooseVersion):
     __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
 
     def __init__(self, vstring):
-        # type: (Str) -> None
+        # type: (AnyTestVersion) -> None
+        if hasattr(vstring, "__iter__") and not isinstance(vstring, six.string_types):
+            vstring = ".".join(str(part) for part in vstring)
         if isinstance(vstring, (TestVersion, LooseVersion)):
             self.version = vstring.version
             return
@@ -572,7 +580,7 @@ def get_service_types_for_version(version):
 
 
 def warn_version(test, functionality, version, test_version=None, skip=True, fail=False, older=False):
-    # type: (AnyMagpieTestCaseType, Str, Str, Str, bool, bool, bool) -> None
+    # type: (AnyMagpieTestCaseType, Str, AnyTestVersion, Optional[AnyTestVersion], bool, bool, bool) -> None
     """
     Verifies that test version value *minimally* has :paramref:`version` requirement to execute a test.
 
@@ -589,7 +597,7 @@ def warn_version(test, functionality, version, test_version=None, skip=True, fai
         When ``True``, instead verifies that the instance is older than :paramref:`version` .
         (ie: ``test.version < version``).
     """
-    if not isinstance(test_version, six.string_types):
+    if test_version is None:
         test_version = TestSetup.get_Version(test)
     min_req = TestVersion(test_version) < TestVersion(version)
     if min_req or (not min_req and older):

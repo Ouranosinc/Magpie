@@ -199,6 +199,10 @@ Service Hooks
 
 .. versionadded:: 3.25
 
+.. warning::
+    Requires `Twitcher`_ version ``0.7.0`` minimally to use this feature. Versions ``0.6.x`` of `Twitcher`_ remain
+    compatible but will not call the adapter hooks as the feature did not exist at that point.
+
 Under each :term:`Service` within `providers.cfg`_ or the :ref:`config_file`, it is possible to provide a section
 named``hooks`` that lists additional pre/post request/response processing operations to apply when matched against
 the given request filter conditions. These hooks are plugin-based Python scripts that can modify the proxied request

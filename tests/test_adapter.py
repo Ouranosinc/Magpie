@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import sys
 import time
 import unittest
 import uuid
@@ -34,6 +35,8 @@ if TYPE_CHECKING:
     from mock import MagicMock
 
     from magpie.typedefs import AnyRequestType, AnyResponseType, CookiesType
+
+PYTHON_VERSION = sys.version_info
 
 
 @unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")
@@ -272,6 +275,9 @@ class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
         """
         Validate hooks functionalities using examples defined in ``config/providers.cfg`` loaded by default.
         """
+        # first two requirements are package versions when hooks become available
+        # last is a valid combination of package versions, but insufficient to test this feature (test bound to fail)
+        utils.warn_version(self, "Twitcher package with adapter hooks", "3.6", skip=True, test_version=PYTHON_VERSION)
         utils.warn_version(self, "Magpie adapter hooks feature", "3.25", skip=True)
         utils.warn_version(self, "Twitcher adapter hooks feature", "0.7", fail=True, test_version=twitcher_version)
 
