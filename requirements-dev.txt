@@ -28,5 +28,6 @@ pytest
 python2-secrets; python_version <= "3.5"
 safety
 tox>=3.0
+twine
 webtest
 waitress

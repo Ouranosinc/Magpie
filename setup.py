@@ -187,7 +187,7 @@ LOGGER.info("link requirements: %s", LINKS)
 
 setup(
     # -- meta information --------------------------------------------------
-    name=__meta__.__package__,
+    name=__meta__.__distribution__,
     version=__meta__.__version__,
     description=__meta__.__description__,
     long_description=README + "\n\n" + CHANGES,
