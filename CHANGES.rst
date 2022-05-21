@@ -9,7 +9,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+* Add ``context`` parameter available for `Service Hook` functions, offering more handlers to obtain references to
+  the adapter, the request's `Service` implementation, and the corresponding database `Resource`. This can be used,
+  amongst other things, to perform advanced operations such as validating other `Resource` and `Permission` conditions
+  to modify the handled ``request`` or ``response`` by the hook.
 
 .. _changes_3.25.0:
 

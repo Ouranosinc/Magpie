@@ -135,6 +135,7 @@ a combined configuration as follows.
         public: true
         c4i: false
         type: api
+        hooks: []   # see 'Service Hooks' section below for more details
 
     groups:
       - name: my-group
@@ -158,7 +159,7 @@ a combined configuration as follows.
         group: my-group  # will reference above group
         action: create
 
-    webhooks:
+    webhooks:   # see 'Webhook Configuration' below for more details
       - name: <webhook_name>
         action: <webhook_action>
         method: GET | HEAD | POST | PUT | PATCH | DELETE
@@ -204,13 +205,13 @@ Service Hooks
     compatible but will not call the adapter hooks as the feature did not exist at that point.
 
 Under each :term:`Service` within `providers.cfg`_ or the :ref:`config_file`, it is possible to provide a section
-named``hooks`` that lists additional pre/post request/response processing operations to apply when matched against
+named ``hooks`` that lists additional pre/post request/response processing operations to apply when matched against
 the given request filter conditions. These hooks are plugin-based Python scripts that can modify the proxied request
-and responses when `Magpie` and `Twitcher`_ work together using the :ref:`utilities_adapter<Magpie Adapter>`.
-Each hook must be configured using the following parameters.
+and response when `Magpie` and `Twitcher`_ work together using the :ref:`utilities_adapter<Magpie Adapter>`.
+Each :term:`Service Hook` must be configured using the following parameters.
 
 
-.. list-table::
+.. list-table:: :term:`Service Hook` configuration
     :header-rows: 1
     :stub-columns: 1
     :widths: 10,10,80
@@ -243,16 +244,21 @@ More specifically, when a :term:`Service` or children :term:`Resource` is access
 through `Twitcher`_, the authenticated and authorized request goes through ``hooks`` processing chain that can adjust
 certain request and response parameters (e.g.: add headers, filter the body, etc.), or even substitute the request
 definition entirely based on ``target`` implementations. Hooks are applied in the same order as they are defined in
-the configuration when they match the inbound request, propagating the request/response across each call.
-Plugin scripts can therefore apply some advanced logic to improve the synergy between the protected services.
+the configuration when they match the inbound request, propagating the request/response across each :term:`Service Hook`
+call. Plugin scripts can therefore apply some advanced logic to improve the synergy between the protected services.
 They can also be employed to apply some :term:`Service` specific operations such as filtering protected contents
-that `Magpie` and `Twitcher`_ cannot themselves process evidently.
+that `Magpie` and `Twitcher`_ cannot themselves process evidently. :term:`Service Hook` are applied *after*
+authentication and authorization of the request, just before sending the request to the real protected :term:`Service`
+(in case of ``request`` hook), and just after receiving its response (in case of ``response`` hook.
 
-Permitted signatures of hook functions are as presented below.
-The first argument (``request`` or ``response`` accordingly) is always required. Its modified definition must be
-returned as well. The other parameters (``service``, ``hook``) are optional. They represent the specific configurations
-that triggered the ``target`` call. Optional arguments can be specified in any order or combination, but **MUST** use
-the exact argument names indicated below.
+Permitted signatures of :term:`Service Hook` functions are as presented below.
+The first argument (``request`` or ``response`` respectively) is **always required**. Its modified definition must be
+returned as well. The other parameters (``service``, ``hook``, ``context``) are all optional. They represent the
+specific configurations that triggered the ``target`` call. Optional arguments can be specified in any order or
+combination, but **MUST** use the exact argument names indicated below.
+
+.. versionchanged:: 3.26.0
+    Added the ``context`` parameter.
 
 .. code-block:: python
 
@@ -260,13 +266,51 @@ the exact argument names indicated below.
 
     def request_hook(request: pyramid.request.Request,
                      service: magpie.typedefs.ServiceConfigItem,
-                     hook: magpie.typedefs.ServiceHookConfigItem) -> pyramid.request.Request: ...
+                     hook: magpie.typedefs.ServiceHookConfigItem,
+                     context: magpie.adapter.HookContext,
+                     ) -> pyramid.request.Request: ...
 
     def response_hook(response: pyramid.response.Response) -> pyramid.response.Response: ...
 
     def response_hook(response: pyramid.response.Response,
                       service: magpie.typedefs.ServiceConfigItem,
-                      hook: magpie.typedefs.ServiceHookConfigItem) -> pyramid.response.Response: ...
+                      hook: magpie.typedefs.ServiceHookConfigItem,
+                      context: magpie.adapter.HookContext,
+                      ) -> pyramid.response.Response: ...
+
+
+
+.. list-table:: :term:`Service Hook` function parameters
+    :header-rows: 1
+    :stub-columns: 1
+    :widths: 10,20,70
+
+    * - Parameter
+      - Type
+      - Description
+    * - ``request``/``response``
+      - :class:`pyramid.request.Request` / :class:`pyramid.response.Response`
+      - Applicable instance to be modified by the hook according to ``type`` definition.
+    * - ``service``
+      - :class:`magpie.typedefs.ServiceConfigItem`
+      - Definition of the :term:`Service` as specified in the original configuration file.
+    * - ``hook``
+      - :class:`magpie.typedefs.ServiceHookConfigItem`
+      - Specific hook entry (under the above ``service`` definition), that was matched to call the ``target`` function.
+    * - ``context``
+      - :class:`magpie.adapter.HookContext`
+      - Attribute holder with internal handlers and references that were used for processing the current ``request``.
+        This offers precomputed accessors to :class:`magpie.adapter.MagpieAdapter`, the contextual :term:`Service`
+        involved in the current transaction (i.e.: specific :class:`magpie.services.ServiceInterface` implementation),
+        as well as the underlying database reference :class:`magpie.models.Resource` that represents the accessed
+        :term:`Service`. Using those definitions, it is possible for a :term:`Service Hook` to perform further
+        :term:`Permission` verifications for manipulating the ``request`` or ``response`` (e.g.: filtering content).
+
+.. warning::
+    When using the ``context`` parameter, it is important to consider that any operation performed that could involve
+    additional database queries or :ref:`perm_resolution` steps could slow down the observed response speed from the
+    protected :term:`Service`. Optimizing or caching the result of such operations could become critical if the request
+    that triggers the corresponding :term:`Service Hook` require high demands.
 
 .. seealso::
     File `providers.cfg`_ presents contextual information and location of the ``hooks`` schema under

@@ -167,6 +167,7 @@ if TYPE_CHECKING:
     # generic 'configuration' field under a service that supports it
     ServiceConfiguration = Dict[Str, Union[Str, List[JSON], JSON]]
     ServiceConfigItem = TypedDict("ServiceConfigItem", {
+        "name": Optional[Str],  # injected in some cases from parent dict key
         "url": Str,
         "title": Str,
         "type": Str,
