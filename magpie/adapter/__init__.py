@@ -97,7 +97,15 @@ if TYPE_CHECKING:
 
     from magpie.models import Resource
     from magpie.services import ServiceInterface as MagpieService
-    from magpie.typedefs import JSON, AnyResponseType, AnySettingsContainer, ServiceHookType, Str
+    from magpie.typedefs import (
+        JSON,
+        AnyResponseType,
+        AnySettingsContainer,
+        ServiceConfigItem,
+        ServiceHookConfigItem,
+        ServiceHookType,
+        Str
+    )
 
     from twitcher.models.service import ServiceConfig  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.3
     from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
@@ -310,7 +318,8 @@ class MagpieAdapter(AdapterInterface):
             kwargs = {}
             if len(signature.parameters) > 1:
                 hook = copy.deepcopy(hook_cfg)
-                for key, val in [("service", svc_config), ("hook", hook), ("context", HookContext(instance, self))]:
+                ctx = HookContext(instance, self, svc_config, hook)
+                for key, val in [("service", svc_config), ("hook", hook), ("context", ctx)]:
                     if key in signature.parameters:
                         kwargs[key] = val
             try:
@@ -383,11 +392,15 @@ class HookContext(object):
     adapter = None   # type: MagpieAdapter
     request = None   # type: Request
     response = None  # type: Optional[Response]  # optional in case request hook (response not yet reached)
+    config = None    # type: ServiceConfigItem   # same as 'service' parameter that can be requested directly
+    hook = None      # type: ServiceHookConfigItem  # same as 'hook' parameter that can be requested directly
     _service = None  # type: Optional[MagpieService]
 
-    def __init__(self, instance, adapter):
-        # type: (Union[Request, Response], MagpieAdapter) -> None
+    def __init__(self, instance, adapter, config, hook):
+        # type: (Union[Request, Response], MagpieAdapter, ServiceConfigItem, ServiceHookConfigItem) -> None
         self.adapter = adapter
+        self.config = config
+        self.hook = hook
         if isinstance(instance, Request):
             self.request = instance
             self.response = None
