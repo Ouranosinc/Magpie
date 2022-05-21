@@ -84,7 +84,8 @@ if TYPE_CHECKING:
     }, total=False)
     # recursive nodes structure employed by functions for listing children resources hierarchy
     # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
-    NestedResourceNodes = Dict[int, "ResourceNode"]
+    _ResourceNode = "ResourceNode"  # type: TypeAlias  # pylint: disable=C0103
+    NestedResourceNodes = Dict[int, _ResourceNode]
     ResourceNode = TypedDict("ResourceNode", {
         "node": ServiceOrResourceType,
         "children": NestedResourceNodes
