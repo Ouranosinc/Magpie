@@ -9,10 +9,19 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Add ``context`` parameter available for `Service Hook` functions, offering more handlers to obtain references to
   the adapter, the request's `Service` implementation, and the corresponding database `Resource`. This can be used,
   amongst other things, to perform advanced operations such as validating other `Resource` and `Permission` conditions
   to modify the handled ``request`` or ``response`` by the hook.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix ``request.user`` property attempting ``setattr`` for unauthenticated use-case (*anonymous* pseudo user) when
+  other piece of code (``MagpieAdapter``, `Twitcher`, etc.) except ``None`` since no actual user is authenticated.
+  Identified during implementation testing of
+  `bird-house/birdhouse-deploy#245 <https://github.com/bird-house/birdhouse-deploy/pull/245>`_ feature.
 
 .. _changes_3.25.0:
 

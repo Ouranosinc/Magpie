@@ -243,13 +243,12 @@ class ServiceInterface(object):
         """
         Obtain the :term:`User` that was identified to obtain protected :term:`Resource` access.
         """
-        user = self.request.user
+        found = user = self.request.user
 
         # fallback lookup in case cookies exists but request method did not evaluate user
         # this can happen in situations where 'request.user' was pre-resolved when interacting with Twitcher
         if user is None:
             user = get_request_user(self.request)
-            self.request.user = user  # fix for future references using the expected location
 
         if not user:
             session = get_connected_session(self.request)
@@ -257,6 +256,13 @@ class ServiceInterface(object):
             user = UserService.by_user_name(anonymous, db_session=session)
             if user is None:
                 raise RuntimeError("No Anonymous user in the database")
+        # 'request.user' expected None (and should remain as such) when anonymous (unauthenticated)
+        elif found is None and user is not None:
+            try:
+                self.request.user = user  # fix for future references using the expected location
+            except AttributeError as exc:
+                LOGGER.warning("Failed attempt to fix invalid request user reference.", exc_info=exc)
+
         return user
 
     @property
