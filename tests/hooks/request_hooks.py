@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from pyramid.request import Request
     from pyramid.response import Response
 
+    from magpie.adapter import HookContext
     from magpie.typedefs import ServiceConfigItem, ServiceHookConfigItem
 
 
@@ -52,10 +53,20 @@ def add_x_wps_output_link(response, hook):
 
 # only to demonstrate that hook/service parameters can be combined however we want
 # also, this hook is used in combination with above one in matching condition to test multi-hook chaining
-def combined_arguments(response, service, hook):
-    # type: (Response, ServiceConfigItem, ServiceHookConfigItem) -> Response
+def combined_arguments(response, service, hook, context):
+    # type: (Response, ServiceConfigItem, ServiceHookConfigItem, HookContext) -> Response
     for i, svc_hook in enumerate(service["hooks"]):
         if svc_hook == hook:
             response.headers["X-Magpie-Hook-Index"] = str(i)  # string because header requires it
             break
+    # below is to validate definitions during testing of hook feature
+    assert context
+    assert context.request is response.request
+    assert context.response is response
+    assert context.hook == hook
+    assert context.service
+    assert context.service.service_type == "api"
+    assert context.resource
+    assert context.resource.resource_name == "weaver"
+    assert context.resource.resource_type == "service"
     return response

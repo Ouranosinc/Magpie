@@ -216,6 +216,13 @@ Glossary
         :term:`Service` defines different combination of functionalities. Implemented by sub-classes of
         :py:class:`magpie.models.ServiceInterface`.
 
+    Service Hook
+        Plugin function handler that can apply modifications onto received requests or returned responses when
+        interacting with `Twitcher`_ :term:`Proxy`, based on a set of filter conditions.
+
+        .. seealso::
+            :ref:`Service Hooks` section for details.
+
     User
         Unitary entity containing details about the user allowing it to log into `Magpie` and that can have other
         relationships applied to it such as :term:`Permission` and :term:`Group` that extend his specific access rights

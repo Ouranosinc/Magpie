@@ -212,19 +212,23 @@ def get_resource_parents(resource, db_session, tree_service_builder=None):
     return list(parents)
 
 
-def get_resource_children(resource, db_session, tree_service_builder=None):
-    # type: (ServiceOrResourceType, Session, Optional[ResourceTreeService]) -> NestedResourceNodes
+def get_resource_children(resource, db_session, tree_service_builder=None, limit_depth=None):
+    # type: (ServiceOrResourceType, Session, Optional[ResourceTreeService], Optional[int]) -> NestedResourceNodes
     """
     Obtains the children resource node structure of the input service or resource.
 
     :param resource: Initial resource where to start building the tree from.
     :param db_session: Database connection to retrieve resources.
     :param tree_service_builder: Utility that build the tree (default: :py:data:`models.RESOURCE_TREE_SERVICE`).
+    :param limit_depth: Maximum depth to look for children resources (very deep if not specified, could be slow).
     :returns: ``{node: Resource, children: {node_id: <recursive>}}``
     """
     if tree_service_builder is None:
         tree_service_builder = models.RESOURCE_TREE_SERVICE
-    query = tree_service_builder.from_parent_deeper(resource.resource_id, db_session=db_session)
+    kwargs = {}
+    if isinstance(limit_depth, int):
+        kwargs["limit_depth"] = limit_depth
+    query = tree_service_builder.from_parent_deeper(resource.resource_id, db_session=db_session, **kwargs)
     tree_struct_dict = tree_service_builder.build_subtree_strut(query)
     return tree_struct_dict["children"]
 

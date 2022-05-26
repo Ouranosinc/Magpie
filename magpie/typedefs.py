@@ -84,7 +84,8 @@ if TYPE_CHECKING:
     }, total=False)
     # recursive nodes structure employed by functions for listing children resources hierarchy
     # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
-    NestedResourceNodes = Dict[int, "ResourceNode"]
+    _ResourceNode = "ResourceNode"  # type: TypeAlias  # pylint: disable=C0103
+    NestedResourceNodes = Dict[int, _ResourceNode]
     ResourceNode = TypedDict("ResourceNode", {
         "node": ServiceOrResourceType,
         "children": NestedResourceNodes
@@ -167,6 +168,7 @@ if TYPE_CHECKING:
     # generic 'configuration' field under a service that supports it
     ServiceConfiguration = Dict[Str, Union[Str, List[JSON], JSON]]
     ServiceConfigItem = TypedDict("ServiceConfigItem", {
+        "name": Optional[Str],  # injected in some cases from parent dict key
         "url": Str,
         "title": Str,
         "type": Str,

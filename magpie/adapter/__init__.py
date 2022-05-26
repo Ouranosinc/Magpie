@@ -16,6 +16,8 @@ from pyramid.httpexceptions import (
     HTTPServiceUnavailable,
     HTTPUnauthorized
 )
+from pyramid.request import Request
+from pyramid.response import Response
 from pyramid_beaker import set_cache_regions_from_settings
 from requests.exceptions import HTTPError
 from six.moves.urllib.parse import parse_qsl, urlparse
@@ -92,10 +94,18 @@ if TYPE_CHECKING:
 
     from pyramid.authentication import AuthTktCookieHelper
     from pyramid.config import Configurator
-    from pyramid.request import Request
-    from pyramid.response import Response
 
-    from magpie.typedefs import JSON, AnyResponseType, AnySettingsContainer, ServiceHookType, Str
+    from magpie.models import Resource
+    from magpie.services import ServiceInterface as MagpieService
+    from magpie.typedefs import (
+        JSON,
+        AnyResponseType,
+        AnySettingsContainer,
+        ServiceConfigItem,
+        ServiceHookConfigItem,
+        ServiceHookType,
+        Str
+    )
 
     from twitcher.models.service import ServiceConfig  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.3
     from twitcher.store import AccessTokenStoreInterface  # noqa  # pylint: disable=E0611  # Twitcher <= 0.5.x
@@ -285,6 +295,7 @@ class MagpieAdapter(AdapterInterface):
         svc_hooks = svc_config.get("hooks", [])
         # copy to avoid (un)intentional modifications to configurations
         svc_config = copy.deepcopy(svc_config)
+        svc_config["name"] = service_name  # often useful reference, but not directly in definition since dict key
         for hook_cfg in svc_hooks:
             if hook_cfg["type"] != hook_type:
                 continue
@@ -307,7 +318,8 @@ class MagpieAdapter(AdapterInterface):
             kwargs = {}
             if len(signature.parameters) > 1:
                 hook = copy.deepcopy(hook_cfg)
-                for key, val in [("service", svc_config), ("hook", hook)]:
+                ctx = HookContext(instance, self, svc_config, hook)
+                for key, val in [("service", svc_config), ("hook", hook), ("context", ctx)]:
                     if key in signature.parameters:
                         kwargs[key] = val
             try:
@@ -368,3 +380,48 @@ class MagpieAdapter(AdapterInterface):
             response.request.method, request_path, response.request.query_string
         )
         return response
+
+
+class HookContext(object):
+    """
+    Context handlers associated to the request/response for the :term:`Service Hook` to be evaluated.
+
+    Dispatch calls to database or other derived operations *on demand* as much as possible to minimize the impact of
+    retrieving some parameters by each request that requires this hook context.
+    """
+    adapter = None   # type: MagpieAdapter
+    request = None   # type: Request
+    response = None  # type: Optional[Response]  # optional in case request hook (response not yet reached)
+    config = None    # type: ServiceConfigItem   # same as 'service' parameter that can be requested directly
+    hook = None      # type: ServiceHookConfigItem  # same as 'hook' parameter that can be requested directly
+    _service = None  # type: Optional[MagpieService]
+
+    def __init__(self, instance, adapter, config, hook):
+        # type: (Union[Request, Response], MagpieAdapter, ServiceConfigItem, ServiceHookConfigItem) -> None
+        self.adapter = adapter
+        self.config = config
+        self.hook = hook
+        if isinstance(instance, Request):
+            self.request = instance
+            self.response = None
+        if isinstance(instance, Response):
+            self.response = instance
+            self.request = instance.request
+
+    @property
+    def service(self):
+        # type: () -> MagpieService
+        """
+        Service implementation that defines the :term:`Resource` structure and :term:`Permission` resolution method.
+        """
+        if not self._service:
+            self._service = self.adapter.owssecurity_factory(self.request).get_service(self.request)
+        return self._service
+
+    @property
+    def resource(self):
+        # type: () -> Resource
+        """
+        Database :term:`Resource` that represents the :term:`Service` reference implementation.
+        """
+        return self.service.service
