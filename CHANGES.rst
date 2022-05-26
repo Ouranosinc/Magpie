@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.26.0:
+
+`3.26.0 <https://github.com/Ouranosinc/Magpie/tree/3.26.0>`_ (2022-05-26)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``context`` parameter available for `Service Hook` functions, offering more handlers to obtain references to
