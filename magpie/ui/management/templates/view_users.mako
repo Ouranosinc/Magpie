@@ -16,20 +16,31 @@
 <table class="simple-list" id="view_users_list">
 <thead class="theme">
 <tr>
-    <th>User</th>
+    <th class="user-info">User</th>
+    <th class="user-info">Email</th>
     <th>Status</th>
     <th>Action</th>
 </tr>
 </thead>
 <tbody>
-%for i, user_name in enumerate(users):
+%for i, user_info in enumerate(users):
+    <%
+        user_name = user_info["name"]
+        user_email = user_info["email"]
+    %>
     <form action="${request.path}" method="post">
         %if i % 2:
         <tr class="list-row-even">
         %else:
         <tr class="list-row-odd">
         %endif
-            <td><input type="hidden" value="${user_name}" name="user_name">${user_name}</td>
+            <td class="user-info">
+                <input type="hidden" value="${user_name}" name="user_name">
+                ${user_name}
+            </td>
+            <td class="user-info">
+                <a href="mailto:${user_email}">${user_email}</a>
+            </td>
             <td>
                 <div class="status-container">
                     %if user_name in users_with_error:

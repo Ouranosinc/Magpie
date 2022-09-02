@@ -17,6 +17,9 @@ Features / Changes
   | If any ``User`` entries with duplicate case-insensitive emails are present in the database, the application
     will fail when performing the database migration. Resolve those cases manually before starting `Magpie`.
 
+* Display ``User`` email field in UI page providing the list of registered and pending users.
+* Add ``mailto:`` link for all ``User`` email fields displayed in UI.
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix conflicting ``User`` email not properly reported in UI with an appropriate message in creation page.

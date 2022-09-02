@@ -757,8 +757,8 @@ table.simple-list tr.list-row-even {
 }
 
 table.simple-list tr,
-table.simple-list td:first-child,
-table.simple-list th:first-child {
+table.simple-list td:first-child:not(.user-info),
+table.simple-list th:first-child:not(.user-info) {
     width: 75%;
     text-align: left;
 }
@@ -771,6 +771,18 @@ table.simple-list th:not(:first-child) {
 table.simple-list input[type="button"],
 table.simple-list input[type="submit"] {
     margin: 0 0.5em;
+}
+
+table.simple-list th.user-info,
+table.simple-list td.user-info {
+    text-align: left;
+}
+table.simple-list td.user-info:first-child {
+    width: 25%;
+}
+
+table.simple-list td:last-child {
+    width: 10%;
 }
 
 /* --- Resource tree rendering  --- */

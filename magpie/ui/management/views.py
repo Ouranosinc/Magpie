@@ -79,10 +79,10 @@ class ManagementViews(AdminRequests, BaseViews):
 
         users = self.get_user_details(status="all")
         non_error = UserStatuses.OK | UserStatuses.Pending  # use combine in case more error types gets added later on
-        user_names = [user["user_name"] for user in users]
+        user_info = [{"name": user["user_name"], "email": user["email"]} for user in users]
         user_error = [user["user_name"] for user in users if UserStatuses.get(user["status"]) not in non_error]
         pending = [user["user_name"] for user in users if UserStatuses.get(user["status"]) == UserStatuses.Pending]
-        return self.add_template_data({"users": user_names, "users_with_error": user_error, "users_pending": pending})
+        return self.add_template_data({"users": user_info, "users_with_error": user_error, "users_pending": pending})
 
     @view_config(route_name="add_user", renderer="templates/add_user.mako")
     def add_user(self):

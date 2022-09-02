@@ -177,7 +177,9 @@
                                         </label>
                                     %else:
                                         <label>
-                                        <span class="panel-value">${email}</span>
+                                        <span class="panel-value">
+                                            <a href="mailto:${email}">${email}</a>
+                                        </span>
                                         %if user_name not in MAGPIE_FIXED_USERS:
                                             <input type="submit" value="Edit" name="edit_email" class="button theme">
                                         %endif
