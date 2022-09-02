@@ -1631,9 +1631,12 @@ def find_html_body_contents(response_or_body, html_search=None):
         provided within the same level-search to distinguish between multiple matches to pick a single one.
 
         If provided, definition ``index`` must be an integer corresponding to the item to pick within a set.
-        When using ``index``, the HTML items to pick from do not need to be represent similar sub-contents.
+        When using ``index``, the HTML items to pick from do not need to represent similar sub-contents.
         If provided, definition ``attribute`` must be a string corresponding to an HTML attribute that is contained
         by only one item within multiple matches.
+
+        If the last matched element is unique (not a list) and the corresponding final search definition of this item
+        provides ``attribute``, the value of this attribute will be returned instead of the full element definition.
 
         Only the last nested element can return multiple matches (list of elements), intermediate elements must all be
         unique in order to search deeper in the nested definitions. If multiple intermediate elements can be matched,
@@ -1680,6 +1683,9 @@ def find_html_body_contents(response_or_body, html_search=None):
             body = parts[0]  # move to next child element to search
         # otherwise, search is done, return found item or list of elements
         elif len(parts) == 1:
+            elem_attr = search_element.get("attribute")
+            if elem_attr and elem_attr in parts[0].attrs:
+                return parts[0].attrs[elem_attr]
             return parts[0]
         else:
             parts = [item for item in parts if str(item).strip()]  # remove empty items separators
