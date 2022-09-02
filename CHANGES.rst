@@ -9,7 +9,15 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Nothing new for the moment.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix conflicting ``User`` email not properly reported in UI with an appropriate message in creation page.
+  The ``User`` name was instead reported as the conflicting property, although it was not the problematic field
+  (resolves `#521 <https://github.com/Ouranosinc/Magpie/issues/521>`_).
 
 .. _changes_3.26.0:
 

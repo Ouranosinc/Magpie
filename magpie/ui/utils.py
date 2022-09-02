@@ -558,7 +558,7 @@ class AdminRequests(BaseViews):
 
         # soft pre-checks
         user_details = self.get_user_details(status="all", cookies=admin_cookies)
-        if user_email in [usr["email"] for usr in user_details]:
+        if user_email in [usr["email"].lower() for usr in user_details]:
             data["invalid_user_email"] = True
             data["reason_user_email"] = "Conflict"
         if user_email == "":
@@ -577,7 +577,7 @@ class AdminRequests(BaseViews):
             data["invalid_password"] = True
             data["reason_password"] = "Mismatch"  # nosec: B105  # avoid false positive
 
-        check_data = ["invalid_user_name", "invalid_email", "invalid_password", "invalid_group_name"]
+        check_data = ["invalid_user_name", "invalid_user_email", "invalid_password", "invalid_group_name"]
         for check_fail in check_data:
             if data.get(check_fail, False):
                 return self.add_template_data(data)
@@ -595,7 +595,7 @@ class AdminRequests(BaseViews):
         resp = request_api(self.request, path, "POST", data=payload)
 
         # hard post checks, retrieve known errors related to fields to display messages instead of raising
-        if resp.status_code in (HTTPBadRequest.code, HTTPUnprocessableEntity.code):
+        if resp.status_code in (HTTPBadRequest.code, HTTPConflict.code, HTTPUnprocessableEntity.code):
             # attempt to retrieve the API more-specific reason why the operation is invalid
             body = get_json(resp)
             param_name = body.get("param", {}).get("name")

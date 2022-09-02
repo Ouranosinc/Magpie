@@ -2004,8 +2004,13 @@ class User_Check_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class User_Check_ConflictResponseSchema(BaseResponseSchemaAPI):
+class User_Check_Name_ConflictResponseSchema(BaseResponseSchemaAPI):
     description = "User name matches an already existing user name."
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class User_Check_Email_ConflictResponseSchema(BaseResponseSchemaAPI):
+    description = "User email matches an already existing user email."
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
@@ -3681,7 +3686,7 @@ Users_POST_responses = {
     "401": UnauthorizedResponseSchema(),
     "403": Users_POST_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
-    "409": User_Check_ConflictResponseSchema(),
+    "409": User_Check_Name_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 User_GET_responses = {
@@ -3699,7 +3704,7 @@ User_PATCH_responses = {
     "401": UnauthorizedResponseSchema(),
     "403": UserGroup_GET_ForbiddenResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359
     "406": NotAcceptableResponseSchema(),
-    "409": User_Check_ConflictResponseSchema(),
+    "409": User_Check_Name_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 User_DELETE_responses = {
