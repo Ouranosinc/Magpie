@@ -4571,8 +4571,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         ]
         utils.TestSetup.delete_TestUser(self, override_user_name=other_name)
         utils.TestSetup.create_TestGroup(self)
-        body = utils.TestSetup.create_TestUser(self, override_email=test_email)
-        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        utils.TestSetup.create_TestUser(self, override_email=test_email)
         data = {
             "user_name": other_name,
             "password": self.test_user_name,
