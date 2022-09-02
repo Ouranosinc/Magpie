@@ -777,6 +777,7 @@ table.simple-list th.user-info,
 table.simple-list td.user-info {
     text-align: left;
 }
+
 table.simple-list td.user-info:first-child {
     width: 25%;
 }

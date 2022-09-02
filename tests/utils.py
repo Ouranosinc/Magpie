@@ -192,7 +192,7 @@ def make_run_option_decorator(run_option):
     @functools.wraps(run_option)
     def wrap(test_func, *_, **__):
         # type: (Callable, Any, Any) -> Callable
-        pytest_marker = pytest.mark.__getattr__(run_option.marker)
+        pytest_marker = getattr(pytest.mark, run_option.marker)
         unittest_skip = unittest.skipUnless(*run_option())
         test_func = pytest_marker(test_func)
         test_func = unittest_skip(test_func)
