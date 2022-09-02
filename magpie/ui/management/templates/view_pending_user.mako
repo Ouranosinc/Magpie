@@ -58,7 +58,9 @@
                             <form id="edit_email" action="${request.path}" method="post">
                                 <div class="panel-line-entry">
                                     <label>
-                                        <span class="panel-value">${email}</span>
+                                        <span class="panel-value">
+                                            <a href="mailto:${email}">${email}</a>
+                                        </span>
                                         <input type="submit" value="Edit" name="edit_email" class="button theme">
                                     </label>
                                 </div>

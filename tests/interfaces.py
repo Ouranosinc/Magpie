@@ -4557,6 +4557,37 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_Conflict_Email_CaseInsensitive(self):
+        utils.warn_version(self, "user creation with duplicate case-insensitive email conflict", "3.27.0", skip=True)
+
+        other_name = self.test_user_name + "-other"
+        test_email = "random.guy@email.com"
+        other_emails = [
+            "Random.guy@email.com",
+            "random.Guy@email.com",
+            "random.guy@Email.com",
+            "random.guy@email.COM",
+            "RANDOM.GUY@EMAIL.COM",
+        ]
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_name)
+        utils.TestSetup.create_TestGroup(self)
+        utils.TestSetup.create_TestUser(self, override_email=test_email)
+        data = {
+            "user_name": other_name,
+            "password": self.test_user_name,
+        }
+        for email in other_emails:
+            data["email"] = email
+            resp = utils.test_request(self, "POST", "/users", data=data,
+                                      headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+            utils.check_response_basic_info(resp, 409, expected_method="POST")
+        # sanity check that it was not due to duplicate user name, but indeed the email
+        data["email"] = "some.new@email.com"
+        resp = utils.test_request(self, "POST", "/users", data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 201, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UpdateUser_ReservedKeyword_LoggedUser(self):
         """
@@ -7465,9 +7496,12 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         # filter only to users of this test to avoid failing side-effects from other test data
         test_user_forms = {user: utils.find_html_form(user_forms, {"user_name": user}) for user in test_users}
         utils.check_val_equal(len(test_user_forms), len(test_users), msg="Could not find all test user forms")
-        # each form has an HTML body with 'status' in it, the status is located on second column (index = 1)
+        # each form has an HTML body with 'status' in it
+        # status is located on second column (index = 1) in older versions [user, status, buttons]
+        # status is located on third column (index = 2) in newer versions [user, email, status, buttons]
+        status_index = 2 if utils.TestSetup.get_Version(self) >= TestVersion("3.27.0") else 1
         html_search = [{"name": "form"}, {"class": ["list-row-even", "list-row-odd"]},
-                       {"name": "td", "index": 1}, {"class": ["status-container"]}]
+                       {"name": "td", "index": status_index}, {"class": ["status-container"]}]
         test_user_statuses = {user: utils.find_html_body_contents(form.html, html_search)
                               for user, form in test_user_forms.items()}
         for user in test_users:
@@ -7478,6 +7512,44 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
                                       msg="Expected user with 'error' status to display the correct error code.")
             else:
                 utils.check_val_is_in("OK", str(test_user_statuses[user]), msg="Expected user to have 'OK' status.")
+
+    @runner.MAGPIE_TEST_STATUS
+    @runner.MAGPIE_TEST_USERS
+    def test_GetUsersList_DisplayedEmails(self):
+        """
+        Validate that UI user list page displays user email next to its name.
+        """
+        utils.warn_version(self, "user emails displayed in UI user list page", "3.27.0", skip=True)
+
+        un_anonym = get_constant("MAGPIE_ANONYMOUS_USER")
+        un_admin = get_constant("MAGPIE_ADMIN_USER")
+        ue_anonym = get_constant("MAGPIE_ANONYMOUS_EMAIL")
+        ue_admin = get_constant("MAGPIE_ADMIN_EMAIL")
+        u1_name = "test-{}".format(uuid.uuid4())
+        u2_name = "test-{}".format(uuid.uuid4())
+        test_users = [un_anonym, un_admin, u1_name, u2_name]
+        expect_emails = {un_anonym: ue_anonym, un_admin: ue_admin}
+        utils.TestSetup.create_TestGroup(self)
+        for user_name in [u1_name, u2_name]:
+            body = utils.TestSetup.create_TestUser(self, override_user_name=user_name)
+            info = utils.TestSetup.get_UserInfo(self, override_body=body)
+            expect_emails[user_name] = info["email"]
+
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path="/ui/users", expected_type=CONTENT_TYPE_HTML)
+        user_forms = resp.forms  # every user is in a distinct form
+        # filter only to users of this test to avoid failing side-effects from other test data
+        test_user_forms = {user: utils.find_html_form(user_forms, {"user_name": user}) for user in test_users}
+        utils.check_val_equal(len(test_user_forms), len(test_users), msg="Could not find all test user forms")
+        html_search = [{"name": "form"}, {"class": ["list-row-even", "list-row-odd"]},
+                       {"name": "td", "index": 1}, {"name": "a", "attribute": "href"}]
+        test_user_emails = {
+            user: utils.find_html_body_contents(form.html, html_search)
+            for user, form in test_user_forms.items()
+        }
+        utils.check_val_true(all(email.startswith("mailto:") for email in test_user_emails.values()),
+                             msg="All emails should display links to send email.")
+        test_emails_visible = {user: email.split(":")[-1] for user, email in test_user_emails.items()}
+        utils.check_val_equal(test_emails_visible, expect_emails)
 
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_USERS

@@ -86,14 +86,20 @@ PIP_USE_FEATURE := `python -c '\
 	import pip; \
 	from distutils.version import LooseVersion; \
 	print(LooseVersion(pip.__version__) < LooseVersion("21.0"))'`
+PIP_DISABLE_FEATURE := `python -c '\
+	import pip; \
+	from distutils.version import LooseVersion; \
+	print(LooseVersion(pip.__version__) >= LooseVersion("22.0"))'`
 ifeq ($(findstring "--use-feature=2020-resolver",$(PIP_XARGS)),)
   # feature not specified, but needed
   ifeq ("$(PIP_USE_FEATURE)", "True")
     PIP_XARGS := --use-feature=2020-resolver $(PIP_XARGS)
   else
     # use faster legacy resolver
-    ifeq ($(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS)),)
-      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    ifeq ($(PIP_DISABLE_FEATURE), "False")
+      ifeq ($(findstring "--use-deprecated=legacy-resolver",$(PIP_XARGS)),)
+        PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+      endif
     endif
     ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
       PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
@@ -105,10 +111,12 @@ else
     PIP_XARGS := $(subst "--use-feature=2020-resolver",,$(PIP_XARGS))
   else
     # use faster legacy resolver
-    ifeq $(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS))
-      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    ifeq ($(PIP_DISABLE_FEATURE), "False")
+      ifeq ($(findstring "--use-deprecated=legacy-resolver",$(PIP_XARGS)),)
+        PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+      endif
     endif
-  	ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
+    ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
       PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
     endif
   endif

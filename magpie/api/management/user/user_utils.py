@@ -128,8 +128,22 @@ def create_user(user_name,              # type: Str
     user_checked = ax.evaluate_call(
         lambda: models.UserSearchService.by_name_or_email(user_name=user_name, email=email, db_session=db_session),
         http_error=HTTPForbidden, msg_on_fail=s.User_Check_ForbiddenResponseSchema.description)
-    ax.verify_param(user_checked, is_none=True, with_param=False, http_error=HTTPConflict,
-                    msg_on_fail=s.User_Check_ConflictResponseSchema.description)
+    # return user name or email that caused conflict if any
+    # WARNING:
+    #   done only in this case because admin-view expected,
+    #   otherwise this becomes a vector of attack with partial credentials provided
+    user_params = {"with_param": False}
+    if user_checked:
+        user_params["with_param"] = True
+        if compare_digest(user_checked.user_name, user_name):
+            user_params["msg_on_fail"] = s.User_Check_Name_ConflictResponseSchema.description
+            user_params["param_name"] = "user_name"
+            user_params["param_content"] = {"value": user_name, "conditions": [{"unique": False}]}
+        else:
+            user_params["msg_on_fail"] = s.User_Check_Email_ConflictResponseSchema.description
+            user_params["param_name"] = "user_email"
+            user_params["param_content"] = {"value": user_checked.email, "conditions": [{"unique": False}]}
+    ax.verify_param(user_checked, is_none=True, http_error=HTTPConflict, **user_params)
 
     # Create user with specified name and group to assign
     new_user = models.User(user_name=user_name, email=email)  # noqa

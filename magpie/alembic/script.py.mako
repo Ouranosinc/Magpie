@@ -8,11 +8,12 @@ Create Date: ${create_date}
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.orm.session import sessionmaker
 
 # Revision identifiers, used by Alembic.
 # pylint: disable=C0103,invalid-name  # revision control variables not uppercase
-%if revision:
-revision = "${revision}"
+%if up_revision:
+revision = "${up_revision}"
 %else:
 revision = None
 %endif
@@ -31,6 +32,8 @@ depends_on = "${depends_on}"
 %else:
 depends_on = None
 %endif
+
+Session = sessionmaker()
 
 
 def upgrade():
