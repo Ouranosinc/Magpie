@@ -100,6 +100,11 @@ jobs:
         if: ${{ matrix.python-version != 'none' }}
         with:
           python-version: ${{ matrix.python-version }}
+      # run 'install-sys' by itself first even if other targets depend on it to setup pip
+      # this ensures that the auto-resolved PIP_XARGS will match the active pip version for following installs
+      - name: Install Package Managers
+        if: ${{ matrix.python-version != 'none' }}
+        run: make install-sys
       - name: Install Dependencies
         if: ${{ matrix.python-version != 'none' }}
         run: make install-pkg install-dev version
