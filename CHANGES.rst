@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.27.0:
+
+`3.27.0 <https://github.com/Ouranosinc/Magpie/tree/3.27.0>`_ (2022-09-02)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * | Add database unique index to ensure case-insensitive ``User`` email cannot be stored.
