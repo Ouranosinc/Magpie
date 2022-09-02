@@ -558,7 +558,7 @@ class AdminRequests(BaseViews):
 
         # soft pre-checks
         user_details = self.get_user_details(status="all", cookies=admin_cookies)
-        if user_email in [usr["email"].lower() for usr in user_details]:
+        if (user_email or "").lower() in [usr["email"].lower() for usr in user_details]:
             data["invalid_user_email"] = True
             data["reason_user_email"] = "Conflict"
         if user_email == "":

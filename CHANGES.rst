@@ -11,7 +11,11 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Nothing new for the moment.
+* | Add database unique index to ensure case-insensitive ``User`` email cannot be stored.
+  |
+  | **IMPORTANT**:
+  | If any ``User`` entries with duplicate case-insensitive emails are present in the database, the application
+    will fail when performing the database migration. Resolve those cases manually before starting `Magpie`.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

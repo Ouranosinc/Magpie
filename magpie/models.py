@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from ziggurat_foundations import ziggurat_model_init
 from ziggurat_foundations.models.base import BaseModel, get_db_session
 from ziggurat_foundations.models.external_identity import ExternalIdentityMixin
@@ -512,16 +513,16 @@ class UserSearchService(UserService):
             if status is not None:
                 status = [int(status) for status in status]
                 query = query.in_(status)
-            return query.filter((User.user_name == user_name) | (User.email == email)).first()
+            return query.filter((User.user_name == user_name) | (func.lower(User.email) == email.lower())).first()
         user = cls.by_user_name(user_name=user_name, status=status, db_session=db_session)
         if user is not None:
             return user
         if status is UserStatuses.Pending:
-            return db_session.query(UserPending).filter(UserPending.email == email).first()
+            return db_session.query(UserPending).filter(func.lower(UserPending.email) == email.lower()).first()
         user = super(UserSearchService, cls).by_email(email=email, db_session=db_session)
         if user is not None and UserStatuses.get(user.status) in status:
             return user
-        return db_session.query(UserPending).filter(UserPending.email == email).first()
+        return db_session.query(UserPending).filter(func.lower(UserPending.email) == email.lower()).first()
 
 
 class ExternalIdentity(ExternalIdentityMixin, Base):
