@@ -4557,6 +4557,38 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_Conflict_Email_CaseInsensitive(self):
+        utils.warn_version(self, "user creation with duplicate case-insensitive email conflict", "3.27.0", skip=True)
+
+        other_name = self.test_user_name + "-other"
+        test_email = "random.guy@email.com"
+        other_emails = [
+            "Random.guy@email.com",
+            "random.Guy@email.com",
+            "random.guy@Email.com",
+            "random.guy@email.COM",
+            "RANDOM.GUY@EMAIL.COM",
+        ]
+        utils.TestSetup.delete_TestUser(self, override_user_name=other_name)
+        utils.TestSetup.create_TestGroup(self)
+        body = utils.TestSetup.create_TestUser(self, override_email=test_email)
+        info = utils.TestSetup.get_UserInfo(self, override_body=body)
+        data = {
+            "user_name": other_name,
+            "password": self.test_user_name,
+        }
+        for email in other_emails:
+            data["email"] = email
+            resp = utils.test_request(self, "POST", "/users", data=data,
+                                      headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+            utils.check_response_basic_info(resp, 409, expected_method="POST")
+        # sanity check that it was not due to duplicate user name, but indeed the email
+        data["email"] = "some.new@email.com"
+        resp = utils.test_request(self, "POST", "/users", data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 201, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
     def test_UpdateUser_ReservedKeyword_LoggedUser(self):
         """
