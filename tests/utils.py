@@ -125,7 +125,7 @@ class RunOption(object):
         self._description = description
 
     def __call__(self, *args, **kwargs):
-        # type: (Any, Any) -> Tuple[bool, Str]
+        # type: (*Any, **Any) -> Tuple[bool, Str]
         """
         Return (condition, reason) matching ``unittest.skipUnless`` decorator.
         """
@@ -191,7 +191,7 @@ def make_run_option_decorator(run_option):
     """
     @functools.wraps(run_option)
     def wrap(test_func, *_, **__):
-        # type: (Callable, Any, Any) -> Callable
+        # type: (Callable, *Any, **Any) -> Callable
         pytest_marker = getattr(pytest.mark, run_option.marker)
         unittest_skip = unittest.skipUnless(*run_option())
         test_func = pytest_marker(test_func)
@@ -477,7 +477,7 @@ def get_test_webhook_app(webhook_url):
         return PyramidResponse("Webhook app has been reset.")
 
     def error_body(exc, *_):
-        # type: (Exception, Any) -> HTTPException
+        # type: (Exception, *Any) -> HTTPException
         """
         Make the assertion error text available as webhook response text.
         """
@@ -653,7 +653,7 @@ def mocked_get_settings(test_func=None, settings=None):
         from magpie.utils import get_settings as real_get_settings
 
         def mocked(container, *args, **kwargs):
-            # type: (Optional[AnySettingsContainer], Any, Any) -> SettingsType
+            # type: (Optional[AnySettingsContainer], *Any, **Any) -> SettingsType
             if isinstance(container, DummyRequest):
                 _settings = container.registry.settings
             else:
@@ -664,14 +664,14 @@ def mocked_get_settings(test_func=None, settings=None):
 
         if not test:
             @contextlib.contextmanager
-            def wrapped(*_, **__):  # type: (Any, Any) -> Any
+            def wrapped(*_, **__):  # type: (*Any, **Any) -> Any
                 with mock.patch("magpie.utils.get_settings", side_effect=mocked) as mock_settings, \
                      mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked), \
                      mock.patch("magpie.adapter.magpieservice.get_settings", side_effect=mocked):
                     yield mock_settings
         else:
             # decorator variant
-            def wrapped(*_, **__):  # type: (Any, Any) -> Any
+            def wrapped(*_, **__):  # type: (*Any, **Any) -> Any
                 with mock.patch("magpie.utils.get_settings", side_effect=mocked), \
                      mock.patch("magpie.adapter.magpieowssecurity.get_settings", side_effect=mocked), \
                      mock.patch("magpie.adapter.magpieservice.get_settings", side_effect=mocked):
@@ -744,7 +744,7 @@ def mock_request(request_path_query="",     # type: Str
 
 
 def mock_response(body=None, status=200, **kwargs):
-    # type: (Optional[Union[bytes, Str, JSON]], int, Any) -> AnyResponseType
+    # type: (Optional[Union[bytes, Str, JSON]], int, **Any) -> AnyResponseType
     """
     Generates a fake response with provided arguments and expected handlers applied for common use by applications.
     """
@@ -788,7 +788,7 @@ def mocked_send_email(func):
         return True  # "success" email
 
     @functools.wraps(func)
-    def wrapped(*_, **__):  # type: (Any, Any) -> Any
+    def wrapped(*_, **__):  # type: (*Any, **Any) -> Any
         # mock both direct reference if imported and places that use it to globally mock email notifications
         with wrapped_call("magpie.api.management.register.register_utils.send_email", side_effect=no_email):
             with wrapped_call("magpie.api.management.user.user_utils.send_email", side_effect=no_email):
@@ -959,7 +959,7 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
         return __WRAPPED_INSTANCES__[target]
 
     def wrapped_func(*_, **__):
-        # type: (Any, Any) -> Any
+        # type: (*Any, **Any) -> Any
         if instance is None:
             return real(*_, **__)
         if type(real) is property:  # pylint: disable=C0123
@@ -971,7 +971,7 @@ def wrapped_call(target, method=None, instance=None, side_effect=None):
         Magic mock with injected return value from the wrapped call by the patched function.
         """
         def _execute_mock_call(self, *args, **kwargs):  # pylint: disable=W0221
-            # type: (Any, Any) -> Any
+            # type: (*Any, **Any) -> Any
             result = super(MockPatcher, self)._execute_mock_call(*args, **kwargs)
             if self.call_args_list:
                 if self.call_args_list[-1].args == args and self.call_args_list[-1].kwargs == kwargs:

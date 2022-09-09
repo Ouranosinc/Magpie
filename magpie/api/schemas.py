@@ -81,7 +81,7 @@ def get_security(service, method):
 # Path definitions (from services and parameters)
 
 def service_api_route_info(service_api, **kwargs):
-    # type: (Service, Any) -> Dict[Str, Any]
+    # type: (Service, **Any) -> Dict[Str, Any]
     kwargs.update({
         "name": service_api.name,
         "pattern": service_api.path,
@@ -682,7 +682,7 @@ class ErrorCallBodySchema(ErrorFallbackBodySchema):
 
 class ErrorResponseBodySchema(BaseResponseBodySchema):
     def __init__(self, code, description, **kw):
-        # type: (int, str, Any) -> None
+        # type: (int, str, **Any) -> None
         super(ErrorResponseBodySchema, self).__init__(code, description, **kw)
         assert code >= 400  # nosec: B101
 

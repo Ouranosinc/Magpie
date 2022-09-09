@@ -70,7 +70,7 @@ class MagpieServiceStore(ServiceStoreInterface):
         self.magpie_admin_token = get_admin_cookies(self.settings, self.twitcher_ssl_verify)
 
     def save_service(self, name, url, *args, **kwargs):  # noqa: F811
-        # type: (Str, Str, Any, Any) -> NoReturn
+        # type: (Str, Str, *Any, **Any) -> NoReturn
         """
         Store is read-only, use `Magpie` :term:`API` to add services.
 
@@ -89,7 +89,7 @@ class MagpieServiceStore(ServiceStoreInterface):
         raise NotImplementedError(msg)
 
     def delete_service(self, name, *args, **kwargs):  # noqa: F811
-        # type: (Str, Any, Any) -> NoReturn
+        # type: (Str, *Any, **Any) -> NoReturn
         """
         Store is read-only, use :mod:`Magpie` :term:`API` to delete services.
         """

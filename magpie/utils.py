@@ -146,7 +146,7 @@ def set_logger_config(logger, force_stdout=False, message_format=None, datetime_
 
 
 def print_log(msg, logger=None, level=logging.INFO, **kwargs):
-    # type: (Str, Optional[logging.Logger], int, Any) -> None
+    # type: (Str, Optional[logging.Logger], int, **Any) -> None
     """
     Logs the requested message to the logger and optionally enforce printing to the console according to configuration
     value defined by ``MAGPIE_LOG_PRINT``.
@@ -211,6 +211,24 @@ def ismethod(obj):
     if six.PY2:
         return inspect.ismethod(obj)
     return inspect.isroutine(obj) and "." in obj.__qualname__
+
+
+def signature_with_args(func, *args, **kwargs):
+    # type: (Callable[[...], Any], *Any, **Any) -> Str
+    """
+    Returns a visual representation of a function signature with is arguments.
+
+    .. code-block:: python
+
+        def function(a, b, c=1): ...
+
+        signature_with_args(function, 1, 2, c=3)
+
+        # returns:  <module.function(a=1, b=2, c=3)>
+    """
+    sig = inspect.signature(func).bind_partial(*args, **kwargs)
+    sig = str(sig).replace("BoundArguments ", fully_qualified_name(func))
+    return sig
 
 
 # alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5

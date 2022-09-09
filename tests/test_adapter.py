@@ -166,7 +166,7 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         self.login_test_user()
 
         def mock_magpie_request(*args, **kwargs):
-            # type: (Any, Any) -> AnyResponseType
+            # type: (*Any, **Any) -> AnyResponseType
             if args:
                 method, url, args = args[0], args[1], args[2:]
             else:
@@ -290,7 +290,7 @@ class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
         twitcher_proxy_path = "/ows/proxy"  # default
 
         def mock_requests(*args, **kwargs):
-            # type: (Any, Any) -> AnyResponseType
+            # type: (*Any, **Any) -> AnyResponseType
             if args:
                 _method, url, args = args[0], args[1], args[2:]
             else:
