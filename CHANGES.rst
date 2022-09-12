@@ -9,7 +9,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add debug logging details of processed ``Webhooks`` to facilitate integration with other services sending or
+  receiving requests from this functionality.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Minor adjustment in typing definitions.
 
 .. _changes_3.27.0:
 
