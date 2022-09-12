@@ -81,7 +81,7 @@ def create_users(user_config, magpie_url, magpie_admin_username, magpie_admin_pa
 
 
 def delete_users(user_config, magpie_url, magpie_admin_username, magpie_admin_password, **__):
-    # type: (UserConfig, Str, Str, Str, Any) -> UserConfig
+    # type: (UserConfig, Str, Str, Str, **Any) -> UserConfig
     """
     Deletes the specified users.
 

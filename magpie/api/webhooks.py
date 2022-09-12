@@ -1,3 +1,4 @@
+import logging
 import multiprocessing
 from collections import defaultdict
 from typing import TYPE_CHECKING
@@ -18,7 +19,15 @@ from magpie.api.management.user.user_formats import format_user
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
 from magpie.register import get_all_configs
-from magpie.utils import CONTENT_TYPE_JSON, FORMAT_TYPE_MAPPING, ExtendedEnum, get_logger, get_settings, raise_log
+from magpie.utils import (
+    CONTENT_TYPE_JSON,
+    FORMAT_TYPE_MAPPING,
+    ExtendedEnum,
+    get_logger,
+    get_settings,
+    raise_log,
+    signature_with_args
+)
 
 if TYPE_CHECKING:
     from typing import Optional, Union
@@ -184,10 +193,16 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
     if not webhooks:
         return
     action_webhooks = webhooks[action]
-    if len(action_webhooks) > 0:
+    n_webhooks = len(action_webhooks)
+    if n_webhooks > 0:
         # Execute all webhook requests
-        pool = multiprocessing.Pool(processes=len(action_webhooks))  # pylint: disable=R1732
+        LOGGER.info("Found %s webhook%s to apply for '%s' operation.",
+                    n_webhooks, "s" if n_webhooks > 1 else "", action)
+        pool = multiprocessing.Pool(processes=n_webhooks)  # pylint: disable=R1732
         args = [(webhook, params, update_user_status_on_error) for webhook in action_webhooks]
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            for func_args in args:
+                LOGGER.debug("Will call webhook: %s", signature_with_args(send_webhook_request, *func_args))
         pool.starmap_async(send_webhook_request, args)
 
 

@@ -144,7 +144,7 @@ def handle_errors(func):
         :func:`redirect_error`
     """
     def wrap(*args, **kwargs):
-        # type: (Any, Any) -> Callable[[...], Any]
+        # type: (*Any, **Any) -> Callable[[...], Any]
         view_container = None if not args and not isinstance(args[0], BaseViews) else args[0]
         try:
             return func(*args, **kwargs)
