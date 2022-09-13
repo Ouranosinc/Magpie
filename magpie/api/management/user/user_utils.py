@@ -276,6 +276,7 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     :param overwrite:
         If the corresponding `(user, resource, permission[name])` exists, there is a conflict.
         Conflict is considered only by permission-name regardless of other modifiers.
+        If permissions match exactly (including modifiers), conflict is raised regardless of overwrite value.
         If overwrite is ``False``, the conflict will be raised and not be applied.
         If overwrite is ``True``, the permission modifiers will be replaced by the new ones, or created if missing.
     :returns: valid HTTP response on successful operation.
@@ -290,6 +291,10 @@ def create_user_resource_permission_response(user, resource, permission, db_sess
     http_success = HTTPCreated
     http_detail = s.UserResourcePermissions_POST_CreatedResponseSchema.description
     if overwrite and exist_perm:
+        # conflict regardless of override if permissions are exact duplicates (avoid delete followed by recreate)
+        ax.verify_param(exist_perm, not_equal=True, param_compare=permission,
+                        http_error=HTTPConflict, content=err_content,
+                        msg_on_fail=s.UserResourcePermissions_POST_ConflictResponseSchema.description)
         # skip similar permission lookup since we already did it
         http_success = HTTPOk
         http_detail = s.UserResourcePermissions_PUT_OkResponseSchema.description
