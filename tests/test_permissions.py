@@ -6,6 +6,7 @@ from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
 from magpie import __meta__, models
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope, format_permissions
+from tests import interfaces as ti
 from tests import runner, utils
 
 
@@ -18,7 +19,7 @@ class MockObject(object):
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_UTILS
 @runner.MAGPIE_TEST_PERMISSIONS
-class TestPermissions(unittest.TestCase):
+class TestPermissions(ti.ConfigTestCase, unittest.TestCase):
     def test_format_permissions_applied(self):
         """
         Validate that provided permission sets are formatted as intended, with both implicit and explicit variants, and
@@ -121,6 +122,23 @@ class TestPermissions(unittest.TestCase):
         ]
         utils.check_all_equal(format_perms["permission_names"], expect_names, any_order=False)
         utils.check_all_equal(format_perms["permissions"], expect_perms, any_order=False)
+
+    def test_permission_compare_invalid(self):
+        """
+        Check that invalid comparison classes does not raise an error.
+        """
+        utils.warn_version(self, "permission set comparison", "3.27.1", test_version=__meta__.__version__, skip=True)
+
+        perm = PermissionSet("read")
+        utils.check_no_raise(lambda: perm == str)
+        utils.check_no_raise(lambda: perm is str)
+        utils.check_no_raise(lambda: perm in [str])
+        utils.check_no_raise(lambda: perm == object)
+        utils.check_no_raise(lambda: perm is object)
+        utils.check_no_raise(lambda: perm in [object])
+        utils.check_no_raise(lambda: perm == object())
+        utils.check_no_raise(lambda: perm is object())
+        utils.check_no_raise(lambda: perm in [object()])
 
     def test_permission_convert_from_string(self):
         """

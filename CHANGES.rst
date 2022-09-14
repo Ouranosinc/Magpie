@@ -11,11 +11,16 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add debug logging details of processed ``Webhooks`` to facilitate integration with other services sending or
+* Raise HTTP conflict on `Permission` update when the new `Permission` to be generated matches perfectly with the
+  existing one to avoid unnecessary `Webhooks` calls (subsequent delete and create of the same `Permission` definition).
+* Add debug logging details of processed `Webhooks` to facilitate integration with other services sending or
   receiving requests from this functionality.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
+* Fix ``verify_param`` indirectly causing an error with ``PermissionSet`` object passed as ``param_compare`` argument
+  when attempting to resolve if that comparison argument is of ``str`` type, which was not handled as valid second
+  argument for the ``PermissionSet.__eq__`` operation.
 * Minor adjustment in typing definitions.
 
 .. _changes_3.27.0:

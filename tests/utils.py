@@ -79,7 +79,8 @@ if TYPE_CHECKING:
     )
 
     # pylint: disable=C0103,invalid-name
-    AnyMagpieTestCaseType = Union[Type[ti.BaseTestCase], ti.BaseTestCase,
+    AnyMagpieTestCaseType = Union[Type[ti.ConfigTestCase], ti.ConfigTestCase,
+                                  Type[ti.BaseTestCase], ti.BaseTestCase,
                                   Type[ti.AdminTestCase], ti.AdminTestCase,
                                   Type[ti.UserTestCase], ti.UserTestCase]
     OptionalHeaderCookiesType = Tuple[Optional[AnyHeadersType], Optional[AnyCookiesType]]

@@ -158,8 +158,13 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             raise ValueError("no comparison flag specified for verification")
         if param_compare is None and needs_compare:
             raise TypeError("'param_compare' cannot be 'None' with specified test flags")
-        is_str_typ = param_compare in six.string_types or param_compare == six.string_types
-        is_cmp_typ = isinstance(param_compare, type)
+        is_cmp_typ = isinstance(param_compare, type) or (
+            isinstance(param_compare, tuple) and param_compare and all(isinstance(_cmp, type) for _cmp in param_compare)
+        )
+        if is_cmp_typ:  # avoid calling 'in' or '__eq__' implementation that could have trouble with 'other' as str type
+            is_str_typ = param_compare in six.string_types or param_compare == six.string_types
+        else:
+            is_str_typ = False
         if needs_compare and not needs_iterable:
             # allow 'different' string literals for comparison, otherwise types between value/compare must match exactly
             # with 'is_type', comparison must be made directly with compare as type instead of with instance type
