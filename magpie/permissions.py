@@ -152,10 +152,7 @@ class PermissionSet(object):
     def __eq__(self, other):
         # type: (Any) -> bool
         if not isinstance(other, PermissionSet):
-            if not (
-                isinstance(other, six.string_types) or
-                isinstance(other, (dict, tuple, PermissionTuple, Permission))
-            ):
+            if not isinstance(other, six.string_types + (dict, tuple, PermissionTuple, Permission)):  # type: ignore
                 return False
             other = PermissionSet(other)
         return self.name == other.name and self.access == other.access and self.scope == other.scope
