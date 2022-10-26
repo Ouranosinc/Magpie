@@ -35,7 +35,7 @@ users:
 #   not providing an entry referenced somewhere else (e.g.: in permissions or users)
 #   will default to only using the group name and defaults for every other field
 groups:
-  - name: <groupname>                 # required if entry provided
+  - name: <group.name>                # required if entry provided
     description: <some description>   # optional (default: empty)
     discoverable: True                # optional (default: False)
 
@@ -47,5 +47,4 @@ webhooks:
     url: <location>
     payload: # add any parameters required with the webhook url here
       <param_name> : <param_value>
-      ...
-
+      # ... more parameters ...
