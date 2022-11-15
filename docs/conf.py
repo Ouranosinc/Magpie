@@ -20,6 +20,12 @@ import os
 import re
 import sys
 
+import requests
+import requests.adapters
+from bs4 import BeautifulSoup
+from pyramid.config import Configurator
+from urllib3 import Retry
+
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
 # relative to the documentation root, use os.path.abspath to make it
@@ -39,7 +45,6 @@ sys.path.insert(0, PROJECT_ROOT)
 from magpie import __meta__  # isort:skip # noqa: E402
 # for api generation
 from magpie.api.schemas import generate_api_schema  # isort:skip # noqa: E402
-from pyramid.config import Configurator  # isort:skip # noqa: E402
 
 # -- General configuration ---------------------------------------------
 
@@ -117,6 +122,81 @@ autoapi_dirs = [os.path.join(PROJECT_ROOT, __meta__.__package__)]
 autoapi_ignore = [os.path.join(PROJECT_ROOT, "magpie/alembic/*")]
 autoapi_python_class_content = "both"
 
+linkcheck_timeout = 20
+linkcheck_retries = 5
+
+linkcheck_providers = {
+    "dkrz": {
+        "hostname": "esgf-data.dkrz.de",
+        "display_name": "DKRZ",
+        "locations": [
+            "esgf1.dkrz.de",
+            "esgf2.dkrz.de",
+            "esgf3.dkrz.de",
+        ],
+    },
+    "ipsl": {
+        "hostname": "esgf-node.ipsl.upmc.fr",
+        "display_name": "IPSL",
+        "locations": [
+            "vesg.ipsl.upmc.fr",
+        ],
+    },
+    # former "badc"
+    "ceda": {
+        "hostname": "esgf-index1.ceda.ac.uk",
+        "display_name": "CEDA",
+        "locations": [
+            "esgf.ceda.ac.uk",
+        ],
+    },
+    # former "pcmdi"
+    "llnl": {
+        "hostname": "esgf-node.llnl.gov",
+        "display_name": "LLNL",
+        "locations": [
+            "esgf-data1.llnl.gov",
+            "esgf-data2.llnl.gov",
+        ],
+    },
+    "smhi": {
+        "hostname": "esg-dn1.nsc.liu.se",
+        "display_name": "SMHI",
+        "locations": [
+            "esg-dn1.nsc.liu.se",
+            "esg-dn2.nsc.liu.se",
+        ],
+    },
+}
+
+
+def ignore_down_providers():
+    adapter = requests.adapters.HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1))
+    session = requests.Session()
+    session.mount("https://", adapter)
+    resp = session.get("https://esgf-node.llnl.gov/status/")
+    if resp.status_code != 200:
+        return []
+    body = BeautifulSoup(resp.text)
+    nodes = list(str(item) for item in body.find_all("tr") if any(status in str(item) for status in ["DOWN", "UP"]))
+    down_list = []
+    for prov_key, prov_cfg in linkcheck_providers.items():
+        prov_down = all(
+            "DOWN" in node
+            for node in nodes
+            if any(
+                prov in node
+                for prov in [prov_cfg["hostname"], prov_cfg["display_name"]] + prov_cfg["locations"]
+            )
+        )
+        if prov_down:
+            print(f"Ignoring provider [{prov_key}] detected as all instances down for link-check.")
+            locations = set(prov_cfg["hostname"] + prov_cfg["locations"])
+            locations |= set("https://{}".format(url) for url in locations)
+            down_list.extend(list(locations))
+    return down_list
+
+
 # cases to ignore during link checking
 linkcheck_ignore = [
     # might not exist yet (we are generating it!)
@@ -126,16 +206,14 @@ linkcheck_ignore = [
     "https://github.com/Ouranosinc/Magpie/*",    # limit only Magpie so others are still checked
     # ignore private links
     "https://github.com/Ouranosinc/PAVICS/*",
-    # ignore false-positive broken links to local doc files used for rendering on Github
+    # ignore false-positive broken links to local doc files used for rendering on GitHub
     "CHANGES.rst",
     r"docs/\w+.rst",
     "https://pcmdi.llnl.gov/",  # works, but very often causes false-positive 'broken' links
-]
+] + ignore_down_providers()
 linkcheck_anchors_ignore = [
-    r".*issuecomment.*"   # github issue comment anchors not resolved
+    r".*issuecomment.*"   # GitHub issue comment anchors not resolved
 ]
-linkcheck_timeout = 20
-linkcheck_retries = 5
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
