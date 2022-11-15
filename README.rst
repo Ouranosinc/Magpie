@@ -27,8 +27,8 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - releases
       - | |version| |commits-since|
 
-.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28legacy%20support%29-2.7%2C%203.5%2B-orange.svg
-    :alt: Python 2.7, 3.5+ supported (legacy)
+.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28legacy%20support%29-3.5%2B-orange.svg
+    :alt: Python 3.5+ supported (legacy)
     :target: https://www.python.org/getit
 
 .. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.7%2B-blue.svg
