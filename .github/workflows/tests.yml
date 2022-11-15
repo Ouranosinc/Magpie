@@ -49,7 +49,7 @@ jobs:
         # os: [ubuntu-latest, windows-latest]
         # python-version: ["2.7", "3.5", "3.6", "3.7", "3.8"]
         os: [ubuntu-latest]
-        python-version: ["3.6", "3.7", "3.8"]
+        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
         allow-failure: [false]
         test-case: [test-local]
         # can use below option to set environment variables or makefile settings applied during test execution
@@ -67,10 +67,10 @@ jobs:
             test-case: start test-remote
           # test allowed failing because of old versions
           # FIXME: remove altogether (twitcher does not support it for a long time)
-          #- os: ubuntu-latest
-          #  python-version: 2.7
-          #  allow-failure: true
-          #  test-case: test-local
+          - os: ubuntu-latest
+            python-version: 2.7
+            allow-failure: true
+            test-case: test-local
           - os: ubuntu-latest
             python-version: 3.5
             allow-failure: true
