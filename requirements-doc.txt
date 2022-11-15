@@ -4,7 +4,8 @@
 astroid<2.12    # pin to resolve sphinx-autoapi (see https://github.com/readthedocs/sphinx-autoapi/issues/349)
 cloud_sptheme
 jinja2<3.1  # fix sphinx failing, see: https://github.com/sphinx-doc/sphinx/issues/10291
-pycodestyle==2.6.0; python_version >= "3.6"
+pycodestyle>=2.6.0,<2.9.0; python_version <= "3.5"  # pyup: ignore
+pycodestyle>=2.6.0,<3; python_version >= "3.6"
 # sphinx-autoapi dropped 3.5 support at 1.3.0
 # latest to fullfil requirements, but that is not the main doc builder version
 sphinx-autoapi; python_version < "3.6"
