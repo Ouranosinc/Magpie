@@ -31,13 +31,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Requires Python 2.7, 3.5+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.27.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.28.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/3.27.0...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/3.28.0...master
 
-.. |version| image:: https://img.shields.io/badge/tag-3.27.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-3.28.0-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/3.27.0
+    :target: https://github.com/Ouranosinc/Magpie/tree/3.28.0
 
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/Magpie/shield.svg
     :alt: Dependencies Status
@@ -47,9 +47,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Github Actions CI Build Status (master branch)
     :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3Amaster
 
-.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/3.27.0?label=3.27.0
+.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/3.28.0?label=3.28.0
     :alt: Github Actions CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A3.27.0
+    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A3.28.0
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
     :alt: Readthedocs Build Status (master branch)
@@ -77,7 +77,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 .. |docker_semver_tag| image:: https://img.shields.io/docker/v/pavics/magpie?label=version&sort=semver
     :alt: Docker Version Tag
-    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=3.27.0
+    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=3.28.0
 
 .. end-badges
 
@@ -121,8 +121,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - ``pavics/magpie:3.27.0``
-      - ``pavics/twitcher:magpie-3.27.0``
+    * - ``pavics/magpie:3.28.0``
+      - ``pavics/twitcher:magpie-3.28.0``
     * - ``pavics/magpie:latest``
       - ``pavics/twitcher:magpie-latest``
 
