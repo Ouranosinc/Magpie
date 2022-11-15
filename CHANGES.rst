@@ -11,7 +11,7 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add Python 3.9 and 3.10 support.
+* Add Python 3.9, 3.10 and 3.11 support.
 * Drop Python 2.7 support.
 * Mark Python 3.5 and 3.6 as legacy versions.
   Those are not recommended for security reasons, but are technically still functional to run `Magpie`.

@@ -48,7 +48,7 @@ jobs:
       matrix:
         # os: [ubuntu-latest, windows-latest]
         os: [ubuntu-latest]
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         allow-failure: [false]
         test-case: [test-local]
         # can use below option to set environment variables or makefile settings applied during test execution
@@ -84,10 +84,10 @@ jobs:
             allow-failure: true
             test-case: test-local
           # test allowed failing for recent versions
-          - os: ubuntu-latest
-            python-version: 3.11
-            allow-failure: true
-            test-case: test-local
+          # - os: ubuntu-latest
+          #   python-version: 3.12
+          #   allow-failure: true
+          #   test-case: test-local
     steps:
       - uses: actions/checkout@v2
         with:
