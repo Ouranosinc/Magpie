@@ -191,7 +191,7 @@ def ignore_down_providers():
         )
         if prov_down:
             print(f"Ignoring provider [{prov_key}] detected as all instances down for link-check.")
-            locations = set(prov_cfg["hostname"] + prov_cfg["locations"])
+            locations = set([prov_cfg["hostname"]] + prov_cfg["locations"])
             locations |= set("https://{}".format(url) for url in locations)
             down_list.extend(list(locations))
     return down_list
