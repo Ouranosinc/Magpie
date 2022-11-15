@@ -48,8 +48,8 @@ sqlalchemy>=1.4.44,<2; python_version >= "3.7"
 sqlalchemy_utils<0.36.4; python_version < "3"      # pyup: ignore
 sqlalchemy_utils==0.37.9; python_version == "3.5"  # pyup: ignore
 sqlalchemy_utils==0.38.3; python_version >= "3.6"
-threddsclient==0.4.1; python_version < "3"
-threddsclient>=0.4.1; python_version >= "3"
+threddsclient==0.4.2; python_version < "3"         # pyup: ignore
+threddsclient>=0.4.2; python_version >= "3"
 transaction
 typing; python_version < "3"
 # typing extension required for TypedDict
