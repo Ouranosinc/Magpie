@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.28.0:
+
+`3.28.0 <https://github.com/Ouranosinc/Magpie/tree/3.28.0>`_ (2022-11-15)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Raise HTTP conflict on `Permission` update when the new `Permission` to be generated matches perfectly with the
