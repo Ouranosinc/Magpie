@@ -83,6 +83,11 @@ jobs:
             python-version: 3.6
             allow-failure: true
             test-case: test-local
+          # test allowed failing for recent versions
+          - os: ubuntu-latest
+            python-version: 3.11
+            allow-failure: true
+            test-case: test-local
     steps:
       - uses: actions/checkout@v2
         with:
