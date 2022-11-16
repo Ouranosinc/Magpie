@@ -47,9 +47,8 @@ jobs:
     strategy:
       matrix:
         # os: [ubuntu-latest, windows-latest]
-        # python-version: ["2.7", "3.5", "3.6", "3.7", "3.8"]
         os: [ubuntu-latest]
-        python-version: ["3.6", "3.7", "3.8"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         allow-failure: [false]
         test-case: [test-local]
         # can use below option to set environment variables or makefile settings applied during test execution
@@ -65,16 +64,6 @@ jobs:
             python-version: 3.7
             allow-failure: true
             test-case: start test-remote
-          # test allowed failing because of old versions
-          # FIXME: remove altogether (twitcher does not support it for a long time)
-          #- os: ubuntu-latest
-          #  python-version: 2.7
-          #  allow-failure: true
-          #  test-case: test-local
-          - os: ubuntu-latest
-            python-version: 3.5
-            allow-failure: true
-            test-case: test-local
           # coverage test
           - os: ubuntu-latest
             python-version: 3.7
@@ -85,12 +74,20 @@ jobs:
             python-version: none
             allow-failure: true
             test-case: test-docker
-          # --- debug ---
+          # test allowed failing for legacy versions
+          - os: ubuntu-latest
+            python-version: 3.5
+            allow-failure: true
+            test-case: test-local
+          - os: ubuntu-latest
+            python-version: 3.6
+            allow-failure: true
+            test-case: test-local
+          # test allowed failing for recent versions
           # - os: ubuntu-latest
-          #   python-version: 3.7
-          #   allow-failure: false
-          #   test-case: test-custom
-          #   test-option: MAGPIE_LOG_LEVEL=DEBUG TEST_LOG_LEVEL=DEBUG SPEC='test_import_target or TestAdapterHooks'
+          #   python-version: 3.12
+          #   allow-failure: true
+          #   test-case: test-local
     steps:
       - uses: actions/checkout@v2
         with:

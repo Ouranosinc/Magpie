@@ -19,7 +19,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :widths: 10,90
 
     * - dependencies
-      - | |py_ver| |dependencies|
+      - | |py_ver_support| |py_ver_recommend| |dependencies|
     * - tests status
       - | |github_latest| |github_tagged| |coverage| |codacy|
     * - docker status
@@ -27,8 +27,12 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - releases
       - | |version| |commits-since|
 
-.. |py_ver| image:: https://img.shields.io/badge/python-2.7%2C%203.5%2B-blue.svg
-    :alt: Requires Python 2.7, 3.5+
+.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28legacy%20support%29-3.5%2B-orange.svg
+    :alt: Python 3.5+ supported (legacy)
+    :target: https://www.python.org/getit
+
+.. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.7%2B-blue.svg
+    :alt: Python 3.7+ recommended
     :target: https://www.python.org/getit
 
 .. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/3.28.0.svg

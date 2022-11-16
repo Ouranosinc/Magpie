@@ -9,7 +9,17 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add Python 3.9, 3.10 and 3.11 support.
+* Drop Python 2.7 support.
+* Mark Python 3.5 and 3.6 as legacy versions.
+  Those are not recommended for security reasons, but are technically still functional to run `Magpie`.
+  To run `Magpie` within `Twitcher`, Python 3.6 is required.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Maintenance updates for security fixes of dependency packages.
 
 .. _changes_3.28.0:
 
