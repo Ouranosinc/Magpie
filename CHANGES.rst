@@ -11,6 +11,23 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* Add Python 3.9, 3.10 and 3.11 support.
+* Drop Python 2.7 support.
+* Mark Python 3.5 and 3.6 as legacy versions.
+  Those are not recommended for security reasons, but are technically still functional to run `Magpie`.
+  To run `Magpie` within `Twitcher`, Python 3.6 is required.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Maintenance updates for security fixes of dependency packages.
+
+.. _changes_3.28.0:
+
+`3.28.0 <https://github.com/Ouranosinc/Magpie/tree/3.28.0>`_ (2022-11-15)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Raise HTTP conflict on `Permission` update when the new `Permission` to be generated matches perfectly with the
   existing one to avoid unnecessary `Webhooks` calls (subsequent delete and create of the same `Permission` definition).
 * Add debug logging details of processed `Webhooks` to facilitate integration with other services sending or
