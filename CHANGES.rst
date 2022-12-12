@@ -11,6 +11,8 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* Add ``service_sync_type`` field to `Service` edition UI page.
+* Add missing Python typing annotations for ``magpie.cli.sync_resources`` and ``magpie.cli.sync_services`` functions.
 * Add Python 3.9, 3.10 and 3.11 support.
 * Drop Python 2.7 support.
 * Mark Python 3.5 and 3.6 as legacy versions.
@@ -19,6 +21,8 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
+* Fix missing ``resource_type`` field following synchronization with ``RemoteResource`` causing UI views ``KeyError``
+  when rendering their Mako template (resolves `#549 <https://github.com/Ouranosinc/Magpie/issues/549>`_).
 * Maintenance updates for security fixes of dependency packages.
 
 .. _changes_3.28.0:

@@ -20,13 +20,15 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, Type
 
-    from magpie.typedefs import JSON, Str
+    from magpie.typedefs import AnyNestedChildrenTree, ServiceResourceTypeTree, Str
 
 
 def is_valid_resource_schema(resources):
-    # type: (JSON) -> bool
+    # type: (AnyNestedChildrenTree) -> bool
     """
-    Returns ``True`` if the structure of the input dictionary is a tree of the following form:
+    Validates the resource structure.
+
+    Expected dictionary is a tree of the following form:
 
     .. code-block:: json
 
@@ -67,7 +69,7 @@ class SyncServiceInterface(object):
 
     @abc.abstractmethod
     def get_resources(self):
-        # type: () -> JSON
+        # type: () -> ServiceResourceTypeTree
         """
         This is the function actually fetching the data from the remote service. Implement this for every specific
         service.
@@ -81,9 +83,12 @@ class SyncServiceGeoserver(SyncServiceInterface):
 
     @property
     def max_depth(self):
+        # type: () -> None
         return None
 
     def get_resources(self):
+        # type: () -> ServiceResourceTypeTree
+
         # Only workspaces are fetched for now
         resource_type = "route"
         workspaces_url = "{}/{}".format(self.url, "workspaces")
@@ -109,9 +114,12 @@ class SyncServiceProjectAPI(SyncServiceInterface):
 
     @property
     def max_depth(self):
+        # type: () -> None
         return None
 
     def get_resources(self):
+        # type: () -> ServiceResourceTypeTree
+
         # Only workspaces are fetched for now
         resource_type = "route"
         projects_url = "/".join([self.url, "Projects"])
@@ -134,6 +142,7 @@ class SyncServiceThredds(SyncServiceInterface):
 
     @property
     def max_depth(self):
+        # type: () -> int
         return 3
 
     @staticmethod
@@ -144,8 +153,9 @@ class SyncServiceThredds(SyncServiceInterface):
         return id_
 
     def get_resources(self):
+        # type: () -> ServiceResourceTypeTree
         def thredds_get_resources(url, depth):
-            cat = threddsclient.read_url(url)
+            cat = threddsclient.read_url(url, timeout=5)
             name = self._resource_id(cat)
             if depth == self.max_depth:
                 name = self.service_name
@@ -170,9 +180,11 @@ class SyncServiceThredds(SyncServiceInterface):
 class SyncServiceDefault(SyncServiceInterface):
     @property
     def max_depth(self):
+        # type: () -> None
         return None
 
     def get_resources(self):
+        # type: () -> ServiceResourceTypeTree
         return {}
 
 

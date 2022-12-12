@@ -151,6 +151,18 @@
                     </tr>
                     <tr>
                         <td>
+                            <span class="panel-entry">Sync Type: </span>
+                        </td>
+                        <td>
+                            <div class="panel-line-entry">
+                                <span class="label ${'label-null' if service_sync_type is None else 'label-info'}">
+                                    ${str(service_sync_type).lower()}
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
                             <span class="panel-entry">Permissions: </span>
                         </td>
                         <td>
