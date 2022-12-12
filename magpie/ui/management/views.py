@@ -21,7 +21,6 @@ from pyramid.view import view_config
 from magpie import register
 from magpie.api import schemas
 from magpie.cli import sync_resources
-from magpie.cli.sync_resources import OUT_OF_SYNC
 from magpie.constants import get_constant
 # FIXME: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
@@ -179,7 +178,7 @@ class ManagementViews(AdminRequests, BaseViews):
                 return self.goto_service(res_id)
 
             if "clean_resource" in self.request.POST:
-                # "clean_resource" must be above "edit_permissions" because they"re in the same form.
+                # "clean_resource" must be above "edit_permissions" because they're in the same form.
                 self.delete_resource(res_id)
             elif "edit_permissions" in self.request.POST and not inherit_grp_perms:
                 # FIXME:
@@ -248,7 +247,7 @@ class ManagementViews(AdminRequests, BaseViews):
                 users_url = self.request.route_url("edit_user", user_name=user_name, cur_svc_type=cur_svc_type)
                 return HTTPMovedPermanently(location=users_url)
 
-            # edits to groups checkboxes
+            # edits to group's checkboxes
             if is_edit_group_membership:
                 selected_groups = self.request.POST.getall("member")
                 removed_groups = list(set(own_groups) - set(selected_groups) - {self.MAGPIE_ANONYMOUS_GROUP})
@@ -548,7 +547,7 @@ class ManagementViews(AdminRequests, BaseViews):
             path = schemas.ServiceResourcesAPI.path.format(service_name=service)
             resp = request_api(self.request, path, "GET")
             check_response(resp)
-            raw_resources = get_json(resp)[service]
+            raw_resources = get_json(resp)[service]  # type: Dict[Str, JSON]
             perms = permission.get(raw_resources["resource_id"], [])
             perm_names = [PermissionSet(perm_json).explicit_permission for perm_json in perms]
             resources[service] = OrderedDict(
@@ -608,7 +607,7 @@ class ManagementViews(AdminRequests, BaseViews):
                 group_info["description"] = self.request.POST.get("new_description")
                 group_info.update(self.update_group_info(group_name, group_info))
             elif "clean_resource" in self.request.POST:
-                # "clean_resource" must be above "edit_permissions" because they"re in the same form.
+                # "clean_resource" must be above "edit_permissions" because they're in the same form.
                 self.delete_resource(res_id)
             elif "is_discoverable" in self.request.POST:
                 group_info["discoverable"] = not asbool(self.request.POST.get("is_discoverable"))
@@ -721,7 +720,7 @@ class ManagementViews(AdminRequests, BaseViews):
         for last_sync, service_name in zip(last_sync_datetimes, services):
             if last_sync:
                 ids_to_clean += self.get_ids_to_clean(res_perms[service_name]["children"])
-                if now - last_sync > OUT_OF_SYNC:
+                if now - last_sync > sync_resources.OUT_OF_SYNC:
                     out_of_sync.append(service_name)
         return res_perms, ids_to_clean, last_sync_humanized, out_of_sync
 
@@ -731,7 +730,10 @@ class ManagementViews(AdminRequests, BaseViews):
         for service_name, service_values in services.items():
             service_id = service_values["resource_id"]
             merge = sync_resources.merge_local_and_remote_resources
-            resources_for_service = merge(res_perms, service_values["service_sync_type"], service_id, session)
+            # create a subset for the current local service resources tree
+            # avoids over-copying/looping the multi-service tree by merge function that works on the full set each time
+            local_svc_res = {service_name: res_perms[service_name]}
+            resources_for_service = merge(local_svc_res, service_values["service_sync_type"], service_id, session)
             merged_resources[service_name] = resources_for_service[service_name]
         return merged_resources
 
@@ -801,7 +803,7 @@ class ManagementViews(AdminRequests, BaseViews):
         path = schemas.ServiceResourcesAPI.path.format(service_name=service_name)
         resp = request_api(self.request, path, "GET")
         check_response(resp)
-        raw_resources = get_json(resp)[service_name]
+        raw_resources = get_json(resp)[service_name]  # type: Dict[Str, JSON]
         resources[service_name] = dict(
             id=raw_resources["resource_id"],
             permissions=[],
@@ -926,6 +928,7 @@ class ManagementViews(AdminRequests, BaseViews):
             "service_id": service_id,
             "service_push": service_push,
             "service_push_show": service_push_show,
+            "service_sync_type": service_data.get("service_sync_type"),
             "cur_svc_type": cur_svc_type,
         }  # type: Dict[str, Any]
 

@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     import math
     import typing
     from typing import Any, AnyStr, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
+    from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
 
     import six
     from pyramid.config import Configurator
@@ -30,19 +31,6 @@ if TYPE_CHECKING:
     from magpie import models
     from magpie.api.webhooks import WEBHOOK_TEMPLATE_PARAMS, WebhookAction, WebhookActionNames
     from magpie.permissions import Permission, PermissionSet
-
-    if hasattr(typing, "TypeAlias"):
-        from typing import TypeAlias  # pylint: disable=E0611,no-name-in-module  # Python >= 3.10
-    else:
-        from typing_extensions import TypeAlias
-    if hasattr(typing, "TypedDict"):
-        from typing import TypedDict  # pylint: disable=E0611,no-name-in-module
-    else:
-        from typing_extensions import TypedDict  # noqa
-    if hasattr(typing, "Literal"):
-        from typing import Literal  # pylint: disable=E0611,no-name-in-module
-    else:
-        from typing_extensions import Literal  # noqa
 
     # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 
@@ -82,6 +70,7 @@ if TYPE_CHECKING:
         "type": Optional[Str],
         "reason": Optional[Str]
     }, total=False)
+
     # recursive nodes structure employed by functions for listing children resources hierarchy
     # {<res-id>: {"node": <res>, "children": {<res-id>: ... }}
     _ResourceNode = "ResourceNode"  # type: TypeAlias  # pylint: disable=C0103
@@ -91,7 +80,32 @@ if TYPE_CHECKING:
         "children": NestedResourceNodes
     }, total=True)
     ResourcePermissionMap = Dict[int, List[PermissionSet]]  # raw mapping of permission-names applied per resource ID
+    ServiceResourceNodeTree = Dict[Str, ResourceNode]
     NestingKeyType = Literal["children", "parent"]
+
+    # recursive nodes structure employed by functions for listing children resources hierarchy
+    # {<svc-name>: {"resource_type": "<res>", "children": {<res-id>: ... }}
+    _NestedResourceTypeTree = "NestedResourceTypeTree"  # type: TypeAlias  # pylint: disable=C0103
+    NestedResourceTypeTree = TypedDict("NestedResourceTypeTree", {
+        "resource_type": Str,
+        "children": Dict[Str, _NestedResourceTypeTree],
+    }, total=True)
+    ServiceResourceTypeTree = Dict[Str, NestedResourceTypeTree]
+
+    _NestedRemoteResourceTree = "NestedRemoteResourceTree"  # type: TypeAlias  # pylint: disable=C0103
+    NestedRemoteResourceTree = TypedDict("NestedRemoteResourceTree", {
+        "remote_id": int,
+        "resource_type": Str,
+        "resource_display_name": NotRequired[Str],
+        "children": Dict[Str, _NestedRemoteResourceTree],
+    }, total=True)
+    RemoteResourceTree = Dict[Str, NestedRemoteResourceTree]
+
+    AnyNestedChildrenTree = Union[
+        RemoteResourceTree,
+        ServiceResourceNodeTree,
+        ServiceResourceTypeTree,
+    ]
 
     AnyZigguratPermissionType = Union[
         models.GroupPermission,

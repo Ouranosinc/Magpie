@@ -31,7 +31,8 @@ if TYPE_CHECKING:
 
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import JSON, Str
+    from magpie.models import Service
+    from magpie.typedefs import JSON, RemoteResourceTree, ServiceResourceNodeTree, SettingsType, Str
 
 LOGGER = get_logger(__name__)
 
@@ -46,6 +47,7 @@ for sync_service_class in SYNC_SERVICES_TYPES.values():
 
 
 def merge_local_and_remote_resources(resources_local, service_sync_type, service_id, session):
+    # type: (RemoteResourceTree, Str, int, Session) -> RemoteResourceTree
     """
     Main function to sync resources with remote server.
     """
@@ -59,13 +61,14 @@ def merge_local_and_remote_resources(resources_local, service_sync_type, service
 
 
 def _merge_resources(resources_local, resources_remote, max_depth=None):
+    # type: (RemoteResourceTree, RemoteResourceTree, Optional[int]) -> RemoteResourceTree
     """
     Merge resources_local and resources_remote, adding the following keys to the output:
 
         - remote_id: id of the RemoteResource
         - matches_remote: True or False depending if the resource is present on the remote server
 
-    :returns: dictionary of the form validated by `magpie.cli.sync_services.is_valid_resource_schema`.
+    :returns: Dictionary tree of the merged resources.
     """
     if not resources_remote:
         return resources_local
@@ -96,13 +99,16 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
         # loop remote resources, looking for matches in local resources
         for resource_name_remote, values in _resources_remote.items():
             if resource_name_remote not in _resources_local:
-                new_resource = {"permission_names": [],
-                                "permissions": [],
-                                "children": {},
-                                "id": None,
-                                "remote_id": values["remote_id"],
-                                "resource_display_name": values.get("resource_display_name", resource_name_remote),
-                                "matches_remote": True}
+                new_resource = {
+                    "permission_names": [],
+                    "permissions": [],
+                    "children": {},
+                    "id": None,
+                    "remote_id": values["remote_id"],
+                    "resource_type": values["resource_type"],
+                    "resource_display_name": values.get("resource_display_name", resource_name_remote),
+                    "matches_remote": True,
+                }
                 _resources_local[resource_name_remote] = new_resource
                 recurse(new_resource["children"], values["children"], depth + 1)
 
@@ -115,11 +121,13 @@ def _merge_resources(resources_local, resources_remote, max_depth=None):
 
 
 def _sort_resources(resources):
+    # type: (RemoteResourceTree) -> None
     """
-    Sorts a resource dictionary of the type validated by 'sync_services.is_valid_resource_schema' by using an
-    OrderedDict.
+    Sorts a nested resource dictionary.
 
-    :return: None
+    The dictionary is expected to be valid as per :func:`sync_services.is_valid_resource_schema`.
+
+    :return: None. Inplace modification.
     """
     for values in resources.values():
         values["children"] = OrderedDict(sorted(values["children"].items()))
@@ -127,11 +135,9 @@ def _sort_resources(resources):
 
 
 def _ensure_sync_info_exists(service_resource_id, session):
+    # type: (int, Session) -> None
     """
     Make sure the RemoteResourcesSyncInfo entry exists in the database.
-
-    :param service_resource_id:
-    :param session:
     """
     service_sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_resource_id, session)
     if not service_sync_info:
@@ -161,23 +167,18 @@ def _get_remote_resources(service):
 def _delete_records(service_id, session):
     """
     Delete all RemoteResource based on a Service.resource_id.
-
-    :param service_id:
-    :param session:
     """
     session.query(models.RemoteResource).filter_by(service_id=service_id).delete()
     session.flush()
 
 
 def _create_main_resource(service_id, session):
+    # type: (int, Session) -> None
     """
     Creates a main resource for a service, whether one currently exists or not.
 
     Each RemoteResourcesSyncInfo has a main RemoteResource of the same name as the service.
     This is similar to the Service and Resource relationship.
-
-    :param service_id:
-    :param session:
     """
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
     main_resource = models.RemoteResource(service_id=service_id,
@@ -190,12 +191,9 @@ def _create_main_resource(service_id, session):
 
 
 def _update_db(remote_resources, service_id, session):
+    # type: (RemoteResourceTree, int, Session) -> None
     """
     Writes remote resources to database.
-
-    :param remote_resources:
-    :param service_id:
-    :param session:
     """
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
 
@@ -222,23 +220,28 @@ def _update_db(remote_resources, service_id, session):
 
 
 def _format_resource_tree(children):
+    # type: (ServiceResourceNodeTree) -> RemoteResourceTree
     fmt_res_tree = {}
     for child_dict in children.values():
         resource = child_dict["node"]
         new_children = child_dict["children"]
         resource_display_name = resource.resource_display_name or resource.resource_name
-        resource_dict = {"children": _format_resource_tree(new_children),
-                         "remote_id": resource.resource_id,
-                         "resource_display_name": resource_display_name}
+        resource_dict = {
+            "children": _format_resource_tree(new_children),
+            "remote_id": resource.resource_id,
+            "resource_type": resource.resource_type,
+            "resource_display_name": resource_display_name,
+        }
         fmt_res_tree[resource.resource_name] = resource_dict
     return fmt_res_tree
 
 
 def _query_remote_resources_in_database(service_id, session):
+    # type: (int, Session) -> RemoteResourceTree
     """
     Reads remote resources from the RemoteResources table. No external request is made.
 
-    :return: a dictionary of the form defined in 'sync_services.is_valid_resource_schema'
+    :return: Dictionary of the form defined in :func:`sync_services.is_valid_resource_schema`.
     """
     service = session.query(models.Service).filter_by(resource_id=service_id).first()
     _ensure_sync_info_exists(service_id, session)
@@ -249,11 +252,21 @@ def _query_remote_resources_in_database(service_id, session):
     tree = get_resource_children(main_resource, session, models.REMOTE_RESOURCE_TREE_SERVICE)
 
     remote_resources = _format_resource_tree(tree)
-    return {service.resource_name: {"children": remote_resources, "remote_id": main_resource.resource_id}}
+    remote_service = {
+        service.resource_name: {
+            "children": remote_resources,
+            "resource_type": "service",
+            "remote_id": main_resource.resource_id,
+        }
+    }
+    return remote_service
 
 
 def get_last_sync(service_id, session):
     # type: (int, Session) -> Optional[datetime.datetime]
+    """
+    Obtain the date-time of the last known sync event for a service.
+    """
     last_sync = None
     _ensure_sync_info_exists(service_id, session)
     sync_info = models.RemoteResourcesSyncInfo.by_service_id(service_id, session)
@@ -263,11 +276,12 @@ def get_last_sync(service_id, session):
 
 
 def fetch_all_services_by_type(service_type, session):
+    # type: (Str, Session) -> None
     """
     Get remote resources for all services of a certain type.
 
-    :param service_type:
-    :param session:
+    :param service_type: Service type for which all corresponding services will be synchronized.
+    :param session: Database connexion to apply synchronization changes.
     """
     for service in session.query(models.Service).filter_by(type=service_type):
         try:
@@ -280,11 +294,12 @@ def fetch_all_services_by_type(service_type, session):
 
 
 def fetch_single_service(service, session):
+    # type: (Union[Service, int], Session) -> None
     """
     Get remote resources for a single service.
 
-    :param service: (models.Service) or service_id
-    :param session:
+    :param service: Specific service for which to synchronize remote resources.
+    :param session: Database connexion to apply synchronization changes.
     """
     if isinstance(service, int):
         service = session.query(models.Service).filter_by(resource_id=service).first()
@@ -302,6 +317,7 @@ def fetch_single_service(service, session):
 
 
 def fetch(settings=None):
+    # type: (Optional[SettingsType]) -> None
     """
     Main function to get all remote resources for each service and write to database.
     """
@@ -347,7 +363,7 @@ def make_parser():
                                                  "Magpie Service sync-type.")
     make_logging_options(parser)
     parser.add_argument("--db", metavar="CONNECTION_URL", dest="db",
-                        help="Magpie database URL to connect to. Otherwise employ typical environment variables.")
+                        help="Magpie database URL to connect to. Otherwise, employ typical environment variables.")
     return parser
 
 
