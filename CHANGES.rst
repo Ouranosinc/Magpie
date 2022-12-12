@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.29.0:
+
+`3.29.0 <https://github.com/Ouranosinc/Magpie/tree/3.29.0>`_ (2022-12-12)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add ``service_sync_type`` field to `Service` edition UI page.
