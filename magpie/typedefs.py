@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import math
-    import typing
     from typing import Any, AnyStr, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
     from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
 
