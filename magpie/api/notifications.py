@@ -66,9 +66,14 @@ def get_email_template(template_constant, container=None):
     if not isinstance(template_file, str) or not os.path.isfile(template_file) or not template_file.endswith(".mako"):
         raise_log("Email template [{}] missing or invalid from [{!s}]".format(template_constant, template_file),
                   IOError, logger=LOGGER)
-    template = Template(filename=template_file,    # nosec: B702  # mako escapes against XSS attacks
-                        default_filters=["decode.utf8", "trim"],  # mako email expected with Content-Type charset=UTF-8
-                        strict_undefined=True)     # report name of any missing variable reference
+    filters = [
+        "decode.utf8",  # email expected with Content-Type charset=UTF-8
+        "trim",
+        "h",            # apply HTML escape for security
+    ]
+    template = Template(filename=template_file,     # nosec: B702  # mako escapes against XSS attacks
+                        default_filters=filters,
+                        strict_undefined=True)      # report name of any missing variable reference
     return template
 
 
