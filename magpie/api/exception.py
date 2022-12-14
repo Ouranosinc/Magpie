@@ -177,13 +177,14 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             is_str_cmp = isinstance(param, six.string_types)
             ok_str_cmp = isinstance(param_compare, six.string_types)
             eq_typ_cmp = type(param) is type(param_compare)
+            is_pattern = matches and isinstance(param_compare, Pattern)
             if is_type and not (is_str_typ or is_cmp_typ):
                 LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
             if matches and not (isinstance(param_compare, six.string_types) or isinstance(param_compare, Pattern)):
                 LOGGER.debug("[param_compare: %s] invalid type is not a regex string or pattern", type(param_compare))
                 raise TypeError("'param_compare' for matching verification must be a string or compile regex pattern")
-            if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp)):
+            if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp) or is_pattern):
                 # since 'param' depends on provided input by user, it should be a user-side invalid parameter
                 # only exception is if 'param_compare' is not value-based, then developer combined wrong flags
                 if is_str_typ or is_cmp_typ:
