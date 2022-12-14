@@ -55,7 +55,8 @@ transaction
 typing; python_version < "3"
 # typing extension required for TypedDict
 typing_extensions; python_version < "3.8"
-wheel
+wheel; python_version <= "3.6"
+wheel>=0.38; python_version >= "3.7"
 webob
 ziggurat_foundations==0.8.4
 zope.interface>=4.7.2,<5
