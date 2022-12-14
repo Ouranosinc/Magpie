@@ -9,6 +9,7 @@ Tests for the various utility operations employed by Magpie.
 """
 import inspect
 import os
+import re
 import tempfile
 import unittest
 from distutils.version import LooseVersion
@@ -188,6 +189,8 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param("", not_empty=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("abc", is_empty=True), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=r"[0-9]+"), HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=re.compile(r"[0-9]+")),
+                           HTTPBadRequest)
 
         # with requested error
         utils.check_raises(lambda:
@@ -210,6 +213,11 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda:
                            ax.verify_param("abc", matches=True, param_compare=r"[0-9]+", http_error=HTTPForbidden),
                            HTTPForbidden)
+        utils.check_raises(lambda:
+                           ax.verify_param("abc", matches=True,
+                                           param_compare=re.compile(r"[0-9]+"),
+                                           http_error=HTTPForbidden),
+                           HTTPForbidden)
 
     def test_verify_param_proper_verifications_passed(self):
         ax.verify_param("x", param_compare=["a", "b"], not_in=True)
@@ -226,6 +234,7 @@ class TestUtils(unittest.TestCase):
         ax.verify_param("abc", not_empty=True)
         ax.verify_param("", is_empty=True)
         ax.verify_param("abc", matches=True, param_compare=r"[a-z]+")
+        ax.verify_param("abc", matches=True, param_compare=re.compile(r"[a-z]+"))
 
     def test_verify_param_args_incorrect_usage(self):
         """
@@ -241,6 +250,8 @@ class TestUtils(unittest.TestCase):
                            HTTPInternalServerError, msg="incorrect HTTP class to raise error should be caught")
         utils.check_raises(lambda: ax.verify_param([1], param_compare=1, is_in=True),
                            HTTPInternalServerError, msg="incorrect non-iterable compare should raise invalid type")
+        utils.check_raises(lambda: ax.verify_param("a", matches=True, param_compare=1),
+                           HTTPInternalServerError, msg="incorrect matching pattern not a string or compiled pattern")
         for flag in ["not_none", "not_empty", "not_in", "not_equal", "is_none", "is_empty", "is_in", "is_equal",
                      "is_true", "is_false", "is_type", "matches"]:
             utils.check_raises(lambda: ax.verify_param("x", **{flag: 1}),
@@ -289,6 +300,20 @@ class TestUtils(unittest.TestCase):
 
         # strings cases handled correctly (no raise)
         utils.check_no_raise(lambda: ax.verify_param("1", param_compare="1", is_equal=True))
+
+    def test_apply_param_content_pattern_param_compare_as_string(self):
+        result = ax.apply_param_content({}, "value", param_name="test", param_compare=re.compile("regex"),
+                                        param_content={}, with_param=True,
+                                        needs_compare=True, needs_iterable=False, is_type=False,
+                                        fail_conditions={"matches": False})
+        assert result == {
+            "param": {
+                "name": "test",
+                "value": "value",
+                "compare": "regex",
+                "conditions": {"matches": False},
+            }
+        }
 
     def test_enum_values_listing(self):
         utils.check_all_equal(DummyEnum.values(), ["value-1", "value-2"], any_order=True)
