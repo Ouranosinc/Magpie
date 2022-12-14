@@ -12,6 +12,8 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add HTML filtering rule when generating Mako Templates employed for email notifications to ensure safe parameters.
+* Add sanitization of regex patterns provided to ``verify_param`` function to ensure that if it gets misused by
+  specifying a user input, it would not unintentionally lead to potential regex injection and ReDoS attacks.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

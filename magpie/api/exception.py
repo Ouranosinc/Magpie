@@ -175,7 +175,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                 LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
             if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp)):
-                # since 'param' depends of provided input by user, it should be a user-side invalid parameter
+                # since 'param' depends on provided input by user, it should be a user-side invalid parameter
                 # only exception is if 'param_compare' is not value-based, then developer combined wrong flags
                 if is_str_typ or is_cmp_typ:
                     LOGGER.debug("[param: %s] invalid value compare with [param_compare: %s]", param, param_compare)
@@ -236,7 +236,8 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         fail_conditions.update({"is_type": isinstance(param, param_compare)})
         fail_verify = fail_verify or not fail_conditions["is_type"]
     if matches:
-        fail_conditions.update({"matches": bool(re.match(param_compare, param, re.I | re.X))})
+        param_compare_sanitized = re.escape(param_compare)
+        fail_conditions.update({"matches": bool(re.match(param_compare_sanitized, param, re.I | re.X))})
         fail_verify = fail_verify or not fail_conditions["matches"]
     if fail_verify:
         content = apply_param_content(content, param, param_compare, param_name, with_param, param_content,
