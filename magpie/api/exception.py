@@ -181,7 +181,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             if is_type and not (is_str_typ or is_cmp_typ):
                 LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
-            if matches and not (isinstance(param_compare, six.string_types) or isinstance(param_compare, Pattern)):
+            if matches and not isinstance(param_compare, (six.string_types, Pattern)):
                 LOGGER.debug("[param_compare: %s] invalid type is not a regex string or pattern", type(param_compare))
                 raise TypeError("'param_compare' for matching verification must be a string or compile regex pattern")
             if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp) or is_pattern):
