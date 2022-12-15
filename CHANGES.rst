@@ -9,7 +9,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add HTML filtering rule when generating Mako Templates employed for email notifications to ensure safe parameters.
+* Add common regex patterns as precompiled definitions to speedup their use when provided to ``verify_param`` function.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* N/A
 
 .. _changes_3.29.0:
 

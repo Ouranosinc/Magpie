@@ -1,4 +1,5 @@
 import json
+import platform
 import re
 from sys import exc_info
 from typing import TYPE_CHECKING
@@ -43,12 +44,17 @@ RAISE_RECURSIVE_SAFEGUARD_MAX = 5
 RAISE_RECURSIVE_SAFEGUARD_COUNT = 0
 
 # utility parameter validation regexes for 'matches' argument
-PARAM_REGEX = r"^[A-Za-z0-9]+(?:[\s_\-\.][A-Za-z0-9]+)*$"    # request parameters
-SCOPE_REGEX = r"^[A-Za-z0-9]+(?:[\:\s_\-\.][A-Za-z0-9]+)*$"  # allow scoped names (e.g.: 'namespace:value')
-EMAIL_REGEX = colander.EMAIL_RE
-UUID_REGEX = colander.UUID_REGEX
-URL_REGEX = colander.URL_REGEX
-INDEX_REGEX = r"^[0-9]+$"
+PARAM_REGEX = re.compile(r"^[A-Za-z0-9]+(?:[\s_\-\.][A-Za-z0-9]+)*$")    # request parameters
+SCOPE_REGEX = re.compile(r"^[A-Za-z0-9]+(?:[\:\s_\-\.][A-Za-z0-9]+)*$")  # allow scoped names (e.g.: 'namespace:value')
+EMAIL_REGEX = re.compile(colander.EMAIL_RE)
+UUID_REGEX = re.compile(colander.UUID_REGEX)
+URL_REGEX = re.compile(colander.URL_REGEX, re.I | re.X)
+INDEX_REGEX = re.compile(r"^[0-9]+$")
+
+if platform.python_version() >= "3.7":
+    Pattern = re.Pattern
+else:
+    Pattern = type(re.compile(""))
 
 
 def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
@@ -171,11 +177,15 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             is_str_cmp = isinstance(param, six.string_types)
             ok_str_cmp = isinstance(param_compare, six.string_types)
             eq_typ_cmp = type(param) is type(param_compare)
+            is_pattern = matches and isinstance(param_compare, Pattern)
             if is_type and not (is_str_typ or is_cmp_typ):
                 LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
-            if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp)):
-                # since 'param' depends of provided input by user, it should be a user-side invalid parameter
+            if matches and not isinstance(param_compare, (six.string_types, Pattern)):
+                LOGGER.debug("[param_compare: %s] invalid type is not a regex string or pattern", type(param_compare))
+                raise TypeError("'param_compare' for matching verification must be a string or compile regex pattern")
+            if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp) or is_pattern):
+                # since 'param' depends on provided input by user, it should be a user-side invalid parameter
                 # only exception is if 'param_compare' is not value-based, then developer combined wrong flags
                 if is_str_typ or is_cmp_typ:
                     LOGGER.debug("[param: %s] invalid value compare with [param_compare: %s]", param, param_compare)
@@ -236,7 +246,10 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         fail_conditions.update({"is_type": isinstance(param, param_compare)})
         fail_verify = fail_verify or not fail_conditions["is_type"]
     if matches:
-        fail_conditions.update({"matches": bool(re.match(param_compare, param, re.I | re.X))})
+        param_compare_regex = param_compare
+        if isinstance(param_compare, six.string_types):
+            param_compare_regex = re.compile(param_compare, re.I | re.X)
+        fail_conditions.update({"matches": bool(re.match(param_compare_regex, param))})
         fail_verify = fail_verify or not fail_conditions["matches"]
     if fail_verify:
         content = apply_param_content(content, param, param_compare, param_name, with_param, param_content,
@@ -276,6 +289,8 @@ def apply_param_content(content,                # type: JSON
                 param_compare = str if param_compare == six.string_types else param_compare
                 param_compare = getattr(param_compare, "__name__", str(param_compare))
                 param_compare = "Type[{}]".format(param_compare) if is_type else param_compare
+            if isinstance(param_compare, Pattern):
+                param_compare = param_compare.pattern
             content["param"]["compare"] = str(param_compare)
         if isinstance(param_content, dict):
             content["param"].update(param_content)
