@@ -47,11 +47,11 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Dependencies Status
     :target: https://pyup.io/account/repos/github/Ouranosinc/Magpie/
 
-.. |github_latest| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/master?label=master
+.. |github_latest| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/Magpie/tests.yml?label=master&branch=master
     :alt: Github Actions CI Build Status (master branch)
     :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3Amaster
 
-.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/Magpie/Tests/3.29.0?label=3.29.0
+.. |github_tagged| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/Magpie/tests.yml?label=3.29.0&branch=3.29.0
     :alt: Github Actions CI Build Status (latest tag)
     :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A3.29.0
 
