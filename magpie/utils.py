@@ -206,7 +206,7 @@ def isclass(obj):
 def ismethod(obj):
     # type: (Any) -> bool
     """
-    Evaluate an object for :class:`method` type (ie: class method reference.
+    Evaluate an object for :class:`method` type (i.e.: class method reference.
     """
     if six.PY2:
         return inspect.ismethod(obj)
@@ -435,7 +435,7 @@ def get_request_user(request):
     transaction if commit occurred beforehand. This can happen for example when creating a user from a pending-user
     where the user must be committed to allow webhooks to refer to it immediately, although the request has not
     completed processing. Operations using the ``request.user`` reference following that user creation could have a
-    detached object state from the session. Also ensure that any resolved user is allow attached to the reestablished
+    detached object state from the session. Ensure that any resolved user is also attached to the reestablished
     database session reference in the request.
 
     After reattaching to the session, following step is the original configuration setup
@@ -479,6 +479,7 @@ def get_header(header_name,         # type: Str
                default=None,        # type: Optional[Str], Optional[Union[Str, List[Str]]], bool
                split=None,          # type: Optional[Union[Str, List[Str]]]
                multi=False,         # type: bool
+               pop=False,           # type: bool
                ):                   # type: (...) -> Optional[Union[Str, List[Str]]]
     """
     Retrieves ``header_name`` by fuzzy match (independently of upper/lower-case and underscore/dash) from various
@@ -487,11 +488,13 @@ def get_header(header_name,         # type: Str
     If ``split`` is specified, the matched ``header_name`` is first split with it and the first item is returned.
     This allows to parse complex headers (e.g.: ``text/plain; charset=UTF-8`` to ``text/plain`` with ``split=';'``).
 
-    :param header_name: header to find.
-    :param header_container: where to look for `header_name`.
-    :param default: value to returned if `header_container` is invalid or `header_name` could not be found.
-    :param split: character(s) to use to split the *found* `header_name`.
-    :param multi: return extracted header as array of multiple values or return a single value on fist match.
+    :param header_name: Header to find.
+    :param header_container: Where to look for `header_name`.
+    :param default: Value to returned if `header_container` is invalid or `header_name` could not be found.
+    :param split: Character(s) to use to split the *found* `header_name`.
+    :param multi: Return extracted header as array of multiple values or return a single value on fist match.
+    :param pop: Remove the header from the container if found.
+    :returns: Found header value(s) if applicable.
     """
     def fuzzy_name(name):
         # type: (Str) -> Str
@@ -505,19 +508,31 @@ def get_header(header_name,         # type: Str
     if isinstance(headers, dict):
         headers = header_container.items()
     header_name = fuzzy_name(header_name)
-    headers_found = []
+    headers_found = set()
+    headers_value = []
     for h, v in headers:
         if fuzzy_name(h) == header_name:
+            headers_found.add(h)
             if isinstance(split, six.string_types) and len(split) > 1:
                 split = [c for c in split]
             if hasattr(split, "__iter__") and not isinstance(split, six.string_types):
                 for sep in split:
                     v = v.replace(sep, split[0])
                 split = split[0]
-            headers_found.append((v.split(split)[0] if split else v).strip())
+            headers_value.append((v.split(split)[0] if split else v).strip())
             if not multi:
-                return headers_found[0]
-    return headers_found or default
+                break
+    if headers_found and pop:
+        for h in headers_found:
+            if isinstance(header_container, list):
+                for i, (k, _) in enumerate(header_container):
+                    if k == h:
+                        del header_container[i]
+            else:
+                del header_container[h]
+    if not multi and headers_value:
+        headers_value = headers_value[0]
+    return headers_value or default
 
 
 def convert_response(response):
@@ -527,8 +542,8 @@ def convert_response(response):
 
     Content of the :paramref:`response` is expected to be JSON.
 
-    :param response: response to be converted
-    :returns: converted response
+    :param response: Response to be converted.
+    :returns: Converted response.
     """
     if isinstance(response, Response):
         return response
@@ -646,7 +661,7 @@ def get_settings(container, app=False):
     """
     Retrieve application settings from a supported container.
 
-    :param container: supported container with an handle to application settings.
+    :param container: supported container with a handle to application settings.
     :param app: allow retrieving from current thread registry if no container was defined.
     :return: found application settings dictionary.
     :raise TypeError: when no application settings could be found or unsupported container.
@@ -927,7 +942,7 @@ def log_exception_tween(handler, registry):  # noqa: F811
     """
     Tween factory that logs any exception before re-raising it.
 
-    Application errors are marked as ``ERROR`` while non critical HTTP errors are marked as ``WARNING``.
+    Application errors are marked as ``ERROR`` while non-critical HTTP errors are marked as ``WARNING``.
     """
     def log_exc(request):
         # type: (Request) -> Response

@@ -79,7 +79,11 @@ def process_sign_in_external(request, username, provider):
 
 def verify_provider(provider_name):
     # type: (Str) -> None
-    """:raises HTTPNotFound: if provider name is not one of known providers."""
+    """
+    Verifies that the specified name is a valid external provider against the login configuration providers.
+
+    :raises HTTPNotFound: if provider name is not one of known providers.
+    """
     ax.verify_param(provider_name, param_name="provider_name", param_compare=list(MAGPIE_PROVIDER_KEYS), is_in=True,
                     http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
 
@@ -148,10 +152,11 @@ def sign_in_view(request):
         login_failure_view(request, s.Signin_POST_UnauthorizedResponseSchema.description)
 
     elif provider_name in MAGPIE_EXTERNAL_PROVIDERS:
-        return ax.evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
+        resp = ax.evaluate_call(lambda: process_sign_in_external(request, user_name, provider_name),
                                 http_error=HTTPInternalServerError,
                                 content={"user_name": user_name, "provider_name": provider_name},
                                 msg_on_fail=s.Signin_POST_External_InternalServerErrorResponseSchema.description)
+        return resp
 
 
 @view_config(context=ZigguratSignInSuccess, permission=NO_PERMISSION_REQUIRED)

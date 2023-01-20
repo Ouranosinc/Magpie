@@ -62,7 +62,7 @@ def request_api(request,            # type: Request
     If they are passed as argument, corresponding values will override the ones found in :paramref:`request`.
 
     All sub-requests to the API are assumed to be :py:data:`magpie.common.CONTENT_TYPE_JSON` unless explicitly
-    overridden with :paramref:`headers`. Headers are also looked for for additional ``Set-Cookie`` header in case they
+    overridden with :paramref:`headers`. Headers are also looked for additional ``Set-Cookie`` header in case they
     need to be passed down to :paramref:`cookies`.
 
     :param request: incoming Magpie UI request that requires sub-request to Magpie API, to retrieve required details.
@@ -82,13 +82,14 @@ def request_api(request,            # type: Request
     else:
         headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
     # although no body is required per-say for HEAD/GET requests, add it if missing
-    # this avoid downstream errors when 'request.POST' is accessed
+    # this avoids downstream errors when 'request.POST' is accessed
     # we use a plain empty byte str because empty dict `{}` or `None` cause errors on each case
     # of local/remote testing with corresponding `webtest.TestApp`/`requests.Request`
-    if not data:
-        data = ""
-    if isinstance(data, dict) and get_header("Content-Type", headers, split=[",", ";"]) == CONTENT_TYPE_JSON:
-        data = json.dumps(data)
+    if method not in ("HEAD", "GET", "OPTIONS"):
+        if not data:
+            data = ""
+        if isinstance(data, dict) and get_header("Content-Type", headers, split=[",", ";"]) == CONTENT_TYPE_JSON:
+            data = json.dumps(data)
 
     if hasattr(cookies, "items"):  # any dict-like implementation
         cookies = list(cookies.items())
