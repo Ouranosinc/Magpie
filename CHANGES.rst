@@ -13,10 +13,11 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add HTML filtering rule when generating Mako Templates employed for email notifications to ensure safe parameters.
 * Add common regex patterns as precompiled definitions to speedup their use when provided to ``verify_param`` function.
+* Improve the documentation regarding the configuration of `GitHub` as `External Provider` for login identity.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* N/A
+* Fix duplicate ``Location`` header causing issues during HTTP redirection for `External Provider` login procedure.
 
 .. _changes_3.29.0:
 
