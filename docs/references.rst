@@ -33,10 +33,14 @@
 .. _LLNL: https://www.llnl.gov/
 .. _PCMDI: https://pcmdi.llnl.gov/
 .. _SMHI: https://www.smhi.se
-.. _GitHub_AuthN: https://docs.github.com/developers/apps/identifying-and-authorizing-users-for-github-apps
-.. |Github_OAuthApp| replace:: Creating an OAuth App
-.. _Github_OAuthApp: https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/
+.. _GitHub: https://github.com/
+.. |GitHub_OAuthApp_AuthN| replace:: GitHub OAuth App - Web Application Flow
+.. _GitHub_OAuthApp_AuthN: https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#web-application-flow
+.. |Github_OAuthApp_Config| replace:: OAuth App
+.. _Github_OAuthApp_Config: https://developer.github.com/apps/building-oauth-apps/creating-an-oauth-app/
 .. _WSO2: https://wso2.com/
+.. |GitHub_GitHubApp_Config| replace::  GitHub App
+.. _GitHub_GitHubApp_Config: https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps
 .. |WSO2_doc| replace:: WSO2 Identity Server Documentation
 .. _WSO2_doc: https://docs.wso2.com/display/IS550/WSO2+Identity+Server+Documentation
 
