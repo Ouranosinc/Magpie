@@ -163,9 +163,9 @@ managing this :term:`Authentication` procedure.
 |                                +-----------------------------------------------------------------------+
 |                                | *Swedish Meteorological and Hydrological Institute* (`SMHI`_)         |
 +--------------------------------+-----------------------------------------------------------------------+
-| ``OAuth2``                     | `GitHub_AuthN`_ Authentication                                        |
+| ``OAuth2``                     | `GitHub`_ Authentication (see :ref:`config_auth_github`)              |
 |                                +-----------------------------------------------------------------------+
-|                                | `WSO2`_ Open Source Identity Server                                   |
+|                                | `WSO2`_ Open Source Identity Server (see :ref:`config_auth_wso2`)     |
 +--------------------------------+-----------------------------------------------------------------------+
 
 | :sup:`(1)` extended variant of ``OpenID``

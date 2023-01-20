@@ -1198,6 +1198,7 @@ be defined to correspond to the provider signin endpoint, as defined below
 (with your relevant value resolution of :envvar:`MAGPIE_URL`).
 
 .. code-block:: yaml
+
     Homepage URL: ${MAGPIE_URL}
     Callback URL: ${MAGPIE_URL}/providers/github/signin
 
