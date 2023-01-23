@@ -45,8 +45,9 @@ class LoginViews(AdminRequests, BaseViews):
                 for key in self.request.POST:
                     data[key] = self.request.POST.get(key)
 
-                return_data["provider_name"] = data.get("provider_name", "").lower()
-                is_external = return_data["provider_name"] in [p.lower() for p in external_providers]
+                provider_name = data.get("provider_name", "")
+                return_data["provider_name"] = provider_name
+                is_external = provider_name.lower() in [p.lower() for p in external_providers]
                 if is_external:
                     return_data["user_name_internal"] = ""
                 else:

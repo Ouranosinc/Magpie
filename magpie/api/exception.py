@@ -25,6 +25,7 @@ from magpie.utils import (
     CONTENT_TYPE_PLAIN,
     CONTENT_TYPE_TXT_XML,
     SUPPORTED_ACCEPT_TYPES,
+    get_header,
     get_logger,
     isclass,
     islambda
@@ -593,6 +594,15 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
             http_headers.pop(header, None)
 
     try:
+        # Pass down Location if it is provided and should be given as input parameter for this HTTP class.
+        # Omitting this step would inject a (possibly extra) empty Location that defaults to the current application.
+        # When resolving HTTP redirects, injecting this extra Location when the requested one is not the current
+        # application will lead to redirection failures because all locations are appended in the header as CSV list.
+        if issubclass(http_class, HTTPRedirection):
+            location = get_header("Location", http_headers, pop=True)
+            if location and "location" not in http_kwargs:
+                http_kwargs["location"] = location
+
         # directly output json
         if content_type == CONTENT_TYPE_JSON:
             content_type = "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)

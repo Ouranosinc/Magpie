@@ -177,10 +177,7 @@ def authomatic_config(request=None):
             # "redirect_uri": "{}/providers/github/signin".format(request.application_url) if request else None,
             "access_headers": {"User-Agent": "Magpie"},
             "id": provider_id(),
-            "_apis": {
-                "Get your events": ("GET", "https://api.github.com/users/{user.username}/events"),
-                "Get your watched repos": ("GET", "https://api.github.com/user/subscriptions"),
-            },
+            "_apis": {},
         },
         "wso2": {
             "class_": wso2.WSO2,

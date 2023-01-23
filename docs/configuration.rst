@@ -1181,13 +1181,52 @@ configuration names are supported where mentioned.
 GitHub Settings
 ~~~~~~~~~~~~~~~~~
 
-To use `GitHub_AuthN`_ authentication provider, variables :envvar:`GITHUB_CLIENT_ID` and :envvar:`GITHUB_CLIENT_SECRET`
-must be configured. These settings correspond to the values retrieved from following steps described in
-`Github_OAuthApp`_.
+To offer `GitHub`_ as an :term:`External Provider` for authentication within `Magpie`, a trusted
+|Github_OAuthApp_Config|_ or |Github_GitHubApp_Config|_ must be created to grant necessary access to your `Magpie`
+instance to communicate with GitHub in order to retrieve profile :term:`Authentication` tokens for users granting
+it the corresponding permission.
+You can customise the application name, image and description has deemed fit for your own `Magpie` instance.
 
-Furthermore, the callback URL used for configuring the OAuth application on GitHub must match the running `Magpie`
-instance URL. For this reason, the values of :envvar:`MAGPIE_URL`, :envvar:`MAGPIE_HOST` and :envvar:`HOSTNAME` must
-be considered.
+.. note::
+    Both the |Github_OAuthApp_Config|_ and |Github_GitHubApp_Config|_ can be used interchangeably since the only access
+    and scope required by `Magpie` is to validate `GitHub` user identities, which is supported by both approaches.
+
+The `Homepage URL` used for configuring the :term:`Authentication` application on GitHub should match the targeted
+`Magpie` instance URL. Other :ref:`config_app_settings` values such as :envvar:`MAGPIE_URL`, :envvar:`MAGPIE_HOST`
+and :envvar:`HOSTNAME` used to configure the instance must be considered. The `Authorization callback URL` should
+be defined to correspond to the provider signin endpoint, as defined below
+(with your relevant value resolution of :envvar:`MAGPIE_URL`).
+
+.. code-block:: yaml
+
+    Homepage URL: ${MAGPIE_URL}
+    Callback URL: ${MAGPIE_URL}/providers/github/signin
+
+Once created, variables :envvar:`GITHUB_CLIENT_ID` and :envvar:`GITHUB_CLIENT_SECRET` obtained from `GitHub` must
+be configured in the environment loaded by the `Magpie` instance. These settings correspond to the values that
+will be used to accomplish |Github_OAuthApp_AuthN|_.
+
+During login on `Magpie`, users will then be able to select the `GitHub` :term:`External Provider` using their
+`GitHub` usernames, as shown below.
+
+.. figure:: _static/github-external-login.png
+    :alt: GitHub External Provider Login
+
+    Magpie UI login section using GitHub OAuth as External Provider.
+
+The login page will perform a redirection toward the `GitHub`_ authentication page, asking them
+to login if necessary, and will ask to grant permissions to the OAuth application to access their `GitHub` identity
+for validation. After validation, the `Callback URL` will be used to return automatically to your `Magpie` instance,
+where the user should then be automatically logged in using the external identity. On future logins, it will not be
+necessary to re-validate the granted permissions as long as the OAuth application remains available and its
+:envvar:`GITHUB_CLIENT_ID` and :envvar:`GITHUB_CLIENT_SECRET` remain synchronized with the `Magpie` instance.
+
+.. warning::
+    Note that, as during :term:`User` creation, the same uniqueness rules apply for usernames and emails.
+    Users will not be able to reuse the same username and/or email across *internal* and *external* :term:`Provider`
+    logins. If this poses issues for your use cases, contributions to
+    `Ouranosinc/Magpie#118 <https://github.com/Ouranosinc/Magpie/issues/118>`_
+    would be welcome to work on better supporting internal/external :term:`User` associations.
 
 .. seealso::
     Refer to :ref:`authn_requests` and :ref:`authn_providers` for details.
@@ -1197,7 +1236,7 @@ be considered.
 WSO2 Settings
 ~~~~~~~~~~~~~~~~~
 
-To use `WSO2`_ authentication provider, following variables must be set:
+To use `WSO2`_ authentication as :term:`External Provider`, following variables must be set:
 
 - :envvar:`WSO2_HOSTNAME`
 - :envvar:`WSO2_CLIENT_ID`
