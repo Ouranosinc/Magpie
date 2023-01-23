@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.30.0:
+
+`3.30.0 <https://github.com/Ouranosinc/Magpie/tree/3.30.0>`_ (2023-01-23)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add HTML filtering rule when generating Mako Templates employed for email notifications to ensure safe parameters.
