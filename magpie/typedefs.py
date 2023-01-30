@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]
     SettingsType = Dict[Str, SettingValue]
+    AnyRegistryContainer = Union[Configurator, Registry, PyramidRequest, PyramidResponse]
     AnySettingsContainer = Union[Configurator, Registry, PyramidRequest, PyramidResponse, SettingsType]
 
     ParamsType = Dict[Str, Any]

@@ -9,7 +9,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add ``get_registry`` utility function and adjust ``get_settings`` that reuses common operations between them.
 
 .. _changes_3.30.0:
 
