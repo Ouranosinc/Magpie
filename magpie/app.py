@@ -34,6 +34,7 @@ from magpie.utils import (
     patch_magpie_url,
     print_log,
     setup_cache_settings,
+    setup_pyramid_config,
     setup_session_config,
     setup_ziggurat_config
 )
@@ -147,6 +148,7 @@ def main(global_config=None, **settings):  # noqa: F811
     config = get_auth_config(settings)
     setup_cache_settings(settings)  # default 'cache=off' if missing since 'pyramid_beaker' enables it otherwise
     set_cache_regions_from_settings(settings)  # parse/convert cache settings into regions understood by beaker
+    setup_pyramid_config(config)
     setup_session_config(config)
     setup_ziggurat_config(config)
 

@@ -43,6 +43,7 @@ from magpie.utils import (
     is_json_body,
     normalize_field_pattern,
     setup_cache_settings,
+    setup_pyramid_config,
     setup_session_config
 )
 
@@ -52,7 +53,7 @@ from magpie.utils import (
 #   Module 'magpie.adapter' should not be imported from 'magpie' package.
 from twitcher.__version__ import __version__ as twitcher_version  # noqa
 from twitcher.adapter.base import AdapterInterface  # noqa
-from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
+from twitcher.owsproxy import owsproxy_defaultconfig, send_request  # noqa
 
 if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
     from twitcher.owsregistry import OWSRegistry  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.x
@@ -278,6 +279,7 @@ class MagpieAdapter(AdapterInterface):
         LOGGER.info("Loading Magpie AuthN/AuthZ configuration for adapter.")
         config = get_auth_config(container)
         config.include("pyramid_beaker")
+        setup_pyramid_config(config)
         setup_session_config(config)
 
         # add route to verify user token matching between Magpie/Twitcher
@@ -379,6 +381,23 @@ class MagpieAdapter(AdapterInterface):
             response, service["name"], "response",
             response.request.method, request_path, response.request.query_string
         )
+        return response
+
+    def send_request(self, request, service):
+        # type: (Request, ServiceConfig) -> Response
+        """
+        Send the request to the proxied service and handle its response.
+
+        .. versionadded:: 3.31
+            Requires ``Twitcher >= 0.8.x``.
+
+        Because requests are sometimes handled using :mod:`requests` depending on the service type, the ``request``
+        reference in the produced ``response`` is not always set. Ensure it is applied to allow :meth:`response_hook`
+        retrieving it when attempting to resolve the proxied service path.
+        """
+        response = send_request(request, service)
+        if response.request is None:
+            response.request = request
         return response
 
 
