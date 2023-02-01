@@ -6134,7 +6134,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 #   instead, only check that the URL minimally contains service path detail and is not Magpie URL
                 svc_parsed_url = urlparse(svc["public_url"])
                 utils.check_val_true(svc_parsed_url.path.endswith("/" + svc_name))
-                utils.check_val_not_equal(svc_parsed_url.netloc, p_url.netloc, msg="Public URL cannot be under Magpie")
+                utils.check_val_not_equal(svc_parsed_url.netloc, p_url.netloc,
+                                          msg="Public URL cannot be under Magpie. Error in service:\n{}".format(svc))
 
         # ensure that no providers are missing from registered services
         registered_svc_names = [svc["service_name"] for svc in services_list]
