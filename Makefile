@@ -529,6 +529,7 @@ check-security-only: check-security-code-only check-security-deps-only  ## run s
 
 # ignored codes:
 #	42194: https://github.com/kvesteri/sqlalchemy-utils/issues/166  # not fixed since 2015
+#	51668: https://github.com/sqlalchemy/sqlalchemy/pull/8563  # still in beta + major version change sqlalchemy 2.0.0b1
 .PHONY: check-security-deps-only
 check-security-deps-only: mkdir-reports  ## run security checks on package dependencies
 	@echo "Running security checks of dependencies..."
@@ -540,6 +541,7 @@ check-security-deps-only: mkdir-reports  ## run security checks on package depen
 			-r "$(APP_ROOT)/requirements-doc.txt" \
 			-r "$(APP_ROOT)/requirements-sys.txt" \
 			-i 42194 \
+			-i 51668 \
 		1> >(tee "$(REPORTS_DIR)/check-security-deps.txt")'
 
 .PHONY: check-security-code-only
