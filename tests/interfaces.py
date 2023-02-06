@@ -6118,7 +6118,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         services_list = utils.TestSetup.get_RegisteredServicesList(self)
 
         # ensure that registered services information are all matching the providers in config file
-        # ignore registered services not from providers as their are not explicitly required from the config
+        # ignore registered services not from providers as they are not explicitly required from the config
         for svc in services_list:
             svc_name = svc["service_name"]
             if svc_name in self.test_services_info:

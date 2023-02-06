@@ -713,6 +713,8 @@ def get_settings(container, app=False):
         print_log("Using settings from local thread.", level=logging.DEBUG)
         registry = get_current_registry()
         return registry.settings
+    if isinstance(container, Registry):  # pre-check registry that is also a 'dict'
+        container = container.settings
     if isinstance(container, dict):
         return container
     registry = get_registry(container, nothrow=True)
