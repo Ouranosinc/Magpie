@@ -696,7 +696,8 @@ def get_registry(container=None, nothrow=False):
         return get_current_registry()
     if nothrow:
         return None
-    raise TypeError(f"Could not retrieve registry from container object of type [{fully_qualified_name(container)}].")
+    name = fully_qualified_name(container)
+    raise TypeError("Could not retrieve registry from container object of type [{}].".format(name))
 
 
 def get_settings(container, app=False):
@@ -714,13 +715,14 @@ def get_settings(container, app=False):
         registry = get_current_registry()
         return registry.settings
     if isinstance(container, Registry):  # pre-check registry that is also a 'dict'
-        container = container.settings
+        return container.settings
     if isinstance(container, dict):
         return container
     registry = get_registry(container, nothrow=True)
     if isinstance(registry, Registry):
         return registry.settings
-    raise TypeError("Could not retrieve settings from container object [{}]".format(fully_qualified_name(container)))
+    name = fully_qualified_name(container)
+    raise TypeError("Could not retrieve settings from container object [{}]".format(name))
 
 
 def import_target(target, default_root=None):
