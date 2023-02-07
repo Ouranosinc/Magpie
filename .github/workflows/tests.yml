@@ -123,6 +123,7 @@ jobs:
         uses: codecov/codecov-action@v2
         if: ${{ success() && matrix.test-case == 'coverage' }}
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./reports/coverage.xml
           fail_ci_if_error: true
           verbose: true
