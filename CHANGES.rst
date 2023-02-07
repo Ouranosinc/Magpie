@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.31.0:
+
+`3.31.0 <https://github.com/Ouranosinc/Magpie/tree/3.31.0>`_ (2023-02-07)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Use ``twitcher>=0.8.0``.
