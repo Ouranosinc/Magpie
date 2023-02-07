@@ -43,6 +43,7 @@ from magpie.utils import (
     is_json_body,
     normalize_field_pattern,
     setup_cache_settings,
+    setup_pyramid_config,
     setup_session_config
 )
 
@@ -54,13 +55,27 @@ from twitcher.__version__ import __version__ as twitcher_version  # noqa
 from twitcher.adapter.base import AdapterInterface  # noqa
 from twitcher.owsproxy import owsproxy_defaultconfig  # noqa
 
+try:
+    from twitcher.owsproxy import send_request  # noqa  # Twitcher >= 0.8.0
+except ImportError:
+    # old reference provides unused extra arguments, but otherwise remain the same implementation
+    from twitcher.owsproxy import _send_request as send_request  # noqa
+
+    warnings.warn(
+        "Older version of Twitcher detected. Using old references as fallback for backward compatibility support."
+        "Consider updating to a more recent version of Twitcher."
+        "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
+        ImportWarning
+    )
+
+
 if LooseVersion(twitcher_version) >= LooseVersion("0.6.0"):
     from twitcher.owsregistry import OWSRegistry  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.x
 
-    if LooseVersion(twitcher_version) >= LooseVersion("0.8.0"):
+    if LooseVersion(twitcher_version) >= LooseVersion("0.9.0"):
         warnings.warn(
             "This Magpie version is not guaranteed to work with newer versions of Twitcher. "
-            "This Magpie version offers compatibility with Twitcher 0.6.x and 0.7.x."
+            "This Magpie version offers compatibility with Twitcher 0.6.x through 0.8.x."
             "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
             ImportWarning
         )
@@ -84,7 +99,7 @@ if LooseVersion(twitcher_version) == LooseVersion("0.6.0"):
     warnings.warn(
         "Twitcher 0.6.0 exact version does not have complete compatibility support for MagpieAdapter. "
         "It is recommended to either revert to Twitcher 0.5.x and previous Magpie < 3.18 version, "
-        "or use an higher Twitcher 0.6.x version. "
+        "or use a higher Twitcher 0.6.x version. "
         "Current package versions are (Twitcher: {}, Magpie: {})".format(twitcher_version, magpie_version),
         ImportWarning
     )
@@ -278,6 +293,7 @@ class MagpieAdapter(AdapterInterface):
         LOGGER.info("Loading Magpie AuthN/AuthZ configuration for adapter.")
         config = get_auth_config(container)
         config.include("pyramid_beaker")
+        setup_pyramid_config(config)
         setup_session_config(config)
 
         # add route to verify user token matching between Magpie/Twitcher
@@ -379,6 +395,23 @@ class MagpieAdapter(AdapterInterface):
             response, service["name"], "response",
             response.request.method, request_path, response.request.query_string
         )
+        return response
+
+    def send_request(self, request, service):
+        # type: (Request, ServiceConfig) -> Response
+        """
+        Send the request to the proxied service and handle its response.
+
+        .. versionadded:: 3.31
+            Requires ``Twitcher >= 0.8.x``.
+
+        Because requests are sometimes handled using :mod:`requests` depending on the service type, the ``request``
+        reference in the produced ``response`` is not always set. Ensure it is applied to allow :meth:`response_hook`
+        retrieving it when attempting to resolve the proxied service path.
+        """
+        response = send_request(request, service)
+        if response.request is None:
+            response.request = request
         return response
 
 

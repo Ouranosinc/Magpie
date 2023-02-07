@@ -9,7 +9,19 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Use ``twitcher>=0.8.0``.
+* Register a ``ResponseFactory`` that inserts the ``request`` reference within produced ``response`` objects when
+  handled by ``pyramid`` handlers. This is to ensure better alignment of expected object references with other code
+  sections, such as in the ``MagpieAdapter``.
+* Add ``get_registry`` utility function and adjust ``get_settings`` that reuses common operations between them.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix ``MagpieAdapter`` to employ the new ``send_request`` method (``twitcher>=0.8.0``) in order to inject the
+  missing ``response.request`` reference within the proxied response when the ``requests`` module was used to perform
+  the request. This resolves a ``None`` reference that caused most of the ``MagpieAdapter.response_hook`` to fail.
 
 .. _changes_3.30.0:
 

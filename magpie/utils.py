@@ -16,6 +16,7 @@ import requests
 import six
 from pyramid.config import ConfigurationError, Configurator
 from pyramid.httpexceptions import HTTPClientError, HTTPException, HTTPOk
+from pyramid.interfaces import IResponseFactory
 from pyramid.registry import Registry
 from pyramid.request import Request
 from pyramid.response import Response
@@ -31,6 +32,7 @@ from sqlalchemy.orm.exc import DetachedInstanceError
 from transaction.interfaces import NoTransaction
 from webob.headers import EnvironHeaders, ResponseHeaders
 from ziggurat_foundations.models.services.user import UserService
+from zope.interface import implementer
 
 from magpie import __meta__
 from magpie.constants import get_constant
@@ -53,6 +55,7 @@ if TYPE_CHECKING:
         JSON,
         AnyHeadersType,
         AnyKey,
+        AnyRegistryContainer,
         AnyRequestType,
         AnyResponseType,
         AnySettingsContainer,
@@ -292,6 +295,28 @@ def setup_cache_settings(settings, force=False, enabled=False, expire=0):
             _set(cache_expire, str(expire))
         else:
             settings.pop(cache_expire, None)
+
+
+def setup_pyramid_config(config):
+    # type: (Configurator) -> None
+    """
+    Setup :mod:`Pyramid` utilities in the application configuration to define expected object references.
+    """
+    registry = get_registry(config)
+    response_factory = registry.queryUtility(IResponseFactory)
+    if not response_factory:
+
+        @implementer(IResponseFactory)
+        class ResponseFactory(object):
+            @staticmethod
+            def __call__(request):
+                # type: (Request) -> Response
+                """
+                Obtain a response object with the request object reference set as its property.
+                """
+                return Response(request=request)
+
+        registry.registerUtility(factory=ResponseFactory)
 
 
 def setup_session_config(config):
@@ -656,6 +681,25 @@ def get_admin_cookies(container, verify=True, raise_message=None):
     return {token_name: session_cookies}
 
 
+def get_registry(container=None, nothrow=False):
+    # type: (Optional[AnyRegistryContainer], bool) -> Optional[Registry]
+    """
+    Retrieves the application ``registry`` from various containers referencing to it.
+    """
+    if isinstance(container, Response):
+        container = container.request
+    if isinstance(container, (Configurator, Request)):
+        return container.registry
+    if isinstance(container, Registry):
+        return container
+    if container is None:
+        return get_current_registry()
+    if nothrow:
+        return None
+    name = fully_qualified_name(container)
+    raise TypeError("Could not retrieve registry from container object of type [{}].".format(name))
+
+
 def get_settings(container, app=False):
     # type: (Optional[AnySettingsContainer], bool) -> SettingsType
     """
@@ -666,19 +710,19 @@ def get_settings(container, app=False):
     :return: found application settings dictionary.
     :raise TypeError: when no application settings could be found or unsupported container.
     """
-    if isinstance(container, Response):
-        container = container.request
-    if isinstance(container, (Configurator, Request)):
-        return container.registry.settings  # noqa
-    if isinstance(container, Registry):
-        return container.settings
-    if isinstance(container, dict):
-        return container
     if container is None and app:
         print_log("Using settings from local thread.", level=logging.DEBUG)
         registry = get_current_registry()
         return registry.settings
-    raise TypeError("Could not retrieve settings from container object [{}]".format(type(container)))
+    if isinstance(container, Registry):  # pre-check registry that is also a 'dict'
+        return container.settings
+    if isinstance(container, dict):
+        return container
+    registry = get_registry(container, nothrow=True)
+    if isinstance(registry, Registry):
+        return registry.settings
+    name = fully_qualified_name(container)
+    raise TypeError("Could not retrieve settings from container object [{}]".format(name))
 
 
 def import_target(target, default_root=None):
