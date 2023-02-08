@@ -56,17 +56,17 @@ jobs:
         include:
           # linter tests
           - os: ubuntu-latest
-            python-version: 3.7
+            python-version: 3.11
             allow-failure: false
             test-case: check
           # remote test
           - os: ubuntu-latest
-            python-version: 3.7
+            python-version: 3.11
             allow-failure: true
             test-case: start test-remote
           # coverage test
           - os: ubuntu-latest
-            python-version: 3.7
+            python-version: 3.11
             allow-failure: false
             test-case: coverage
           # smoke test of Docker image

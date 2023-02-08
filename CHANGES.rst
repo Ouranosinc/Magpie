@@ -9,7 +9,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Use Python 3.11 in the `Magpie` Docker application to take advantage of performance improvements and security fixes.
+* Use ``twitcher>=0.9.0`` based on Python 3.11 for the `Twitcher` Docker with ``MagpieAdapter`` preinstalled.
+* Use Python 3.11 by default for CI tests and linting checks.
 
 .. _changes_3.31.0:
 
