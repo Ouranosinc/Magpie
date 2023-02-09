@@ -1253,8 +1253,8 @@ parameters), please refer to |WSO2_doc|_.
 
 .. _config_user_register_approval:
 
-User Registration and Approval Configuration
------------------------------------------------
+User Registration and Approval Settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 3.13
 
@@ -1442,8 +1442,8 @@ approval procedures.
 
 .. _config_user_group_assignment:
 
-User-Group Assignment Configuration
------------------------------------
+User-Group Assignment Settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. versionadded:: 3.17
 
