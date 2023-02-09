@@ -56,7 +56,10 @@ jobs:
         include:
           # linter tests
           - os: ubuntu-latest
-            python-version: 3.11
+            # FIXME:
+            #   Not using 3.11 because of problems with pylint false-positives about missing builtin references.
+            #   https://github.com/PyCQA/pylint/issues/6535
+            python-version: 3.10
             allow-failure: false
             test-case: check
           # remote test
