@@ -59,17 +59,17 @@ jobs:
             # FIXME:
             #   Not using 3.11 because of problems with pylint false-positives about missing builtin references.
             #   https://github.com/PyCQA/pylint/issues/6535
-            python-version: 3.10
+            python-version: "3.10"
             allow-failure: false
             test-case: check
           # remote test
           - os: ubuntu-latest
-            python-version: 3.11
+            python-version: "3.11"
             allow-failure: true
             test-case: start test-remote
           # coverage test
           - os: ubuntu-latest
-            python-version: 3.11
+            python-version: "3.11"
             allow-failure: false
             test-case: coverage
           # smoke test of Docker image
@@ -79,11 +79,11 @@ jobs:
             test-case: test-docker
           # test allowed failing for legacy versions
           - os: ubuntu-20.04
-            python-version: 3.5
+            python-version: "3.5"
             allow-failure: true
             test-case: test-local
           - os: ubuntu-20.04
-            python-version: 3.6
+            python-version: "3.6"
             allow-failure: true
             test-case: test-local
           # test allowed failing for recent versions
