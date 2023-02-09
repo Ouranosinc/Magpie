@@ -14,7 +14,7 @@ sphinx-autoapi>=1.7.0; python_version >= "3.6"
 sphinx-paramlinks>=0.4.1,<0.5; python_version < "3"
 sphinx-paramlinks>=0.4.1; python_version >= "3"
 sphinx; python_version < "3"
-sphinx>=3.1,<4; python_version >= "3"
+sphinx>=3.1,<6; python_version >= "3"
 sphinxcontrib-redoc>=1.6.0
 sphinx_autodoc_typehints[type_comments]; python_version < "3.6"
 sphinx_autodoc_typehints[type_comments]>=1.11.0; python_version >= "3.6"
