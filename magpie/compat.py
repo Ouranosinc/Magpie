@@ -17,6 +17,19 @@ try:
         def patch(self):
             return self.micro
 
+        def _cmp(self, other):
+            # type: (Union[LooseVersion, str]) -> int
+            if isinstance(other, str):
+                other = LooseVersion(other)
+            elif not isinstance(other, LooseVersion):
+                return NotImplemented
+            if self.version == other.version:
+                return 0
+            if self.version < other.version:
+                return -1
+            if self.version > other.version:
+                return 1
+
 except ImportError:  # pragma: no cover  # for backward compatibility
     from distutils.version import LooseVersion as BaseVersion  # pylint: disable=deprecated-module
 
