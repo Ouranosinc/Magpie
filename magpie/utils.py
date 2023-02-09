@@ -234,15 +234,6 @@ def signature_with_args(func, *args, **kwargs):
     return sig
 
 
-# alternative to 'makedirs' with 'exists_ok' parameter only available for python>3.5
-def make_dirs(path):
-    dir_path = os.path.dirname(path)
-    if not os.path.isfile(path) or not os.path.isdir(dir_path):
-        for subdir in mkpath(dir_path):
-            if not os.path.isdir(subdir):
-                os.mkdir(subdir)
-
-
 def get_settings_from_config_ini(config_ini_path, ini_main_section_name="app:magpie_app"):
     # type: (Str, Str) -> SettingsType
     parser = configparser.ConfigParser()

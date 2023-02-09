@@ -12,7 +12,6 @@ import os
 import re
 import tempfile
 import unittest
-from distutils.version import LooseVersion
 
 import mock
 import six
@@ -23,6 +22,7 @@ from magpie import __meta__, constants
 from magpie.api import exception as ax
 from magpie.api import generic as ag
 from magpie.api import requests as ar
+from magpie.compat import LooseVersion
 from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header, get_magpie_url, import_target
 from tests import runner, utils
 

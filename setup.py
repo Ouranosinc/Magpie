@@ -3,12 +3,16 @@
 import logging
 import os
 import sys
-from distutils.version import LooseVersion
+
+try:
+    from packaging.version import Version as LooseVersion
+except ImportError:
+    from distutils.version import LooseVersion  # pylint: disable=deprecated-module
 
 try:
     from setuptools import setup
 except ImportError:
-    from distutils.core import setup
+    from distutils.core import setup  # pylint: disable=deprecated-module
 
 try:
     # typing only available builtin starting with Python3

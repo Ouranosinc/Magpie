@@ -2,7 +2,6 @@ import copy
 import inspect
 import re
 import warnings
-from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import requests
@@ -29,6 +28,7 @@ from magpie.api.exception import evaluate_call, raise_http, valid_http, verify_p
 from magpie.api.generic import get_request_info
 from magpie.api.schemas import SigninAPI
 from magpie.app import setup_magpie_configs
+from magpie.compat import LooseVersion
 from magpie.constants import get_constant
 from magpie.security import get_auth_config
 from magpie.utils import (

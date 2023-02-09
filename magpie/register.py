@@ -43,7 +43,6 @@ from magpie.utils import (
     get_phoenix_url,
     get_twitcher_protected_service_url,
     islambda,
-    make_dirs,
     print_log,
     raise_log
 )
@@ -111,7 +110,9 @@ class RegistrationConfigurationError(RegistrationValueError):
 
 
 def _login_loop(login_url, cookies_file, data=None, message="Login response"):
-    make_dirs(cookies_file)
+    cookies_dir = os.path.dirname(cookies_file)
+    if not os.path.isdir(cookies_dir):
+        os.makedirs(cookies_dir)  # don't use "exist_ok" for backward compatibility (Python<3.5)
     data_str = ""
     if data is not None and isinstance(data, dict):
         for key in data:
@@ -173,13 +174,17 @@ def _phoenix_update_services(services_dict):
     return True
 
 
-def _phoenix_login(cookies):
+def _phoenix_login(cookies_file):
+    # type: (Str) -> bool
+    """
+    Performs Phoenix login using provided cookies.
+    """
     phoenix_pwd = get_constant("PHOENIX_PASSWORD")
     phoenix_url = get_phoenix_url()
     login_url = phoenix_url + "/account/login/phoenix"
     login_data = {"password": phoenix_pwd, "submit": "submit"}
-    _login_loop(login_url, cookies, login_data, "Phoenix login response")
-    return _phoenix_login_check(cookies)
+    _login_loop(login_url, cookies_file, login_data, "Phoenix login response")
+    return _phoenix_login_check(cookies_file)
 
 
 def _phoenix_login_check(cookies):
