@@ -44,11 +44,13 @@ requests
 requests_file
 simplejson
 six>=1.12.0
-sqlalchemy==1.3.*; python_version <= "3.6"
-sqlalchemy>=1.4.44,<2; python_version >= "3.7"
+# see also: safety 51668, https://github.com/sqlalchemy/sqlalchemy/pull/8563, still beta + major version change 2.0.0b1
+sqlalchemy==1.3.*; python_version <= "3.6"  # pyup: ignore
+sqlalchemy>=1.4.44,<2; python_version >= "3.7"  # pyup: ignore
+# see also: safety 42194, https://github.com/kvesteri/sqlalchemy-utils/issues/166, not fixed since 2015
 sqlalchemy-utils<0.36.4; python_version < "3"  # pyup: ignore
 sqlalchemy-utils==0.37.9; python_version >= "3" and python_version <= "3.5"  # pyup: ignore
-sqlalchemy-utils==0.39.0; python_version >= "3.6"
+sqlalchemy-utils==0.39.0; python_version >= "3.6"  # pyup: ignore
 threddsclient==0.4.2; python_version < "3"   # pyup: ignore
 threddsclient>=0.4.2; python_version >= "3"
 transaction
