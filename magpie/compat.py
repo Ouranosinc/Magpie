@@ -25,12 +25,6 @@ class VersionInterface(object):
         # type: () -> int
         raise NotImplementedError
 
-    @property
-    @abc.abstractmethod
-    def version(self):
-        # type: () -> Tuple[Union[int, str], ...]
-        raise NotImplementedError
-
 
 try:
     from packaging.version import InvalidVersion  # pylint: disable=unused-import
