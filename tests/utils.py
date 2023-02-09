@@ -60,6 +60,7 @@ if TYPE_CHECKING:
     from webtest.forms import BeautifulSoup
 
     import tests.interfaces as ti
+    from magpie.compat import TupleVersion
     from magpie.services import ServiceInterface
     from magpie.typedefs import (
         JSON,
@@ -250,6 +251,45 @@ class TestVersion(LooseVersion):
         if other.version == "latest":
             return -1
         return super(TestVersion, self)._cmp(other)  # noqa
+
+    def __lt__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) < 0
+
+    def __le__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) <= 0
+
+    def __gt__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) > 0
+
+    def __ge__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) >= 0
+
+    def __eq__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) == 0
+
+    def __ne__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) != 0
+
+    @property
+    def version(self):
+        # type: () -> Union[Tuple[Union[int, str], ...], str]
+        if self._version == "latest":
+            return "latest"
+        return super(TestVersion, self).version
+
+    @version.setter
+    def version(self, version):
+        # type: (Union[Tuple[Union[int, str], ...], str, TupleVersion]) -> None
+        if version == "latest":
+            self._version = "latest"
+        else:
+            super(TestVersion, self).version = version
 
 
 @six.add_metaclass(SingletonMeta)

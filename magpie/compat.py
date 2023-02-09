@@ -1,9 +1,11 @@
+import inspect
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Tuple, Union
 
 try:
     from packaging.version import InvalidVersion, Version as BaseVersion  # pylint: disable=unused-import
+    from packaging.version import _Version as TupleVersion  # pylint: disable=unused-import
 
     class LooseVersion(BaseVersion):
         @property
@@ -12,6 +14,21 @@ try:
             parts = [part for part in self._version[1:] if part is not None]
             parts = tuple(part_group for part in parts for part_group in part)
             return parts
+
+        @version.setter
+        def version(self, version):
+            # type: (Union[Tuple[Union[int, str], ...], str, TupleVersion]) -> None
+            if isinstance(version, tuple) and all(isinstance(part, int) for part in version):
+                fields = {field: None for field in TupleVersion._fields if field not in ["epoch", "release"]}
+                self._version = TupleVersion(epoch=0, release=version, **fields)
+            elif isinstance(version, str):
+                self._version = LooseVersion(version)._version
+            elif isinstance(version, TupleVersion):
+                self._version = version
+            else:
+                cls = version if inspect.isclass(version) else type(version)
+                name = ".".join([version.__module__, cls.__name__])
+                raise TypeError("Unknown parsing method for version type: {}".format(name))
 
         @property
         def patch(self):
