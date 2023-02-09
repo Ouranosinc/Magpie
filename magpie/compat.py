@@ -5,7 +5,7 @@ if TYPE_CHECKING:
 
 try:
     from packaging.version import InvalidVersion, Version as BaseVersion  # pylint: disable=unused-import
-    from packaging.version import _Version as TupleVersion  # pylint: disable=unused-import
+    from packaging.version import _Version as TupleVersion  # pylint: disable=W0212,protected-access
 
     class LooseVersion(BaseVersion):
         @property
@@ -22,7 +22,7 @@ try:
                 fields = {field: None for field in TupleVersion._fields if field not in ["epoch", "release"]}
                 self._version = TupleVersion(epoch=0, release=version, **fields)
             elif isinstance(version, str):
-                self._version = LooseVersion(version)._version
+                self._version = LooseVersion(version)._version  # pylint: disable=W0212,protected-access
             elif isinstance(version, TupleVersion):
                 self._version = version
             else:
