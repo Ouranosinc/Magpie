@@ -1,10 +1,12 @@
 import inspect
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Tuple, Union
 
 try:
-    from packaging.version import InvalidVersion, Version as BaseVersion  # pylint: disable=unused-import
+    from packaging.version import InvalidVersion
+    from packaging.version import Version as BaseVersion  # pylint: disable=unused-import
     from packaging.version import _Version as TupleVersion  # pylint: disable=W0212,protected-access
 
     class LooseVersion(BaseVersion):
