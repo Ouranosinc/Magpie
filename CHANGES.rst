@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.32.0:
+
+`3.32.0 <https://github.com/Ouranosinc/Magpie/tree/3.32.0>`_ (2023-02-09)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Use Python 3.11 in the `Magpie` Docker application to take advantage of performance improvements and security fixes.
