@@ -1,7 +1,6 @@
 """
 Store adapters to read data from magpie.
 """
-from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import requests
@@ -10,6 +9,7 @@ from pyramid.httpexceptions import HTTPOk
 from pyramid.settings import asbool
 
 from magpie.api.schemas import ServicesAPI
+from magpie.compat import LooseVersion
 from magpie.db import get_connected_session
 from magpie.models import Service as MagpieService
 from magpie.services import invalidate_service

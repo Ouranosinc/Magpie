@@ -10,7 +10,6 @@ import unittest
 import uuid
 import warnings
 from copy import deepcopy
-from distutils.version import LooseVersion
 from errno import EADDRINUSE
 from typing import TYPE_CHECKING
 
@@ -35,6 +34,7 @@ from webtest.forms import Form
 from webtest.response import TestResponse
 
 from magpie import __meta__, app, services
+from magpie.compat import LooseVersion
 from magpie.constants import get_constant
 from magpie.permissions import Access, PermissionSet, Scope
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess
@@ -60,6 +60,7 @@ if TYPE_CHECKING:
     from webtest.forms import BeautifulSoup
 
     import tests.interfaces as ti
+    from magpie.compat import TupleVersion
     from magpie.services import ServiceInterface
     from magpie.typedefs import (
         JSON,
@@ -250,6 +251,45 @@ class TestVersion(LooseVersion):
         if other.version == "latest":
             return -1
         return super(TestVersion, self)._cmp(other)  # noqa
+
+    def __lt__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) < 0
+
+    def __le__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) <= 0
+
+    def __gt__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) > 0
+
+    def __ge__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) >= 0
+
+    def __eq__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) == 0
+
+    def __ne__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) != 0
+
+    @property
+    def version(self):
+        # type: () -> Union[Tuple[Union[int, str], ...], str]
+        if self._version == "latest":
+            return "latest"
+        return super(TestVersion, self).version
+
+    @version.setter
+    def version(self, version):
+        # type: (Union[Tuple[Union[int, str], ...], str, TupleVersion]) -> None
+        if version == "latest":
+            self._version = "latest"
+        else:
+            super(TestVersion, self).version = version
 
 
 @six.add_metaclass(SingletonMeta)
@@ -1598,7 +1638,7 @@ def check_error_param_structure(body,                                   # type: 
         if param_value is not null:
             # unicode representation was explicitly returned in value only when of string type
             if is_param_value_literal_unicode and isinstance(param_value, six.string_types):
-                param_value = u"u\'{}\'".format(param_value)
+                param_value = "u\'{}\'".format(param_value)
             check_val_equal(body["param"], param_value)
         if param_compare_exists or param_compare is not null:
             check_val_is_in("param_compare", body)

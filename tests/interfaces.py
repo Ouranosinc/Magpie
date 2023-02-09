@@ -420,7 +420,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
         utils.check_or_try_logout_user(self)
         _, cookies = utils.check_or_try_login_user(self, username=test_user_name, password=test_user_name)
-        real_token = cookies.get(token_name, "")
+        cookies_dict = cookies.get_dict() if hasattr(cookies, "get_dict") else cookies
+        real_token = cookies_dict.get(token_name, "")  # convert to dict avoids multiple ".local[host]" domain conflict
+        utils.check_val_not_equal(real_token, "", msg="expected test user token could not be found in cookies")
         token_size = 128 + 8 + len(str(real_user_id)) + len(token_data)
         utils.check_val_equal(len(real_token), token_size, msg="could not retrieve test user token")
         # validate the token actually works in normal conditions

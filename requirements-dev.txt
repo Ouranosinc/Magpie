@@ -27,7 +27,7 @@ pylint>=2.11,!=2.12,!=2.15; python_version >= "3.6"
 pylint-quotes
 # bird-house/twticher, must match version in Dockerfile.adapater
 pyramid-twitcher>=0.5.3; python_version < "3.6"  # pyup: ignore
-pyramid-twitcher>=0.8.0; python_version >= "3.6"
+pyramid-twitcher>=0.9.0; python_version >= "3.6"
 pytest
 python2-secrets; python_version <= "3.5"
 safety

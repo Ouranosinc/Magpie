@@ -84,11 +84,17 @@ PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'
 PIP_XARGS ?=
 PIP_USE_FEATURE := `python -c '\
 	import pip; \
-	from distutils.version import LooseVersion; \
+	try: \
+		from packaging.version import Version as LooseVersion; \
+	except Exception: \
+		from distutils.version import LooseVersion; \
 	print(LooseVersion(pip.__version__) < LooseVersion("21.0"))'`
 PIP_DISABLE_FEATURE := `python -c '\
 	import pip; \
-	from distutils.version import LooseVersion; \
+	try: \
+		from packaging.version import Version as LooseVersion; \
+	except Exception: \
+		from distutils.version import LooseVersion; \
 	print(LooseVersion(pip.__version__) >= LooseVersion("22.0"))'`
 ifeq ($(findstring "--use-feature=2020-resolver",$(PIP_XARGS)),)
   # feature not specified, but needed

@@ -3,12 +3,16 @@
 import logging
 import os
 import sys
-from distutils.version import LooseVersion
+
+try:
+    from packaging.version import Version as LooseVersion
+except ImportError:
+    from distutils.version import LooseVersion  # pylint: disable=deprecated-module
 
 try:
     from setuptools import setup
 except ImportError:
-    from distutils.core import setup
+    from distutils.core import setup  # pylint: disable=deprecated-module
 
 try:
     # typing only available builtin starting with Python3
@@ -121,13 +125,14 @@ def _parse_requirements(file_path, requirements, links):
                 continue
             if "python_version" in line:
                 operator, py_ver = _split_requirement(line, version=True, python=True)
+                sys_ver = ".".join([str(part) for part in sys.version_info[:3]])
                 op_map = {
-                    "==": LooseVersion(sys.version) == LooseVersion(py_ver),
-                    ">=": LooseVersion(sys.version) >= LooseVersion(py_ver),
-                    "<=": LooseVersion(sys.version) <= LooseVersion(py_ver),
-                    "!=": LooseVersion(sys.version) != LooseVersion(py_ver),
-                    ">": LooseVersion(sys.version) > LooseVersion(py_ver),
-                    "<": LooseVersion(sys.version) < LooseVersion(py_ver),
+                    "==": LooseVersion(sys_ver) == LooseVersion(py_ver),
+                    ">=": LooseVersion(sys_ver) >= LooseVersion(py_ver),
+                    "<=": LooseVersion(sys_ver) <= LooseVersion(py_ver),
+                    "!=": LooseVersion(sys_ver) != LooseVersion(py_ver),
+                    ">": LooseVersion(sys_ver) > LooseVersion(py_ver),
+                    "<": LooseVersion(sys_ver) < LooseVersion(py_ver),
                 }
                 # skip requirement if not fulfilling python version
                 if not op_map[operator]:

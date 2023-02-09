@@ -1,7 +1,6 @@
 import logging
 import uuid
 from copy import copy
-from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import requests
@@ -16,6 +15,7 @@ from six.moves.urllib.parse import urlparse
 
 from magpie.api.exception import evaluate_call, verify_param
 from magpie.api.schemas import ProviderSigninAPI
+from magpie.compat import LooseVersion
 from magpie.constants import get_constant
 from magpie.db import get_connected_session
 from magpie.models import Service

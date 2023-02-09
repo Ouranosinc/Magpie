@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from magpie.typedefs import AnyRequestType, AnyResponseType, CookiesType
 
-PYTHON_VERSION = sys.version_info
+PYTHON_VERSION = sys.version_info[:3]
 
 
 @unittest.skipIf(six.PY2, "Unsupported Twitcher for MagpieAdapter in Python 2")

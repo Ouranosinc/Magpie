@@ -161,7 +161,7 @@ def make_email_contents(config, settings, template, parameters=None):
     }
     params.update(parameters or {})
     contents = template.render(**params)
-    message = u"{}".format(contents).strip(u"\n")
+    message = "{}".format(contents).strip("\n")
     return message.encode("utf8")
 
 
