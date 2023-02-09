@@ -9,7 +9,6 @@ import re
 import sys
 import time
 import types
-from distutils.dir_util import mkpath
 from typing import TYPE_CHECKING
 
 import requests
