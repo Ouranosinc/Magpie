@@ -1,15 +1,43 @@
+import abc
 import inspect
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Tuple, Union
 
+
+class VersionInterface(object):
+    @property
+    @abc.abstractmethod
+    def major(self):
+        # type: () -> int
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def minor(self):
+        # type: () -> int
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def patch(self):
+        # type: () -> int
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def version(self):
+        # type: () -> Tuple[Union[int, str], ...]
+        raise NotImplementedError
+
+
 try:
     from packaging.version import InvalidVersion  # pylint: disable=unused-import
     from packaging.version import Version as BaseVersion  # pylint: disable=unused-import
     from packaging.version import _Version as TupleVersion  # pylint: disable=W0212,protected-access
 
-    class LooseVersion(BaseVersion):
+    class LooseVersion(BaseVersion, VersionInterface):
         @property
         def version(self):
             # type: () -> Tuple[Union[int, str], ...]
@@ -20,14 +48,14 @@ try:
         @version.setter
         def version(self, version):
             # type: (Union[Tuple[Union[int, str], ...], str, TupleVersion]) -> None
-            if isinstance(version, tuple) and all(isinstance(part, int) for part in version):
+            if isinstance(version, tuple) and all(isinstance(part, (int, str)) for part in version):
                 fields = {field: None for field in TupleVersion._fields if field not in ["epoch", "release"]}
-                self._version = TupleVersion(epoch=0, release=version, **fields)
+                self._version = TupleVersion(epoch=0, release=[int(part) for part in version], **fields)
             elif isinstance(version, str):
                 self._version = LooseVersion(version)._version  # pylint: disable=W0212,protected-access
             elif isinstance(version, TupleVersion):
                 self._version = version
-            else:
+            else:  # pragma: no cover
                 cls = version if inspect.isclass(version) else type(version)
                 name = ".".join([version.__module__, cls.__name__])
                 raise TypeError("Unknown parsing method for version type: {}".format(name))
@@ -54,7 +82,7 @@ except ImportError:  # pragma: no cover  # for backward compatibility
 
     InvalidVersion = ValueError
 
-    class LooseVersion(BaseVersion):
+    class LooseVersion(BaseVersion, VersionInterface):
         @property
         def major(self):
             # type: () -> int
