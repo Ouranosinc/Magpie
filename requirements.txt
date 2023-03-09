@@ -60,6 +60,6 @@ typing_extensions; python_version < "3.8"
 wheel; python_version <= "3.6"
 wheel>=0.38; python_version >= "3.7"
 webob
-ziggurat_foundations==0.8.4
+ziggurat_foundations==0.9.1
 zope.interface>=4.7.2,<5
 zope.sqlalchemy==1.6
