@@ -51,7 +51,7 @@ sqlalchemy>=1.4.44,<2; python_version >= "3.7"  # pyup: ignore
 sqlalchemy-utils<0.36.4; python_version < "3"  # pyup: ignore
 sqlalchemy-utils==0.37.9; python_version >= "3" and python_version <= "3.5"  # pyup: ignore
 sqlalchemy-utils==0.39.0; python_version >= "3.6"  # pyup: ignore
-threddsclient==0.4.2; python_version < "3"   # pyup: ignore
+threddsclient==0.4.2; python_version < "3"  # pyup: ignore
 threddsclient>=0.4.2; python_version >= "3"
 transaction
 typing; python_version < "3"
@@ -60,6 +60,7 @@ typing_extensions; python_version < "3.8"
 wheel; python_version <= "3.6"
 wheel>=0.38; python_version >= "3.7"
 webob
-ziggurat_foundations==0.9.1
+ziggurat_foundations==0.8.4; python_version <= "3.6"  # pyup: ignore
+ziggurat_foundations==0.9.1; python_version >= "3.7"
 zope.interface>=4.7.2,<5
 zope.sqlalchemy==1.6
