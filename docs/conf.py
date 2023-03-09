@@ -122,6 +122,9 @@ autoapi_dirs = [os.path.join(PROJECT_ROOT, __meta__.__package__)]
 autoapi_ignore = [os.path.join(PROJECT_ROOT, "magpie/alembic/*")]
 autoapi_python_class_content = "both"
 
+# avoid 403 by some links that explicitly block robots/scripts with mocked user-agent
+user_agent = "Mozilla/5.0 (X11; Linux x86_64; rv:25.0) Gecko/20100101 Firefox/25.0"
+
 linkcheck_timeout = 20
 linkcheck_retries = 5
 
