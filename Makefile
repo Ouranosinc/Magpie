@@ -471,13 +471,16 @@ docker-push-magpie: docker-build-magpie		## push only built docker image for Mag
 docker-push: docker-push-magpie docker-push-adapter	 ## push built docker images for Magpie application and MagpieAdapter for Twitcher
 
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/ci/docker-compose.smoke-test.yml"
-.PHONY: docker-test
-docker-test: docker-build-magpie	## execute a smoke test of the built image for Magpie application (validate that it boots)
+.PHONY: docker-test-only
+docker-test-only:	## execute smoke test of the built image for Magpie application (validate that it boots)
 	@echo "Smoke test of built application docker image"
 	docker-compose $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
 	curl localhost:2001 | grep "Magpie Administration"
 	docker-compose $(DOCKER_TEST_COMPOSES) stop
+
+.PHONY: docker-test
+docker-test: docker-build-magpie docker-test-only	## execute smoke test of the built image for Magpie application (validate that it boots)
 
 .PHONY: docker-test-stop
 docker-test-stop:  ## explicitly stop any running instance that could remain from 'docker-test' target
@@ -729,10 +732,10 @@ test-custom-only:		## run custom tests [example: SPEC="<marker1> or (<marker2> a
 		-k "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-docker
-test-docker: docker-test  ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
+test-docker: docker-test	## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
 
 # for consistency only with other test
-test-docker-only: test-docker ## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
+test-docker-only: docker-test-only	## run test with docker (alias for 'docker-test' target) - WARNING: build image if missing
 
 # coverage file location cannot be changed
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
