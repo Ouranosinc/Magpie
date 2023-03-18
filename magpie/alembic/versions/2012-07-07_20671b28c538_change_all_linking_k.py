@@ -43,16 +43,14 @@ def upgrade():
     op.drop_constraint("groups_pkey", "groups", type_="primary")
 
     if isinstance(c.connection.engine.dialect, MySQLDialect):
-        op.add_column("groups", sa.Column("id", sa.Integer, primary_key=True,
-                                          autoincrement=False))
-        op.create_primary_key(groups_pkey, "groups", cols=["id"])
+        op.add_column("groups", sa.Column("id", sa.Integer, primary_key=True, autoincrement=False))
+        op.create_primary_key(groups_pkey, "groups", ["id"])
         op.alter_column("groups", "id", type_=sa.Integer,
                         existing_type=sa.Integer, autoincrement=True,
                         existing_autoincrement=False, nullable=False)
     else:
-        op.add_column("groups", sa.Column("id", sa.Integer, primary_key=True,
-                                          autoincrement=True))
-        op.create_primary_key(groups_pkey, "groups", cols=["id"])
+        op.add_column("groups", sa.Column("id", sa.Integer, primary_key=True, autoincrement=True))
+        op.create_primary_key(groups_pkey, "groups", ["id"])
 
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         for t in ["groups_permissions", "groups_resources_permissions",
@@ -99,12 +97,12 @@ def upgrade():
 
     op.execute("""
         update groups_permissions set group_id = 
-        (select id from groups where groups.group_name=groups_permissions.group_name)""")
+        (select id from groups where groups.group_name=groups_permissions.group_name)
+    """)
 
     op.drop_constraint(groups_permissions_pkey, "groups_permissions",
                        type_="primary")
-    op.create_primary_key(groups_permissions_pkey, "groups_permissions",
-                          cols=["group_id", "perm_name"])
+    op.create_primary_key(groups_permissions_pkey, "groups_permissions", ["group_id", "perm_name"])
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         op.create_foreign_key(None, "groups_permissions", "groups",
                               remote_cols=["id"],
@@ -122,13 +120,14 @@ def upgrade():
 
     op.execute("""
         update groups_resources_permissions set group_id = 
-        (select id from groups where groups.group_name=groups_resources_permissions.group_name)""")
+        (select id from groups where groups.group_name=groups_resources_permissions.group_name)
+    """)
     op.drop_constraint(groups_resources_permissions_pkey,
                        "groups_resources_permissions",
                        type_="primary")
     op.create_primary_key(groups_resources_permissions_pkey,
                           "groups_resources_permissions",
-                          cols=["group_id", "resource_id", "perm_name"])
+                          ["group_id", "resource_id", "perm_name"])
 
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         op.create_foreign_key(None, "groups_resources_permissions", "groups",
@@ -145,7 +144,8 @@ def upgrade():
                                                               ondelete="CASCADE")))
     op.execute("""
         update users_groups set group_id = 
-        (select id from groups where groups.group_name=users_groups.group_name)""")
+        (select id from groups where groups.group_name=users_groups.group_name)
+    """)
 
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         op.add_column("users_groups", sa.Column("user_id", sa.Integer()))
@@ -156,10 +156,10 @@ def upgrade():
                                                               ondelete="CASCADE")))
     op.execute("""
         update users_groups set user_id = 
-        (select id from users where users.user_name=users_groups.user_name)""")
-    op.drop_constraint(users_groups_pkey, "users_groups", type="primary")
-    op.create_primary_key(users_groups_pkey, "users_groups",
-                          cols=["user_id", "group_id"])
+        (select id from users where users.user_name=users_groups.user_name)
+    """)
+    op.drop_constraint(users_groups_pkey, "users_groups", type_="primary")
+    op.create_primary_key(users_groups_pkey, "users_groups", ["user_id", "group_id"])
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         op.create_foreign_key(None, "users_groups", "groups",
                               remote_cols=["id"],
@@ -179,11 +179,10 @@ def upgrade():
                                                                    ondelete="CASCADE")))
     op.execute("""
         update users_permissions set user_id = 
-        (select id from groups where groups.group_name=users_permissions.user_name)""")
-    op.drop_constraint(users_permissions_pkey, "users_permissions",
-                       type="primary")
-    op.create_primary_key(users_permissions_pkey, "users_permissions",
-                          cols=["user_id", "perm_name"])
+        (select id from groups where groups.group_name=users_permissions.user_name)
+    """)
+    op.drop_constraint(users_permissions_pkey, "users_permissions", type_="primary")
+    op.create_primary_key(users_permissions_pkey, "users_permissions", ["user_id", "perm_name"])
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         op.create_foreign_key(None, "users_permissions", "users",
                               remote_cols=["id"],
@@ -201,13 +200,14 @@ def upgrade():
 
     op.execute("""
         update users_resources_permissions set user_id = 
-        (select id from users where users.user_name=users_resources_permissions.user_name)""")
+        (select id from users where users.user_name=users_resources_permissions.user_name)
+    """)
     op.drop_constraint(users_resources_permissions_pkey,
                        "users_resources_permissions",
-                       type="primary")
+                       type_="primary")
     op.create_primary_key(users_resources_permissions_pkey,
                           "users_resources_permissions",
-                          cols=["user_id", "resource_id", "perm_name"])
+                          ["user_id", "resource_id", "perm_name"])
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         op.create_foreign_key(None, "users_resources_permissions", "users",
                               remote_cols=["id"],
