@@ -9,7 +9,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add a new ``tween`` that enforces active database transaction to be closed after handling the request and
+  generating response to limit potential ``idle in transaction`` states.
+* Unpin ``alembic`` to allow latest versions to be installed for Python versions supporting it.
 
 .. _changes_3.32.0:
 

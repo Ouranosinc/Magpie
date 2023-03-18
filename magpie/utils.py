@@ -21,6 +21,7 @@ from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.settings import asbool, truthy
 from pyramid.threadlocal import get_current_registry
+from pyramid.tweens import INGRESS
 from pyramid_retry import IBeforeRetry, mark_error_retryable
 from requests.cookies import RequestsCookieJar
 from requests.structures import CaseInsensitiveDict
@@ -309,6 +310,20 @@ def setup_pyramid_config(config):
         registry.registerUtility(factory=ResponseFactory)
 
 
+def cleanup_session(handler, _):
+    # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
+    """
+    Tween that forces the database connection to be closed once the response is obtained from the request.
+    """
+    def cleanup(request):
+        # type: (Request) -> Response
+        response = handler(request)
+        if request.db.transaction.is_active:
+            request.db.transaction.close()
+        return response
+    return cleanup
+
+
 def setup_session_config(config):
     # type: (Configurator) -> None
     """
@@ -352,6 +367,7 @@ def setup_session_config(config):
         # 'request.tm' is the transaction manager used by 'pyramid_tm'
         lambda request: get_tm_session(session_factory, request.tm), "db", reify=True
     )
+    config.add_tween(fully_qualified_name(cleanup_session), under=INGRESS)
 
     def debug_request_user(request):
         # type: (Request) -> Optional[models.User]
