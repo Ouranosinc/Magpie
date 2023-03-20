@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.33.0:
+
+`3.33.0 <https://github.com/Ouranosinc/Magpie/tree/3.33.0>`_ (2023-03-20)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add a new ``tween`` that enforces active database transaction to be closed after handling the request and
