@@ -32,11 +32,11 @@ def upgrade():
         users_t.c.user_name == external_identities_t.c.local_user_name
     )
     conn.execute(stmt)
-    op.drop_constraint("pk_external_identities", "external_identities", type="primary")
-    op.drop_constraint("fk_external_identities_local_user_name_users", "external_identities", type="foreignkey")
+    op.drop_constraint("pk_external_identities", "external_identities", type_="primary")
+    op.drop_constraint("fk_external_identities_local_user_name_users", "external_identities", type_="foreignkey")
     op.drop_column("external_identities", "local_user_name")
     op.create_primary_key("pk_external_identities", "external_identities",
-                          cols=["external_id", "local_user_id", "provider_name"])
+                          ["external_id", "local_user_id", "provider_name"])
     op.create_foreign_key(None, "external_identities", "users",
                           remote_cols=["id"], local_cols=["local_user_id"], onupdate="CASCADE", ondelete="CASCADE")
 

@@ -26,14 +26,14 @@ def upgrade():
         for table in ["groups_permissions", "groups_resources_permissions", "users_groups", "resources"]:
             for constraint in insp.get_foreign_keys(table):
                 if constraint["referred_columns"] == ["group_name"]:
-                    op.drop_constraint(constraint["name"], table, type="foreignkey")
+                    op.drop_constraint(constraint["name"], table, "foreignkey")
 
     op.drop_column("groups", "id")
     op.alter_column("groups", "group_name",
                     type_=sa.Unicode(128),
                     existing_type=sa.Unicode(50),
                     )
-    op.create_primary_key("groups_pkey", "groups", cols=["group_name"])
+    op.create_primary_key("groups_pkey", "groups", ["group_name"])
 
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         op.create_foreign_key(None, "groups_permissions", "groups",
