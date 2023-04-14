@@ -562,7 +562,7 @@ check-security-code-only: mkdir-reports  ## run security checks on source code
 		1> >(tee "$(REPORTS_DIR)/check-security-code.txt")'
 
 .PHONY: check-docs-only
-check-docs-only: check-doc8-only check-docf-only	## run every code documentation checks
+check-docs-only: check-doc8-only check-docf-only check-links-only	## run every code documentation checks
 
 .PHONY: check-doc8-only
 check-doc8-only: mkdir-reports		## run PEP8 documentation style checks

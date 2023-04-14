@@ -33,6 +33,12 @@ Glossary
         .. seealso::
             :ref:`Allowed Permissions <allowed-permissions>` section for details.
 
+    Application Programming Interface
+    API
+        Most typically, referring to the use of HTTP requests following an :ref:`OpenAPI` specification,
+        and more broadly, to refer to `Magpie`'s own API definition. It can also refer to a specific :term:`Service`
+        using RESTful API, which can be registered using the :ref:`ServiceAPI` implementation.
+
     Applied Permission
         An active :term:`Permission` for a given :term:`User` or :term:`Group` depending on context.
 
@@ -48,9 +54,9 @@ Glossary
 
     Authorization
         Process of allowing or denying access to a :term:`Resource` or :term:`Service` according to :term:`Logged User`
-        identified through one of the :term:`Authentication Methods`. This process typically falls into the hands of a
-        :term:`Proxy` application as :term:`Policy Enforcement Point` using policy access decisions provided
-        by `Magpie`.
+        identified through one of the :ref:`Authentication Methods <auth_methods>`. This process typically falls into
+        the hands of a :term:`Proxy` application as :term:`Policy Enforcement Point` using policy access decisions
+        provided by `Magpie`.
 
     Context User
         Specific :term:`User` that is being targeted by a request from specified value for the ``{user_name}`` request
@@ -131,6 +137,11 @@ Glossary
         When not logged in, this :term:`User` is considered to be equivalent to explicitly requesting
         :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER`. Otherwise, it is whoever the
         :term:`Authentication` mechanism identifies with token extracted from request :term:`Cookies`.
+
+    OpenAPI
+    OAS
+        The |OpenAPI-spec|_ (`OAS`) defines a standard, programming language-agnostic interface description for
+        HTTP :term:`API`s. It is used in `Magpie` to represent :term:`API` definitions for requests and responses.
 
     OGC
         Acronym for `Open Geospatial Consortium` that represent the global initiative and community to standardize

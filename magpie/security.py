@@ -122,7 +122,6 @@ def authomatic_setup(request):
 
 
 def authomatic_config(request=None):
-
     defaults_config = {
         "popup": True,
     }

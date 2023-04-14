@@ -552,7 +552,6 @@ class TestAdapterCachingAllRegions(BaseTestAdapterCaching):
 
         Although service is cached, the resolution of the given user doing the request must still resolve correctly.
         """
-
         admin_headers = self.headers.copy()
         admin_cookies = self.cookies.copy()
         admin_no_cache = self.cache_reset_headers.copy()
@@ -725,7 +724,6 @@ class TestAdapterCachingAllRegions(BaseTestAdapterCaching):
         and others referring to that cached state, updated references must be ensured everywhere for new requests that
         could change request query parameters, headers, authentication tokens, etc.
         """
-
         # create some test OWS service (WPS used, but could be any)
         svc_name = self.test_service_name + "_wps"
         svc_type = ServiceWPS.service_type
@@ -822,7 +820,6 @@ class TestAdapterCachingAllRegions(BaseTestAdapterCaching):
         """
         Validate that any operation triggering cached service's invalidation also invalidates corresponding ACL caches.
         """
-
         svc1_name = self.test_service_name + "_invalidate_1"
         svc2_name = self.test_service_name + "_invalidate_2"
         svc1_path = "/ows/proxy/{}".format(svc1_name)

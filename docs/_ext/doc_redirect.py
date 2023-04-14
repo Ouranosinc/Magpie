@@ -65,7 +65,6 @@ def generate_redirects(app):
 
         Literal RST file references must be relative to package root in other to be rendered correctly on GitHub.
     """
-
     if not isinstance(app.builder, (StandaloneHTMLBuilder, CheckExternalLinksBuilder)):
         ext = os.path.split(__file__)[-1].split(".")[0]
         builder = type(app.builder)

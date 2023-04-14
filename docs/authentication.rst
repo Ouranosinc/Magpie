@@ -6,8 +6,9 @@ Authentication and Authorization
 ==========================================
 
 In order to perform :term:`Authentication` in `Magpie`, multiple :term:`Provider` and methods are supported.
-By default, the :term:`Internal Provider` named ``ziggurat`` is employed, which corresponds to the package used
-internally to manage all `Magpie` elements. Login procedure is covered in :ref:`Authentication Requests` section.
+By default, the :term:`Internal Provider <Internal Providers>` named ``ziggurat`` is employed, which corresponds
+to the package used internally to manage all `Magpie` elements.
+Login procedure is covered in :ref:`Authentication Requests` section.
 
 Supported :term:`External Providers` are presented in the table below in section :ref:`authn_providers`, although more
 could be added later on.
@@ -28,8 +29,8 @@ Authentication Requests
 ---------------------------
 
 The most convenient way to sign-in with `Magpie` is to employ the user interface provided on path
-``{MAGPIE_URL}/ui/login``. This page will present fields that allow both :term:`Internal Provider` and
-:term:`External Provider` login methods.
+``{MAGPIE_URL}/ui/login``. This page will present fields that allow both :term:`Internal Providers`
+and :term:`External Providers` login methods.
 
 Alternatively, API requests can be employed to define your own interface, or to obtain request tokens needed to
 accomplish further requests interactions toward `Magpie` or obtain :term:`Authorization` from the :term:`Proxy` using
@@ -134,7 +135,7 @@ Authentication Providers
 ---------------------------
 
 For any of the :term:`Authentication` requests, omitting the ``provider_name`` identifier
-(or explicitly using value of :envvar:`MAGPIE_DEFAULT_PROVIDER`) will default to employ :term:`Internal Provider`
+(or explicitly using value of :envvar:`MAGPIE_DEFAULT_PROVIDER`) will default to employ the :term:`Internal Providers`
 method. This means that :term:`User` identity resolution will be attempted against locally registered users in `Magpie`
 database.
 
@@ -180,7 +181,7 @@ managing this :term:`Authentication` procedure.
 Using any of the :term:`External Providers` will tell `Magpie` to interrogate the configured identity URL of that
 provider and use the credentials to attempt :term:`Authentication`. If successful, the response returned by that
 :term:`Provider` should be parsed by `Magpie` in order to determine which corresponding local :term:`User` profile
-it refers to. After validation, the :term:`Logged User` will be :term:`Authenticated` and following requests will be
+it refers to. After validation, the :term:`Logged User` will be authenticated and following requests will be
 applicable using the same ``Cookie`` methodology as when using normal local provider procedure.
 See :ref:`Authentication Headers` for more details on that matter.
 
@@ -268,7 +269,7 @@ When appropriately authenticated, access to the targeted :term:`Resource` will b
 :term:`Effective Permissions <Effective Permission>` that :term:`Logged User` has for it. This decision is extensively
 explained in section :ref:`perm_resolution`.
 
-Another alternative to obtain :term:`Authorization` (only when using the :ref:`utilities_adapter<Magpie Adapter>`) is
+Another alternative to obtain :term:`Authorization` (only when using the :ref:`Magpie Adapter <utilities_adapter>`) is
 by providing the ``Authorization`` header in the request with appropriate credentials. In this situation, the adapter
 will attempt a login operation inline to that original request, and if successful, will update the ``Cookie`` headers
 accordingly. Although this method saves the need for the client to explicitly do an initial :term:`Authentication`

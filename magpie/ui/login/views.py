@@ -108,7 +108,6 @@ class LoginViews(AdminRequests, BaseViews):
         .. seealso::
             :meth:`magpie.ui.management.views.ManagementViews.add_user`
         """
-
         return_data = {
             "is_registration": True,  # require login as admin for registration, dispatch operation checks
             "MAGPIE_SUB_TITLE": "User Registration",  # avoid default referring to administration operations

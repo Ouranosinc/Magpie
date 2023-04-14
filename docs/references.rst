@@ -22,6 +22,8 @@
 .. _Twitcher: https://github.com/bird-house/twitcher
 .. _Waitress: https://github.com/Pylons/waitress
 .. _Ziggurat-Foundations: https://github.com/ergo/ziggurat_foundations
+.. |OpenAPI-spec| replace:: OpenAPI Specification
+.. _OpenAPI-spec: https://spec.openapis.org/oas/v3.1.0
 
 .. external providers
 .. _OpenID: https://openid.net/
