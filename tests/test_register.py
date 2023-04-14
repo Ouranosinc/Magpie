@@ -490,7 +490,6 @@ def test_register_process_permissions_from_multiple_files():
 
     Use the *raw* format expected from loaded configuration files to validate their parsing at the same time.
     """
-
     cfg1 = {
         "users": [
             {"username": "usr1"},

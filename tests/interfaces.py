@@ -6113,7 +6113,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             For :term:`Service` types that allow ``GetCapabilities`` :term:`Permission`, it was expected that
             they automatically set it to be allowed for ``MAGPIE_ANONYMOUS_USER``. This caused problems
             when the inverse operation (deny) is required since ``MAGPIE_ANONYMOUS_USER`` cannot be modified
-            from the API and :term:`Direct Permission` has higher priority over :term:`Inherited Permission`,
+            from the API and :term:`Direct Permissions` has higher priority over :term:`Inherited Permissions`,
             making it possible to revert with any inherited :term:`Group` :term:`Permission`.
             This behaviour is not automatically applied in following versions.
         """

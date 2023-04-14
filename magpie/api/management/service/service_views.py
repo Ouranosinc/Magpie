@@ -316,7 +316,6 @@ def get_service_type_resources_view(request):
     """
     List details of resource types supported under a specific service type.
     """
-
     def _get_resource_types_info(res_type_names):
         res_type_classes = [rtc for rtn, rtc in models.RESOURCE_TYPE_DICT.items() if rtn in res_type_names]
         return [sf.format_service_resource_type(rtc, SERVICE_TYPE_DICT[service_type]) for rtc in res_type_classes]

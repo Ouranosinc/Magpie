@@ -50,12 +50,12 @@ application documentation of your liking for their respective setup requirements
 API
 ----------------------
 
-When the application is started, the Swagger API should be available under ``/api`` path. This will render the *current*
-version API and applicable requests. Please refer to this documentation to discover all provided API paths and
-operations supported by `Magpie` on a *running* instance (that could be older than latest code base). Alternatively,
-documentation of *all* versions is available on `ReadTheDocs`_ at the |oas-rtd|_ location. To select another version
-than the latest, first employ the `ReadTheDocs`_ version selector, then navigate to the Swagger page, or directly adjust
-the URL as ``/en/{version}/api.html``.
+When the application is started, the :term:`OpenAPI` should be available under ``/api`` path. This will render the
+*current* :term:`API` version and applicable requests. Please refer to this documentation to discover all provided
+:term:`API` paths and operations supported by `Magpie` on a *running* instance (that could be older than latest code
+base). Alternatively, documentation of *all* versions is available on `ReadTheDocs`_ at the |oas-rtd|_ location.
+To select another version than the latest, first employ the `ReadTheDocs`_ version selector, then navigate to the
+Swagger UI page, or directly adjust the URL as ``/en/{version}/api.html``.
 
 .. |oas-rtd| replace:: OpenAPI Specification
 .. _oas-rtd: https://pavics-magpie.readthedocs.io/en/latest/api.html

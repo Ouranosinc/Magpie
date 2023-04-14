@@ -90,7 +90,8 @@ class WebhookAction(ExtendedEnum):
     """
 
     DELETE_USER = "delete_user"
-    """Triggered when an existing :term:`User` gets successfully deleted.
+    """
+    Triggered when an existing :term:`User` gets successfully deleted.
 
     .. seealso::
         :ref:`webhook_user_delete`

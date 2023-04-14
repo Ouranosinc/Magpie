@@ -215,7 +215,9 @@ ignored-classes=optparse.Values,
 # supports qualified module names, as well as Unix pattern matching.
 ignored-modules=magpie.definitions.*_definitions,
                 alembic.op,
-                alembic.context
+                alembic.context,
+                os,
+                abc
 
 # Show a hint with possible names when a member name was not found. The aspect
 # of finding the hint is based on edit distance.

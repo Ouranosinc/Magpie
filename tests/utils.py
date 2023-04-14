@@ -824,7 +824,6 @@ def mocked_send_email(func):
     .. seealso::
         :func:`mock_send_mail`
     """
-
     def no_email(*_, **__):
         return True  # "success" email
 
@@ -867,7 +866,6 @@ def mock_send_email(target):
 
     :param target: Target function which will be replaced by a mocked send_email function.
     """
-
     # Employ the function that builds the SMTP connection to raise an error midway to skip sending the email.
     # This way we test everything including configuration retrieval and body template generation, except sending.
     from magpie.api.notifications import send_email as real_send_email

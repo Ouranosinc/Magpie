@@ -887,8 +887,8 @@ class TokenOperation(ExtendedEnum):
 
     GROUP_ACCEPT_TERMS = "group-accept-terms"
     """
-    Temporary token associated to an URL endpoint called by an user that accepts the terms and conditions (T&C)
-    to join a particular group.
+    Temporary token associated to an URL endpoint called by a user that accepts the terms and conditions (T&C) to join a
+    particular group.
     """
 
     USER_PASSWORD_RESET = "user-password-reset"  # nosec: B105
@@ -913,8 +913,8 @@ class TokenOperation(ExtendedEnum):
 
     WEBHOOK_USER_STATUS_ERROR = "webhook-user-status-error"
     """
-    Temporary token employed to provide a callback URL that a registered webhook can call following the triggered
-    event to indicate that the corresponding operation resulted into an invalid user status.
+    Temporary token employed to provide a callback URL that a registered webhook can call following the triggered event
+    to indicate that the corresponding operation resulted into an invalid user status.
     """
 
 

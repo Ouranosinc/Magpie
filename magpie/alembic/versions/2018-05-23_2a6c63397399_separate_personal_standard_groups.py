@@ -75,7 +75,6 @@ def upgrade_migrate(old_group, old_user, new_group, new_name, db_session):
 
     Reassigns the user references to link to the new standard group.
     """
-
     if new_group is None and old_group is not None:
         # just rename the group, no need to adjust references
         old_group.group_name = new_name
@@ -109,7 +108,6 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
 
     Reassigns the user references to link to the old personal group.
     """
-
     if old_group is None:
         # create missing group
         db_session.execute(groups.insert().value(group_name=old_name, member_count=0))
@@ -144,7 +142,6 @@ def clean_user_groups(db_session):
 
     Invalid user references are dropped.
     """
-
     all_users = db_session.execute(sa.select([users]))
     all_groups = db_session.execute(sa.select([groups]))
     all_usr_grp = db_session.execute(sa.select([users_groups]))

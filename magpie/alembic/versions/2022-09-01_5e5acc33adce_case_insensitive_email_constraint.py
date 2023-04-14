@@ -1,5 +1,5 @@
 """
-Case Insensitive Email Constraint
+Case Insensitive Email Constraint.
 
 Revision ID: 5e5acc33adce
 Revises: 0c6269f410cd

@@ -88,7 +88,7 @@ employed by `Magpie`:
     :term:`Group` membership contexts. When requesting a :term:`Group`'s permissions, only "rules" explicitly set on
     the given group are returned. The same concept applies when *only* requesting :term:`User` permissions. Providing
     applicable :term:`User`-scoped requests with ``inherited=true`` query parameter will return the complete set of
-    |applied_permissions|_ for that :term:`User` and all his :term:`Group` membership simultaneously.
+    |applied_permissions|_ for that :term:`User` and all its :term:`Group` membership simultaneously.
     See |perm_example_type|_ for comparison of results with different query parameters.
 
     .. versionchanged:: 2.0
@@ -102,7 +102,7 @@ employed by `Magpie`:
 
 - **Resolved Permissions**:
     Specific interpretation of |inherited_permissions|_ when there are multiple |applied_permissions|_
-    combinations to the :term:`User` and/or his :term:`Group` memberships. The *resolution* of all those definitions
+    combinations to the :term:`User` and/or its :term:`Group` memberships. The *resolution* of all those definitions
     are interpreted on a per-:term:`Resource` basis to obtain an equivalent and unique :term:`Permission` matching
     the one with highest priority, only for that localized scope. This resulting *resolved* :term:`Permission` reduces
     the set of defined |inherited_permissions|_ such that other entries on the same :term:`Resource` can be
@@ -346,9 +346,9 @@ The |perm_scope|_ concept is defined by :class:`magpie.permissions.Scope` enum. 
 Also, when combined with the |perm_access|_ component, the |perm_scope|_ modifier can provide advanced control over
 granted or denied access.
 
-As a general rule of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
-the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
-hierarchy and by :term:`Group` memberships.
+As a general rule of thumb, all :term:`Permissions <Permission>` are resolved such that more restrictive access
+applied *closer* to the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms
+of inheritance by tree hierarchy and by :term:`Group` memberships.
 
 .. seealso::
     - |perm_example_modifiers|_
@@ -733,8 +733,8 @@ Given that scheme, let's say that existing elements are defined using the allowe
         resource-B1         (resource-type-1)
             resource-B2     (resource-type-2)
 
-Let's says we also got a ``example-user`` that is member of ``example-group``, and that  |applied_permissions|_ on them
-are as follows:
+Let's says we also got a ``example-user`` that is member of ``example-group``, and that |applied_permissions|_
+for them are defined as follows:
 
 .. code-block::
 
@@ -744,61 +744,73 @@ are as follows:
     (service-3,   example-user,  write)
     (resource-B1, example-group, read)
 
-For simplification purposes, we will use the names directly in following steps, but remember that requests would
-normally require unique identifiers for :term:`Resource` resolution. Lets observe what happens using different query
-parameters with request ``GET /users/{user_name}/resources/{resource_id}/permissions``.
+For simplification purposes, we will use the names directly in following steps, but remember that actual :term:`API`
+requests would normally require unique identifiers for :term:`Resource` resolution. Lets observe what happens using
+different query parameters with request ``GET /users/{user_name}/resources/{resource_id}/permissions``.
 
 If no query parameter is specified, we obtain permissions as follows:
 
 .. code-block::
 
-    /users/example-user/resources/service-1/permissions                     => [write]
+    /users/example-user/resources/service-1/permissions                     => [write]  (1)
     /users/example-user/resources/service-2/permissions                     => []
-    /users/example-user/resources/resource-A/permissions                    => [read]
-    /users/example-user/resources/service-3/permissions                     => [write]
+    /users/example-user/resources/resource-A/permissions                    => [read]   (1)
+    /users/example-user/resources/service-3/permissions                     => [write]  (1)
     /users/example-user/resources/resource-B1/permissions                   => []
     /users/example-user/resources/resource-B2/permissions                   => []
 
-Using ``inherited`` option, we obtain the following:
+These :term:`Permissions <Permission>` :sup:`(1)` simply represent the |direct_permissions|_
+that ``example-user`` has, **without** considering all its :term:`Group` memberships.
+
+Using ``inherited=true`` option, we obtain the following:
 
 .. code-block::
 
     /users/example-user/resources/service-1/permissions?inherited=true      => [write]
-    /users/example-user/resources/service-2/permissions?inherited=true      => [write]  (1)
+    /users/example-user/resources/service-2/permissions?inherited=true      => [write]  (2)
     /users/example-user/resources/resource-A/permissions?inherited=true     => [read]
     /users/example-user/resources/service-3/permissions?inherited=true      => [write]
-    /users/example-user/resources/resource-B1/permissions?inherited=true    => [read]   (1)
+    /users/example-user/resources/resource-B1/permissions?inherited=true    => [read]   (2)
     /users/example-user/resources/resource-B2/permissions?inherited=true    => []
 
 As illustrated, requesting for |inherited_permissions|_ now also returns :term:`Group`-related :term:`Permission`
-:sup:`(1)` where they where not returned before with only :term:`User`-related :term:`Permission`.
+:sup:`(2)` that where not returned before with only :term:`User`-related :term:`Permission`. Note that returned
+:term:`Permissions <Permission>` are all combinations of |applied_permissions|_ originally defined.
 
-On the other hand, using ``effective`` would result in the following:
+On the other hand, using ``effective=true`` would result in the following:
 
 .. code-block::
 
-    /users/example-user/resources/service-1/permissions?effective=true      => [write]
+    /users/example-user/resources/service-1/permissions?effective=true      => [write]          (1)
     /users/example-user/resources/service-2/permissions?effective=true      => [write]          (2)
     /users/example-user/resources/resource-A/permissions?effective=true     => [read, write]    (3)
-    /users/example-user/resources/service-3/permissions?effective=true      => []
-    /users/example-user/resources/resource-B1/permissions?effective=true    => [read]           (2)
+    /users/example-user/resources/service-3/permissions?effective=true      => [write]          (1)
+    /users/example-user/resources/resource-B1/permissions?effective=true    => [read, write]    (4)
     /users/example-user/resources/resource-B2/permissions?effective=true    => [read, write]    (4)
 
-In this case, all :term:`Resource` entries that had :term:`Permission` directly set on them :sup:`(2)`, whether through
-:term:`User` or :term:`Group` combination, all return the exact same set of :term:`Permission`. This is because
-|effective_permissions|_ always imply |inherited_permissions|_ (i.e.: using both query simultaneously is redundant).
-The reason why we obtain these sets for cases :sup:`(2)` is also because there is no other :term:`Permission` applied
-to any of their parent :term:`Service` or :term:`Resource`. Contrarily, ``resource-A`` :sup:`(3)` now additionally
-receives :term:`Permission` ``read`` indirectly from its parent ``service-2`` (note: ``write`` is redundant here).
-Similarly, ``resource-B2`` :sup:`(4)` which did not even have any immediate :term:`Permission` applied to it,
-now receives both ``read`` and ``write`` access, respectively from its parents ``resource-B1`` and ``service-3``. This
-demonstrates why, although |effective_permissions|_ imply |inherited_permissions|_, they do not necessarily resolve to
-the same result according to the effective :term:`Resource` hierarchy and its parent-children resolution implementation.
+In this case, all :term:`Resource` entries that had :term:`Permission` directly set on them, whether through
+:term:`User` :sup:`(1)` or :term:`Group` :sup:`(2)` combination, all return the exact same set of :term:`Permission`.
+This is because |effective_permissions|_ always imply |inherited_permissions|_
+(i.e.: using both query simultaneously is redundant).
+The reason why we obtain these sets for cases :sup:`(1)` and :sup:`(2)` is because there is no
+other :term:`Permission` applied  to any of their parent :term:`Service` or :term:`Resource`.
+Contrarily, ``resource-A`` :sup:`(3)` now additionally (in contrast to ``inherited=true``)
+receives :term:`Permission` ``write`` indirectly from its parent ``service-2``.
+This is due to the ``recursive`` hierarchical inheritance of the parent-children *permission scheme*.
+Furthermore, ``resource-A`` :sup:`(3)` preserves the ``read`` :term:`Permission` that was directly
+applied for ``example-user``. Similarly, ``resource-B2`` :sup:`(4)` which did not even have any
+immediate |applied_permissions|_ on it, now receives both ``read`` and ``write`` access, respectively
+from its parents ``resource-B1`` (through inherited :term:`Group` :term:`Permission <Permissions>`)
+and ``service-3`` (through direct :term`User` :term:`Permission <Permissions>`).
+This demonstrates why, although |effective_permissions|_ imply |inherited_permissions|_,
+they do not necessarily resolve to the same result according to the effective :term:`Resource` hierarchy
+and its parent-children resolution implementation.
 
 Using ``effective`` query tells `Magpie` to rewind the :term:`Resource` tree from the requested :term:`Resource` up to
 the top-most :term:`Service` in order to accumulate all |inherited_permissions|_ observed along the way for every
-encountered element. All :term:`Permission` that is applied *higher* to the requested :term:`Resource` are considered
-as if applied directly on it. Query parameter ``inherited`` limits itself only to specifically requested
+encountered element. All :term:`Permissions <Permission>` that are applied *higher* than the requested
+:term:`Resource` are considered as if applied directly on it.
+Query parameter ``inherited`` limits itself only to specifically requested
 :term:`Resource`, without hierarchy resolution, but still considering :term:`Group` memberships. For this reason,
 ``inherited`` *could* look the same to ``effective`` results if the :term:`Service` hierarchy is "flat", or if all
 :term:`Permission` can be found directly on the target :term:`Resource`, but it is not guaranteed. This is further
@@ -806,8 +818,12 @@ important if the :term:`Service`'s type implementation provides custom methodolo
 (see :ref:`services` for more details).
 
 In summary, ``effective`` tells us *"which permissions does the user have access to for this resource"*, while
-``inherited`` answers *"which permissions does the user have on this resource alone"*, and without any query, we
-obtain *"what are the permissions that this user explicitly has on this resource"*.
+``inherited`` answers *"which permissions does the user or its groups have on this resource alone"*, and without
+any query, we obtain *"which permissions that this user explicitly has itself on this resource"*.
+
+.. note::
+    For both ``inherited`` and ``effective`` query parameters, explicitly requesting ``false`` is equivalent
+    to omitting the parameter entirely.
 
 .. _perm_example_modifiers:
 .. |perm_example_modifiers| replace:: Permission Modifiers example
@@ -1013,4 +1029,3 @@ Presented below is the resolved |effective_permissions|_ matrix of ``TestUser`` 
       - ``write``
       - |check|
       - Allowed from :envvar:`MAGPIE_ANONYMOUS_GROUP` recursive access.
-

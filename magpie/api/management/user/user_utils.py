@@ -589,7 +589,8 @@ def get_user_services(user, request, cascade_resources=False, format_as_list=Fal
     :param user: user for which to find services
     :param request: request with database session connection
     :param cascade_resources:
-        If ``False``, return only services which the :term:`User` has :term:`Immediate Permissions` on specialized
+        If ``False``, return only services which the :term:`User` has
+        :ref:`Immediate Permissions <immediate_permissions>` on specialized
         top-level resources corresponding to a :term:`Service`.
         Otherwise, return every service that has at least one sub-resource with permissions (children at any-level).
         In both cases, the *permissions* looked for consider either only :term:`Direct Permissions` or any

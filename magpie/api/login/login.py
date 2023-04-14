@@ -278,7 +278,6 @@ def authomatic_login_view(request):
     """
     Signs in a user session using an external provider.
     """
-
     provider_name = request.matchdict.get("provider_name", "").lower()
     response = Response()
     verify_provider(provider_name)

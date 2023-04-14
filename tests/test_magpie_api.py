@@ -660,7 +660,6 @@ def test_response_metadata():
 
     note: test only locally to avoid remote server side-effects and because mock cannot be done remotely
     """
-
     def raise_request(*_, **__):
         raise TypeError()
 
