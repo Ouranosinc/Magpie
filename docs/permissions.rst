@@ -346,9 +346,9 @@ The |perm_scope|_ concept is defined by :class:`magpie.permissions.Scope` enum. 
 Also, when combined with the |perm_access|_ component, the |perm_scope|_ modifier can provide advanced control over
 granted or denied access.
 
-As a general rule of thumb, all :term:`Permission` are resolved such that more restrictive access applied *closer* to
-the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms of inheritance by tree
-hierarchy and by :term:`Group` memberships.
+As a general rule of thumb, all :term:`Permissions <Permission>` are resolved such that more restrictive access
+applied *closer* to the actual :term:`Resource` for the targeted :term:`User` will have priority, both in terms
+of inheritance by tree hierarchy and by :term:`Group` memberships.
 
 .. seealso::
     - |perm_example_modifiers|_
@@ -759,8 +759,8 @@ If no query parameter is specified, we obtain permissions as follows:
     /users/example-user/resources/resource-B1/permissions                   => []
     /users/example-user/resources/resource-B2/permissions                   => []
 
-These simply represent the |direct_permissions|_ that ``example-user`` has, **without** considering all
-its :term:`Group` memberships.
+These :term:`Permissions <Permission>` :sup:`(1)` simply represent the |direct_permissions|_
+that ``example-user`` has, **without** considering all its :term:`Group` memberships.
 
 Using ``inherited=true`` option, we obtain the following:
 
@@ -774,7 +774,7 @@ Using ``inherited=true`` option, we obtain the following:
     /users/example-user/resources/resource-B2/permissions?inherited=true    => []
 
 As illustrated, requesting for |inherited_permissions|_ now also returns :term:`Group`-related :term:`Permission`
-:sup:`(1)` that where not returned before with only :term:`User`-related :term:`Permission`. Note that returned
+:sup:`(2)` that where not returned before with only :term:`User`-related :term:`Permission`. Note that returned
 :term:`Permissions <Permission>` are all combinations of |applied_permissions|_ originally defined.
 
 On the other hand, using ``effective=true`` would result in the following:
@@ -785,7 +785,7 @@ On the other hand, using ``effective=true`` would result in the following:
     /users/example-user/resources/service-2/permissions?effective=true      => [write]          (2)
     /users/example-user/resources/resource-A/permissions?effective=true     => [read, write]    (3)
     /users/example-user/resources/service-3/permissions?effective=true      => [write]          (1)
-    /users/example-user/resources/resource-B1/permissions?effective=true    => [read]           (2)
+    /users/example-user/resources/resource-B1/permissions?effective=true    => [read, write]    (4)
     /users/example-user/resources/resource-B2/permissions?effective=true    => [read, write]    (4)
 
 In this case, all :term:`Resource` entries that had :term:`Permission` directly set on them, whether through
@@ -808,8 +808,9 @@ and its parent-children resolution implementation.
 
 Using ``effective`` query tells `Magpie` to rewind the :term:`Resource` tree from the requested :term:`Resource` up to
 the top-most :term:`Service` in order to accumulate all |inherited_permissions|_ observed along the way for every
-encountered element. All :term:`Permission` that is applied *higher* that the requested :term:`Resource` are considered
-as if applied directly on it. Query parameter ``inherited`` limits itself only to specifically requested
+encountered element. All :term:`Permissions <Permission>` that are applied *higher* than the requested
+:term:`Resource` are considered as if applied directly on it.
+Query parameter ``inherited`` limits itself only to specifically requested
 :term:`Resource`, without hierarchy resolution, but still considering :term:`Group` memberships. For this reason,
 ``inherited`` *could* look the same to ``effective`` results if the :term:`Service` hierarchy is "flat", or if all
 :term:`Permission` can be found directly on the target :term:`Resource`, but it is not guaranteed. This is further
