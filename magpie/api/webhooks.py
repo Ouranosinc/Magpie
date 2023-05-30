@@ -13,8 +13,8 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.management.group.group_formats import format_group
-from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.resource import resource_utils as ru
+from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user.user_formats import format_user
 from magpie.constants import get_constant
