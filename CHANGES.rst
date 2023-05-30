@@ -9,7 +9,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add the ``service.type`` data in the `Webhooks` for a `Permission` change, even if the resource is not a service,
+  since the root service type is necessary to `Cowbird`.
 
 .. _changes_3.33.0:
 

@@ -14,6 +14,7 @@ from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.management.group.group_formats import format_group
 from magpie.api.management.resource.resource_formats import format_resource
+from magpie.api.management.resource import resource_utils as ru
 from magpie.api.management.service.service_formats import format_service
 from magpie.api.management.user.user_formats import format_user
 from magpie.constants import get_constant
@@ -155,6 +156,7 @@ if TYPE_CHECKING:
 def get_permission_update_params(target,         # type: Union[models.User, models.Group]
                                  resource,       # type: ServiceOrResourceType
                                  permission,     # type: PermissionSet
+                                 db_session,     # type: Session
                                  ):              # type: (...) -> WebhookTemplateParameters
     """
     Generates the :term:`Webhook` parameters based on provided references.
@@ -166,7 +168,10 @@ def get_permission_update_params(target,         # type: Union[models.User, mode
     if resource.resource_type == "service":
         res_params = format_service(resource, basic_info=True, dotted=True)
     else:
-        res_params = {"service.{}".format(param): None for param in ["name", "type", "sync_type", "public_url"]}
+        res_params = {"service.{}".format(param): None for param in ["name", "sync_type", "public_url"]}
+        # Add the root service type even for non-service resources, since it is needed by Cowbird.
+        res_params["service.type"] = \
+            ru.get_resource_root_service_by_id(resource.resource_id, db_session=db_session).type
     res_params.update(format_resource(resource, basic_info=True, dotted=True))
     params = permission.webhook_params()
     params.update(target_params)
