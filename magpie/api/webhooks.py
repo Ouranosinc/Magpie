@@ -170,8 +170,8 @@ def get_permission_update_params(target,         # type: Union[models.User, mode
     else:
         res_params = {"service.{}".format(param): None for param in ["name", "sync_type", "public_url"]}
         # Add the root service type even for non-service resources, since it is needed by Cowbird.
-        res_params["service.type"] = \
-            ru.get_resource_root_service_by_id(resource.resource_id, db_session=db_session).type
+        res_params["service.type"] = ru.get_resource_root_service_by_id(
+            resource.resource_id, db_session=db_session).type
     res_params.update(format_resource(resource, basic_info=True, dotted=True))
     params = permission.webhook_params()
     params.update(target_params)
