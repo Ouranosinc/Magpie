@@ -554,7 +554,7 @@ class TestWebhooks(ti.AdminTestCase):
                     expected["data"]["resource_type"] = self.test_resource_type
                     expected["data"]["resource_id"] = res_id
                     expected["data"]["service_name"] = None
-                    expected["data"]["service_type"] = None
+                    expected["data"]["service_type"] = self.test_service_type
                     expected["data"]["service_public_url"] = None
                 else:
                     expected["data"]["resource_name"] = self.test_service_name

@@ -190,7 +190,7 @@ def create_group_resource_permission_response(group, resource, permission, db_se
     ax.evaluate_call(lambda: db_session.add(new_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=perm_content,
                      msg_on_fail=s.GroupResourcePermissions_POST_ForbiddenAddResponseSchema.description)
-    webhook_params = get_permission_update_params(group, resource, permission)
+    webhook_params = get_permission_update_params(group, resource, permission, db_session)
     process_webhook_requests(WebhookAction.CREATE_GROUP_PERMISSION, webhook_params)
     return ax.valid_http(http_success=http_success, content=perm_content, detail=http_detail)
 
@@ -277,7 +277,7 @@ def delete_group_resource_permission_response(group, resource, permission, db_se
     ax.evaluate_call(lambda: db_session.delete(del_perm), fallback=lambda: db_session.rollback(),
                      http_error=HTTPForbidden, content=perm_content,
                      msg_on_fail=s.GroupServicePermission_DELETE_ForbiddenResponseSchema.description)
-    webhook_params = get_permission_update_params(group, resource, permission)
+    webhook_params = get_permission_update_params(group, resource, permission, db_session)
     process_webhook_requests(WebhookAction.DELETE_GROUP_PERMISSION, webhook_params)
     return ax.valid_http(http_success=HTTPOk, detail=s.GroupServicePermission_DELETE_OkResponseSchema.description)
 
