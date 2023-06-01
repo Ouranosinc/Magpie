@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.34.0:
+
+`3.34.0 <https://github.com/Ouranosinc/Magpie/tree/3.34.0>`_ (2023-05-31)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add the ``service.type`` data in the `Webhooks` for a `Permission` change, even if the resource is not a service,
