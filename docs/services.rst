@@ -571,16 +571,18 @@ administrator intends to only make use (for the moment) of :term:`WFS` functiona
         url: http://localhost:1234
         type: geoserver
 
-        # customizable configuration (enable desired OWS request handlers)
-        # all OWS are enabled by default if no configuration is provided
+        # customizable configuration (enable desired OWS/REST request handlers)
+        # all OWS/REST services are enabled by default if no configuration is provided
         configuration:
           wfs: true
           wms: false
           wps: false
+          api: false
 
-This would make sure that request parsing and access to :term:`WMS` and :term:`WPS` endpoints is disabled, but leaves
-the :term:`Resource` definitions available for use at a later time if the administrator decides to eventually make use
-of them. For example, the administrator could decide to start using :term:`WMS` as well without any further change
+This would make sure that request parsing and access to :term:`WMS`, :term:`WPS` and any REST :term:`API` endpoints
+are disabled, but leaves the :term:`Resource` definitions available for use at a later time if the administrator
+decides to eventually make use of them.
+For example, the administrator could decide to start using :term:`WMS` as well without any further change
 needed other than updating this :term:`Service` custom configuration and applying :term:`Permissions <Permission>`
 specific only to :term:`WMS`.
 All other :term:`Applied Permissions <Applied Permission>` to existing :term:`User`, :term:`Group` and :term:`Resource`
@@ -590,7 +592,8 @@ the :term:`WFS` to :term:`WMS` request handlers.
 .. note::
     Custom configuration can be provided With either the `providers.cfg`_ (as presented above), in
     a :ref:`config_file` as described in greater lengths within the :ref:`configuration` chapter,
-    or by providing the ``configuration`` field directly within the API request body during :term:`Service` creation.
+    or by providing the ``configuration`` field directly within the :term:`API` request body during
+    :term:`Service` creation.
 
 
 Service Synchronization

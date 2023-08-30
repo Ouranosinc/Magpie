@@ -439,7 +439,7 @@ class ServiceInterface(object):
     def _get_request_path_parts(self):
         # type: () -> Optional[List[Str]]
         """
-        Obtain the :attr:`request` path parts striped of anything prior to the referenced :attr:`service` name.
+        Obtain the :attr:`request` path parts stripped of anything prior to the referenced :attr:`service` name.
         """
         path_parts = self.request.path.rstrip("/").split("/")
         svc_name = self.service.resource_name
@@ -728,15 +728,6 @@ class ServiceOWS(ServiceInterface):
 
     request = property(_get_request, _set_request)
 
-    @property
-    @abc.abstractmethod
-    def service_base(self):
-        # type: () -> Str
-        """
-        Name of the base :term:`OWS` functionality serviced by `Geoserver`.
-        """
-        raise NotImplementedError
-
     @abc.abstractmethod
     def resource_requested(self):
         # type: () -> MultiResourceRequested
@@ -766,7 +757,6 @@ class ServiceWPS(ServiceOWS):
     """
     Service that represents a ``Web Processing Service`` endpoint.
     """
-    service_base = "wps"
     service_type = "wps"
 
     permissions = [
@@ -843,7 +833,6 @@ class ServiceNCWMS2(ServiceBaseWMS):
     .. seealso::
         https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/04-usage.html
     """
-    service_base = "wms"
     service_type = "ncwms"
 
     permissions = [
@@ -929,6 +918,15 @@ class ServiceGeoserverBase(ServiceOWS):
     Provides basic configuration parameters and functionalities shared by `Geoserver` implementations.
     """
 
+    @property
+    @abc.abstractmethod
+    def service_base(self):
+        # type: () -> Str
+        """
+        Name of the base :term:`OWS` functionality serviced by `Geoserver`.
+        """
+        raise NotImplementedError
+
     @classmethod
     @classproperty
     @abc.abstractmethod
@@ -1004,7 +1002,9 @@ class ServiceGeoserverBase(ServiceOWS):
 
         The :attr:`resource_param` is also added to ensure it is always parsed based on the derived implementation.
         """
-        if isinstance(cls.resource_param, six.string_types):
+        if cls.resource_param is None:
+            return []
+        elif isinstance(cls.resource_param, six.string_types):
             impl_params = [cls.resource_param]
         elif isinstance(cls.resource_param, list):
             impl_params = cls.resource_param
@@ -1141,7 +1141,7 @@ class ServiceGeoserverBase(ServiceOWS):
 
 class ServiceGeoserverWMS(ServiceGeoserverBase, ServiceBaseWMS):  # order important to call overridden class properties
     """
-    Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``GeoServer``.
+    Service that represents a `Web Map Service` endpoint with functionalities specific to `Geoserver`.
 
     .. seealso::
         https://docs.geoserver.org/latest/en/user/services/wms/reference.html
@@ -1239,12 +1239,11 @@ class ServiceAPI(ServiceInterface):
 
 class ServiceWFS(ServiceOWS):
     """
-    Service that represents a ``Web Feature Service`` endpoint.
+    Service that represents a `Web Feature Service` endpoint.
 
     .. seealso::
         https://www.ogc.org/standards/wfs (OpenGIS WFS 2.0.0 implementation)
     """
-    service_base = "wfs"
     service_type = "wfs"
 
     permissions = [
@@ -1298,7 +1297,7 @@ class ServiceWFS(ServiceOWS):
 
 class ServiceGeoserverWFS(ServiceGeoserverBase, ServiceWFS):  # order important to call overridden class properties
     """
-    Service that represents a ``Web Feature Service`` endpoint with functionalities specific to ``GeoServer``.
+    Service that represents a `Web Feature Service` endpoint with functionalities specific to `Geoserver`.
 
     .. seealso::
         https://docs.geoserver.org/latest/en/user/services/wfs/reference.html
@@ -1332,7 +1331,7 @@ class ServiceGeoserverWFS(ServiceGeoserverBase, ServiceWFS):  # order important 
 
 class ServiceTHREDDS(ServiceInterface):
     """
-    Service that represents a ``THREDDS Data Server`` endpoint.
+    Service that represents a `THREDDS Data Server` endpoint.
     """
     service_type = "thredds"
 
@@ -1451,8 +1450,9 @@ class ServiceTHREDDS(ServiceInterface):
 
 class ServiceGeoserverWPS(ServiceGeoserverBase, ServiceWPS):  # order important to call overridden class properties
     """
-    Service that represents a ``Web Processing Service`` under a `Geoserver` instance.
+    Service that represents a `Web Processing Service` under a `Geoserver` instance.
     """
+    service_base = "wps"
     service_type = "geoserverwps"
 
     resource_scoped = False  # name in 'identifier' must not be split and does not match WORKSPACE
@@ -1472,9 +1472,22 @@ class ServiceGeoserverWPS(ServiceGeoserverBase, ServiceWPS):  # order important 
     }
 
 
+class ServiceGeoserverAPI(ServiceAPI, ServiceGeoserverBase):
+    """
+    Service that represents a generic `REST API` under a `Geoserver` instance.
+    """
+    service_base = "api"
+    service_type = "geoserverapi"
+
+    resource_scoped = False
+    resource_multi = False
+    resource_param = None
+    resource_types_permissions = ServiceAPI.resource_types_permissions
+
+
 class ServiceGeoserver(ServiceGeoserverBase):
     """
-    Service that encapsulates the multiple :term:`OWS` endpoints from `GeoServer` services.
+    Service that encapsulates the multiple :term:`OWS` endpoints from `Geoserver` services.
 
     .. seealso::
         https://docs.geoserver.org/stable/en/user/services/index.html
@@ -1485,17 +1498,20 @@ class ServiceGeoserver(ServiceGeoserverBase):
         ServiceGeoserverWFS.service_base: ServiceGeoserverWFS,
         ServiceGeoserverWMS.service_base: ServiceGeoserverWMS,
         ServiceGeoserverWPS.service_base: ServiceGeoserverWPS,
+        ServiceGeoserverAPI.service_base: ServiceGeoserverAPI,
     }
 
     @classproperty
-    def service_ows_supported(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
-        # type: () -> Set[Type[ServiceOWS]]
+    def service_supported(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
+        # type: () -> Set[Type[ServiceGeoserverBase]]
         return set(cls.service_map.values())
 
     # only allow workspace directly under service
     # then, only layer or process under that workspace
+    # allow nesting any amount of routes to form a prefix, which then can lead to an OWS endpoint, or any other REST API
     child_structure_allowed = {
-        models.Service: [models.Workspace],
+        models.Service: [models.Workspace, models.Route],
+        models.Route: [models.Workspace, models.Route],
         models.Workspace: [models.Layer, models.Process],
         models.Layer: [],
         models.Process: [],
@@ -1511,6 +1527,14 @@ class ServiceGeoserver(ServiceGeoserverBase):
         Without the :class:`models.Workspace` scope in the path, ``identifier`` parameter fails to be resolved by
         `Geoserver`, as if it was unspecified. Attribute :attr:`ServiceGeoserverWPS.resource_scoped` controls the
         behaviour of splitting the defined :attr:`resource_param` into :class:`models.Workspace` and child components.
+        
+    .. note::
+        The :class:`models.Route` is allowed at the root of the service and for any nested :class:`models.Route`
+        resource to support various endpoints such as the ``/web`` user interface, or the REST interface for the
+        new generation of `OGC API` services typically on ``/ogc/{features|maps|processes}`` endpoints. No special
+        logic is applied for the different services nested under those endpoints. All of them are handled as *typical*
+        RESTful APIs, for which permissions and appropriate sub-paths should be defined accordingly with their
+        respective specifications and schema.
     """
 
     configurable = True
@@ -1536,7 +1560,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
     def params_expected(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> List[Str]
         params = set()
-        for svc in cls.service_ows_supported:
+        for svc in cls.service_supported:
             if issubclass(svc, ServiceOWS):
                 param_names = getattr(svc, "params_expected", None)
                 if param_names:
@@ -1547,7 +1571,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
     def permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> List[Permission]
         perms = set()
-        for svc in cls.service_ows_supported:
+        for svc in cls.service_supported:
             if issubclass(svc, ServiceOWS):
                 svc_perms = getattr(svc, "permissions", None)
                 if svc_perms:
@@ -1558,7 +1582,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
     def resource_types_permissions(cls):  # noqa  # pylint: disable=E0213,no-self-argument,W0221,arguments-differ
         # type: () -> ResourceTypePermissions
         perms = {}  # type: ResourceTypePermissions
-        for svc in cls.service_ows_supported:
+        for svc in cls.service_supported:
             if issubclass(svc, ServiceOWS):
                 svc_res_perms = getattr(svc, "resource_types_permissions", None)
                 if svc_res_perms:
@@ -1591,17 +1615,20 @@ class ServiceGeoserver(ServiceGeoserverBase):
         req = self.parser.params["request"]
         if not svc and req:
             # geoserver allows omitting 'service' request query parameter because it can be inferred from the path
-            # since all OWS services are accessed using '/geoserver/<SERVICE>?request=...'
+            # since all OWS services can also be accessed using '/geoserver/<SERVICE>?request=...'
             # attempt to match using applicable path fragment
             svc_path = self.request.path.rsplit("/", 1)[-1].lower()
-            for svc_ows in type(self).service_ows_supported:  # pylint: disable=E1133,not-an-iterable
+            for svc_ows in type(self).service_supported:  # pylint: disable=E1133,not-an-iterable
                 if svc_path == svc_ows.service_base:
                     svc = svc_ows.service_base
                     break
         config = self.get_config()
         if svc not in config or not config[svc]:
-            self._service_requested = None
-            return None
+            if config.get(ServiceGeoserverAPI.service_base):
+                self._service_requested = ServiceGeoserverAPI
+            else:
+                self._service_requested = None
+            return self._service_requested
         self._service_requested = type(self).service_map[svc]
         return self._service_requested
 
@@ -1645,6 +1672,8 @@ SERVICE_TYPES = frozenset([
     ServiceGeoserverWFS,
     ServiceGeoserverWMS,
     ServiceGeoserverWPS,
+    # purposely omit 'ServiceGeoserverAPI' since it is just like base 'ServiceAPI' on its own
+    # no value to duplicate it outside its use within 'ServiceGeoserver'
     ServiceNCWMS2,
     ServiceTHREDDS,
     ServiceWFS,
