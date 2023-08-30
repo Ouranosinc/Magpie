@@ -55,8 +55,8 @@
             <div class="panel-fields">
                 <table class="panel-line">
                     <tr>
-                        <td>
-                            <span class="panel-entry">Name: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Name: </div>
                         </td>
                         <td>
                             <form id="edit_name" action="${request.path}" method="post">
@@ -97,8 +97,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Description: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Description: </div>
                         </td>
                         <td>
                             <form id="edit_description" action="${request.path}" method="post">
@@ -135,8 +135,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Discoverable: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Discoverable: </div>
                         </td>
                         <td>
                             <form id="edit_discoverable" action="${request.path}" method="post">

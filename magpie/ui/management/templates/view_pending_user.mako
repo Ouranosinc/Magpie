@@ -39,8 +39,8 @@
             <div class="panel-fields">
                 <table class="panel-line">
                     <tr>
-                        <td>
-                            <span class="panel-entry">Username: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Username: </div>
                         </td>
                         <td>
                             <div class="panel-line-entry">
@@ -51,8 +51,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Email: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Email: </div>
                         </td>
                         <td>
                             <form id="edit_email" action="${request.path}" method="post">
@@ -68,8 +68,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Status: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Status: </div>
                         </td>
                         <td>
                             <div class="status-container">
@@ -92,8 +92,8 @@
                 <table class="panel-line">
                     <!--- fixme: should have a way to regenerate a new email confirmation url? --->
                     <tr>
-                        <td>
-                            <span class="panel-entry">Registration: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Registration: </div>
                         </td>
                         <td>
                             <div class="panel-line-entry">

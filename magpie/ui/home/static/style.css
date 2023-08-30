@@ -388,6 +388,12 @@ table.panel-line td {
     max-width: 1em;
 }
 
+.panel-line-permissions {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.5em;
+}
+
 .panel-line-checkbox {
     padding-top: 0.1em;
     display: inline-block;
@@ -400,6 +406,11 @@ table.panel-line td {
 .panel-entry {
     font-weight: bold;
     margin-right: 0.5em;
+    margin-top: 0.25em;
+}
+
+.panel-entry-title {
+    vertical-align: top;
 }
 
 .panel-value {
@@ -912,6 +923,7 @@ table.simple-list td:last-child {
 
 .tree-line-scroll-visible {
     overflow-x: auto;
+    min-height: 2.5em;  /* ensure the scroll-bar doesn't hide the title texts */
 }
 
 .tree-key {
@@ -977,6 +989,7 @@ div.tree-button {
     text-overflow: ellipsis;
     overflow: auto;
     text-align: left;
+    min-height: 2em;  /* ensure the scroll-bar doesn't hide the title texts */
 }
 
 .permission-cell {

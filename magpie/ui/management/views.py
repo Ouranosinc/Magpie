@@ -20,7 +20,8 @@ from pyramid.view import view_config
 
 from magpie import register
 from magpie.api import schemas
-from magpie.cli import sync_resources
+from magpie.cli.sync_resources import OUT_OF_SYNC, fetch_single_service, get_last_sync, merge_local_and_remote_resources
+from magpie.cli.sync_services import SYNC_SERVICES_TYPES
 from magpie.constants import get_constant
 # FIXME: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
@@ -285,7 +286,7 @@ class ManagementViews(AdminRequests, BaseViews):
             raise HTTPBadRequest(detail=repr(exc))
 
         sync_types = [s["service_sync_type"] for s in services.values()]
-        sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
+        sync_implemented = any(s in SYNC_SERVICES_TYPES for s in sync_types)
 
         info = self.get_remote_resources_info(res_perms, services, session)
         res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
@@ -648,7 +649,7 @@ class ManagementViews(AdminRequests, BaseViews):
             raise HTTPBadRequest(detail=repr(exc))
 
         sync_types = [s["service_sync_type"] for s in services.values()]
-        sync_implemented = any(s in sync_resources.SYNC_SERVICES_TYPES for s in sync_types)
+        sync_implemented = any(s in SYNC_SERVICES_TYPES for s in sync_types)
 
         info = self.get_remote_resources_info(res_perms, services, session)
         res_perms, ids_to_clean, last_sync_humanized, out_of_sync = info
@@ -696,7 +697,7 @@ class ManagementViews(AdminRequests, BaseViews):
         session = self.request.db
         for service_info in services.values():
             try:
-                sync_resources.fetch_single_service(service_info["resource_id"], session)
+                fetch_single_service(service_info["resource_id"], session)
                 transaction.commit()
             except Exception:  # noqa: W0703 # nosec: B110
                 errors.append(service_info["service_name"])
@@ -720,7 +721,7 @@ class ManagementViews(AdminRequests, BaseViews):
         for last_sync, service_name in zip(last_sync_datetimes, services):
             if last_sync:
                 ids_to_clean += self.get_ids_to_clean(res_perms[service_name]["children"])
-                if now - last_sync > sync_resources.OUT_OF_SYNC:
+                if now - last_sync > OUT_OF_SYNC:
                     out_of_sync.append(service_name)
         return res_perms, ids_to_clean, last_sync_humanized, out_of_sync
 
@@ -729,7 +730,7 @@ class ManagementViews(AdminRequests, BaseViews):
         merged_resources = {}
         for service_name, service_values in services.items():
             service_id = service_values["resource_id"]
-            merge = sync_resources.merge_local_and_remote_resources
+            merge = merge_local_and_remote_resources
             # create a subset for the current local service resources tree
             # avoids over-copying/looping the multi-service tree by merge function that works on the full set each time
             local_svc_res = {service_name: res_perms[service_name]}
@@ -740,7 +741,7 @@ class ManagementViews(AdminRequests, BaseViews):
     @staticmethod
     def get_last_sync_datetimes(service_ids, session):
         # type: (List[int], Session) -> List[Optional[datetime]]
-        return [sync_resources.get_last_sync(s, session) for s in service_ids]
+        return [get_last_sync(s, session) for s in service_ids]
 
     def delete_resource(self, res_id):
         try:

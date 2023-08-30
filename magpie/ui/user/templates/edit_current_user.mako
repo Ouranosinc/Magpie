@@ -81,8 +81,8 @@
             <div class="panel-fields">
                 <table class="panel-line">
                     <tr>
-                        <td>
-                            <span class="panel-entry">Username: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Username: </div>
                         </td>
                         <td>
                             <div class="panel-line-entry">
@@ -105,8 +105,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Password: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Password: </div>
                         </td>
                         <td>
                             <form id="edit_password" action="${request.path}" method="post">
@@ -156,8 +156,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Email: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Email: </div>
                         </td>
                         <td>
                             %if user_edit_email:
@@ -216,8 +216,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Status: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Status: </div>
                         </td>
                         <td>
                             <div class="status-container">
