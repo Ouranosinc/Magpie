@@ -248,7 +248,6 @@ class TestAdapter(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 @runner.MAGPIE_TEST_ADAPTER
 @runner.MAGPIE_TEST_FUNCTIONAL
 class TestAdapterHooks(ti.SetupTwitcher, ti.UserTestCase, ti.BaseTestCase):
-
     __test__ = True
 
     @classmethod

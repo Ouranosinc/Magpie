@@ -1004,7 +1004,7 @@ class ServiceGeoserverBase(ServiceOWS):
         """
         if cls.resource_param is None:
             return []
-        elif isinstance(cls.resource_param, six.string_types):
+        if isinstance(cls.resource_param, six.string_types):
             impl_params = [cls.resource_param]
         elif isinstance(cls.resource_param, list):
             impl_params = cls.resource_param
@@ -1527,7 +1527,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
         Without the :class:`models.Workspace` scope in the path, ``identifier`` parameter fails to be resolved by
         `Geoserver`, as if it was unspecified. Attribute :attr:`ServiceGeoserverWPS.resource_scoped` controls the
         behaviour of splitting the defined :attr:`resource_param` into :class:`models.Workspace` and child components.
-        
+
     .. note::
         The :class:`models.Route` is allowed at the root of the service and for any nested :class:`models.Route`
         resource to support various endpoints such as the ``/web`` user interface, or the REST interface for the
