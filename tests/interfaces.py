@@ -6910,8 +6910,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                 Workspace.resource_type_name,
             ]
             struct_allowed = {
-                Service.resource_type_name: [Workspace.resource_type_name, Route.resource_type_name],
-                Route.resource_type_name: [Workspace.resource_type_name, Route.resource_type_name],
+                Service.resource_type_name: [Route.resource_type_name, Workspace.resource_type_name],
+                Route.resource_type_name: [Route.resource_type_name, Workspace.resource_type_name],
                 Workspace.resource_type_name: [Layer.resource_type_name, Process.resource_type_name],
                 Layer.resource_type_name: [],
                 Process.resource_type_name: [],
@@ -6934,7 +6934,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("resource_types_allowed", svc)
         utils.check_val_is_in("resource_structure_allowed", svc)
         utils.check_val_equal(svc["resource_child_allowed"], True)
-        utils.check_val_equal(svc["resource_types_allowed"], res_types_allowed)
+        utils.check_all_equal(svc["resource_types_allowed"], res_types_allowed, any_order=True)
         utils.check_val_equal(svc["resource_structure_allowed"], struct_allowed)
 
         path = "/resources/{}/types".format(svc_id)
