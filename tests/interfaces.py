@@ -6902,24 +6902,39 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             override_resource_types=res_types
         )
 
-        # nested file/dirs always allowed at any level expect under File
-        res_types_allowed = [Layer.resource_type_name, Process.resource_type_name, Workspace.resource_type_name]
-        struct_allowed = {
-            Service.resource_type_name: [Workspace.resource_type_name],
-            Workspace.resource_type_name: [Layer.resource_type_name, Process.resource_type_name],
-            Layer.resource_type_name: [],
-            Process.resource_type_name: [],
-        }
+        if TestVersion(self.version) >= TestVersion("3.35.0"):
+            res_types_allowed = [
+                Route.resource_type_name,
+                Layer.resource_type_name,
+                Process.resource_type_name,
+                Workspace.resource_type_name,
+            ]
+            struct_allowed = {
+                Service.resource_type_name: [Route.resource_type_name, Workspace.resource_type_name],
+                Route.resource_type_name: [Route.resource_type_name, Workspace.resource_type_name],
+                Workspace.resource_type_name: [Layer.resource_type_name, Process.resource_type_name],
+                Layer.resource_type_name: [],
+                Process.resource_type_name: [],
+            }
+        else:
+            # nested file/dirs always allowed at any level expect under File
+            res_types_allowed = [Layer.resource_type_name, Process.resource_type_name, Workspace.resource_type_name]
+            struct_allowed = {
+                Service.resource_type_name: [Workspace.resource_type_name],
+                Workspace.resource_type_name: [Layer.resource_type_name, Process.resource_type_name],
+                Layer.resource_type_name: [],
+                Process.resource_type_name: [],
+            }
 
         path = "/services/{}".format(self.test_service_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
-        svc = body["service"]
+        svc = body["service"]  # type: JSON
         utils.check_val_is_in("resource_child_allowed", svc)
         utils.check_val_is_in("resource_types_allowed", svc)
         utils.check_val_is_in("resource_structure_allowed", svc)
         utils.check_val_equal(svc["resource_child_allowed"], True)
-        utils.check_val_equal(svc["resource_types_allowed"], res_types_allowed)
+        utils.check_all_equal(svc["resource_types_allowed"], res_types_allowed, any_order=True)
         utils.check_val_equal(svc["resource_structure_allowed"], struct_allowed)
 
         path = "/resources/{}/types".format(svc_id)

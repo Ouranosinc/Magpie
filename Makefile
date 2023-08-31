@@ -564,12 +564,18 @@ check-security-code-only: mkdir-reports  ## run security checks on source code
 .PHONY: check-docs-only
 check-docs-only: check-doc8-only check-docf-only check-links-only	## run every code documentation checks
 
+# FIXME: temporary workaround (https://github.com/PyCQA/doc8/issues/145 and https://github.com/PyCQA/doc8/issues/147)
+# 		configuration somehow not picked up directly from setup.cfg in python 3.11
+#		setting 'ignore-path-errors' not working without the full path (relative 'docs/changes.rst' fails)
+CHECK_DOC8_XARGS := --ignore-path-errors "$(APP_ROOT)/docs/changes.rst;D000"
+
 .PHONY: check-doc8-only
 check-doc8-only: mkdir-reports		## run PEP8 documentation style checks
 	@echo "Running PEP8 doc style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-doc8.txt"
 	@bash -c '$(CONDA_CMD) \
 		doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
+			$(CHECK_DOC8_XARGS) \
 		1> >(tee "$(REPORTS_DIR)/check-doc8.txt")'
 
 # FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)

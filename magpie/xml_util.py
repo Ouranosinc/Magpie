@@ -5,7 +5,7 @@ Package :mod:`lxml` is employed directly even though some linters (e.g.: ``bandi
 instead, because that package's extension with ``lxml`` is marked as deprecated.
 
 .. seealso::
-    https://pypi.org/project/defusedxml/#defusedxml-lxml
+    https://github.com/tiran/defusedxml#defusedxmllxml
 
 To use the module, import is as if importing ``lxml.etree``:
 

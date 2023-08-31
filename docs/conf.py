@@ -215,7 +215,8 @@ linkcheck_ignore = [
     "https://pcmdi.llnl.gov/",  # works, but very often causes false-positive 'broken' links
 ] + ignore_down_providers()
 linkcheck_anchors_ignore = [
-    r".*issuecomment.*"   # GitHub issue comment anchors not resolved
+    r".*issuecomment.*",  # GitHub issue comment anchors not resolved
+    "defusedxmllxml",  # not found because of GitHub dynamic links
 ]
 
 # Add any paths that contain templates here, relative to this directory.

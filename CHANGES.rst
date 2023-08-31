@@ -1,4 +1,4 @@
-.. explicit references must be used in this file (not references.rst) to ensure they are directly rendered on Github
+    .. explicit references must be used in this file (not references.rst) to ensure they are directly rendered on Github
 .. :changelog:
 
 Changes
@@ -9,7 +9,21 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add support of RESTful API endpoints (i.e.: ``ServiceAPI``) under ``ServiceGeoserver`` using ``Route`` resources
+  (fixes `#584 <https://github.com/Ouranosinc/Magpie/issues/584>`_).
+  Requires the `Service` to be configured either with the default ``configuration``,
+  or by explicitly setting ``api: true``. When a HTTP request is sent toward a `Service` typed ``ServiceGeoserver``,
+  any non-`OWS` request (i.e.: `WFS`, `WMS`, `WPS`) will default to the resolution handling of typical ``ServiceAPI``.
+  This can be used notably to access the ``/web`` and ``/ogc`` endpoints of a `GeoServer` instance.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix `UI` rendering of the `Permission` label list under a `Service` edition page when a large amount of possible
+  permissions is applicable. This was notably the case of ``ServiceGeoserver`` that combines permissions of multiple
+  `OWS`-based services, which where going out of bound of the UI page.
+* Fix `UI` scrollbars going over the `Permission` titles in the `User` and `Group` permission edition pages.
 
 .. _changes_3.34.0:
 

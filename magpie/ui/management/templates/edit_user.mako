@@ -55,8 +55,8 @@
             <div class="panel-fields">
                 <table class="panel-line">
                     <tr>
-                        <td>
-                            <span class="panel-entry">Username: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Username: </div>
                         </td>
                         <td>
                             %if user_name not in MAGPIE_FIXED_USERS:
@@ -107,8 +107,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Password: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Password: </div>
                         </td>
                         <td>
                             %if user_name not in MAGPIE_USER_PWD_DISABLED:
@@ -159,8 +159,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Email: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Email: </div>
                         </td>
                         <td>
                             %if user_name not in MAGPIE_FIXED_USERS:
@@ -210,8 +210,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Status: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Status: </div>
                         </td>
                         <td>
                             <div class="status-container">

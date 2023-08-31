@@ -48,7 +48,6 @@ def ows_parser_factory(request):
 
 
 class OWSParser(object):
-
     def __init__(self, request):
         self.request = request
         self.params = {}
@@ -94,7 +93,6 @@ class OWSGetParser(OWSParser):
 
 
 class OWSPostParser(OWSParser):
-
     def __init__(self, request):
         super(OWSPostParser, self).__init__(request)
         self.document = xml_util.fromstring(self.request.body)

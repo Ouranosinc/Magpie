@@ -1010,6 +1010,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             gi: GetFeatureInfo permission (WMS Layer)
             gm: GetMap (WMS Layer)
             dp: DescribeProcess permission (WPS Process)
+            r: Read permission (API Route)
+            w: Write permission (API Route)
             A: allow
             D: deny
             M: match        (makes sense only on layer for any permission except GetCapabilities on service itself)
@@ -1031,6 +1033,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                     Layer21             (gf-D-M)                dp-D, gf-D, gi-D (revoke access, user > group)
                     Layer22                         (gf-D-M)    dp-D, gf-D, gi-D (revoke access, both groups)
                     Layer23             (gf-A-M)    (gf-D-M)    dp-D, gf-A, gi-D (allowed access, user > group)
+                Route1                                          r-D, w-D (denied default)
+                    Route2              (r-A-R)                 r-A, w-D
+                Route3                  (r-A-R)     (w-A-R)     r-A, w-A
+                    Route4                          (w-D-M)     r-A, w-D (revoked access)
 
         .. note::
             Permissions that do not applied to a given sub-:term:`OWS` implementation are automatically denied.
@@ -1052,6 +1058,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         p12_name = "process12"
         p13_name = "process13"
         p14_name = "process14"
+        r1_name = "route1"
+        r2_name = "route2"
+        r3_name = "route3"
+        r4_name = "route4"
 
         utils.TestSetup.delete_TestService(self, svc1_name)
         svc1_id, w1_id = utils.TestSetup.create_TestServiceResourceTree(
@@ -1122,6 +1132,34 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             override_resource_type=models.Layer.resource_type_name
         )
         l23_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=svc1_id,
+            override_resource_name=r1_name,
+            override_resource_type=models.Route.resource_type_name
+        )
+        r1_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=r1_id,
+            override_resource_name=r2_name,
+            override_resource_type=models.Route.resource_type_name
+        )
+        r2_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=svc1_id,
+            override_resource_name=r3_name,
+            override_resource_type=models.Route.resource_type_name
+        )
+        r3_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
+        info = utils.TestSetup.create_TestResource(
+            self,
+            parent_resource_id=r3_id,
+            override_resource_name=r4_name,
+            override_resource_type=models.Route.resource_type_name
+        )
+        r4_id = utils.TestSetup.get_ResourceInfo(self, info)["resource_id"]
 
         # create permissions
         gcAR = PermissionSet(Permission.GET_CAPABILITIES, Access.ALLOW, Scope.RECURSIVE)    # noqa
@@ -1134,6 +1172,9 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         gmDR = PermissionSet(Permission.GET_MAP, Access.DENY, Scope.RECURSIVE)              # noqa
         dpAR = PermissionSet(Permission.DESCRIBE_PROCESS, Access.ALLOW, Scope.RECURSIVE)    # noqa
         dpDM = PermissionSet(Permission.DESCRIBE_PROCESS, Access.DENY, Scope.MATCH)         # noqa
+        rAR = PermissionSet(Permission.READ, Access.ALLOW, Scope.RECURSIVE)                 # noqa
+        wAR = PermissionSet(Permission.WRITE, Access.ALLOW, Scope.RECURSIVE)                # noqa
+        wDM = PermissionSet(Permission.WRITE, Access.DENY, Scope.MATCH)                     # noqa
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=svc1_id, override_permission=gcAR)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=svc1_id, override_permission=gmDR)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=w1_id, override_permission=gfAR)
@@ -1149,6 +1190,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=l22_id, override_permission=gfDM)
         utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=l23_id, override_permission=gfAM)
         utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=l23_id, override_permission=gfDM)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=r2_id, override_permission=rAR)
+        utils.TestSetup.create_TestUserResourcePermission(self, override_resource_id=r3_id, override_permission=rAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=r3_id, override_permission=wAR)
+        utils.TestSetup.create_TestGroupResourcePermission(self, override_resource_id=r4_id, override_permission=wDM)
 
         # login test user for which the permissions were set
         self.login_test_user()
@@ -1156,23 +1201,30 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         # service calls
         svc_path = "/ows/proxy/{}".format(svc1_name)
 
-        def _msg(_path, _params):
-            # type: (Str, Dict[Str, Str]) -> Str
+        def _msg(_path, _params, _method):
+            # type: (Str, Dict[Str, Str], Str) -> Str
             _qs = "&".join("{}={}".format(k, v) for k, v in _params.items())
             path_qs = "{}?{}".format(_path, _qs) if _qs else _path
-            return "Using combination [{}, {}]".format("GET", path_qs)
+            return "Using combination [{}, {}]".format(_method, path_qs)
 
         def _scope(workspace, layer):
             # type: (Str, Str) -> Str
             return "{}:{}".format(workspace, layer)
 
-        def _test(_path, _params, allow):
-            # type: (Str, Dict[Str, Str], bool) -> None
-            req = self.mock_request(_path, method="GET", params=_params)
+        def _test(_path, _params, allow, method="GET"):
+            # type: (Str, Dict[Str, Str], bool, Str) -> None
+            req = self.mock_request(_path, method=method, params=_params)
             if allow:
-                utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(_path, _params))
+                utils.check_no_raise(
+                    lambda: self.ows.check_request(req),
+                    msg=_msg(_path, _params, method),
+                )
             else:
-                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(_path, _params))
+                utils.check_raises(
+                    lambda: self.ows.check_request(req),
+                    OWSAccessForbidden,
+                    msg=_msg(_path, _params, method),
+                )
 
         # request for any OWS
         #   <HOST>/geoserver[/<WORKSPACE>]/<OWS>?request=GetCapabilities
@@ -1204,6 +1256,25 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         w2_l1 = _scope(w2_name, l21_name)
         w2_l2 = _scope(w2_name, l22_name)
         w2_l3 = _scope(w2_name, l23_name)
+
+        # API endpoints only valid with exact paths
+        r1_path = "{}/{}".format(svc_path, r1_name)
+        r2_path = "{}/{}".format(r1_path, r2_name)
+        r3_path = "{}/{}".format(svc_path, r3_name)
+        r4_path = "{}/{}".format(r3_path, r4_name)
+        rnd_path = "{}/{}".format(svc_path, "random")
+        _test(r1_path, {}, method="GET", allow=False)
+        _test(r2_path, {}, method="GET", allow=True)
+        _test(r3_path, {}, method="GET", allow=True)
+        _test(r4_path, {}, method="GET", allow=True)
+        _test(r1_path, {}, method="POST", allow=False)
+        _test(r2_path, {}, method="POST", allow=False)
+        _test(r3_path, {}, method="POST", allow=True)
+        _test(r4_path, {}, method="POST", allow=False)
+        _test(rnd_path, {}, method="GET", allow=False)
+        _test(rnd_path, {}, method="POST", allow=False)
+        _test(svc_path, {}, method="GET", allow=False)
+        _test(svc_path, {}, method="POST", allow=False)
 
         # Layer1, mismatching permission for WMS
         _test(svc_wms_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
@@ -1402,13 +1473,13 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             layer_permutes = itertools.permutations([w1_l1, w1_l2, w1_l3, w2_l1, w2_l2, w2_l3], quantity)
             for layer_combo in layer_permutes:
                 query = ",".join(layer_combo)
-                allow = not any(layer_deny in layer_combo for layer_deny in [w1_l2, w2_l1, w2_l2])
-                _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": query}, allow=allow)
+                allow_layer = not any(layer_deny in layer_combo for layer_deny in [w1_l2, w2_l1, w2_l2])
+                _test(svc_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": query}, allow=allow_layer)
 
                 # multiple layers nested under same workspace will work for request with Workspace isolated path
                 # otherwise, automatic deny regardless if they were allowed during request without workspace in path
-                allow_w1 = allow and all(layer.startswith(w1_name) for layer in layer_combo)
-                allow_w2 = allow and all(layer.startswith(w2_name) for layer in layer_combo)
+                allow_w1 = allow_layer and all(layer.startswith(w1_name) for layer in layer_combo)
+                allow_w2 = allow_layer and all(layer.startswith(w2_name) for layer in layer_combo)
                 _test(w1_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": query}, allow=allow_w1)
                 _test(w2_wfs_path, {"request": Permission.GET_FEATURE.title, "typeNames": query}, allow=allow_w2)
 

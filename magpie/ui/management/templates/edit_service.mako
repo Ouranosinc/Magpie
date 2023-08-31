@@ -82,8 +82,8 @@
             <div class="panel-fields">
                 <table class="panel-line">
                     <tr>
-                        <td>
-                            <span class="panel-entry">Name: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Name: </div>
                         </td>
                         <td>
                             <form action="${request.path}" method="post">
@@ -106,8 +106,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Protected URL: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Protected URL: </div>
                         </td>
                         <td>
                             <form action="${request.path}" method="post">
@@ -130,8 +130,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Public URL: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Public URL: </div>
                         </td>
                         <td>
                             <div class="panel-line-entry">
@@ -140,8 +140,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Type: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Type: </div>
                         </td>
                         <td>
                             <div class="panel-line-entry">
@@ -150,8 +150,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Sync Type: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Sync Type: </div>
                         </td>
                         <td>
                             <div class="panel-line-entry">
@@ -162,11 +162,11 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">Permissions: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">Permissions: </div>
                         </td>
                         <td>
-                            <div class="panel-line-entry panel-line-limit-size">
+                            <div class="panel-line-entry panel-line-limit-size panel-line-permissions">
                                 %for perm in service_perm:
                                     <span class="label label-warning">${perm}</span>
                                 %endfor
@@ -174,8 +174,8 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
-                            <span class="panel-entry">ID: </span>
+                        <td class="panel-entry-title">
+                            <div class="panel-entry">ID: </div>
                         </td>
                         <td>
                             <div class="panel-line-entry">
