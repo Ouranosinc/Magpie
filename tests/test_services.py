@@ -1201,11 +1201,11 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         # service calls
         svc_path = "/ows/proxy/{}".format(svc1_name)
 
-        def _msg(_path, _params):
-            # type: (Str, Dict[Str, Str]) -> Str
+        def _msg(_path, _params, _method):
+            # type: (Str, Dict[Str, Str], Str) -> Str
             _qs = "&".join("{}={}".format(k, v) for k, v in _params.items())
             path_qs = "{}?{}".format(_path, _qs) if _qs else _path
-            return "Using combination [{}, {}]".format("GET", path_qs)
+            return "Using combination [{}, {}]".format(_method, path_qs)
 
         def _scope(workspace, layer):
             # type: (Str, Str) -> Str
@@ -1215,9 +1215,16 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             # type: (Str, Dict[Str, Str], bool, Str) -> None
             req = self.mock_request(_path, method=method, params=_params)
             if allow:
-                utils.check_no_raise(lambda: self.ows.check_request(req), msg=_msg(_path, _params))
+                utils.check_no_raise(
+                    lambda: self.ows.check_request(req),
+                    msg=_msg(_path, _params, method),
+                )
             else:
-                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=_msg(_path, _params))
+                utils.check_raises(
+                    lambda: self.ows.check_request(req),
+                    OWSAccessForbidden,
+                    msg=_msg(_path, _params, method),
+                )
 
         # request for any OWS
         #   <HOST>/geoserver[/<WORKSPACE>]/<OWS>?request=GetCapabilities
@@ -1252,9 +1259,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         # API endpoints only valid with exact paths
         r1_path = "{}/{}".format(svc_path, r1_name)
-        r2_path = "{}/{}".format(svc_path, r2_name)
+        r2_path = "{}/{}".format(r1_path, r2_name)
         r3_path = "{}/{}".format(svc_path, r3_name)
-        r4_path = "{}/{}".format(svc_path, r4_name)
+        r4_path = "{}/{}".format(r3_path, r4_name)
+        rnd_path = "{}/{}".format(svc_path, "random")
         _test(r1_path, {}, method="GET", allow=False)
         _test(r2_path, {}, method="GET", allow=True)
         _test(r3_path, {}, method="GET", allow=True)
@@ -1263,8 +1271,10 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         _test(r2_path, {}, method="POST", allow=False)
         _test(r3_path, {}, method="POST", allow=True)
         _test(r4_path, {}, method="POST", allow=False)
-        _test("/random", {}, method="GET", allow=False)
-        _test("/random", {}, method="POST", allow=False)
+        _test(rnd_path, {}, method="GET", allow=False)
+        _test(rnd_path, {}, method="POST", allow=False)
+        _test(svc_path, {}, method="GET", allow=False)
+        _test(svc_path, {}, method="POST", allow=False)
 
         # Layer1, mismatching permission for WMS
         _test(svc_wms_path, {"request": Permission.GET_FEATURE.title, "layers": w1_l1}, allow=False)
