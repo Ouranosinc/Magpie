@@ -16,6 +16,7 @@ from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.resource import resource_utils as ru
+from magpie.api.management.resource import resource_views as rv
 from magpie.api.management.service import service_formats as sf
 from magpie.api.management.service import service_utils as su
 from magpie.permissions import Permission, PermissionType, format_permissions
@@ -26,14 +27,16 @@ from magpie.utils import CONTENT_TYPE_JSON
 if TYPE_CHECKING:
     from typing import List, Optional, Union
 
+    from pyramid.request import Request
     from sqlalchemy.orm.session import Session
 
-    from magpie.typedefs import JSON, Str
+    from magpie.typedefs import JSON, AnyResponseType, Str
 
 
 @s.ServiceTypesAPI.get(tags=[s.ServicesTag], response_schemas=s.ServiceTypes_GET_responses)
 @view_config(route_name=s.ServiceTypesAPI.name, request_method="GET")
 def get_service_types_view(request):  # noqa: F811
+    # type: (Request) -> AnyResponseType
     """
     List all available service types.
     """
@@ -45,6 +48,7 @@ def get_service_types_view(request):  # noqa: F811
                       response_schemas=s.ServiceType_GET_responses)
 @view_config(route_name=s.ServiceTypeAPI.name, request_method="GET")
 def get_services_by_type_view(request):
+    # type: (Request) -> AnyResponseType
     """
     List all registered services from a specific type.
     """
@@ -55,6 +59,7 @@ def get_services_by_type_view(request):
                    response_schemas=s.Services_GET_responses)
 @view_config(route_name=s.ServicesAPI.name, request_method="GET")
 def get_services_view(request):
+    # type: (Request) -> AnyResponseType
     """
     List all registered services.
     """
@@ -62,6 +67,7 @@ def get_services_view(request):
 
 
 def get_services_runner(request):
+    # type: (Request) -> AnyResponseType
     """
     Generates services response format from request conditions.
 
@@ -111,6 +117,7 @@ def get_services_runner(request):
                     response_schemas=s.Services_POST_responses)
 @view_config(route_name=s.ServicesAPI.name, request_method="POST")
 def register_service_view(request):
+    # type: (Request) -> AnyResponseType
     """
     Registers a new service.
     """
@@ -127,6 +134,7 @@ def register_service_view(request):
                     response_schemas=s.Service_PATCH_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="PATCH")
 def update_service_view(request):
+    # type: (Request) -> AnyResponseType
     """
     Update service information.
     """
@@ -200,8 +208,9 @@ def update_service_view(request):
 @s.ServiceAPI.get(tags=[s.ServicesTag], response_schemas=s.Service_GET_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="GET")
 def get_service_view(request):
+    # type: (Request) -> AnyResponseType
     """
-    Get a service information.
+    Get service information.
     """
     service = ar.get_service_matchdict_checked(request)
     service_info = sf.format_service(service, show_private_url=True,
@@ -214,6 +223,7 @@ def get_service_view(request):
                      response_schemas=s.Service_DELETE_responses)
 @view_config(route_name=s.ServiceAPI.name, request_method="DELETE")
 def unregister_service_view(request):
+    # type: (Request) -> AnyResponseType
     """
     Unregister a service.
     """
@@ -227,6 +237,7 @@ def unregister_service_view(request):
                      msg_on_fail="Delete service from resource tree failed.", content=svc_content)
 
     def remove_service_magpie_and_phoenix(svc, svc_push, db_session):
+        # type: (models.Service, bool, Session) -> None
         db_session.delete(svc)
         if svc_push and svc.type in SERVICES_PHOENIX_ALLOWED:
             sync_services_phoenix(db_session.query(models.Service))
@@ -241,6 +252,7 @@ def unregister_service_view(request):
 @s.ServicePermissionsAPI.get(tags=[s.ServicesTag], response_schemas=s.ServicePermissions_GET_responses)
 @view_config(route_name=s.ServicePermissionsAPI.name, request_method="GET")
 def get_service_permissions_view(request):
+    # type: (Request) -> AnyResponseType
     """
     List all applicable permissions for a service.
     """
@@ -253,10 +265,22 @@ def get_service_permissions_view(request):
                          content=format_permissions(svc_perms, PermissionType.ALLOWED))
 
 
+@s.ServiceResourceAPI.get(schema=s.ServiceResource_GET_RequestSchema, tags=[s.ServicesTag, s.ResourcesTag],
+                          response_schemas=s.ServiceResource_GET_responses)
+@view_config(route_name=s.ServiceResourceAPI.name, request_method="GET")
+def get_service_resource_view(request):
+    # type: (Request) -> AnyResponseType
+    """
+    Get resource information under a service.
+    """
+    return rv.get_resource_handler(request)
+
+
 @s.ServiceResourceAPI.delete(schema=s.ServiceResource_DELETE_RequestSchema, tags=[s.ServicesTag],
                              response_schemas=s.ServiceResource_DELETE_responses)
 @view_config(route_name=s.ServiceResourceAPI.name, request_method="DELETE")
 def delete_service_resource_view(request):
+    # type: (Request) -> AnyResponseType
     """
     Unregister a resource.
     """
@@ -267,6 +291,7 @@ def delete_service_resource_view(request):
                            response_schemas=s.ServiceResources_GET_responses)
 @view_config(route_name=s.ServiceResourcesAPI.name, request_method="GET")
 def get_service_resources_view(request):
+    # type: (Request) -> AnyResponseType
     """
     List all resources registered under a service.
     """
@@ -281,6 +306,7 @@ def get_service_resources_view(request):
                             response_schemas=s.ServiceResources_POST_responses)
 @view_config(route_name=s.ServiceResourcesAPI.name, request_method="POST")
 def create_service_resource_view(request):
+    # type: (Request) -> AnyResponseType
     """
     Register a new resource directly under a service or under one of its children resources.
     """
@@ -313,6 +339,7 @@ def create_service_resource_view(request):
                                response_schemas=s.ServiceTypeResources_GET_responses)
 @view_config(route_name=s.ServiceTypeResourcesAPI.name, request_method="GET")
 def get_service_type_resources_view(request):
+    # type: (Request) -> AnyResponseType
     """
     List details of resource types supported under a specific service type.
     """
@@ -335,6 +362,7 @@ def get_service_type_resources_view(request):
                                    response_schemas=s.ServiceTypeResourceTypes_GET_responses)
 @view_config(route_name=s.ServiceTypeResourceTypesAPI.name, request_method="GET")
 def get_service_type_resource_types_view(request):
+    # type: (Request) -> AnyResponseType
     """
     List all resource types supported under a specific service type.
     """

@@ -455,19 +455,19 @@ class ContentType(colander.SchemaNode):
 
 class RequestHeaderSchemaAPI(colander.MappingSchema):
     accept = AcceptType(name="Accept", validator=colander.OneOf(SUPPORTED_ACCEPT_TYPES),
-                        description="Desired MIME type for the response body content.")
+                        description="Desired media-type for the response body content.")
     content_type = ContentType(validator=colander.OneOf(KNOWN_CONTENT_TYPES),
-                               description="MIME content type of the request body.")
+                               description="Media-type of the request body content.")
 
 
 class RequestHeaderSchemaUI(colander.MappingSchema):
     content_type = ContentType(default=CONTENT_TYPE_HTML, example=CONTENT_TYPE_HTML,
-                               description="MIME content type of the request body.")
+                               description="Media-type of the request body content.")
 
 
 class QueryRequestSchemaAPI(colander.MappingSchema):
     format = AcceptType(validator=colander.OneOf(SUPPORTED_FORMAT_TYPES),
-                        description="Desired MIME type for the response body content. "
+                        description="Desired media-type for the response body content. "
                                     "This formatting alternative by query parameter overrides the Accept header.")
 
 
@@ -601,7 +601,7 @@ class BaseRequestSchemaAPI(colander.MappingSchema):
 
 class HeaderResponseSchema(colander.MappingSchema):
     content_type = ContentType(validator=colander.OneOf(SUPPORTED_ACCEPT_TYPES),
-                               description="MIME content type of the response body.")
+                               description="Media-type of the response body content.")
 
 
 class BaseResponseSchemaAPI(colander.MappingSchema):
@@ -1787,6 +1787,10 @@ class ServiceResources_POST_ForbiddenResponseSchema(Resources_POST_ForbiddenResp
 class ServiceResources_POST_UnprocessableEntityResponseSchema(BaseResponseSchemaAPI):
     description = "Provided 'parent_id' value is invalid."
     body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
+
+
+class ServiceResource_GET_RequestSchema(Resource_GET_RequestSchema):
+    service_name = ServiceNameParameter
 
 
 # delete service's resource use same method as direct resource delete
@@ -3654,6 +3658,7 @@ ServiceTypeResourceTypes_GET_responses = {
     "422": UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
+ServiceResource_GET_responses = Resource_GET_responses
 ServiceResource_DELETE_responses = {
     "200": ServiceResource_DELETE_OkResponseSchema(),
     "400": Resource_MatchDictCheck_BadRequestResponseSchema(),  # FIXME: https://github.com/Ouranosinc/Magpie/issues/359

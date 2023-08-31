@@ -1,6 +1,13 @@
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict, HTTPForbidden, HTTPInternalServerError, HTTPOk
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPForbidden,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk
+)
 from pyramid.settings import asbool
 from pyramid.view import view_config
 from ziggurat_foundations.models.services.group import GroupService
@@ -12,7 +19,7 @@ from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.resource import resource_formats as rf
 from magpie.api.management.resource import resource_utils as ru
-from magpie.api.management.service.service_formats import format_service_resources
+from magpie.api.management.service import service_formats as sf
 from magpie.api.management.service.service_utils import get_services_by_type
 from magpie.api.management.user import user_utils as uu
 from magpie.permissions import PermissionType, format_permissions
@@ -20,12 +27,15 @@ from magpie.register import magpie_register_permissions_from_config, sync_servic
 from magpie.services import SERVICE_TYPE_DICT, get_resource_child_allowed
 
 if TYPE_CHECKING:
-    from magpie.typedefs import NestingKeyType
+    from typing import List
+
+    from magpie.typedefs import JSON, AnyRequestType, AnyResponseType, NestingKeyType
 
 
 @s.ResourcesAPI.get(tags=[s.ResourcesTag], response_schemas=s.Resources_GET_responses)
 @view_config(route_name=s.ResourcesAPI.name, request_method="GET")
 def get_resources_view(request):
+    # type: (AnyRequestType) -> AnyResponseType
     """
     List all registered resources.
     """
@@ -34,20 +44,32 @@ def get_resources_view(request):
         services = get_services_by_type(svc_type, db_session=request.db)
         res_json[svc_type] = {}
         for svc in services:
-            res_json[svc_type][svc.resource_name] = format_service_resources(
+            res_json[svc_type][svc.resource_name] = sf.format_service_resources(
                 svc, request.db, show_all_children=True, show_private_url=False)
     res_json = {"resources": res_json}
     return ax.valid_http(http_success=HTTPOk, detail=s.Resources_GET_OkResponseSchema.description, content=res_json)
 
 
-@s.ResourceAPI.get(schema=s.Resource_GET_RequestSchema, tags=[s.ResourcesTag],
-                   response_schemas=s.Resource_GET_responses)
-@view_config(route_name=s.ResourceAPI.name, request_method="GET")
-def get_resource_view(request):
+def get_resource_handler(request):
+    # type: (AnyRequestType) -> AnyResponseType
     """
-    Get resource information.
+    Obtains the resource specified by the request with all applicable parameter validation and handling.
     """
     resource = ar.get_resource_matchdict_checked(request)
+
+    # additional check only for endpoint based under service, resource-based endpoint accesses the resource directly
+    if "service_name" in request.matchdict:
+        # if the requested resource ID is the service itself, 'root_service_id=None', must check 'resource_id' also
+        service = ar.get_service_matchdict_checked(request)
+        ax.verify_param(service.resource_id, [resource.root_service_id, resource.resource_id],
+                        is_in=True, param_name="service_name",
+                        http_error=HTTPNotFound,
+                        content={
+                            "service": sf.format_service(service, basic_info=True),
+                            "resource": rf.format_resource(resource, basic_info=True),
+                        },
+                        msg_on_fail="Requested resource is not located under the specified service.")
+
     parents = asbool(ar.get_query_param(request, ["parents", "parent"], False))
     flatten = False
     if parents:
@@ -101,10 +123,22 @@ def get_resource_view(request):
                          detail=s.Resource_GET_OkResponseSchema.description)
 
 
+@s.ResourceAPI.get(schema=s.Resource_GET_RequestSchema, tags=[s.ResourcesTag],
+                   response_schemas=s.Resource_GET_responses)
+@view_config(route_name=s.ResourceAPI.name, request_method="GET")
+def get_resource_view(request):
+    # type: (AnyRequestType) -> AnyResponseType
+    """
+    Get resource information.
+    """
+    return get_resource_handler(request)
+
+
 @s.ResourcesAPI.post(schema=s.Resources_POST_RequestSchema, tags=[s.ResourcesTag],
                      response_schemas=s.Resources_POST_responses)
 @view_config(route_name=s.ResourcesAPI.name, request_method="POST")
 def create_resource_view(request):
+    # type: (AnyRequestType) -> AnyResponseType
     """
     Register a new resource.
     """
@@ -119,6 +153,7 @@ def create_resource_view(request):
                       response_schemas=s.Resources_DELETE_responses)
 @view_config(route_name=s.ResourceAPI.name, request_method="DELETE")
 def delete_resource_view(request):
+    # type: (AnyRequestType) -> AnyResponseType
     """
     Unregister a resource.
     """
@@ -129,6 +164,7 @@ def delete_resource_view(request):
                      response_schemas=s.Resource_PATCH_responses)
 @view_config(route_name=s.ResourceAPI.name, request_method="PATCH")
 def update_resource(request):
+    # type: (AnyRequestType) -> AnyResponseType
     """
     Update a resource information.
     """
@@ -170,6 +206,7 @@ def update_resource(request):
                               response_schemas=s.ResourcePermissions_GET_responses)
 @view_config(route_name=s.ResourcePermissionsAPI.name, request_method="GET")
 def get_resource_permissions_view(request):
+    # type: (AnyRequestType) -> AnyResponseType
     """
     List all applicable permissions for a resource.
     """
@@ -186,6 +223,7 @@ def get_resource_permissions_view(request):
                         response_schemas=s.ResourceTypes_GET_responses)
 @view_config(route_name=s.ResourceTypesAPI.name, request_method="GET")
 def get_resource_types_view(request):
+    # type: (AnyRequestType) -> AnyResponseType
     """
     List all applicable children resource types under another resource within a service hierarchy.
     """
@@ -221,10 +259,11 @@ def get_resource_types_view(request):
                         response_schema=s.Permissions_PATCH_responses)
 @view_config(route_name=s.PermissionsAPI.name, request_method="PATCH")
 def update_permissions(request):
+    # type: (AnyRequestType) -> AnyResponseType
     """
     Update the requested permissions and create missing related resources if necessary.
     """
-    permissions = ar.get_value_multiformat_body_checked(request, "permissions", check_type=list)
+    permissions = ar.get_value_multiformat_body_checked(request, "permissions", check_type=list)  # type: List[JSON]
     ax.verify_param(permissions, not_none=True, not_empty=True, http_error=HTTPBadRequest,
                     msg_on_fail="No permissions to update (empty `permissions` parameter).")
 
@@ -294,7 +333,7 @@ def update_permissions(request):
             resource_full_type += "/" + resource_type
         if permission:
             cfg_entry = {
-                "service": service_name,
+                "service": service_name,  # noqa
                 "resource": resource_full_path,
                 "type": resource_type if resource_type == "service" else resource_full_type,
                 "permission": permission,
