@@ -591,7 +591,7 @@ class TestCase_MagpieAPI_UsersAuth_Remote(ti.Interface_MagpieAPI_UsersAuth, unit
         cls.version = utils.TestSetup.get_Version(cls, real_version=True)
         cls.setup_admin()
         cls.headers, cls.cookies = utils.check_or_try_login_user(cls, cls.usr, cls.pwd, use_ui_form_submit=True)
-        cls.require = "cannot run tests without logged in user with '{}' permissions".format(cls.grp)
+        cls.require = "cannot run tests without logged-in user with '{}' permissions".format(cls.grp)
         assert cls.headers and cls.cookies, cls.require  # nosec
 
         cls.test_service_name = "unittest-user-auth-remote_test-service"
@@ -688,4 +688,4 @@ def test_response_metadata():
 
 if __name__ == "__main__":
     import sys
-    sys.exit(unittest.main())
+    sys.exit(unittest.main())  # type: ignore
