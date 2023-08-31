@@ -61,14 +61,16 @@ def get_resource_handler(request):
     if "service_name" in request.matchdict:
         # if the requested resource ID is the service itself, 'root_service_id=None', must check 'resource_id' also
         service = ar.get_service_matchdict_checked(request)
-        ax.verify_param(service.resource_id, [resource.root_service_id, resource.resource_id],
-                        is_in=True, param_name="service_name",
-                        http_error=HTTPNotFound,
-                        content={
-                            "service": sf.format_service(service, basic_info=True),
-                            "resource": rf.format_resource(resource, basic_info=True),
-                        },
-                        msg_on_fail="Requested resource is not located under the specified service.")
+        ax.verify_param(
+            service.resource_id, [resource.root_service_id, resource.resource_id],
+            is_in=True, param_name="service_name",
+            http_error=HTTPNotFound,
+            content={
+                "service": sf.format_service(service, basic_info=True),
+                "resource": rf.format_resource(resource, basic_info=True),
+            },
+            msg_on_fail="Requested resource is not located under the specified service.",
+        )
 
     parents = asbool(ar.get_query_param(request, ["parents", "parent"], False))
     flatten = False
