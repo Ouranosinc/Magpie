@@ -629,11 +629,18 @@ def get_authenticate_headers(request, error_type="invalid_token"):
         #   WWW-Authenticate: challenge-1 [realm="<>" title="<>" ...],
         #                     challenge-2 [...], ...
         # provide URL with both 'domain' and 'uri' which are two variants that can exist, depending on implementation
-        "WWW-Authenticate": ("Cookie cookie-name=\"{c}\" error=\"{e}\" title=\"{t}\" "
-                             "domain=\"{u}\" uri=\"{u}\" realm=\"{r}\" "
-                             .format(c=cookie_name, e=error_type, u=signin_url, r=hostname, t=title)),
+        "WWW-Authenticate": (
+            "Cookie cookie-name=\"{c}\" error=\"{e}\" title=\"{t}\" domain=\"{u}\" uri=\"{u}\" realm=\"{r}\" ".format(
+                c=cookie_name, e=error_type, u=signin_url, r=hostname, t=title
+            )
+        ),
+        # https://tools.ietf.org/html/rfc8053#section-4
         # https://tools.ietf.org/html/rfc8053#section-4.3
-        "Location-When-Unauthenticated": login_url,
+        "Authentication-Control": (
+            "Cookie cookie-name=\"{c}\" realm=\"{r}\" location-when-unauthenticated=\"{u}\"".format(
+                c=cookie_name, r=hostname, u=login_url
+            )
+        ),
     }
     return headers
 

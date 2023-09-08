@@ -56,9 +56,13 @@ if TYPE_CHECKING:
 
     AnyKey = Union[Str, int]
     AnyValue = Union[Str, Number, bool, None]
-    _JSONType = "JSON"  # type: TypeAlias   # pylint: disable=C0103
-    BaseJSON = Union[AnyValue, List[_JSONType], Dict[AnyKey, _JSONType]]
-    JSON = Union[Dict[Str, Union[_JSONType]], List[_JSONType]]
+    _JSON = "JSON"  # type: TypeAlias  # pylint: disable=C0103
+    _JsonObjectItemAlias = "_JsonObjectItem"  # type: TypeAlias  # pylint: disable=C0103
+    _JsonListItemAlias = "_JsonListItem"  # type: TypeAlias  # pylint: disable=C0103
+    _JsonObjectItem = Dict[str, Union[AnyValue, _JSON, _JsonObjectItemAlias, _JsonListItemAlias]]
+    _JsonListItem = List[Union[AnyValue, _JSON, _JsonObjectItem, _JsonListItemAlias]]
+    _JsonItem = Union[AnyValue, _JSON, _JsonObjectItem, _JsonListItem]
+    JSON = Union[Dict[str, Union[_JSON, _JsonItem]], List[Union[_JSON, _JsonItem]], AnyValue]
 
     GroupPriority = Union[int, Type[math.inf]]
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]
