@@ -70,34 +70,42 @@ class ConfigTestCase(object):
     # pylint: disable=C0103,invalid-name
 
     # note: all following should be overridden by Test Case accordingly to the needs of their unit tests
-    version = None                  # type: Optional[Str]
-    require = None                  # type: Optional[Str]
-    url = None                      # type: Optional[Str]
-    app = None                      # type: Optional[TestApp]
+    version = None                          # type: Optional[Str]
+    require = None                          # type: Optional[Str]
+    url = None                              # type: Optional[Str]
+    app = None                              # type: Optional[TestApp]
     # parameters for setup operations, admin-level access to the app
-    grp = None                      # type: Optional[Str]
-    usr = None                      # type: Optional[Str]
-    pwd = None                      # type: Optional[Str]
-    cookies = None                  # type: Optional[CookiesType]
-    headers = None                  # type: Optional[HeadersType]
+    grp = None                              # type: Optional[Str]
+    usr = None                              # type: Optional[Str]
+    pwd = None                              # type: Optional[Str]
+    cookies = None                          # type: Optional[CookiesType]
+    headers = None                          # type: Optional[HeadersType]
     json_headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
     # parameters for testing, extracted automatically within 'utils.TestSetup' methods
     # test cookies/headers can match above admin cookies/headers for test suites targeting administrative operations
     # for other access level operations, they should correspond to another appropriate test user
-    test_headers = None             # type: Optional[HeadersType]
-    test_cookies = None             # type: Optional[CookiesType]
-    test_service_type = None        # type: Optional[Str]
-    test_service_name = None        # type: Optional[Str]
-    test_resource_name = None       # type: Optional[Str]
-    test_resource_type = None       # type: Optional[Str]
-    test_user_name = None           # type: Optional[Str]  # reuse as password to simplify calls when creating test user
-    test_group_name = None          # type: Optional[Str]
+    test_headers = None                     # type: Optional[HeadersType]
+    test_cookies = None                     # type: Optional[CookiesType]
+    test_service_type = None                # type: Optional[Str]
+    test_service_name = None                # type: Optional[Str]
+    test_services_info = None               # type: Optional[Dict[Str, JSON]]
+    test_service_resource_perms = None      # type: Optional[List[Permission]]
+    test_resource_name = None               # type: Optional[Str]
+    test_resource_type = None               # type: Optional[Str]
+    test_resource_class = None              # type: Optional[Str]
+    test_resource_perm_name = None          # type: Optional[Str]
+    test_resource_perm_type = None          # type: Optional[Permission]
+    test_admin = None                       # type: Optional[Str]
+    test_user_name = None                   # type: Optional[Str]  # also used as password when creating test user
+    test_group_name = None                  # type: Optional[Str]
     # extra parameters to indicate cleanup on final tear down
     # add new test values on test case startup before they *potentially* get interrupted because of error
-    extra_user_names = set()        # type: Set[Str]
-    extra_group_names = set()       # type: Set[Str]
-    extra_resource_ids = set()      # type: Set[int]
-    extra_service_names = set()     # type: Set[Str]
+    reserved_users = None                   # type: Optional[List[Str]]
+    reserved_groups = None                  # type: Optional[List[Str]]
+    extra_user_names = set()                # type: Set[Str]
+    extra_group_names = set()               # type: Set[Str]
+    extra_resource_ids = set()              # type: Set[int]
+    extra_service_names = set()             # type: Set[Str]
 
 
 @six.add_metaclass(ABCMeta)
@@ -1525,7 +1533,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
             utils.check_val_is_in("resources", body)
             svc_types = utils.get_service_types_for_version(self.version)
             utils.check_all_equal(list(body["resources"]), svc_types, any_order=True)
-            for svc_type in svc_types:
+            for svc_type in svc_types:  # type: JSON
                 services = body["resources"][svc_type]  # type: JSON
                 if svc_type == self.test_service_type:
                     expected_services = [svc0_name, svc1_name]
@@ -2415,7 +2423,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     "action": "create"
                 }
             ]
-        }
+        }  # type: JSON
         resp = utils.test_request(self, "PATCH", "/permissions", headers=self.json_headers,
                                   cookies=self.cookies, json=data)
         utils.check_response_basic_info(resp, 200, expected_method="PATCH")
@@ -2594,13 +2602,13 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                                              override_resource_id=new_resource_id,
                                                              override_permission=new_permission)
         # expected permissions can have more than one entry if the names are not the same, otherwise always only one
-        _expect_inherit = [_perm[0].json() for _perm in expected_inherited_perm_reasons]
+        _expect_inherit = [_perm[0].json() for _perm in expected_inherited_perm_reasons]  # type: List[JSON]
         for i, (_, _reason) in enumerate(expected_inherited_perm_reasons):
             _expect_inherit[i]["reason"] = _reason
-        _expect_resolve = [_perm[0].json() for _perm in expected_resolved_perm_reasons]
+        _expect_resolve = [_perm[0].json() for _perm in expected_resolved_perm_reasons]  # type: List[JSON]
         for i, (_, _reason) in enumerate(expected_resolved_perm_reasons):
             _expect_resolve[i]["reason"] = _reason
-        _expect_effect = [_perm[0].json() for _perm in expected_effective_perm_reasons]
+        _expect_effect = [_perm[0].json() for _perm in expected_effective_perm_reasons]  # type: List[JSON]
         for i, (_, _reason) in enumerate(expected_effective_perm_reasons):
             _expect_effect[i]["reason"] = _reason
         # tests
@@ -3375,7 +3383,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # with or without inherit flag, "other" services and resources should all have no permission
         service_types = utils.get_service_types_for_version(self.version)
-        service_type_no_perm = set(service_types) - {svc_type}
+        service_type_no_perm = set(service_types) - {svc_type}  # type: Set[Str]
         utils.check_val_not_equal(len(service_type_no_perm), 0,
                                   msg="Cannot evaluate response values with insufficient service types.")
         for query in ["", "?inherit=true"]:
@@ -3513,7 +3521,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         path = "/users/{}/resources?filtered=true".format(self.test_user_name)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
-        body = utils.check_response_basic_info(resp)
+        body = utils.check_response_basic_info(resp)  # type: JSON
         svc_types = utils.get_service_types_for_version(self.version)
         utils.check_all_equal(list(body["resources"]), svc_types, any_order=True, msg="All service types listed.")
         for svc_type in svc_types:
@@ -6205,7 +6213,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                     utils.check_all_equal(resource["permission_names"], service_perms, any_order=True)
                 # children resources
                 utils.check_val_is_in("resources", resource)
-                children = resource["resources"]
+                children = resource["resources"]  # type: Dict[int, JSON]
                 utils.check_val_type(children, dict)
                 for res_id, child in children.items():
                     # test only one just to be sure of recursive nature (should have at least one from TestSetup)
@@ -6312,8 +6320,18 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 409, expected_method="POST")
 
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetServiceResource_ResponseFormat_ChildrenNested(self):
+        self.run_GetResource_ResponseFormat_ChildrenNested(True)
+
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetResource_ResponseFormat_ChildrenNested(self):
+        self.run_GetResource_ResponseFormat_ChildrenNested(False)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    def run_GetResource_ResponseFormat_ChildrenNested(self, prefix_service_path):
+        # type: (bool) -> None
         """
         Test format of nested resource tree.
 
@@ -6336,7 +6354,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
         res3_id = info["resource_id"]
 
-        path = "/resources/{}".format(svc_id)
+        prefix_path = "/services/{}".format(self.test_service_name) if prefix_service_path else ""
+        path = "{}/resources/{}".format(prefix_path, svc_id)
         resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("resource", body)
@@ -6382,8 +6401,18 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         res3_body = res1_body["children"][str(res3_id)]
         check_resource_node(res3_body, res3_id, res1_id, svc_id, res_perms, None)
 
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetServiceResource_ResponseFormat_ParentNested_NormalAndInvert(self):
+        self.run_GetResource_ResponseFormat_ParentNested_NormalAndInvert(True)
+
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetResource_ResponseFormat_ParentNested_NormalAndInvert(self):
+        self.run_GetResource_ResponseFormat_ParentNested_NormalAndInvert(False)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    def run_GetResource_ResponseFormat_ParentNested_NormalAndInvert(self, prefix_service_path):
+        # type: (bool) -> None
         """
         Test format of nested resource tree.
 
@@ -6405,13 +6434,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             self,
             override_service_name=svc1_name, override_service_type=ServiceTHREDDS.service_type,
             override_resource_names=["res" + str(i) for i in range(2, 5)],
-            override_resource_types=[type_dir, type_dir, type_file]
+            override_resource_types=[type_dir, type_dir, type_file],
+            override_exist=True,
         )
         # extra sibling resource not checked, but just to make sure that it doesn't appear somewhere else
         # all nested parent object should only contain 1 resource
         utils.TestSetup.create_TestResource(self, parent_resource_id=svc1_id, override_resource_type=type_file)
 
-        path = "/resources/{}".format(res3_id)
+        prefix_path = "/services/{}".format(svc1_name) if prefix_service_path else ""
+        path = "{}/resources/{}".format(prefix_path, res3_id)
         query = {"parent": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
         info = utils.check_response_basic_info(body)  # type: JSON
@@ -6424,7 +6455,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(info["resource"]["parent_id"], res2_id)
         utils.check_val_equal(info["resource"]["root_service_id"], svc1_id)
         utils.check_val_is_in(str(res2_id), info["resource"]["parent"])
-        res2_parent = info["resource"]["parent"][str(res2_id)]
+        res_parents = info["resource"]["parent"]  # type: JSON
+        res2_parent = res_parents[str(res2_id)]
         utils.check_val_not_in("children", res2_parent)
         utils.check_val_is_in("parent", res2_parent)
         utils.check_val_equal(len(res2_parent["parent"]), 1)
@@ -6432,7 +6464,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(res2_parent["parent_id"], svc1_id)
         utils.check_val_equal(res2_parent["root_service_id"], svc1_id)
         utils.check_val_is_in(str(svc1_id), res2_parent["parent"])
-        svc1_parent = res2_parent["parent"][str(svc1_id)]
+        res2_parents = res2_parent["parent"]  # type: JSON
+        svc1_parent = res2_parents[str(svc1_id)]  # type: JSON
         utils.check_val_not_in("children", svc1_parent)
         utils.check_val_is_in("parent", svc1_parent)
         utils.check_val_equal(len(svc1_parent["parent"]), 0)
@@ -6442,13 +6475,13 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(svc1_parent["root_service_id"], None)
 
         # verify inverted "parent" that should still make use of "children" field, since inverted
-        path = "/resources/{}".format(res3_id)
+        path = "{}/resources/{}".format(prefix_path, res3_id)
         query = {"parent": "true", "invert": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
         info = utils.check_response_basic_info(body)  # type: JSON
 
         err_one = (
-            "Even if service has more than one children, using parent query should only list "
+            "Even if service has more than one child resource, using parent query should only list "
             "single child of the branch that leads to requested resource."
         )
         err_last = (
@@ -6463,7 +6496,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(info["resource"]["parent_id"], None)
         utils.check_val_equal(info["resource"]["root_service_id"], None)
         utils.check_val_is_in(str(res2_id), info["resource"]["children"])
-        res2_child = info["resource"]["children"][str(res2_id)]
+        svc1_children = info["resource"]["children"]  # type: JSON
+        res2_child = svc1_children[str(res2_id)]
         utils.check_val_not_in("parent", res2_child)
         utils.check_val_is_in("children", res2_child)
         utils.check_val_equal(len(res2_child["children"]), 1, msg=err_one)
@@ -6471,7 +6505,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(res2_child["parent_id"], svc1_id)
         utils.check_val_equal(res2_child["root_service_id"], svc1_id)
         utils.check_val_is_in(str(res3_id), res2_child["children"])
-        res3_child = res2_child["children"][str(res3_id)]
+        res2_children = res2_child["children"]  # type: JSON
+        res3_child = res2_children[str(res3_id)]  # type: JSON
         utils.check_val_not_in("parent", res3_child)
         utils.check_val_is_in("children", res3_child)
         utils.check_val_equal(len(res3_child["children"]), 0, msg=err_last)
@@ -6480,8 +6515,18 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(res3_child["parent_id"], res2_id)
         utils.check_val_equal(res3_child["root_service_id"], svc1_id)
 
+    @runner.MAGPIE_TEST_SERVICES
+    @runner.MAGPIE_TEST_RESOURCES
+    def test_GetServiceResource_ResponseFormat_ParentListing_NormalAndInvert(self):
+        self.run_GetResource_ResponseFormat_ParentListing_NormalAndInvert(True)
+
     @runner.MAGPIE_TEST_RESOURCES
     def test_GetResource_ResponseFormat_ParentListing_NormalAndInvert(self):
+        self.run_GetResource_ResponseFormat_ParentListing_NormalAndInvert(False)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    def run_GetResource_ResponseFormat_ParentListing_NormalAndInvert(self, prefix_service_path):
+        # type: (bool) -> None
         """
         Test format of nested resource tree.
 
@@ -6503,13 +6548,15 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             self,
             override_service_name=svc1_name, override_service_type=ServiceTHREDDS.service_type,
             override_resource_names=["res" + str(i) for i in range(2, 5)],
-            override_resource_types=[type_dir, type_dir, type_file]
+            override_resource_types=[type_dir, type_dir, type_file],
+            override_exist=True,
         )
         # extra sibling resource not checked, but just to make sure that it doesn't appear somewhere else
         # all nested parent object should only contain 1 resource
         utils.TestSetup.create_TestResource(self, parent_resource_id=svc1_id, override_resource_type=type_file)
 
-        path = "/resources/{}".format(res3_id)
+        prefix_path = "/services/{}".format(svc1_name) if prefix_service_path else ""
+        path = "{}/resources/{}".format(prefix_path, res3_id)
         query = {"parent": "true", "flatten": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
         info = utils.check_response_basic_info(body)  # type: JSON
@@ -6533,7 +6580,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(info["resources"][2]["root_service_id"], None)
 
         # verify inverted list ordering
-        path = "/resources/{}".format(res3_id)
+        path = "{}/resources/{}".format(prefix_path, res3_id)
         query = {"parent": "true", "flatten": "true", "invert": "true"}
         body = utils.test_request(self, "GET", path, params=query, headers=self.json_headers, cookies=self.cookies)
         info = utils.check_response_basic_info(body)

@@ -61,7 +61,6 @@ if TYPE_CHECKING:
 
     import tests.interfaces as ti
     from magpie.compat import TupleVersion
-    from magpie.services import ServiceInterface
     from magpie.typedefs import (
         JSON,
         AnyCookiesType,
@@ -613,7 +612,7 @@ def get_json_body(response):
 
 
 def get_service_types_for_version(version):
-    # type: (Str) -> List[ServiceInterface]
+    # type: (Str) -> List[Str]
     available_service_types = set(services.SERVICE_TYPE_DICT)
     if TestVersion(version) <= TestVersion("0.6.1"):
         available_service_types = available_service_types - {ServiceAccess.service_type}

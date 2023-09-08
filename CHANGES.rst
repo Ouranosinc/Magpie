@@ -17,6 +17,11 @@ Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * Fix returned headers in ``401 Unauthenticated`` response which did not properly employ ``Authentication-Control``
   header to return the ``location-when-unauthenticated`` parameter instead of returning it directly as invalid header.
+* Add `API` endpoint ``GET /services/{service_name}/resources/{resource_id}`` similar to
+  existing endpoint ``GET /resources/{resource_id}`` allowing retrieval of a `Resource` details
+  with prior validation that it lies under the referenced `Service`
+  (fixes `#347 <https://github.com/Ouranosinc/Magpie/issues/347>`_).
+* Improve ``JSON`` typing definitions to reduce false-positives linting errors and add missing typing definitions.
 
 .. _changes_3.35.0:
 
