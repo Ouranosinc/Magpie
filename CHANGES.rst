@@ -11,6 +11,12 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* n/a
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix returned headers in ``401 Unauthenticated`` response which did not properly employ ``Authentication-Control``
+  header to return the ``location-when-unauthenticated`` parameter instead of returning it directly as invalid header.
 * Add `API` endpoint ``GET /services/{service_name}/resources/{resource_id}`` similar to
   existing endpoint ``GET /resources/{resource_id}`` allowing retrieval of a `Resource` details
   with prior validation that it lies under the referenced `Service`
