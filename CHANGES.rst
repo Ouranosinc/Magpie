@@ -9,7 +9,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* n/a
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix returned headers in ``401 Unauthenticated`` response which did not properly employ ``Authentication-Control``
+  header to return the ``location-when-unauthenticated`` parameter instead of returning it directly as invalid header.
 
 .. _changes_3.35.0:
 
