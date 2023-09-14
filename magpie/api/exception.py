@@ -85,6 +85,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                  is_equal=False,                    # type: bool
                  is_type=False,                     # type: bool
                  matches=False,                     # type: bool
+                 not_matches=False,                 # type: bool
                  ):                                 # type: (...) -> None   # noqa: E123,E126
     # pylint: disable=R0912,R0914
     """
@@ -123,12 +124,13 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
     :param is_equal: test that :paramref:`param` equals :paramref:`param_compare` value
     :param is_type: test that :paramref:`param` is of same type as specified by :paramref:`param_compare` type
     :param matches: test that :paramref:`param` matches the regex specified by :paramref:`param_compare` value
+    :param not_matches: test that :paramref:`param` doesn't match the regex specified by :paramref:`param_compare` value
     :raises HTTPError: if tests fail, specified exception is raised (default: :class:`HTTPBadRequest`)
     :raises HTTPInternalServerError: for evaluation error
     :return: nothing if all tests passed
     """
     content = {} if content is None else content
-    needs_compare = is_type or is_in or not_in or is_equal or not_equal or matches
+    needs_compare = is_type or is_in or not_in or is_equal or not_equal or matches or not_matches
     needs_iterable = is_in or not_in
 
     # precondition evaluation of input parameters
@@ -159,9 +161,11 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             raise TypeError("'is_type' is not a 'bool'")
         if not isinstance(matches, bool):
             raise TypeError("'matches' is not a 'bool'")
+        if not isinstance(not_matches, bool):
+            raise TypeError("'not_matches' is not a 'bool'")
         # error if none of the flags specified
         if not any([not_none, not_empty, not_in, not_equal,
-                    is_none, is_empty, is_in, is_equal, is_true, is_false, is_type, matches]):
+                    is_none, is_empty, is_in, is_equal, is_true, is_false, is_type, matches, not_matches]):
             raise ValueError("no comparison flag specified for verification")
         if param_compare is None and needs_compare:
             raise TypeError("'param_compare' cannot be 'None' with specified test flags")
@@ -178,11 +182,11 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             is_str_cmp = isinstance(param, six.string_types)
             ok_str_cmp = isinstance(param_compare, six.string_types)
             eq_typ_cmp = type(param) is type(param_compare)
-            is_pattern = matches and isinstance(param_compare, Pattern)
+            is_pattern = (matches or not_matches) and isinstance(param_compare, Pattern)
             if is_type and not (is_str_typ or is_cmp_typ):
                 LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
-            if matches and not isinstance(param_compare, (six.string_types, Pattern)):
+            if (matches or not_matches) and not isinstance(param_compare, (six.string_types, Pattern)):
                 LOGGER.debug("[param_compare: %s] invalid type is not a regex string or pattern", type(param_compare))
                 raise TypeError("'param_compare' for matching verification must be a string or compile regex pattern")
             if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp) or is_pattern):
@@ -252,6 +256,12 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             param_compare_regex = re.compile(param_compare, re.I | re.X)
         fail_conditions.update({"matches": bool(re.match(param_compare_regex, param))})
         fail_verify = fail_verify or not fail_conditions["matches"]
+    if not_matches:
+        param_compare_regex = param_compare
+        if isinstance(param_compare, six.string_types):
+            param_compare_regex = re.compile(param_compare, re.I | re.X)
+        fail_conditions.update({"not_matches": not re.match(param_compare_regex, param)})
+        fail_verify = fail_verify or not fail_conditions["not_matches"]
     if fail_verify:
         content = apply_param_content(content, param, param_compare, param_name, with_param, param_content,
                                       needs_compare, needs_iterable, is_type, fail_conditions)

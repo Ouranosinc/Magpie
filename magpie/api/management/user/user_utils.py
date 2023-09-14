@@ -33,7 +33,7 @@ from magpie.api.webhooks import (
     get_permission_update_params,
     process_webhook_requests
 )
-from magpie.constants import get_constant
+from magpie.constants import get_constant, protected_user_name_regex
 from magpie.models import TemporaryToken, TokenOperation
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT, service_factory
@@ -226,14 +226,12 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
 
     # logged user updating itself is forbidden if it corresponds to special users
     # cannot edit reserved keywords nor apply them to another user
-    forbidden_user_names = [
-        get_constant("MAGPIE_ADMIN_USER", request),
-        get_constant("MAGPIE_ANONYMOUS_USER", request),
-        get_constant("MAGPIE_LOGGED_USER", request),
-    ]
+    forbidden_user_names_regex = protected_user_name_regex(
+        additional_patterns=[get_constant("MAGPIE_LOGGED_USER", request)], settings_container=request
+    )
     check_user_name_cases = [user.user_name, new_user_name] if update_username else [user.user_name]
     for check_user_name in check_user_name_cases:
-        ax.verify_param(check_user_name, not_in=True, param_compare=forbidden_user_names,
+        ax.verify_param(check_user_name, not_matches=True, param_compare=forbidden_user_names_regex,
                         param_name="user_name", with_param=False,  # don't leak the user names
                         http_error=HTTPForbidden, content={"user_name": str(check_user_name)},
                         msg_on_fail=s.User_PATCH_ForbiddenResponseSchema.description)
@@ -915,8 +913,9 @@ def check_user_editable(user, container):
     :raises HTTPForbidden: When user is not allowed to be edited.
     :return: Nothing if allowed edition.
     """
-    ax.verify_param(user.user_name, not_equal=True, with_param=False,  # avoid leaking username details
-                    param_compare=get_constant("MAGPIE_ANONYMOUS_USER", container),
+    forbidden_user_names_regex = protected_user_name_regex(include_admin=False, settings_container=container)
+    ax.verify_param(user.user_name, not_matches=True, with_param=False,  # avoid leaking username details
+                    param_compare=forbidden_user_names_regex,
                     http_error=HTTPForbidden, msg_on_fail=s.User_CheckAnonymous_ForbiddenResponseSchema.description)
 
 

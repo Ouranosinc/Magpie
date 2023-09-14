@@ -969,6 +969,83 @@ remain available as described at the start of the :ref:`Configuration` section.
     Name of the :term:`Provider` used for login. This represents the identifier that is set to define how to
     differentiate between a local sign-in procedure and a dispatched one some known :ref:`authn_providers`.
 
+Network Mode Settings
+~~~~~~~~~~~~~~~~~~~~~
+
+The following configuration parameters are related to Magpie's "Network Mode" which allows networked instances of Magpie
+to authenticate users for each other. All variables defined in this section are only used if
+:envvar:`MAGPIE_NETWORK_MODE` is enabled.
+
+.. envvar:: MAGPIE_NETWORK_MODE
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.37
+
+    Enable "Network Mode" which enables all functionality to authenticate users using other Magpie instances as
+    external authentication providers.
+
+.. envvar:: MAGPIE_INSTANCE_NAME
+
+    [:class:`str`]
+
+    .. versionadded:: 3.37
+
+    The name of this Magpie instance in the network. This variable is used to determine if an authentication token was
+    issued by this instance of Magpie, or another instance in the network.
+
+    This variable is required if :envvar:`MAGPIE_NETWORK_MODE` is ``True``.
+
+.. envvar:: MAGPIE_DEFAULT_TOKEN_EXPIRY
+
+    [:class:`int`]
+    (Default: ``86400``)
+
+    .. versionadded:: 3.37
+
+    The default expiry time (in seconds) for an authentication token issued for the purpose of network authentication.
+
+.. envvar:: MAGPIE_NETWORK_TOKEN_NAME
+
+    [|constant|_]
+    (Value: ``"magpie_token"``)
+
+    .. versionadded:: 3.37
+
+    The name of the request parameter key whose value is the authentication token issued for the purpose of network
+    authentication.
+
+.. envvar:: MAGPIE_NETWORK_PROVIDER
+
+    [|constant|_]
+    (Value: ``"magpie_network"``)
+
+    .. versionadded:: 3.37
+
+    The name of the external provider that authenticates users using other Magpie instances as external authentication
+    providers.
+
+.. envvar:: MAGPIE_NETWORK_NAME_PREFIX
+
+    [|constant|_]
+    (Value: ``"anonymous_network_"``)
+
+    .. versionadded:: 3.37
+
+    A prefix added to the anonymous network user and network group names. These names are constructed by prepending the
+    remote Magpie instance name with this prefix. For example, a Magpie instance named ``"example123"`` will have a
+    corresponding user and group named ``"anonymous_network_example123"``.
+
+.. envvar:: MAGPIE_NETWORK_GROUP_NAME
+
+    [|constant|_]
+    (Value: ``"magpie_network"``)
+
+    .. versionadded:: 3.37
+
+    The name of the group created to manage permissions for all users authenticated using Magpie instances as external
+    authentication providers.
 
 .. _config_phoenix:
 

@@ -1,9 +1,10 @@
+import re
 from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
-from magpie.constants import get_constant
+from magpie.constants import get_constant, protected_user_name_regex
 from magpie.models import UserGroupStatus, UserStatuses
 
 if TYPE_CHECKING:
@@ -47,7 +48,8 @@ def format_user(user, group_names=None, basic_info=False, dotted=False):
             user_info["has_pending_group"] = bool(user.get_groups_by_status(UserGroupStatus.PENDING))
 
         # special users not meant to be used as valid "accounts" marked as without an ID
-        if user.user_name != get_constant("MAGPIE_ANONYMOUS_USER") and status != UserStatuses.Pending:
+        anonymous_regex = protected_user_name_regex(include_admin=False)
+        if not re.search(anonymous_regex, user.user_name) and status != UserStatuses.Pending:
             user_info["user{}id".format(sep)] = int(user.id)
         return user_info
 

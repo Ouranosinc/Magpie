@@ -276,6 +276,18 @@ HomepageAPI = Service(
 TemporaryUrlAPI = Service(
     path="/tmp/{token}",  # nosec: B108
     name="temporary_url")
+TokenAPI = Service(
+    path="/token",
+    name="Token")
+TokenValidateAPI = Service(
+    path="/token/validate",
+    name="TokenValidate")
+NetworkNodeAPI = Service(
+    path="/network-nodes/{node}",
+    name="NetworkNode")
+NetworkNodesAPI = Service(
+    path="/network-nodes",
+    name="NetworkNodes")
 
 
 # Path parameters
@@ -316,6 +328,19 @@ TokenParameter = colander.SchemaNode(
     colander.String(),
     description="Temporary URL token.",
     example=str(uuid.uuid4()))
+NetworkTokenParameter = colander.SchemaNode(
+    colander.String(),
+    description="Network token",
+    example=str(uuid.uuid4()))
+NetworkNodeNameParameter = colander.SchemaNode(
+    colander.String(),
+    description="Network Node name.",
+    example="node")
+NetworkNodeUrlParameter = colander.SchemaNode(
+    colander.String(),
+    description="Public URL of remote Magpie instance.",
+    example="http://node.example.com/magpie",
+    validator=colander.url)
 
 
 class ServiceType_RequestPathSchema(colander.MappingSchema):
@@ -414,6 +439,7 @@ PermissionTag = "Permission"
 RegisterTag = "Register"
 ResourcesTag = "Resource"
 ServicesTag = "Service"
+NetworkNodeTag = "Network Node"
 
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",
@@ -434,6 +460,9 @@ TAG_DESCRIPTIONS = {
     ResourcesTag: "Management of resources that reside under a given service and their applicable permissions.",
     ServicesTag: "Management of service definitions, children resources and their applicable permissions.",
 }
+
+if get_constant("MAGPIE_NETWORK_MODE", settings_name="magpie.network_mode"):
+    TAG_DESCRIPTIONS[NetworkNodeTag] = "Management of references to other Magpie instances in the network."
 
 # Header definitions
 
@@ -3312,6 +3341,117 @@ class Session_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = Session_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
+class Token_PATCH_OkResponseBodySchema(BaseResponseBodySchema):
+    token = NetworkTokenParameter
+
+
+class Token_RequestBodySchema(colander.MappingSchema):
+    expires = colander.SchemaNode(
+        colander.Integer(),
+        description="Token Expiry (in seconds)",
+        example=2000,
+        default=get_constant("MAGPIE_DEFAULT_TOKEN_EXPIRY")
+    )
+
+
+class Token_PATCH_RequestBodySchema(BaseRequestSchemaAPI):
+    body = Token_RequestBodySchema()
+
+
+class Token_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Get token successful."
+    body = Token_PATCH_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class TokenValidate_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid Token."
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class TokenValidate_BodySchema(colander.MappingSchema):
+    token = NetworkTokenParameter
+
+
+class TokenValidate_GET_RequestBodySchema(BaseRequestSchemaAPI):
+    body = TokenValidate_BodySchema()
+
+
+class TokenValidate_GET_OkResponseBodySchema(BaseResponseBodySchema):
+    user_name = UserNameParameter
+
+
+class TokenValidate_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Validate token successful."
+    body = TokenValidate_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNode_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node could not be found."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkNodes_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Nodes could not be found."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkNode_GET_OkResponseBodySchema(BaseResponseBodySchema):
+    name = NetworkNodeNameParameter
+    url = NetworkNodeUrlParameter
+
+
+class NetworkNode_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node found."
+    body = NetworkNode_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNode_BodySchema(colander.MappingSchema):
+    name = NetworkNodeNameParameter
+    url = NetworkNodeUrlParameter
+
+
+class NetworkNodesSequence(colander.SequenceSchema):
+    node = NetworkNode_BodySchema()
+
+class NetworkNodes_GET_OkResponseBodySchema(BaseResponseBodySchema):
+    nodes = NetworkNodesSequence()
+
+
+class NetworkNodes_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Nodes found."
+    body = NetworkNodes_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNode_POST_RequestBodySchema(BaseRequestSchemaAPI):
+    body = NetworkNode_BodySchema()
+
+
+NetworkNode_PUT_RequestBodySchema = NetworkNode_POST_RequestBodySchema
+
+
+class NetworkNodes_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node created."
+    body = BaseResponseBodySchema(code=HTTPCreated.code, description=description)
+
+
+class NetworkNodes_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node already exists with conflicting attributes."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+NetworkNode_PUT_ConflictResponseSchema = NetworkNodes_POST_ConflictResponseSchema
+
+
+class NetworkNode_PUT_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node updated."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNode_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node deleted."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
 class Session_GET_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
     description = "Failed to get session details."
     body = InternalServerErrorResponseSchema()
@@ -3374,6 +3514,11 @@ class ProviderSignin_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 class ProviderSignin_GET_UnauthorizedResponseSchema(BaseResponseSchemaAPI):
     description = "Unauthorized 'UserInfo' update using provided Authorization headers."
+    body = ErrorResponseBodySchema(code=HTTPUnauthorized.code, description=description)
+
+
+class ProviderSignin_GET_UnauthorizedTokenSchema(BaseResponseSchemaAPI):
+    description = "Unauthorized token in Authorization headers."
     body = ErrorResponseBodySchema(code=HTTPUnauthorized.code, description=description)
 
 
@@ -4219,6 +4364,44 @@ Session_GET_responses = {
     "200": Session_GET_OkResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": Session_GET_InternalServerErrorResponseSchema(),
+}
+Token_PATCH_responses = {
+    "200": Token_PATCH_OkResponseSchema(),
+    "401": UnauthorizedResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+TokenValidate_GET_responses = {
+    "200": TokenValidate_GET_OkResponseSchema(),
+    "400": TokenValidate_GET_BadRequestResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkNode_GET_responses = {
+    "200": NetworkNode_GET_OkResponseSchema(),
+    "404": NetworkNode_GET_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkNodes_GET_responses = {
+    "200": NetworkNodes_GET_OkResponseSchema(),
+    "404": NetworkNodes_GET_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkNodes_POST_responses = {
+    "201": NetworkNodes_POST_CreatedResponseSchema(),
+    "400": BadRequestResponseSchema(),
+    "409": NetworkNodes_POST_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkNode_PUT_responses = {
+    "200": NetworkNode_PUT_OkResponseSchema(),
+    "400": BadRequestResponseSchema(),
+    "409": NetworkNode_PUT_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkNode_DELETE_responses = {
+    "200": NetworkNode_DELETE_OkResponseSchema(),
+    "400": BadRequestResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 Version_GET_responses = {
     "200": Version_GET_OkResponseSchema(),

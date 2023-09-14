@@ -269,11 +269,18 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         """
         settings = get_settings(request)
         token_name = get_constant("MAGPIE_COOKIE_NAME", settings_container=settings)
+        network_mode = get_constant("MAGPIE_NETWORK_MODE", settings_container=settings,
+                                    settings_name="magpie.network_mode")
+        headers = dict(request.headers)
+        network_token_name = get_constant("MAGPIE_NETWORK_TOKEN_NAME", settings_container=settings)
+        if network_mode and "Authorization" not in headers and network_token_name in request.params:
+            headers["Authorization"] = "Bearer {}".format(request.params[network_token_name])
+            request.params["provider_name"] = request.params.get("provider_name",
+                                                                 get_constant("MAGPIE_NETWORK_PROVIDER", settings))
         if "Authorization" in request.headers and token_name not in request.cookies:
             magpie_prov = request.params.get("provider_name", get_constant("MAGPIE_DEFAULT_PROVIDER", settings))
             magpie_path = ProviderSigninAPI.path.format(provider_name=magpie_prov)
             magpie_auth = "{}{}".format(self.magpie_url, magpie_path)
-            headers = dict(request.headers)
             headers.update({"Homepage-Route": "/session", "Accept": CONTENT_TYPE_JSON})
             session_resp = requests.get(magpie_auth, headers=headers, verify=self.twitcher_ssl_verify)
             if session_resp.status_code != HTTPOk.code:

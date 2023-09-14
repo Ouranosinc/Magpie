@@ -32,6 +32,7 @@ paste
 pastedeploy
 pluggy
 psycopg2-binary>=2.7.1
+PyJWT==2.8.0
 pyramid>=1.10.2,<2
 pyramid_beaker==0.8
 pyramid_chameleon>=0.3

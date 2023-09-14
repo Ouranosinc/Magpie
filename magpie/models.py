@@ -1,16 +1,19 @@
 import datetime
 import math
 import uuid
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from pyramid.httpexceptions import HTTPInternalServerError
 from pyramid.security import ALL_PERMISSIONS, Allow, Authenticated, Everyone
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy_utils import URLType
 from ziggurat_foundations import ziggurat_model_init
 from ziggurat_foundations.models.base import BaseModel, get_db_session
 from ziggurat_foundations.models.external_identity import ExternalIdentityMixin
@@ -181,6 +184,41 @@ class UserResourcePermission(UserResourcePermissionMixin, Base):
 class User(UserMixin, Base):
     def __str__(self):
         return "<User: name={} id={}>".format(self.user_name, self.id)
+
+    network_node_id = sa.Column("network_node_id", sa.Integer,
+                                sa.ForeignKey("network_nodes.id", onupdate="CASCADE", ondelete="CASCADE"),
+                                nullable=True)
+
+    # Includes unique constraint to enforce uniqueness over network_node_id
+    __table_args__ = (
+        UniqueConstraint('user_name', 'network_node_id'),
+        UniqueConstraint('email', 'network_node_id'),
+        *((UserMixin.__table_args__,) if isinstance(UserMixin.__table_args__, Mapping) else UserMixin.__table_args__)
+    )
+
+    @declared_attr
+    def user_name(self):
+        """
+        User name for user object.
+
+        Overrides function in UserMixin to set unique to False.
+        This allows us to enforce a uniqueness constraint scoped over the network_node_id.
+        """
+        column = UserMixin.user_name
+        column.unique = False
+        return column
+
+    @declared_attr
+    def email(self):
+        """
+        Email for user object.
+
+        Overrides function in UserMixin to set unique to False.
+        This allows us to enforce a uniqueness constraint scoped over the network_node_id.
+        """
+        column = UserMixin.email
+        column.unique = False
+        return column
 
     def get_groups_by_status(self, status, db_session=None):
         # type: (UserGroupStatus, Session) -> Set[Str]
@@ -994,6 +1032,45 @@ class TemporaryToken(BaseModel, Base):
     def json(self):
         # type: () -> JSON
         return {"token": str(self.token), "operation": str(self.operation.value)}
+
+
+class NetworkToken(BaseModel, Base):
+    """
+    Model that defines a token for authentication across a network of Magpie instances.
+    """
+    __tablename__ = "network_tokens"
+
+    def __init__(self, *_, **__):
+        super(NetworkToken, self).__init__(*_, **__)
+        if not self.token:
+            self.token = uuid.uuid4()
+
+    token = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
+    user_id = sa.Column(sa.Integer,
+                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), unique=True)
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class NetworkNode(BaseModel, Base):
+    """
+    Model that defines a node in a network of Magpie instances.
+    """
+    __tablename__ = "network_nodes"
+
+    id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
+    name = sa.Column(sa.Unicode(128), nullable=False, unique=True)
+    url = sa.Column(URLType(), nullable=False)
+    users = relationship("User", backref="network_nodes", lazy="dynamic")
+
+    @property
+    def anonymous_user_name(self):
+        # type: () -> Str
+        return "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.name)
+
+    @property
+    def anonymous_user(self):
+        # type: () -> Optional[User]
+        return self.users.filter(User.user_name == self.anonymous_user_name).first()
 
 
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,

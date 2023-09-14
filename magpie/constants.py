@@ -105,6 +105,9 @@ MAGPIE_USERS_GROUP = os.getenv("MAGPIE_USERS_GROUP", "users")
 MAGPIE_CRON_LOG = os.getenv("MAGPIE_CRON_LOG", "~/magpie-cron.log")
 MAGPIE_DB_MIGRATION = asbool(os.getenv("MAGPIE_DB_MIGRATION", True))            # run db migration on startup
 MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv("MAGPIE_DB_MIGRATION_ATTEMPTS", 5))
+MAGPIE_NETWORK_MODE = os.getenv("MAGPIE_NETWORK_MODE", False)
+MAGPIE_INSTANCE_NAME = os.getenv("MAGPIE_INSTANCE_NAME")
+MAGPIE_DEFAULT_TOKEN_EXPIRY = int(os.getenv("MAGPIE_DEFAULT_TOKEN_EXPIRY", 86400))
 MAGPIE_LOG_LEVEL = os.getenv("MAGPIE_LOG_LEVEL", _get_default_log_level())      # log level to apply to the loggers
 MAGPIE_LOG_PRINT = asbool(os.getenv("MAGPIE_LOG_PRINT", False))                 # log also forces print to the console
 MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))              # log detail of every incoming request
@@ -146,6 +149,10 @@ MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must be itself (either l
 MAGPIE_CONTEXT_PERMISSION = "MAGPIE_CONTEXT_USER"  # path user must be itself, MAGPIE_LOGGED_USER or unauthenticated
 MAGPIE_LOGGED_USER = "current"
 MAGPIE_DEFAULT_PROVIDER = "ziggurat"
+MAGPIE_NETWORK_TOKEN_NAME = "magpie_token"
+MAGPIE_NETWORK_PROVIDER = "magpie_network"
+MAGPIE_NETWORK_NAME_PREFIX = "anonymous_network_"
+MAGPIE_NETWORK_GROUP_NAME = "magpie_network"
 
 # above this length is considered a token,
 # refuse longer username creation
@@ -162,6 +169,10 @@ MAGPIE_CONSTANTS = [
     "MAGPIE_DEFAULT_PROVIDER",
     "MAGPIE_USER_NAME_MAX_LENGTH",
     "MAGPIE_GROUP_NAME_MAX_LENGTH",
+    "MAGPIE_NETWORK_TOKEN_NAME",
+    "MAGPIE_NETWORK_PROVIDER",
+    "MAGPIE_NETWORK_NAME_PREFIX",
+    "MAGPIE_NETWORK_GROUP_NAME"
 ]
 
 # ===========================
@@ -170,6 +181,48 @@ MAGPIE_CONSTANTS = [
 
 _REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
 
+
+def protected_user_name_regex(include_admin=True,
+                              include_anonymous=True,
+                              include_network=True,
+                              additional_patterns=None,
+                              settings_container=None):
+    # type: (bool, bool, bool, Optional[list], Optional[AnySettingsContainer]) -> Str
+    """
+    Return a regular expression that matches all user names that are protected, meaning that they are generated
+    by Magpie itself and no regular user account should be created with these user names.
+    """
+    patterns = additional_patterns or []
+    if include_admin:
+        patterns.append(get_constant("MAGPIE_ADMIN_USER", settings_container=settings_container))
+    if include_anonymous:
+        patterns.append(get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings_container))
+    if include_network and get_constant("MAGPIE_NETWORK_MODE", settings_container=settings_container):
+        patterns.append(
+            "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
+        )
+    return "^{}$".format("|".join(patterns))
+
+
+def protected_group_name_regex(include_admin=True,
+                               include_anonymous=True,
+                               include_network=True,
+                               settings_container=None):
+    # type: (bool, bool, bool, Optional[AnySettingsContainer]) -> Str
+    """
+    Return a regular expression that matches all group names that are protected, meaning that they are generated
+    by Magpie itself and no regular user account should be created with these group names.
+    """
+    patterns = []
+    if include_admin:
+        patterns.append(get_constant("MAGPIE_ADMIN_GROUP", settings_container=settings_container))
+    if include_anonymous:
+        patterns.append(get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings_container))
+    if include_network and get_constant("MAGPIE_NETWORK_MODE", settings_container=settings_container):
+        patterns.append(
+            "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
+        )
+    return "^{}$".format("|".join(patterns))
 
 def get_constant_setting_name(name):
     # type: (Str) -> Str

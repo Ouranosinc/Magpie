@@ -11,7 +11,9 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* n/a
+* Introduce "Network Mode" which allows other Magpie instances to act as external authentication providers using JSON
+  Web Tokens (JWT). This allows users registered across multiple Magpie instances in a network to more easily gain
+  access to the resources within the network, without requiring the duplication of user credentials across the network.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
