@@ -494,8 +494,15 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
                           .format(url=svc.url, svc=svc_name), logger=LOGGER)
             else:
                 print_log("Service URL update [{url_old}] => [{url_new}] ({svc})"
-                          .format(url_old=svc.url, url_new=svc_new_url, svc=svc_name), logger=LOGGER)
+                          .format(url_old=svc.url, url_new=svc_new_url, svc=svc_name),
+                          logger=LOGGER, level=logging.WARN)
                 svc.url = svc_new_url
+            if svc.type != svc_type:
+                print_log("Service type update [{type_old}] => [{type_new}] ({svc}). "
+                          "If children resources/permissions are not compatible, this could break the instance."
+                          .format(type_old=svc.type, type_new=svc_type, svc=svc_name),
+                          logger=LOGGER, level=logging.WARN)
+                svc.type = svc_type
             svc.sync_type = svc_sync_type
             svc.configuration = svc_config
         elif not force_update and svc_name in existing_services_names:

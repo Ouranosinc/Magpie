@@ -11,7 +11,9 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* n/a
+* Allow startup `Service` registration to update the ``type`` field if a change is detected when loading ``providers``
+  configurations. Note that modifying ``type`` of a `Service` with existing `Resource` or `Permission` definitions on
+  the `Service` itself or any of its children could break the `Magpie` instance if those definitions are not compatible.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
