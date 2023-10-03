@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_3.36.0:
+
+`3.36.0 <https://github.com/Ouranosinc/Magpie/tree/3.36.0>`_ (2023-10-03)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Allow startup `Service` registration to update the ``type`` field if a change is detected when loading ``providers``
