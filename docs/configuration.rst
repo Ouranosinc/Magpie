@@ -974,9 +974,9 @@ Network Mode Settings
 
 The following configuration parameters are related to Magpie's "Network Mode" which allows networked instances of Magpie
 to authenticate users for each other. All variables defined in this section are only used if
-:envvar:`MAGPIE_NETWORK_MODE` is enabled.
+:envvar:`MAGPIE_NETWORK_ENABLED` is enabled.
 
-.. envvar:: MAGPIE_NETWORK_MODE
+.. envvar:: MAGPIE_NETWORK_ENABLED
 
     [:class:`bool`]
     (Default: ``False``)
@@ -986,7 +986,7 @@ to authenticate users for each other. All variables defined in this section are 
     Enable "Network Mode" which enables all functionality to authenticate users using other Magpie instances as
     external authentication providers.
 
-.. envvar:: MAGPIE_INSTANCE_NAME
+.. envvar:: MAGPIE_NETWORK_INSTANCE_NAME
 
     [:class:`str`]
 
@@ -995,9 +995,9 @@ to authenticate users for each other. All variables defined in this section are 
     The name of this Magpie instance in the network. This variable is used to determine if an authentication token was
     issued by this instance of Magpie, or another instance in the network.
 
-    This variable is required if :envvar:`MAGPIE_NETWORK_MODE` is ``True``.
+    This variable is required if :envvar:`MAGPIE_NETWORK_ENABLED` is ``True``.
 
-.. envvar:: MAGPIE_DEFAULT_TOKEN_EXPIRY
+.. envvar:: MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY
 
     [:class:`int`]
     (Default: ``86400``)

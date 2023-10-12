@@ -1,7 +1,6 @@
 import datetime
 import math
 import uuid
-from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
@@ -184,41 +183,6 @@ class UserResourcePermission(UserResourcePermissionMixin, Base):
 class User(UserMixin, Base):
     def __str__(self):
         return "<User: name={} id={}>".format(self.user_name, self.id)
-
-    network_node_id = sa.Column("network_node_id", sa.Integer,
-                                sa.ForeignKey("network_nodes.id", onupdate="CASCADE", ondelete="CASCADE"),
-                                nullable=True)
-
-    # Includes unique constraint to enforce uniqueness over network_node_id
-    __table_args__ = (
-        UniqueConstraint('user_name', 'network_node_id'),
-        UniqueConstraint('email', 'network_node_id'),
-        *((UserMixin.__table_args__,) if isinstance(UserMixin.__table_args__, Mapping) else UserMixin.__table_args__)
-    )
-
-    @declared_attr
-    def user_name(self):
-        """
-        User name for user object.
-
-        Overrides function in UserMixin to set unique to False.
-        This allows us to enforce a uniqueness constraint scoped over the network_node_id.
-        """
-        column = UserMixin.user_name
-        column.unique = False
-        return column
-
-    @declared_attr
-    def email(self):
-        """
-        Email for user object.
-
-        Overrides function in UserMixin to set unique to False.
-        This allows us to enforce a uniqueness constraint scoped over the network_node_id.
-        """
-        column = UserMixin.email
-        column.unique = False
-        return column
 
     def get_groups_by_status(self, status, db_session=None):
         # type: (UserGroupStatus, Session) -> Set[Str]
@@ -1034,6 +998,27 @@ class TemporaryToken(BaseModel, Base):
         return {"token": str(self.token), "operation": str(self.operation.value)}
 
 
+class NetworkUser(BaseModel, Base):
+    """
+    Model that defines a relationship between a User and a User that is authenticated on a different NetworkNode.
+    """
+    __tablename__ = "network_users"
+
+    id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
+    user_id = sa.Column(sa.Integer,
+                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
+    user = relationship("User", foreign_keys=[user_id])
+
+    network_node_id = sa.Column(sa.Integer,
+                                sa.ForeignKey("network_nodes.id", onupdate="CASCADE", ondelete="CASCADE"),
+                                nullable=False)
+    network_node = relationship("NetworkNode", foreign_keys=[network_node_id])
+    network_user_name = sa.Column(sa.Unicode(128))
+
+    __table_args__ = (UniqueConstraint('user_id', 'network_node_id'),
+                      UniqueConstraint('network_user_name', 'network_node_id'))
+
+
 class NetworkToken(BaseModel, Base):
     """
     Model that defines a token for authentication across a network of Magpie instances.
@@ -1047,7 +1032,7 @@ class NetworkToken(BaseModel, Base):
 
     token = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
     user_id = sa.Column(sa.Integer,
-                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), unique=True)
+                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), unique=True, nullable=False)
     user = relationship("User", foreign_keys=[user_id])
 
 
@@ -1060,17 +1045,6 @@ class NetworkNode(BaseModel, Base):
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
     name = sa.Column(sa.Unicode(128), nullable=False, unique=True)
     url = sa.Column(URLType(), nullable=False)
-    users = relationship("User", backref="network_nodes", lazy="dynamic")
-
-    @property
-    def anonymous_user_name(self):
-        # type: () -> Str
-        return "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.name)
-
-    @property
-    def anonymous_user(self):
-        # type: () -> Optional[User]
-        return self.users.filter(User.user_name == self.anonymous_user_name).first()
 
 
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,

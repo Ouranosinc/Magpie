@@ -22,6 +22,7 @@ from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.service import service_formats as sf
 from magpie.api.webhooks import WebhookAction, get_permission_update_params, process_webhook_requests
+from magpie.constants import protected_group_name_regex, get_constant
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 
@@ -94,6 +95,11 @@ def create_group(group_name, description, discoverable, terms, db_session):
     ax.verify_param(group_name, matches=True, param_compare=ax.PARAM_REGEX, param_name="group_name",
                     http_error=HTTPBadRequest, content=group_content_error,
                     msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
+    if get_constant("MAGPIE_NETWORK_ENABLED", settings_name="magpie.network_enabled"):
+        anonymous_regex = protected_group_name_regex(include_admin=False)
+        ax.verify_param(group_name, not_matches=True, param_compare=anonymous_regex, param_name="group_name",
+                        http_error=HTTPBadRequest, content=group_content_error,
+                        msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
     if description:
         ax.verify_param(description, matches=True, param_compare=ax.PARAM_REGEX, param_name="description",
                         http_error=HTTPBadRequest, content=group_content_error,

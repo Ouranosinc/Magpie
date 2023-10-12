@@ -269,8 +269,8 @@ class MagpieOWSSecurity(OWSSecurityInterface):
         """
         settings = get_settings(request)
         token_name = get_constant("MAGPIE_COOKIE_NAME", settings_container=settings)
-        network_mode = get_constant("MAGPIE_NETWORK_MODE", settings_container=settings,
-                                    settings_name="magpie.network_mode")
+        network_mode = get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings,
+                                    settings_name="magpie.network_enabled")
         headers = dict(request.headers)
         network_token_name = get_constant("MAGPIE_NETWORK_TOKEN_NAME", settings_container=settings)
         if network_mode and "Authorization" not in headers and network_token_name in request.params:

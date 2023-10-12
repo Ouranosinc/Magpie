@@ -20,7 +20,7 @@ from pyramid.httpexceptions import (
     HTTPOk,
     HTTPTemporaryRedirect,
     HTTPUnauthorized,
-    HTTPUnprocessableEntity
+    HTTPUnprocessableEntity, HTTPNotImplemented
 )
 from pyramid.request import Request
 from pyramid.response import Response
@@ -55,18 +55,10 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
-MAGPIE_NETWORK_MODE = get_constant("MAGPIE_NETWORK_MODE", settings_name="magpie.network_mode")
-
 # dictionaries of {'provider_id': 'provider_display_name'}
 MAGPIE_DEFAULT_PROVIDER = get_constant("MAGPIE_DEFAULT_PROVIDER")
 MAGPIE_INTERNAL_PROVIDERS = {MAGPIE_DEFAULT_PROVIDER: MAGPIE_DEFAULT_PROVIDER.capitalize()}
 MAGPIE_EXTERNAL_PROVIDERS = get_providers()
-
-if MAGPIE_NETWORK_MODE:
-    MAGPIE_NETWORK_TOKEN_NAME = get_constant("MAGPIE_NETWORK_TOKEN_NAME")
-    MAGPIE_NETWORK_PROVIDER = get_constant("MAGPIE_NETWORK_PROVIDER")
-    MAGPIE_INSTANCE_NAME = get_constant("MAGPIE_INSTANCE_NAME")
-    MAGPIE_EXTERNAL_PROVIDERS[MAGPIE_NETWORK_PROVIDER] = MAGPIE_NETWORK_PROVIDER
 
 MAGPIE_PROVIDER_KEYS = frozenset(set(MAGPIE_INTERNAL_PROVIDERS) | set(MAGPIE_EXTERNAL_PROVIDERS))
 
@@ -285,7 +277,9 @@ def user_from_token(request, token):
     Return the ``User`` associated with the token as long as the token is valid and issued by this Magpie instance.
     """
     magpie_secret = get_constant("MAGPIE_SECRET", request, settings_name="magpie.secret")
-    decoded_token = jwt.decode(token, magpie_secret, algorithms="HS256", issuer=MAGPIE_INSTANCE_NAME,
+    decoded_token = jwt.decode(token, magpie_secret, algorithms="HS256",
+                               issuer=get_constant("MAGPIE_NETWORK_INSTANCE_NAME", request,
+                                                   settings_name='magpie.network_instance_name'),
                                options={"require": ["exp", "token"]})
 
     network_token = (request.db.query(models.NetworkToken)
@@ -307,7 +301,7 @@ def external_login_view(request):
     response = Response()
     verify_provider(provider_name)
     try:
-        if provider_name == MAGPIE_NETWORK_PROVIDER:
+        if provider_name == get_constant("MAGPIE_NETWORK_PROVIDER", request):
             if "Authorization" in request.headers:
                 token_type, token = request.headers.get("Authorization").split()
                 if token_type != "Bearer":
@@ -439,69 +433,61 @@ def get_session_view(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.Session_GET_OkResponseSchema.description, content=session_json)
 
 
-if MAGPIE_NETWORK_MODE:
-    @s.TokenAPI.patch(schema=s.Token_PATCH_RequestBodySchema, tags=[s.SessionTag],
-                      response_schemas=s.Token_PATCH_responses)
-    @view_config(route_name=s.TokenAPI.name, request_method="PATCH", permission=Authenticated)
-    def token_view(request):
-        """
-        Get a token. Generates a new token every time this route is accessed so this can also
-        be used to invalidate a previously generated token.
-        """
-        magpie_secret = get_constant("MAGPIE_SECRET", request, settings_name="magpie.secret")
-        default_expiry = get_constant("MAGPIE_DEFAULT_TOKEN_EXPIRY", request,
-                                      settings_name="magpie.default_token_expiry")
-        magpie_instance_name = get_constant("MAGPIE_INSTANCE_NAME",
-                                            request,
-                                            settings_name="magpie.instance_name")
+@s.TokenAPI.patch(tags=[s.SessionTag], response_schemas=s.Token_PATCH_responses)
+@view_config(route_name=s.TokenAPI.name, request_method="PATCH", permission=Authenticated)
+def token_view(request):
+    """
+    Get a token. Generates a new token every time this route is accessed so this can also
+    be used to invalidate a previously generated token.
+    """
+    magpie_secret = get_constant("MAGPIE_SECRET", request, settings_name="magpie.secret")
+    default_expiry = get_constant("MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY", request,
+                                  settings_name="magpie.network_default_token_expiry")
+    magpie_instance_name = get_constant("MAGPIE_NETWORK_INSTANCE_NAME",
+                                        request,
+                                        settings_name="magpie.network_instance_name")
 
-        expires = request.GET.get("expires", default_expiry)
-        try:
-            expires = int(expires)
-        except ValueError:
-            expires = int(default_expiry)
+    expiry = datetime.utcnow() + timedelta(seconds=default_expiry)
 
-        expiry = datetime.utcnow() + timedelta(seconds=expires)
+    def upsert_token():
+        network_token = request.db.query(models.NetworkToken).filter(
+            models.NetworkToken.user_id == request.user.id).first()
+        if network_token:
+            network_token.token = uuid.uuid4()
+        else:
+            network_token = models.NetworkToken(user_id=request.user.id)
+            request.db.add(network_token)
+        return network_token.token
 
-        def upsert_token():
-            network_token = request.db.query(models.NetworkToken).filter(
-                models.NetworkToken.user_id == request.user.id).first()
-            if network_token:
-                network_token.token = uuid.uuid4()
-            else:
-                network_token = models.NetworkToken(user_id=request.user.id)
-                request.db.add(network_token)
-            return network_token.token
+    token_value = ax.evaluate_call(lambda: upsert_token(), fallback=lambda: request.db.rollback(),
+                                   http_error=HTTPInternalServerError)
 
-        token_value = ax.evaluate_call(lambda: upsert_token(), fallback=lambda: request.db.rollback(),
-                                       http_error=HTTPInternalServerError)
+    token = jwt.encode({"token": str(token_value),
+                        "exp": expiry,
+                        "iss": magpie_instance_name}, magpie_secret, algorithm="HS256")
 
-        token = jwt.encode({"token": str(token_value),
-                            "exp": expiry,
-                            "iss": magpie_instance_name}, magpie_secret, algorithm="HS256")
-
-        return ax.valid_http(http_success=HTTPOk, detail=s.Token_PATCH_OkResponseSchema.description,
-                             content={"token": token})
+    return ax.valid_http(http_success=HTTPOk, detail=s.Token_PATCH_OkResponseSchema.description,
+                         content={"token": token})
 
 
-    @s.TokenValidateAPI.get(schema=s.TokenValidate_GET_RequestBodySchema, tags=[s.SessionTag],
-                            response_schemas=s.TokenValidate_GET_responses)
-    @view_config(route_name=s.TokenValidateAPI.name, permission=NO_PERMISSION_REQUIRED)
-    def validate_token_view(request):
-        """ Validate a token """
-        token = request.GET.get("token")
-        try:
-            authenticated_user = user_from_token(request, token)
-            if authenticated_user:
-                return ax.valid_http(http_success=HTTPOk,
-                                     detail=s.TokenValidate_GET_OkResponseSchema.description,
-                                     content={"user_name": authenticated_user.user_name})
-            else:
-                ax.raise_http(http_error=HTTPUnauthorized,
-                              detail=s.TokenValidate_GET_BadRequestResponseSchema.description)
-        except jwt.exceptions.PyJWTError as exc:
-            ax.raise_http(http_error=HTTPUnauthorized, content={"reason": str(exc)},
+@s.TokenValidateAPI.get(schema=s.TokenValidate_GET_RequestBodySchema, tags=[s.SessionTag],
+                        response_schemas=s.TokenValidate_GET_responses)
+@view_config(route_name=s.TokenValidateAPI.name, permission=NO_PERMISSION_REQUIRED)
+def validate_token_view(request):
+    """ Validate a token """
+    token = request.GET.get("token")
+    try:
+        authenticated_user = user_from_token(request, token)
+        if authenticated_user:
+            return ax.valid_http(http_success=HTTPOk,
+                                 detail=s.TokenValidate_GET_OkResponseSchema.description,
+                                 content={"user_name": authenticated_user.user_name})
+        else:
+            ax.raise_http(http_error=HTTPUnauthorized,
                           detail=s.TokenValidate_GET_BadRequestResponseSchema.description)
+    except jwt.exceptions.PyJWTError as exc:
+        ax.raise_http(http_error=HTTPUnauthorized, content={"reason": str(exc)},
+                      detail=s.TokenValidate_GET_BadRequestResponseSchema.description)
 
 
 @s.ProvidersAPI.get(tags=[s.SessionTag], response_schemas=s.Providers_GET_responses)

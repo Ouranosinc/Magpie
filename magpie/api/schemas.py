@@ -283,7 +283,7 @@ TokenValidateAPI = Service(
     path="/token/validate",
     name="TokenValidate")
 NetworkNodeAPI = Service(
-    path="/network-nodes/{node}",
+    path="/network-nodes/{node_name}",
     name="NetworkNode")
 NetworkNodesAPI = Service(
     path="/network-nodes",
@@ -459,10 +459,8 @@ TAG_DESCRIPTIONS = {
     RegisterTag: "Registration paths for operations available to users (including non-administrators).",
     ResourcesTag: "Management of resources that reside under a given service and their applicable permissions.",
     ServicesTag: "Management of service definitions, children resources and their applicable permissions.",
+    NetworkNodeTag: "Management of references to other Magpie instances in the network."
 }
-
-if get_constant("MAGPIE_NETWORK_MODE", settings_name="magpie.network_mode"):
-    TAG_DESCRIPTIONS[NetworkNodeTag] = "Management of references to other Magpie instances in the network."
 
 # Header definitions
 
@@ -3343,19 +3341,6 @@ class Session_GET_OkResponseSchema(BaseResponseSchemaAPI):
 
 class Token_PATCH_OkResponseBodySchema(BaseResponseBodySchema):
     token = NetworkTokenParameter
-
-
-class Token_RequestBodySchema(colander.MappingSchema):
-    expires = colander.SchemaNode(
-        colander.Integer(),
-        description="Token Expiry (in seconds)",
-        example=2000,
-        default=get_constant("MAGPIE_DEFAULT_TOKEN_EXPIRY")
-    )
-
-
-class Token_PATCH_RequestBodySchema(BaseRequestSchemaAPI):
-    body = Token_RequestBodySchema()
 
 
 class Token_PATCH_OkResponseSchema(BaseResponseSchemaAPI):

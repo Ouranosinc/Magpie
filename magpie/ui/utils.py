@@ -592,8 +592,11 @@ class AdminRequests(BaseViews):
         if (user_email or "").lower() in [usr["email"].lower() for usr in user_details]:
             data["invalid_user_email"] = True
             data["reason_user_email"] = "Conflict"
-        if user_email == "":
-            data["invalid_user_email"] = True
+        if get_constant("MAGPIE_NETWORK_ENABLED", self.request, settings_name="magpie.network_enabled"):
+            anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=self.request)
+            if re.match(anonymous_regex, user_name):
+                data["invalid_user_name"] = True
+                data["reason_user_name"] = "Conflict"
         if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH", self.request):
             data["invalid_user_name"] = True
             data["reason_user_name"] = "Too Long"

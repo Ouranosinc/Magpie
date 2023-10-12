@@ -14,8 +14,8 @@ def create_network_node(request, name, url):
     """
     Create a NetworkNode with the given name and url.
     """
-    network_node = models.NetworkNode(name=name, url=url)
-    name = network_node.anonymous_user_name
+    models.NetworkNode(name=name, url=url)
+    name = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), name)
 
     # create an anonymous user and group for this network node
     register_user_with_group(user_name=name,
@@ -38,8 +38,6 @@ def create_network_node(request, name, url):
     group = models.GroupService.by_group_name(get_constant("MAGPIE_NETWORK_GROUP_NAME"), db_session=request.db)
     group.description = "Group for users who have accounts on a different Magpie instance on this network.".format(name)
     group.discoverable = False
-
-    request.tm.commit()
 
 
 def delete_network_node(request, node):

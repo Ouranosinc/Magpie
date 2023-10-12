@@ -428,43 +428,40 @@ their services.
 Network Mode
 ------------
 
-If the :envvar:`MAGPIE_NETWORK_MODE` is enabled, an additional external authentication provider is added to Magpie which
-allows networked instances of Magpie to authenticate users for each other.
+If the :envvar:`MAGPIE_NETWORK_ENABLED` is enabled, an additional external authentication provider is added to `Magpie`
+which allows networked instances of `Magpie` to authenticate users for each other.
 
-Users can then log in to any Magpie instance where they have an account and request a personal network token in the form
-of a `_JSON Web Token <https://datatracker.ietf.org/doc/html/rfc7519>`_ which can be used to authenticate this user on
-any Magpie instance in the network.
+Users can then log in to any `Magpie` instance where they have an account and request a personal network token in the
+form of a `JSON Web Token <https://datatracker.ietf.org/doc/html/rfc7519>`_ which can be used to authenticate this user
+on any `Magpie` instance in the network.
 
 Managing the Network
 ~~~~~~~~~~~~~~~~~~~~
 
-In order for Magpie instances to authenticate each other's users, each instance must be made aware of the existence of
+In order for `Magpie` instances to authenticate each other's users, each instance must be made aware of the existence of
 the others so that it knows where to send authentication verification requests.
 
-In order to register another Magpie instance as part of the same network, an admin user can create a
+In order to register another `Magpie` instance as part of the same network, an admin user can create a
 :term:`Network Node` with a request to ``POST /network-nodes``. The parameters given to that request include a ``name``
-and a ``url``. The ``name`` is a the name of that other Magpie instance in the network and should correspond to the
-same value as the :envvar:`MAGPIE_INSTANCE_NAME` value set by the other Magpie instance. The ``url`` is a the root URL
-of the other Magpie instance.
+and a ``url``. The ``name`` is a the name of that other `Magpie` instance in the network and should correspond to the
+same value as the :envvar:`MAGPIE_NETWORK_INSTANCE_NAME` value set by the other `Magpie` instance. The ``url`` is a the root URL
+of the other `Magpie` instance.
 
-Once a :term:`Network Node` is registered, Magpie can use that other instance to authenticate users as long as the other
-instance also has :envvar:`MAGPIE_NETWORK_MODE` enabled.
+Once a :term:`Network Node` is registered, `Magpie` can use that other instance to authenticate users as long as the
+other instance also has :envvar:`MAGPIE_NETWORK_ENABLED` enabled.
 
 Managing Personal JWTs
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A :term:`User` can request a new network token with a request to the ``PATCH /token`` route. This route takes one
-optional parameter ``expires`` which is an integer indicating how long (in seconds) until that token expires, the
-default expiry for this token is :envvar:`MAGPIE_DEFAULT_TOKEN_EXPIRY`.
+A :term:`User` can request a new network token with a request to the ``PATCH /token`` route.
 
 Every time a :term:`User` makes a request to the ``PATCH /token`` route a new token is generated for them. This
-effectively cancels all previously created tokens for that user. If a user wishes to cancel all tokens, they can provide
-an ``expires`` value of ``0`` when making the request.
+effectively cancels all previously created tokens for that user.
 
 Authentication
 ~~~~~~~~~~~~~~
 
-Once a :term:`User` gets a personal network token, they can use that token to authenticate with any Magpie instance in
+Once a :term:`User` gets a personal network token, they can use that token to authenticate with any `Magpie` instance in
 the same network. When a user makes a request, they should set the ``provider_name`` parameter to the value of
 :envvar:`MAGPIE_NETWORK_PROVIDER` and provide the network token in the Authorization header in the following format:
 
@@ -479,10 +476,10 @@ Authorization
 ~~~~~~~~~~~~~
 
 Managing authorization for :term:`Users` who authenticate using personal network tokens is complicated by the fact that
-a :term:`User` is not required to have a full account on both Magpie instances in order to using this authentication
+a :term:`User` is not required to have a full account on both `Magpie` instances in order to using this authentication
 mechanism. This means that a :term:`User` may be logged in as a node-specific "anonymous" user.
 
-When another Magpie instance is registered as a :term:`Network Node`, a few additional entities are created:
+When another `Magpie` instance is registered as a :term:`Network Node`, a few additional entities are created:
 
 #. a group used to manage the permissions of all users who authenticate using the new :term:`Network Node`.
    * this group's name will be the :envvar:`MAGPIE_NETWORK_NAME_PREFIX` followed by the :term:`Network Node` name
@@ -494,7 +491,7 @@ When another Magpie instance is registered as a :term:`Network Node`, a few addi
 
 Here is an example to illustrate this point:
 
-* There are 3 Magpie instances in the network named A, B, and C
+* There are 3 `Magpie` instances in the network named A, B, and C
 * There is a :term:`User` named ``"toto"`` registered on instance A
 * There is no :term:`User` named ``"toto"`` who belongs to the ``"anonymous_network_A"`` group registered on instance B
 * There is a :term:`User` named ``"toto"`` who belongs to the ``"anonymous_network_A"`` group registered on instance C

@@ -206,7 +206,12 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
                     with_param=False,  # params are not useful in response for this case
                     content={"user_name": user.user_name},
                     http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
-
+    if get_constant("MAGPIE_NETWORK_ENABLED", request, settings_name="magpie.network_enabled"):
+        anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=request)
+        ax.verify_param(new_user_name, not_matches=True, param_compare=anonymous_regex,
+                        with_param=False,  # params are not useful in response for this case
+                        content={"user_name": user.user_name},
+                        http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
     # FIXME: disable email edit when self-registration is enabled to avoid not having any confirmation of new email
     #   (see https://github.com/Ouranosinc/Magpie/issues/436)
     update_email_admin_only = False
