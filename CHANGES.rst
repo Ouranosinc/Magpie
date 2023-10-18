@@ -9,11 +9,20 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-Features / Changes
-~~~~~~~~~~~~~~~~~~~~~
 * Introduce "Network Mode" which allows other Magpie instances to act as external authentication providers using JSON
   Web Tokens (JWT). This allows users registered across multiple Magpie instances in a network to more easily gain
   access to the resources within the network, without requiring the duplication of user credentials across the network.
+
+.. _changes_3.36.0:
+
+`3.36.0 <https://github.com/Ouranosinc/Magpie/tree/3.36.0>`_ (2023-10-03)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Allow startup `Service` registration to update the ``type`` field if a change is detected when loading ``providers``
+  configurations. Note that modifying ``type`` of a `Service` with existing `Resource` or `Permission` definitions on
+  the `Service` itself or any of its children could break the `Magpie` instance if those definitions are not compatible.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
