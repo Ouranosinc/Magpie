@@ -9,7 +9,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~
+
+* Create an additional settings/environment variable ``MAGPIE_SUPPLEMENTAL_USERNAME_REGEX`` that acts as an additional
+  check for whether a ``username`` is valid. This creates a further restriction on this value which is useful when there
+  are additional limits on the ``username`` that should be enforced by `Magpie`.
 
 .. _changes_3.36.0:
 

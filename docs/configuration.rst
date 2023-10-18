@@ -1428,6 +1428,28 @@ approval procedures.
         obtained from the :term:`Pending User`. Parameter ``approval_required`` is provided to generate alternative
         `Mako Template`_ contents in case different messages should be sent for each situation.
 
+.. _config_user_validation_settings
+
+User Validation Settings
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. envvar:: MAGPIE_SUPPLEMENTAL_USERNAME_REGEX
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.36.1
+
+    A (python3 syntax) regular expression used to validate a ``username`` when creating or updating a `User`.
+
+    For example, if ``MAGPIE_SUPPLEMENTAL_USERNAME_REGEX='^\w+$'``, then a `User` can have ``userA`` as a ``username``
+    but not ``user.A`` or ``user-A``.
+
+    Note that `Magpie` enforces other restrictions that must also be met for a ``username`` to be considered valid.
+    This creates an additional restriction, it does not replace an existing restriction on the ``username``.
+
+    If this variable is empty or unset, then no additional ``username`` validations will be performed.
+
+
 .. envvar:: MAGPIE_USER_REGISTRATION_DECLINED_EMAIL_TEMPLATE
 
     (Default: |email_ur_declined_mako|_)

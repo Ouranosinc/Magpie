@@ -872,6 +872,11 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(user_name, matches=True, param_name="user_name", param_compare=ax.PARAM_REGEX,
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
+        supplemental_regex = get_constant("MAGPIE_SUPPLEMENTAL_USERNAME_REGEX", raise_missing=False)
+        if supplemental_regex:
+            ax.verify_param(user_name, matches=True, param_name="user_name", param_compare=supplemental_regex,
+                            http_error=HTTPBadRequest,
+                            msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
         name_range = range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
         ax.verify_param(len(user_name), is_in=True, param_name="user_name", param_compare=name_range,
                         http_error=HTTPBadRequest,
