@@ -1433,15 +1433,15 @@ approval procedures.
 User Validation Settings
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. envvar:: MAGPIE_SUPPLEMENTAL_USERNAME_REGEX
+.. envvar:: MAGPIE_SUPPLEMENTAL_USER_NAME_REGEX
 
     (Default: ``None``)
 
-    .. versionadded:: 3.36.1
+    .. versionadded:: 3.37
 
     A (python3 syntax) regular expression used to validate a ``username`` when creating or updating a `User`.
 
-    For example, if ``MAGPIE_SUPPLEMENTAL_USERNAME_REGEX='^\w+$'``, then a `User` can have ``userA`` as a ``username``
+    For example, if ``MAGPIE_SUPPLEMENTAL_USER_NAME_REGEX='^\w+$'``, then a `User` can have ``userA`` as a ``username``
     but not ``user.A`` or ``user-A``.
 
     Note that `Magpie` enforces other restrictions that must also be met for a ``username`` to be considered valid.
