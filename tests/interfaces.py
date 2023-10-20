@@ -7517,12 +7517,15 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in(self.test_user_name, body)
 
     @runner.MAGPIE_TEST_USERS
-    def test_AddUser_FormSubmit_WithSupplementalUsernameRegex_Invalid(self):
+    def test_AddUser_FormSubmit_WithExtraUsernameRegex_Invalid(self):
         """
-        Check that the supplemental_user_name_regex setting is used to validate a new user name when the user name is
+        Check that the extra_user_name_regex setting is used to validate a new user name when the user name is
         invalid according to that regex but is valid according to the ax.PARAM_REGEX.
+        
+        .. versionadded:: 3.37
         """
-        with utils.mocked_get_settings(settings={"magpie.supplemental_user_name_regex": "^$"}):
+        utils.warn_version(self, "extra username regex added", "3.37", skip=True)
+        with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^$"}):
             data = {"user_name": self.test_user_name, "group_name": get_constant("MAGPIE_USERS_GROUP"),
                     "email": "{}@mail.com".format(self.test_user_name),
                     "password": self.test_user_name, "confirm": self.test_user_name}
@@ -7531,16 +7534,19 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
             resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="create", form_data=data,
                                                     path=path)
             body = utils.check_ui_response_basic_info(resp)
-            msg = s.Users_CheckInfo_UserNameValueSupplementalRegex_BadRequestResponseSchema.description
+            msg = s.Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema.description
             utils.check_val_is_in(msg, html.unescape(body))
 
     @runner.MAGPIE_TEST_USERS
-    def test_AddUser_FormSubmit_WithSupplementalUsernameRegex_ValidGoodUsername(self):
+    def test_AddUser_FormSubmit_WithExtraUsernameRegex_ValidGoodUsername(self):
         """
-        Check that the supplemental_user_name_regex setting is used to validate a new user name when the user name is
+        Check that the user_name_extra_regex setting is used to validate a new user name when the user name is
         valid according to that regex and the ax.PARAM_REGEX.
+        
+        .. versionadded:: 3.37
         """
-        with utils.mocked_get_settings(settings={"magpie.supplemental_user_name_regex": "^.*$"}):
+        utils.warn_version(self, "extra username regex added", "3.37", skip=True)
+        with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^.*$"}):
             data = {"user_name": self.test_user_name, "group_name": get_constant("MAGPIE_USERS_GROUP"),
                     "email": "{}@mail.com".format(self.test_user_name),
                     "password": self.test_user_name, "confirm": self.test_user_name}
@@ -7556,12 +7562,15 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_val_is_in(self.test_user_name, body)
 
     @runner.MAGPIE_TEST_USERS
-    def test_AddUser_FormSubmit_WithSupplementalUsernameRegex_InvalidBadUsername(self):
+    def test_AddUser_FormSubmit_WithExtraUsernameRegex_InvalidBadUsername(self):
         """
-        Check that the supplemental_user_name_regex setting is used to validate a new user name when the user name is
+        Check that the extra_user_name_regex setting is used to validate a new user name when the user name is
         valid according to that regex but not the ax.PARAM_REGEX.
+        
+        .. versionadded:: 3.37
         """
-        with utils.mocked_get_settings(settings={"magpie.supplemental_user_name_regex": "^.*$"}):
+        utils.warn_version(self, "extra username regex added", "3.37", skip=True)
+        with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^.*$"}):
             email = "{}@mail.com".format(self.test_user_name) # the @ symbol is invalid according to the ax.PARAM_REGEX
             data = {"user_name": email, "group_name": get_constant("MAGPIE_USERS_GROUP"), "email": email,
                     "password": self.test_user_name, "confirm": self.test_user_name}
@@ -7572,10 +7581,10 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
             body = utils.check_ui_response_basic_info(resp)
 
             # the error message should indicate that the user name is invalid according to the original regex
-            # (ax.PARAM_REGEX) not the supplemental regex
+            # (ax.PARAM_REGEX) not the extra regex
             msg = s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description
             utils.check_val_is_in(msg, html.unescape(body))
-            msg = s.Users_CheckInfo_UserNameValueSupplementalRegex_BadRequestResponseSchema.description
+            msg = s.Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema.description
             utils.check_val_not_in(msg, html.unescape(body))
 
     @runner.MAGPIE_TEST_STATUS

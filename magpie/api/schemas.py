@@ -1962,8 +1962,8 @@ class Users_CheckInfo_UserNameValue_BadRequestResponseSchema(BaseResponseSchemaA
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Users_CheckInfo_UserNameValueSupplementalRegex_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Invalid 'user_name' value specified. Does not match the supplemental user name regex."
+class Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid 'user_name' value specified. Does not match the extra user name regex."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
