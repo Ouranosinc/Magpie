@@ -7521,7 +7521,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Check that the extra_user_name_regex setting is used to validate a new user name when the user name is
         invalid according to that regex but is valid according to the ax.PARAM_REGEX.
-        
+
         .. versionadded:: 3.37
         """
         utils.warn_version(self, "extra username regex added", "3.37", skip=True)
@@ -7542,7 +7542,7 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Check that the user_name_extra_regex setting is used to validate a new user name when the user name is
         valid according to that regex and the ax.PARAM_REGEX.
-        
+
         .. versionadded:: 3.37
         """
         utils.warn_version(self, "extra username regex added", "3.37", skip=True)
@@ -7566,12 +7566,12 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Check that the extra_user_name_regex setting is used to validate a new user name when the user name is
         valid according to that regex but not the ax.PARAM_REGEX.
-        
+
         .. versionadded:: 3.37
         """
         utils.warn_version(self, "extra username regex added", "3.37", skip=True)
         with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^.*$"}):
-            email = "{}@mail.com".format(self.test_user_name) # the @ symbol is invalid according to the ax.PARAM_REGEX
+            email = "{}@mail.com".format(self.test_user_name)  # the @ symbol is invalid according to the ax.PARAM_REGEX
             data = {"user_name": email, "group_name": get_constant("MAGPIE_USERS_GROUP"), "email": email,
                     "password": self.test_user_name, "confirm": self.test_user_name}
             path = "/ui/users/add"

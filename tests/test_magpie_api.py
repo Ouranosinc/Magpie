@@ -508,7 +508,6 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
                                       headers=self.json_headers, cookies=self.cookies, expect_errors=True)
             utils.check_response_basic_info(resp, 400, expected_method="POST")
 
-
     @runner.MAGPIE_TEST_USERS
     def test_PostUsers_WithExtraRegex_ValidBoth(self):
         """
@@ -527,6 +526,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
             resp = utils.test_request(self, "POST", "/users", data=data,
                                       headers=self.json_headers, cookies=self.cookies, expect_errors=True)
             utils.check_response_basic_info(resp, 201, expected_method="POST")
+
 
 @runner.MAGPIE_TEST_API
 @runner.MAGPIE_TEST_LOCAL

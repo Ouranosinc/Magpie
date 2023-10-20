@@ -872,8 +872,7 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(user_name, matches=True, param_name="user_name", param_compare=ax.PARAM_REGEX,
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
-        extra_regex = get_constant("MAGPIE_USER_NAME_EXTRA_REGEX", raise_missing=False,
-                                          raise_not_set=False)
+        extra_regex = get_constant("MAGPIE_USER_NAME_EXTRA_REGEX", raise_missing=False, raise_not_set=False)
         if extra_regex:
             ax.verify_param(
                 user_name, matches=True, param_name="user_name", param_compare=extra_regex,
