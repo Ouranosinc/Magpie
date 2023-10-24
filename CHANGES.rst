@@ -13,8 +13,8 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~
 
 * Create an additional settings/environment variable ``MAGPIE_USER_NAME_EXTRA_REGEX`` that acts as an additional
-  check for whether a ``username`` is valid. This creates a further restriction on this value which is useful when there
-  are additional limits on the ``username`` that should be enforced by `Magpie`.
+  check for whether a ``user_name`` is valid. This creates a further restriction on this value which is useful when there
+  are additional limits on the ``user_name`` that should be enforced by `Magpie`.
 
 .. _changes_3.36.0:
 
