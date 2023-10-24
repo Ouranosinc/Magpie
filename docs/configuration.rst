@@ -953,9 +953,9 @@ remain available as described at the start of the :ref:`Configuration` section.
 
     .. versionadded:: 3.37
 
-    A (python3 syntax) regular expression used to validate a ``user_name`` when creating or updating a `User`.
+    A (python3 syntax) regular expression used to validate a ``user_name`` when creating or updating a :term:`User`.
 
-    For example, if ``MAGPIE_USER_NAME_EXTRA_REGEX='^\w+$'``, then a `User` can have ``userA`` as a ``user_name``
+    For example, if ``MAGPIE_USER_NAME_EXTRA_REGEX='^\w+$'``, then a :term:`User` can have ``userA`` as a ``user_name``
     but not ``user.A`` or ``user-A``.
 
     Note that `Magpie` enforces other restrictions that must also be met for a ``user_name`` to be considered valid.
