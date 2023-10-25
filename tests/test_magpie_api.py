@@ -490,6 +490,25 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
             utils.check_response_basic_info(resp, 400, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_WithExtraRegex_CaseInvalidExtraRegex(self):
+        """
+        Check that the user_name_extra_regex setting is used to validate a new user name when the user name is
+        invalid according to that regex because the case is incorrect but is valid according to the ax.PARAM_REGEX.
+
+        .. versionadded:: 3.37
+        """
+        utils.warn_version(self, "extra username regex added", "3.37", skip=True)
+        with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^[a-z]+$"}):
+            data = {
+                "user_name": "UpperCaseUserName",
+                "password": self.test_user_name,
+                "email": "email@example.com",
+            }
+            resp = utils.test_request(self, "POST", "/users", data=data,
+                                      headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+            utils.check_response_basic_info(resp, 400, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
     def test_PostUsers_WithExtraRegex_InvalidRegex(self):
         """
         Check that the user_name_extra_regex setting is used to validate a new user name when the user name is

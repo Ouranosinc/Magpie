@@ -953,7 +953,8 @@ remain available as described at the start of the :ref:`Configuration` section.
 
     .. versionadded:: 3.37
 
-    A (python3 syntax) regular expression used to validate a ``user_name`` when creating or updating a :term:`User`.
+    A case sensitive (python3 syntax) regular expression used to validate a ``user_name`` when creating or updating a
+    :term:`User`.
 
     For example, if ``MAGPIE_USER_NAME_EXTRA_REGEX='^\w+$'``, then a :term:`User` can have ``userA`` as a ``user_name``
     but not ``user.A`` or ``user-A``.

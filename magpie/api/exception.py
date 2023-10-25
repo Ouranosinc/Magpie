@@ -85,6 +85,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                  is_equal=False,                    # type: bool
                  is_type=False,                     # type: bool
                  matches=False,                     # type: bool
+                 regex_flags=re.I | re.X            # type: re.RegexFlag
                  ):                                 # type: (...) -> None   # noqa: E123,E126
     # pylint: disable=R0912,R0914
     """
@@ -123,6 +124,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
     :param is_equal: test that :paramref:`param` equals :paramref:`param_compare` value
     :param is_type: test that :paramref:`param` is of same type as specified by :paramref:`param_compare` type
     :param matches: test that :paramref:`param` matches the regex specified by :paramref:`param_compare` value
+    :param regex_flags: flags to pass to the ``re.compile`` function when comparing using a regular expression
     :raises HTTPError: if tests fail, specified exception is raised (default: :class:`HTTPBadRequest`)
     :raises HTTPInternalServerError: for evaluation error
     :return: nothing if all tests passed
@@ -249,7 +251,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
     if matches:
         param_compare_regex = param_compare
         if isinstance(param_compare, six.string_types):
-            param_compare_regex = re.compile(param_compare, re.I | re.X)
+            param_compare_regex = re.compile(param_compare, regex_flags)
         fail_conditions.update({"matches": bool(re.match(param_compare_regex, param))})
         fail_verify = fail_verify or not fail_conditions["matches"]
     if fail_verify:
