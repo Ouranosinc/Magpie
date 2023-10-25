@@ -85,7 +85,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                  is_equal=False,                    # type: bool
                  is_type=False,                     # type: bool
                  matches=False,                     # type: bool
-                 regex_flags=re.I | re.X            # type: re.RegexFlag
+                 regex_flags=re.I | re.X            # type: re.RegexFlag  # noqa: E741
                  ):                                 # type: (...) -> None   # noqa: E123,E126
     # pylint: disable=R0912,R0914
     """
