@@ -495,9 +495,9 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         Check that the user_name_extra_regex setting is used to validate a new user name when the user name is
         invalid according to that regex because the case is incorrect but is valid according to the ax.PARAM_REGEX.
 
-        .. versionadded:: 3.37
+        .. versionchanged:: 3.37.1
         """
-        utils.warn_version(self, "extra username regex added", "3.37", skip=True)
+        utils.warn_version(self, "case sensitive user name extra regex", "3.37.1", skip=True)
         with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^[a-z]+$"}):
             data = {
                 "user_name": "UpperCaseUserName",
