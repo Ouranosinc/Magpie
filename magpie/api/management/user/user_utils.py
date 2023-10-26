@@ -876,7 +876,7 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         extra_regex = get_constant("MAGPIE_USER_NAME_EXTRA_REGEX", raise_missing=False, raise_not_set=False)
         if extra_regex:
             ax.verify_param(
-                user_name, matches=True, param_name="user_name", param_compare=extra_regex, regex_flags=re.X,
+                user_name, matches=True, param_name="user_name", param_compare=extra_regex,
                 http_error=HTTPBadRequest,
                 msg_on_fail=s.Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema.description,
                 param_content={"setting": "magpie.user_name_extra_regex"}
