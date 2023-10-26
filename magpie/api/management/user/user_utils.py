@@ -1,4 +1,3 @@
-import re
 from inspect import cleandoc
 from secrets import compare_digest  # noqa 'python2-secrets'
 from typing import TYPE_CHECKING
