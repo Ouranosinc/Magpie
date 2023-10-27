@@ -9,7 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~
+
+* Ensure that the settings/environment variable ``MAGPIE_USER_NAME_EXTRA_REGEX`` is case sensitive.
+  Previously, the check was case insensitive meaning that it could not be used to restrict usernames based on case.
+  For example, setting this value to ``^[a-z]+$`` would have permit the username ``"someuser"`` as well as
+  ``"Someuser"``. Now, the same regular expression will not match ``"Someuser"`` since case sensitivity in enforced.
 
 .. _changes_3.37.0:
 
