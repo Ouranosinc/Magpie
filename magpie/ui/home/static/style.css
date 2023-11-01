@@ -1436,3 +1436,19 @@ div.input-container {
     height: 100%;
     -webkit-box-sizing: border-box;
 }
+
+/* authorization form */
+
+table.authorization-table {
+    width: auto;
+    border: 1px solid;
+    border-radius: 4px;
+    margin-top: 10px;
+    padding: 1px;
+}
+
+table.authorization-table td {
+    border: 0;
+    text-align: center;
+}
+

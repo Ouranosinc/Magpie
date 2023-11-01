@@ -95,7 +95,7 @@ def create_group(group_name, description, discoverable, terms, db_session):
     ax.verify_param(group_name, matches=True, param_compare=ax.PARAM_REGEX, param_name="group_name",
                     http_error=HTTPBadRequest, content=group_content_error,
                     msg_on_fail=s.Groups_POST_BadRequestResponseSchema.description)
-    if get_constant("MAGPIE_NETWORK_ENABLED", settings_name="magpie.network_enabled"):
+    if get_constant("MAGPIE_NETWORK_ENABLED"):
         anonymous_regex = protected_group_name_regex(include_admin=False)
         ax.verify_param(group_name, not_matches=True, param_compare=anonymous_regex, param_name="group_name",
                         http_error=HTTPBadRequest, content=group_content_error,

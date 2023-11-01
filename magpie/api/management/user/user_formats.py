@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from pyramid.httpexceptions import HTTPInternalServerError
 
 from magpie.api.exception import evaluate_call
-from magpie.constants import get_constant, protected_user_name_regex
+from magpie.constants import protected_user_name_regex
 from magpie.models import UserGroupStatus, UserStatuses
 
 if TYPE_CHECKING:

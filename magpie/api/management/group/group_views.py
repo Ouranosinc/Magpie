@@ -85,7 +85,7 @@ def edit_group_view(request):
         ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
                         is_none=True, http_error=HTTPConflict, with_param=False,  # don't return group as value
                         msg_on_fail=s.Group_PATCH_ConflictResponseSchema.description)
-        if get_constant("MAGPIE_NETWORK_ENABLED", settings_name="magpie.network_enabled"):
+        if get_constant("MAGPIE_NETWORK_ENABLED"):
             anonymous_regex = protected_group_name_regex(include_admin=False)
             ax.verify_param(new_group_name, not_matches=True, param_compare=anonymous_regex,
                             http_error=HTTPBadRequest,

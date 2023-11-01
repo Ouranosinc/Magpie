@@ -30,6 +30,7 @@ from ziggurat_foundations.models.user_group import UserGroupMixin
 from ziggurat_foundations.models.user_permission import UserPermissionMixin
 from ziggurat_foundations.models.user_resource_permission import UserResourcePermissionMixin
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
+from cryptography.fernet import Fernet
 
 from magpie.api import exception as ax
 from magpie.constants import get_constant
@@ -998,11 +999,11 @@ class TemporaryToken(BaseModel, Base):
         return {"token": str(self.token), "operation": str(self.operation.value)}
 
 
-class NetworkUser(BaseModel, Base):
+class NetworkRemoteUser(BaseModel, Base):
     """
     Model that defines a relationship between a User and a User that is authenticated on a different NetworkNode.
     """
-    __tablename__ = "network_users"
+    __tablename__ = "network_remote_users"
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
     user_id = sa.Column(sa.Integer,
@@ -1012,11 +1013,22 @@ class NetworkUser(BaseModel, Base):
     network_node_id = sa.Column(sa.Integer,
                                 sa.ForeignKey("network_nodes.id", onupdate="CASCADE", ondelete="CASCADE"),
                                 nullable=False)
+    network_token_id = sa.Column(sa.Integer,
+                                 sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="CASCADE"))
+    name = sa.Column(sa.Unicode(128))
     network_node = relationship("NetworkNode", foreign_keys=[network_node_id])
-    network_user_name = sa.Column(sa.Unicode(128))
+    network_token = relationship("NetworkToken", foreign_keys=[network_token_id])
 
     __table_args__ = (UniqueConstraint('user_id', 'network_node_id'),
-                      UniqueConstraint('network_user_name', 'network_node_id'))
+                      UniqueConstraint('name', 'network_node_id'))
+
+    def as_dict(self):
+        # type: () -> Dict[Str, Str]
+        return {
+            "user_name": self.user.user_name,
+            "remote_user_name": self.name,
+            "node_name": self.network_node.name
+        }
 
 
 class NetworkToken(BaseModel, Base):
@@ -1028,11 +1040,47 @@ class NetworkToken(BaseModel, Base):
     def __init__(self, *_, **__):
         super(NetworkToken, self).__init__(*_, **__)
         if not self.token:
-            self.token = uuid.uuid4()
+            self.refresh_token()
 
-    token = sa.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True)
+    @staticmethod
+    def _encrypt(token):
+        # type: (Union[Str, UUID]) -> bytes
+        if isinstance(token, str):
+            token = uuid.UUID(token)
+        return Fernet(get_constant("MAGPIE_SECRET")).encrypt(token.bytes)
+
+    def refresh_token(self):
+        # type: () -> None
+        self.token = self._encrypt(uuid.uuid4())
+        self.created = datetime.datetime.utcnow()
+
+    def decrypted_token(self):
+        # type: () -> UUID
+        return uuid.UUID(bytes=Fernet(get_constant("MAGPIE_SECRET")).decrypt(self.token))
+
+    def expired(self):
+        # type: () -> bool
+        expiry = int(get_constant("MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY"))
+        return (datetime.datetime.utcnow() - self.created) > expiry
+
+    @classmethod
+    def get_expired(cls, db_session):
+        # type: (Session) -> Query
+        token_expiry = int(get_constant("MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY"))
+        expiry_date_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=token_expiry)
+        return db_session.query(cls).filter(cls.created < expiry_date_time)
+
+    @classmethod
+    def by_decrypted_token(cls, token, db_session=None):
+        # type: (Union[Str, UUID], Optional[Session]) -> Optional[NetworkToken]
+        db_session = get_db_session(db_session)
+        return db_session.query(cls).filter(cls.token == cls._encrypt(token)).first()
+
+    id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
+    token = sa.Column(sa.LargeBinary, nullable=False, unique=True)
+    created = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
     user_id = sa.Column(sa.Integer,
-                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), unique=True, nullable=False)
+                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     user = relationship("User", foreign_keys=[user_id])
 
 
@@ -1044,7 +1092,31 @@ class NetworkNode(BaseModel, Base):
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
     name = sa.Column(sa.Unicode(128), nullable=False, unique=True)
-    url = sa.Column(URLType(), nullable=False)
+    jwks_url = sa.Column(URLType(), nullable=False)
+    token_url = sa.Column(URLType(), nullable=False)
+    authorization_url = sa.Column(URLType(), nullable=False)
+    redirect_uris = sa.Column(sa.String)
+
+    def anonymous_user_name(self):
+        # type: () -> Str
+        return self.anonymous_user_name_formatter(self.name)
+
+    @staticmethod
+    def anonymous_user_name_formatter(name):
+        # type: (Str) -> Str
+        return "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), name)
+
+    def anonymous_user(self, db_session):
+        # type: (Optional[Session]) -> User
+        return db_session.query(User).filter(User.user_name == self.anonymous_user_name()).one()
+
+    def anonymous_group(self, db_session):
+        # type: (Optional[Session]) -> User
+        return db_session.query(Group).filter(Group.name == self.anonymous_user_name()).one()
+
+    def as_dict(self):
+        # type: () -> Dict[Str, Any]
+        return {attr.key: getattr(self, attr.key) for attr in sa.inspect(NetworkNode).columns if attr.key != "id"}
 
 
 ziggurat_model_init(User, Group, UserGroup, GroupPermission, UserPermission,

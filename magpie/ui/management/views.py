@@ -24,7 +24,14 @@ from magpie.cli.sync_resources import OUT_OF_SYNC, fetch_single_service, get_las
 from magpie.cli.sync_services import SYNC_SERVICES_TYPES
 from magpie.constants import get_constant
 # FIXME: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
-from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
+from magpie.models import (
+    REMOTE_RESOURCE_TREE_SERVICE,
+    RESOURCE_TYPE_DICT,
+    UserGroupStatus,
+    UserStatuses,
+    NetworkNode,
+    User, NetworkRemoteUser
+)
 from magpie.permissions import Permission, PermissionSet
 # FIXME: remove (SERVICE_TYPE_DICT), implement getters via API
 from magpie.services import SERVICE_TYPE_DICT
@@ -160,6 +167,17 @@ class ManagementViews(AdminRequests, BaseViews):
         for field in param_fields:
             user_info["invalid_{}".format(field)] = False
             user_info["reason_{}".format(field)] = ""
+
+        # add network information
+        if get_constant("MAGPIE_NETWORK_ENABLED", self.request):
+            network_remote_users = (self.request.db.query(NetworkRemoteUser)
+                                    .join(User).filter(User.user_name == user_name)
+                                    .all())
+            existing_network_remote_user_nodes = {nu.network_node_id: nu.name for nu in network_remote_users}
+            network_nodes = self.request.db.query(NetworkNode).order_by(NetworkNode.id).all()
+            user_info["network_nodes"] = [(n.name, existing_network_remote_user_nodes.get(n.id)) for n in network_nodes]
+            user_info["network_routes"] = {"create": schemas.NetworkRemoteUsersAPI.name,
+                                           "delete": schemas.NetworkRemoteUserAPI.name}
 
         if self.request.method == "POST":
             res_id = self.request.POST.get("resource_id")

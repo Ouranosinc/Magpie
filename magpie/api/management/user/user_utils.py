@@ -33,7 +33,7 @@ from magpie.api.webhooks import (
     get_permission_update_params,
     process_webhook_requests
 )
-from magpie.constants import get_constant, protected_user_name_regex
+from magpie.constants import get_constant, protected_user_name_regex, protected_user_email_regex
 from magpie.models import TemporaryToken, TokenOperation
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT, service_factory
@@ -206,12 +206,6 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
                     with_param=False,  # params are not useful in response for this case
                     content={"user_name": user.user_name},
                     http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
-    if get_constant("MAGPIE_NETWORK_ENABLED", request, settings_name="magpie.network_enabled"):
-        anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=request)
-        ax.verify_param(new_user_name, not_matches=True, param_compare=anonymous_regex,
-                        with_param=False,  # params are not useful in response for this case
-                        content={"user_name": user.user_name},
-                        http_error=HTTPBadRequest, msg_on_fail=s.User_PATCH_BadRequestResponseSchema.description)
     # FIXME: disable email edit when self-registration is enabled to avoid not having any confirmation of new email
     #   (see https://github.com/Ouranosinc/Magpie/issues/436)
     update_email_admin_only = False
@@ -219,7 +213,6 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
         update_email_admin_only = asbool(get_constant("MAGPIE_USER_REGISTRATION_ENABLED", request,
                                                       default_value=False, print_missing=True,
                                                       raise_missing=False, raise_not_set=False))
-
     # user name/status change is admin-only operation
     if update_username or update_status or update_email_admin_only:
         err_msg = s.User_PATCH_ForbiddenResponseSchema.description
@@ -858,8 +851,8 @@ def get_user_service_resources_permissions_dict(user, service, request,
 
 
 def check_user_info(user_name=None, email=None, password=None, group_name=None,  # required unless disabled explicitly
-                    check_name=True, check_email=True, check_password=True, check_group=True):
-    # type: (Str, Str, Str, Str, bool, bool, bool, bool) -> None
+                    check_name=True, check_email=True, check_password=True, check_group=True, check_anonymous=True):
+    # type: (Str, Str, Str, Str, bool, bool, bool, bool, bool) -> None
     """
     Validates provided user information to ensure they are adequate for user creation.
 
@@ -883,6 +876,11 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(user_name, param_compare=name_logged, not_equal=True, param_name="user_name",
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
+        if check_anonymous:
+            anonymous_user_name_regex = protected_user_name_regex()
+            ax.verify_param(user_name, not_matches=True, param_compare=anonymous_user_name_regex, param_name="user_name",
+                            http_error=HTTPBadRequest,
+                            msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     if check_email:
         ax.verify_param(email, not_none=True, not_empty=True, param_name="email",
                         http_error=HTTPBadRequest,
@@ -890,6 +888,11 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(email, matches=True, param_compare=ax.EMAIL_REGEX, param_name="email",
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+        if check_anonymous:
+            anonymous_email_regex = protected_user_email_regex()
+            ax.verify_param(email, not_matches=True, param_compare=anonymous_email_regex, param_name="email",
+                            http_error=HTTPBadRequest,
+                            msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     if check_password:
         ax.verify_param(password, not_none=True, not_empty=True, param_name="password",
                         is_type=True, param_compare=six.string_types,  # no match since it can be any character

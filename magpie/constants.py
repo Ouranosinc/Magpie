@@ -108,6 +108,9 @@ MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv("MAGPIE_DB_MIGRATION_ATTEMPTS", 5))
 MAGPIE_NETWORK_ENABLED = asbool(os.getenv("MAGPIE_NETWORK_ENABLED", False))
 MAGPIE_NETWORK_INSTANCE_NAME = os.getenv("MAGPIE_NETWORK_INSTANCE_NAME")
 MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY = int(os.getenv("MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY", 86400))
+MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY = int(os.getenv("MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY", 30))
+MAGPIE_NETWORK_PEM_FILES = os.getenv("MAGPIE_NETWORK_PEM_FILES", os.path.join(MAGPIE_ROOT, "key.pem"))
+MAGPIE_NETWORK_PEM_PASSWORDS = os.getenv("MAGPIE_NETWORK_PEM_PASSWORDS")
 MAGPIE_LOG_LEVEL = os.getenv("MAGPIE_LOG_LEVEL", _get_default_log_level())      # log level to apply to the loggers
 MAGPIE_LOG_PRINT = asbool(os.getenv("MAGPIE_LOG_PRINT", False))                 # log also forces print to the console
 MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))              # log detail of every incoming request
@@ -152,6 +155,7 @@ MAGPIE_DEFAULT_PROVIDER = "ziggurat"
 MAGPIE_NETWORK_TOKEN_NAME = "magpie_token"
 MAGPIE_NETWORK_PROVIDER = "magpie_network"
 MAGPIE_NETWORK_NAME_PREFIX = "anonymous_network_"
+MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT = "{}{}@mail.com".format(MAGPIE_NETWORK_NAME_PREFIX, "{}")
 MAGPIE_NETWORK_GROUP_NAME = "magpie_network"
 
 # above this length is considered a token,
@@ -197,12 +201,31 @@ def protected_user_name_regex(include_admin=True,
         patterns.append(get_constant("MAGPIE_ADMIN_USER", settings_container=settings_container))
     if include_anonymous:
         patterns.append(get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings_container))
-    if include_network and get_constant("MAGPIE_NETWORK_ENABLED",
-                                        settings_name="magpie.network_enabled",
-                                        settings_container=settings_container):
+    if include_network and get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container):
         patterns.append(
             "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
         )
+    return "^({})$".format("|".join(patterns))
+
+
+def protected_user_email_regex(include_admin=True,
+                               include_anonymous=True,
+                               include_network=True,
+                               additional_patterns=None,
+                               settings_container=None):
+    # type: (bool, bool, bool, Optional[List[Str]], Optional[AnySettingsContainer]) -> Str
+    """
+    Return a regular expression that matches all user emails that are protected, meaning that they are generated
+    by Magpie itself and no regular user account should be created with these user emails.
+    """
+    patterns = additional_patterns or []
+    if include_admin:
+        patterns.append(get_constant("MAGPIE_ADMIN_EMAIL", settings_container=settings_container))
+    if include_anonymous:
+        patterns.append(get_constant("MAGPIE_ANONYMOUS_EMAIL", settings_container=settings_container))
+    if include_network and get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container):
+        email_form = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT", settings_container=settings_container)
+        patterns.append(email_form.format('.*'))
     return "^({})$".format("|".join(patterns))
 
 
@@ -220,9 +243,7 @@ def protected_group_name_regex(include_admin=True,
         patterns.append(get_constant("MAGPIE_ADMIN_GROUP", settings_container=settings_container))
     if include_anonymous:
         patterns.append(get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings_container))
-    if include_network and get_constant("MAGPIE_NETWORK_ENABLED",
-                                        settings_name="magpie.network_enabled",
-                                        settings_container=settings_container):
+    if include_network and get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container):
         patterns.append(
             "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
         )

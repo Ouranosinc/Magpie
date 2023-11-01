@@ -7,7 +7,7 @@ from pyramid.view import view_config
 
 from magpie.api import schemas
 from magpie.constants import get_constant
-from magpie.models import UserGroupStatus
+from magpie.models import UserGroupStatus, NetworkNode, NetworkRemoteUser
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json, get_logger
 
@@ -89,6 +89,16 @@ class UserViews(BaseViews):
                                                                default_value=False, print_missing=True,
                                                                raise_missing=False, raise_not_set=False))
         user_info["user_with_error"] = schemas.UserStatuses.get(user_info["status"]) != schemas.UserStatuses.OK
+        # add network information
+        if get_constant("MAGPIE_NETWORK_ENABLED", self.request):
+            network_remote_users = (self.request.db.query(NetworkRemoteUser)
+                                    .filter(NetworkRemoteUser.user_id == self.request.user.id)
+                                    .all())
+            existing_network_remote_user_nodes = {nu.network_node_id: nu.name for nu in network_remote_users}
+            network_nodes = self.request.db.query(NetworkNode).order_by(NetworkNode.id).all()
+            user_info["network_nodes"] = [(n.name, existing_network_remote_user_nodes.get(n.id)) for n in network_nodes]
+            user_info["network_routes"] = {"create": schemas.NetworkNodeLinkAPI.name,
+                                           "delete": schemas.NetworkRemoteUserAPI.name}
         # reset error messages/flags
         user_info["error_message"] = ""
         for field in ["password", "user_email", "user_name"]:

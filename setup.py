@@ -255,6 +255,7 @@ setup(
             "magpie_run_db_migration = magpie.cli.run_db_migration:main",
             "magpie_send_email = magpie.cli.send_email:main",
             "magpie_sync_resources = magpie.cli.sync_resources:main",
+            "magpie_purge_expired_network_tokens = magpie.cli.purge_expired_network_tokens:main"
         ],
     }
 )

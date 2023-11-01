@@ -2,6 +2,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 import colander
+import jwt
 import six
 from cornice import Service
 from cornice.service import get_services
@@ -276,19 +277,37 @@ HomepageAPI = Service(
 TemporaryUrlAPI = Service(
     path="/tmp/{token}",  # nosec: B108
     name="temporary_url")
-TokenAPI = Service(
-    path="/token",
-    name="Token")
-TokenValidateAPI = Service(
-    path="/token/validate",
-    name="TokenValidate")
 NetworkNodeAPI = Service(
-    path="/network-nodes/{node_name}",
+    path="/network/nodes/{node_name}",
     name="NetworkNode")
 NetworkNodesAPI = Service(
-    path="/network-nodes",
+    path="/network/nodes",
     name="NetworkNodes")
-
+NetworkNodeTokenAPI = Service(
+    path="/network/nodes/{node_name}/token",
+    name="NetworkNodeToken")
+NetworkNodesLinkAPI = Service(
+    path="/network/nodes/link",
+    name="NetworkNodesLink")
+NetworkNodeLinkAPI = Service(
+    path="/network/nodes/{node_name}/link",
+    name="NetworkNodeLink")
+NetworkRemoteUserAPI = Service(
+    path="/network/nodes/{node_name}/remote_users/{remote_user_name}",
+    name="NetworkRemoteUser")
+NetworkRemoteUsersAPI = Service(
+    path="/network/remote_users",
+    name="NetworkRemoteUsers")
+NetworkRemoteUsersCurrentAPI = Service(
+    path="/network/remote_users/current",
+    name="NetworkRemoteUserCurrent")
+NetworkTokenAPI = Service(
+    path="/network/token",
+    name="NetworkToken")
+NetworkJSONWebKeySetAPI = Service(
+    path="/network/jwks",
+    name="NetworkJSONWebKeySet"
+)
 
 # Path parameters
 GroupNameParameter = colander.SchemaNode(
@@ -328,19 +347,6 @@ TokenParameter = colander.SchemaNode(
     colander.String(),
     description="Temporary URL token.",
     example=str(uuid.uuid4()))
-NetworkTokenParameter = colander.SchemaNode(
-    colander.String(),
-    description="Network token",
-    example=str(uuid.uuid4()))
-NetworkNodeNameParameter = colander.SchemaNode(
-    colander.String(),
-    description="Network Node name.",
-    example="node")
-NetworkNodeUrlParameter = colander.SchemaNode(
-    colander.String(),
-    description="Public URL of remote Magpie instance.",
-    example="http://node.example.com/magpie",
-    validator=colander.url)
 
 
 class ServiceType_RequestPathSchema(colander.MappingSchema):
@@ -439,7 +445,7 @@ PermissionTag = "Permission"
 RegisterTag = "Register"
 ResourcesTag = "Resource"
 ServicesTag = "Service"
-NetworkNodeTag = "Network Node"
+NetworkTag = "Network"
 
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",
@@ -459,7 +465,7 @@ TAG_DESCRIPTIONS = {
     RegisterTag: "Registration paths for operations available to users (including non-administrators).",
     ResourcesTag: "Management of resources that reside under a given service and their applicable permissions.",
     ServicesTag: "Management of service definitions, children resources and their applicable permissions.",
-    NetworkNodeTag: "Management of references to other Magpie instances in the network."
+    NetworkTag: "Management of references to other Magpie instances, user and access tokens in the network."
 }
 
 # Header definitions
@@ -673,6 +679,7 @@ class ErrorVerifyParamConditions(colander.MappingSchema):
     is_false = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
     is_type = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
     matches = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
+    not_matches = colander.SchemaNode(colander.Boolean(), missing=colander.drop)
 
 
 class ErrorVerifyParamBodySchema(colander.MappingSchema):
@@ -3339,104 +3346,6 @@ class Session_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = Session_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Token_PATCH_OkResponseBodySchema(BaseResponseBodySchema):
-    token = NetworkTokenParameter
-
-
-class Token_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Get token successful."
-    body = Token_PATCH_OkResponseBodySchema(code=HTTPOk.code, description=description)
-
-
-class TokenValidate_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Invalid Token."
-    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
-
-
-class TokenValidate_BodySchema(colander.MappingSchema):
-    token = NetworkTokenParameter
-
-
-class TokenValidate_GET_RequestBodySchema(BaseRequestSchemaAPI):
-    body = TokenValidate_BodySchema()
-
-
-class TokenValidate_GET_OkResponseBodySchema(BaseResponseBodySchema):
-    user_name = UserNameParameter
-
-
-class TokenValidate_GET_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Validate token successful."
-    body = TokenValidate_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
-
-
-class NetworkNode_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Node could not be found."
-    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
-
-
-class NetworkNodes_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Nodes could not be found."
-    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
-
-
-class NetworkNode_GET_OkResponseBodySchema(BaseResponseBodySchema):
-    name = NetworkNodeNameParameter
-    url = NetworkNodeUrlParameter
-
-
-class NetworkNode_GET_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Node found."
-    body = NetworkNode_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
-
-
-class NetworkNode_BodySchema(colander.MappingSchema):
-    name = NetworkNodeNameParameter
-    url = NetworkNodeUrlParameter
-
-
-class NetworkNodesSequence(colander.SequenceSchema):
-    node = NetworkNode_BodySchema()
-
-class NetworkNodes_GET_OkResponseBodySchema(BaseResponseBodySchema):
-    nodes = NetworkNodesSequence()
-
-
-class NetworkNodes_GET_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Nodes found."
-    body = NetworkNodes_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
-
-
-class NetworkNode_POST_RequestBodySchema(BaseRequestSchemaAPI):
-    body = NetworkNode_BodySchema()
-
-
-NetworkNode_PUT_RequestBodySchema = NetworkNode_POST_RequestBodySchema
-
-
-class NetworkNodes_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Node created."
-    body = BaseResponseBodySchema(code=HTTPCreated.code, description=description)
-
-
-class NetworkNodes_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Node already exists with conflicting attributes."
-    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
-
-
-NetworkNode_PUT_ConflictResponseSchema = NetworkNodes_POST_ConflictResponseSchema
-
-
-class NetworkNode_PUT_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Node updated."
-    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
-
-
-class NetworkNode_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Node deleted."
-    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
-
-
 class Session_GET_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
     description = "Failed to get session details."
     body = InternalServerErrorResponseSchema()
@@ -3499,11 +3408,6 @@ class ProviderSignin_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 class ProviderSignin_GET_UnauthorizedResponseSchema(BaseResponseSchemaAPI):
     description = "Unauthorized 'UserInfo' update using provided Authorization headers."
-    body = ErrorResponseBodySchema(code=HTTPUnauthorized.code, description=description)
-
-
-class ProviderSignin_GET_UnauthorizedTokenSchema(BaseResponseSchemaAPI):
-    description = "Unauthorized token in Authorization headers."
     body = ErrorResponseBodySchema(code=HTTPUnauthorized.code, description=description)
 
 
@@ -3616,6 +3520,357 @@ class SwaggerAPI_GET_OkResponseSchema(colander.MappingSchema):
     description = TitleAPI
     header = RequestHeaderSchemaUI()
     body = colander.SchemaNode(colander.String(), example="This page!")
+
+
+class JWTRequestBodySchema(colander.MappingSchema):
+    token = colander.SchemaNode(
+        colander.String(),
+        description="JSON Web Token.",
+        example=jwt.encode({"example": "content"}, "example_secret", algorithm="HS256")
+    )
+
+
+class NetworkToken_POST_RequestSchema(BaseRequestSchemaAPI):
+    body = JWTRequestBodySchema()
+
+
+class NetworkToken_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    body = JWTRequestBodySchema()
+
+
+class NetworkNode_PATCH_RequestBodySchema(colander.MappingSchema):
+    name = colander.SchemaNode(
+        colander.String(),
+        description="Name of another Magpie node (instance) in the network.",
+        example="NodeA",
+        missing=colander.drop
+    )
+    jwks_url = colander.SchemaNode(
+        colander.String(),
+        description="URL that provides the JWKS data for another Magpie node (instance) in the network.",
+        example="https://nodea.example.com/jwks.json",
+        validator=colander.url,
+        missing=colander.drop
+    )
+    token_url = colander.SchemaNode(
+        colander.String(),
+        description="URL that provides the Oauth authorize endpoint for another Magpie node (instance) in the network.",
+        example="https://nodea.example.com/ui/network/authorize",
+        validator=colander.url,
+        missing=colander.drop
+    )
+    authorization_url = colander.SchemaNode(
+        colander.String(),
+        description="URL that provides the Oauth token endpoint for another Magpie node (instance) in the network.",
+        example="https://nodea.example.com/network/token",
+        validator=colander.url,
+        missing=colander.drop
+    )
+    redirect_uris = colander.SchemaNode(
+        colander.String(),
+        description="Space delimited list of valid redirect URIs for another Magpie node (instance) in the "
+                    "network.",
+        example="https://node.example.com/network/nodes/link https://node.example.com/some/other/uri",
+        missing=colander.drop
+    )
+
+
+class NetworkNode_PATCH_RequestSchema(BaseRequestSchemaAPI):
+    body = NetworkNode_PATCH_RequestBodySchema()
+
+
+class NetworkNode_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node could not be found."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkNodes_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Nodes could not be found."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkNode_BodySchema(colander.MappingSchema):
+    name = colander.SchemaNode(
+        colander.String(),
+        description="Name of another Magpie node (instance) in the network.",
+        example="NodeA"
+    )
+    jwks_url = colander.SchemaNode(
+        colander.String(),
+        description="URL that provides the JWKS data for another Magpie node (instance) in the network.",
+        example="https://nodea.example.com/jwks.json",
+        validator=colander.url
+    )
+    token_url = colander.SchemaNode(
+        colander.String(),
+        description="URL that provides the Oauth authorize endpoint for another Magpie node (instance) in the network.",
+        example="https://nodea.example.com/ui/network/authorize",
+        validator=colander.url,
+    )
+    authorization_url = colander.SchemaNode(
+        colander.String(),
+        description="URL that provides the Oauth token endpoint for another Magpie node (instance) in the network.",
+        example="https://nodea.example.com/network/token",
+        validator=colander.url,
+    )
+    redirect_uris = colander.SchemaNode(
+        colander.String(),
+        description="Space delimited list of valid redirect URIs for another Magpie node (instance) in the network",
+        example="https://node.example.com/network/nodes/link https://node.example.com/some/other/uri",
+    )
+
+
+NetworkNode_GET_OkResponseBodySchema = NetworkNode_BodySchema
+
+
+class NetworkNode_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node found."
+    body = NetworkNode_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNodesSequence(colander.SequenceSchema):
+    node = NetworkNode_BodySchema()
+
+
+class NetworkNodes_GET_OkResponseBodySchema(BaseResponseBodySchema):
+    nodes = NetworkNodesSequence()
+
+
+class NetworkNodes_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Nodes found."
+    body = NetworkNodes_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNode_POST_RequestSchema(BaseRequestSchemaAPI):
+    body = NetworkNode_BodySchema()
+
+
+class NetworkNodes_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node created."
+    body = BaseResponseBodySchema(code=HTTPCreated.code, description=description)
+
+
+class NetworkNodes_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Missing required parameter."
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkNodes_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Missing parameters to update network node."
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkNodes_CheckInfo_NameValue_ConflictResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node already exists with the same name."
+    body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
+
+
+class NetworkNodes_CheckInfo_NameValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "name is not valid."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkNodes_CheckInfo_JWKSURLValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "jwks_url is not a valid URL."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkNodes_CheckInfo_TokenURLValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "token_url is not a valid URL."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkNodes_CheckInfo_AuthorizationURLValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "authorization_url is not a valid URL."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkNodes_CheckInfo_RedirectURIsValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "redirect_uris contains a URI that is not valid."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkNode_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node updated."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNode_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node deleted."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNodesLink_GET_RequestSchema(BaseRequestSchemaAPI):
+    body = JWTRequestBodySchema()
+
+
+class NetworkNodeLink_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "User successfully linked with network node."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkRemoteUser_PATCH_RequestBodySchema(colander.MappingSchema):
+    remote_user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the associated user a remote Magpie node (instance) in the network.",
+        example="userAremote",
+        missing=colander.drop
+    )
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the associated user on this Magpie node (instance).",
+        example="userAlocal",
+        missing=colander.drop
+    )
+    node_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of another Magpie node (instance) in the network.",
+        example="NodeA",
+        missing=colander.drop
+    )
+
+
+class NetworkRemoteUser_PATCH_RequestSchema(BaseRequestSchemaAPI):
+    body = NetworkRemoteUser_PATCH_RequestBodySchema()
+
+
+class NetworkRemoteUser_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Missing parameters to update network user."
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkRemoteUser_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Network User could not be found."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkRemoteUsers_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Network User could not be found."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkRemoteUser_BodySchema(colander.MappingSchema):
+    remote_user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the associated user a remote Magpie node (instance) in the network.",
+        example="userAremote"
+    )
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the associated user on this Magpie node (instance).",
+        example="userAlocal"
+    )
+    node_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of another Magpie node (instance) in the network.",
+        example="NodeA"
+    )
+
+
+NetworkRemoteUser_GET_OkResponseBodySchema = NetworkRemoteUser_BodySchema
+
+
+class NetworkRemoteUser_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node found."
+    body = NetworkRemoteUser_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkRemoteUsers_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Missing required parameter."
+    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkRemoteUsersSequence(colander.SequenceSchema):
+    node = NetworkRemoteUser_BodySchema()
+
+
+class NetworkRemoteUsers_GET_OkResponseBodySchema(BaseResponseBodySchema):
+    nodes = NetworkRemoteUsersSequence()
+
+
+class NetworkRemoteUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Nodes found."
+    body = NetworkRemoteUsers_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkRemoteUsers_POST_RequestSchema(BaseRequestSchemaAPI):
+    body = NetworkRemoteUser_BodySchema()
+
+
+class NetworkRemoteUsers_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
+    description = "Remote user created."
+    body = BaseResponseBodySchema(code=HTTPCreated.code, description=description)
+
+
+class NetworkRemoteUsers_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Remote user updated."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkRemoteUsers_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Remote user deleted."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkRemoteUsers_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
+    description = "Remote user already exists with conflicting attributes."
+    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+NetworkRemoteUser_PATCH_ConflictResponseSchema = NetworkRemoteUsers_POST_ConflictResponseSchema
+
+
+class NetworkRemoteUser_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node updated."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkRemoteUser_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Network Node deleted."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNodeToken_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Successfully obtained access token."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNodeToken_GET_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Unable to obtain an access token."
+    body = InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+
+
+class NetworkNodeToken_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Successfully deleted access token."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkNodeToken_DELETE_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Unable to delete an access token."
+    body = InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+
+
+class NetworkNodeLink_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Unable to link user with network node. Missing parameters."
+    body = InternalServerErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class NetworkToken_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
+    description = "Access token created or refreshed."
+    body = BaseResponseBodySchema(code=HTTPCreated.code, description=description)
+
+
+NetworkToken_DELETE_OkResponseSchema = NetworkNodeToken_DELETE_OkResponseSchema
+
+
+class NetworkNodeToken_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Unable to delete an access token. Does not exist."
+    body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkRemoteUsers_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Targeted user update not allowed by requesting user."
+    body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
 # Responses for specific views
@@ -4350,16 +4605,30 @@ Session_GET_responses = {
     "406": NotAcceptableResponseSchema(),
     "500": Session_GET_InternalServerErrorResponseSchema(),
 }
-Token_PATCH_responses = {
-    "200": Token_PATCH_OkResponseSchema(),
-    "401": UnauthorizedResponseSchema(),
+Version_GET_responses = {
+    "200": Version_GET_OkResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-TokenValidate_GET_responses = {
-    "200": TokenValidate_GET_OkResponseSchema(),
-    "400": TokenValidate_GET_BadRequestResponseSchema(),
+Homepage_GET_responses = {
+    "200": Homepage_GET_OkResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
+}
+SwaggerAPI_GET_responses = {
+    "200": SwaggerAPI_GET_OkResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkToken_POST_responses = {
+    "201": NetworkToken_POST_CreatedResponseSchema(),
+    "404": NetworkNode_GET_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkToken_DELETE_responses = {
+
+}
+NetworkJSONWebKeySet_GET_responses = {
+
 }
 NetworkNode_GET_responses = {
     "200": NetworkNode_GET_OkResponseSchema(),
@@ -4374,13 +4643,13 @@ NetworkNodes_GET_responses = {
 NetworkNodes_POST_responses = {
     "201": NetworkNodes_POST_CreatedResponseSchema(),
     "400": BadRequestResponseSchema(),
-    "409": NetworkNodes_POST_ConflictResponseSchema(),
+    "409": NetworkNodes_CheckInfo_NameValue_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-NetworkNode_PUT_responses = {
-    "200": NetworkNode_PUT_OkResponseSchema(),
+NetworkNode_PATCH_responses = {
+    "200": NetworkNode_PATCH_OkResponseSchema(),
     "400": BadRequestResponseSchema(),
-    "409": NetworkNode_PUT_ConflictResponseSchema(),
+    "409": NetworkNodes_CheckInfo_NameValue_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkNode_DELETE_responses = {
@@ -4388,18 +4657,48 @@ NetworkNode_DELETE_responses = {
     "400": BadRequestResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-Version_GET_responses = {
-    "200": Version_GET_OkResponseSchema(),
-    "406": NotAcceptableResponseSchema(),
+NetworkNodeToken_GET_responses = {
+    "200": NetworkNodeToken_GET_OkResponseSchema(),
+    "404": NetworkNode_GET_NotFoundResponseSchema(),
+    "500": NetworkNodeToken_GET_InternalServerErrorResponseSchema()
+}
+NetworkNodeToken_DELETE_responses = {
+    "200": NetworkNodeToken_DELETE_OkResponseSchema(),
+    "404": NetworkNode_GET_NotFoundResponseSchema(),
+    "500": NetworkNodeToken_DELETE_InternalServerErrorResponseSchema()
+}
+NetworkNodesLink_GET_responses = {
+
+}
+NetworkNodeLink_POST_responses = {
+
+}
+NetworkRemoteUser_GET_responses = {
+    "200": NetworkRemoteUser_GET_OkResponseSchema(),
+    "404": NetworkRemoteUser_GET_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-Homepage_GET_responses = {
-    "200": Homepage_GET_OkResponseSchema(),
-    "406": NotAcceptableResponseSchema(),
+NetworkRemoteUsersCurrent_GET_responses = NetworkRemoteUser_GET_responses
+NetworkRemoteUsers_GET_responses = {
+    "200": NetworkRemoteUsers_GET_OkResponseSchema(),
+    "404": NetworkRemoteUsers_GET_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-SwaggerAPI_GET_responses = {
-    "200": SwaggerAPI_GET_OkResponseSchema(),
+NetworkRemoteUsers_POST_responses = {
+    "201": NetworkRemoteUsers_POST_CreatedResponseSchema(),
+    "400": BadRequestResponseSchema(),
+    "409": NetworkRemoteUsers_POST_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkRemoteUser_PATCH_responses = {
+    "200": NetworkRemoteUser_PATCH_OkResponseSchema(),
+    "400": BadRequestResponseSchema(),
+    "409": NetworkRemoteUser_PATCH_ConflictResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkRemoteUser_DELETE_responses = {
+    "200": NetworkRemoteUser_DELETE_OkResponseSchema(),
+    "400": BadRequestResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 

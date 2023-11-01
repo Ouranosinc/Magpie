@@ -56,7 +56,8 @@ def register_user_with_group(user_name, group_name, email, password, db_session)
         if password is None:
             LOGGER.debug("No password provided for user [%s], auto-generating one.", user_name)
             password = pseudo_random_string(length=get_constant("MAGPIE_PASSWORD_MIN_LENGTH"))
-        uu.check_user_info(user_name=user_name, password=password, group_name=group_name, check_email=False)
+        uu.check_user_info(user_name=user_name, password=password, group_name=group_name, check_email=False,
+                           check_anonymous=False)
         new_user = models.User(user_name=user_name, email=email)  # noqa
         UserService.set_password(new_user, password)
         db_session.add(new_user)
@@ -126,7 +127,8 @@ def init_admin(db_session, settings=None):
         # admin user already exist, update modified password
         LOGGER.warning("Detected password change for 'MAGPIE_ADMIN_USER'. Attempting to update...")
         try:
-            uu.check_user_info(password=admin_password, check_name=False, check_email=False, check_group=False)
+            uu.check_user_info(password=admin_password, check_name=False, check_email=False, check_group=False,
+                               check_anonymous=False)
             UserService.set_password(admin_usr, admin_password)
             UserService.regenerate_security_code(admin_usr)
         except Exception as http_exc:  # noqa  # re-raised as value error  # pragma: no cover
