@@ -253,7 +253,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
     if matches:
         param_compare_regex = param_compare
         if isinstance(param_compare, six.string_types):
-            param_compare_regex = re.compile(param_compare, re.I | re.X)
+            param_compare_regex = re.compile(param_compare, re.X)
         fail_conditions.update({"matches": bool(re.match(param_compare_regex, param))})
         fail_verify = fail_verify or not fail_conditions["matches"]
     if not_matches:

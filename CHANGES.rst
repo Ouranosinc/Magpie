@@ -13,6 +13,31 @@ Changes
   Web Tokens (JWT). This allows users registered across multiple Magpie instances in a network to more easily gain
   access to the resources within the network, without requiring the duplication of user credentials across the network.
 
+.. _changes_3.37.1:
+
+`3.37.1 <https://github.com/Ouranosinc/Magpie/tree/3.37.1>`_ (2023-10-27)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~
+
+* Ensure that the settings/environment variable ``MAGPIE_USER_NAME_EXTRA_REGEX`` is case sensitive.
+  Previously, the check was case insensitive meaning that it could not be used to restrict usernames based on case.
+  For example, setting this value to ``^[a-z]+$`` would have permit the username ``"someuser"`` as well as
+  ``"Someuser"``. Now, the same regular expression will not match ``"Someuser"`` since case sensitivity in enforced.
+
+.. _changes_3.37.0:
+
+`3.37.0 <https://github.com/Ouranosinc/Magpie/tree/3.37.0>`_ (2023-10-24)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~
+
+* Create an additional settings/environment variable ``MAGPIE_USER_NAME_EXTRA_REGEX`` that acts as an additional
+  check for whether a ``user_name`` is valid. This creates a further restriction on this value which is useful when there
+  are additional limits on the ``user_name`` that should be enforced by `Magpie`.
+
 .. _changes_3.36.0:
 
 `3.36.0 <https://github.com/Ouranosinc/Magpie/tree/3.36.0>`_ (2023-10-03)
