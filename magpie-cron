@@ -1,1 +1,2 @@
 0 * * * * /bin/bash -c "set -a ; source <($MAGPIE_ENV_DIR/*.env) ; set +a ; magpie_sync_resources"
+1 0 * * * /bin/bash -c "set -a ; source <($MAGPIE_ENV_DIR/*.env) ; set +a ; magpie_purge_expired_network_tokens"
