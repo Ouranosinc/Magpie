@@ -16,6 +16,10 @@ if TYPE_CHECKING:
 
 def _remote_user_from_names(node_name, remote_user_name, db_session):
     # type: (Str, Str, Session) -> models.NetworkRemoteUser
+    """
+    Return the `NetworkRemoteUser` with the same name as ``remote_user_name`` associated
+    with the ``NetworkNode`` named ``node_name``.
+    """
     return (db_session.query(models.NetworkRemoteUser)
                       .join(models.NetworkNode)
                       .filter(models.NetworkRemoteUser.name == remote_user_name)
@@ -25,6 +29,13 @@ def _remote_user_from_names(node_name, remote_user_name, db_session):
 
 def requested_remote_user(request):
     # type: (Request) -> models.NetworkRemoteUser
+    """
+    Return the ``NetworkRemoteUser`` identified by the request path.
+
+    For example: if the current request contains the path ``/nodes/nodeA/remote_users/userB``
+    this will return the ``NetworkRemoteUser`` with the name userB that is associated
+    with the ``NetworkNode`` with the name nodeA.
+    """
     node_name = ar.get_value_matchdict_checked(request, "node_name")
     remote_user_name = ar.get_value_matchdict_checked(request, "remote_user_name")
     remote_user = ax.evaluate_call(
@@ -36,6 +47,13 @@ def requested_remote_user(request):
 
 def check_remote_user_access_permissions(request, remote_user=None):
     # type: (Request, Optional[models.NetworkRemoteUser]) -> None
+    """
+    Raises an error if the currently logged-in user has permission to view/modify the ``remote_user`` model.
+    If ``remote_user`` is None, the requested remote user will be extracted from the request path.
+
+    Admins are allowed to access any model. Other users are only allowed to access those that they are associated
+    with.
+    """
     if remote_user is None:
         remote_user = requested_remote_user(request)
     admin_group = get_constant("MAGPIE_ADMIN_GROUP", settings_container=request)

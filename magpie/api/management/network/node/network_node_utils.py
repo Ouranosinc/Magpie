@@ -18,7 +18,9 @@ NAME_REGEX = r"^[\w-]+$"
 def create_associated_user_groups(new_node, request):
     # type: (models.NetworkNode, Request) -> None
     """
-    Create a NetworkNode with the given name and url.
+    Creates an associated anonymous user and group for the newly created ``new_node``.
+
+    This will also create the network group (named ``MAGPIE_NETWORK_GROUP_NAME``) if it does not yet exist.
     """
     name = new_node.anonymous_user_name()
 
@@ -48,6 +50,9 @@ def create_associated_user_groups(new_node, request):
 
 def update_associated_user_groups(node, old_node_name, request):
     # type: (models.NetworkNode, Str, Request) -> None
+    """
+    If the ``NetworkNode`` name has changed, update the names of the associated anonymous user and group to match.
+    """
     if node.name != old_node_name:
         old_anonymous_name = models.NetworkNode.anonymous_user_name_formatter(old_node_name)
         anonymous_user = request.db.query(models.User).filter(models.User.user_name == old_anonymous_name).one()
@@ -69,6 +74,9 @@ def delete_network_node(request, node):
 def check_network_node_info(db_session=None, name=None, jwks_url=None, token_url=None, authorization_url=None,
                             redirect_uris=None):
     # type: (Optional[Session], Optional[Str], Optional[Str], Optional[Str], Optional[Str], Optional[Str]) -> None
+    """
+    Check that the parameters used to create a new ``NetworkNode`` or update an existing one are well-formed.
+    """
     if name is not None:
         ax.verify_param(name, matches=True, param_name="name", param_compare=NAME_REGEX,
                         http_error=HTTPBadRequest,
