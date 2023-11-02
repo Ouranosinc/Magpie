@@ -998,7 +998,7 @@ to authenticate users for each other. All variables defined in this section are 
     [:class:`bool`]
     (Default: ``False``)
 
-    .. versionadded:: 3.37
+    .. versionadded:: 3.38
 
     Enable "Network Mode" which enables all functionality to authenticate users using other Magpie instances as
     external authentication providers.
@@ -1007,7 +1007,7 @@ to authenticate users for each other. All variables defined in this section are 
 
     [:class:`str`]
 
-    .. versionadded:: 3.37
+    .. versionadded:: 3.38
 
     The name of this Magpie instance in the network. This variable is used to determine if an authentication token was
     issued by this instance of Magpie, or another instance in the network.
@@ -1019,16 +1019,26 @@ to authenticate users for each other. All variables defined in this section are 
     [:class:`int`]
     (Default: ``86400``)
 
-    .. versionadded:: 3.37
+    .. versionadded:: 3.38
 
-    The default expiry time (in seconds) for an authentication token issued for the purpose of network authentication.
+    The default expiry time (in seconds) for an access token issued for the purpose of network authentication.
+
+.. envvar:: MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY
+
+    [:class:`int`]
+    (Default: ``30``)
+
+    .. versionadded:: 3.38
+
+    The default expiry time (in seconds) for an JSON Web Token issued for the purpose of communication between nodes in
+    the network.
 
 .. envvar:: MAGPIE_NETWORK_TOKEN_NAME
 
     [|constant|_]
     (Value: ``"magpie_token"``)
 
-    .. versionadded:: 3.37
+    .. versionadded:: 3.38
 
     The name of the request parameter key whose value is the authentication token issued for the purpose of network
     authentication.
@@ -1038,7 +1048,7 @@ to authenticate users for each other. All variables defined in this section are 
     [|constant|_]
     (Value: ``"magpie_network"``)
 
-    .. versionadded:: 3.37
+    .. versionadded:: 3.38
 
     The name of the external provider that authenticates users using other Magpie instances as external authentication
     providers.
@@ -1048,7 +1058,7 @@ to authenticate users for each other. All variables defined in this section are 
     [|constant|_]
     (Value: ``"anonymous_network_"``)
 
-    .. versionadded:: 3.37
+    .. versionadded:: 3.38
 
     A prefix added to the anonymous network user and network group names. These names are constructed by prepending the
     remote Magpie instance name with this prefix. For example, a Magpie instance named ``"example123"`` will have a
@@ -1059,10 +1069,39 @@ to authenticate users for each other. All variables defined in this section are 
     [|constant|_]
     (Value: ``"magpie_network"``)
 
-    .. versionadded:: 3.37
+    .. versionadded:: 3.38
 
     The name of the group created to manage permissions for all users authenticated using Magpie instances as external
     authentication providers.
+
+.. envvar:: MAGPIE_NETWORK_PEM_FILES
+
+    [:class:`str`]
+    (Default: ``${MAGPIE_ROOT}/key.pem``)
+
+    .. versionadded:: 3.38
+
+    Path to a PEM file containing a public/private key-pair. This is used to sign and verify communication sent between
+    nodes in the network.
+
+    Multiple PEM files can be specified if key rotation is desired. To specify multiple PEM files, separate each file
+    path with a ``:`` character. The first file in the list will contain the primary key and will be used to sign all
+    outgoing communication.
+
+.. envvar:: MAGPIE_NETWORK_PEM_PASSWORDS
+
+    [:class:`str`]
+    (Default: ``None``)
+
+    .. versionadded:: 3.38
+
+    Password used to encrypt the PEM files in :envvar:`MAGPIE_NETWORK_PEM_FILES`.
+
+    If multiple files require passwords, they can be listed with a ``:`` character separator (Note that this means that
+    passwords cannot contain a ``:``. An empty string will be treated the same as no password.
+
+    For example, if you have four files specified in :envvar:`MAGPIE_NETWORK_PEM_FILES` and only the first and third
+    file require a password, set this variable to ``pass1::pass2:`` where ``pass1`` and ``pass2`` are the passwords.
 
 .. _config_phoenix:
 

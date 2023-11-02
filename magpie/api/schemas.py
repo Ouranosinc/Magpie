@@ -3557,14 +3557,14 @@ class NetworkNode_PATCH_RequestBodySchema(colander.MappingSchema):
         validator=colander.url,
         missing=colander.drop
     )
-    token_url = colander.SchemaNode(
+    authorization_url = colander.SchemaNode(
         colander.String(),
         description="URL that provides the Oauth authorize endpoint for another Magpie node (instance) in the network.",
         example="https://nodea.example.com/ui/network/authorize",
         validator=colander.url,
         missing=colander.drop
     )
-    authorization_url = colander.SchemaNode(
+    token_url = colander.SchemaNode(
         colander.String(),
         description="URL that provides the Oauth token endpoint for another Magpie node (instance) in the network.",
         example="https://nodea.example.com/network/token",
@@ -3606,13 +3606,13 @@ class NetworkNode_BodySchema(colander.MappingSchema):
         example="https://nodea.example.com/jwks.json",
         validator=colander.url
     )
-    token_url = colander.SchemaNode(
+    authorization_url = colander.SchemaNode(
         colander.String(),
         description="URL that provides the Oauth authorize endpoint for another Magpie node (instance) in the network.",
         example="https://nodea.example.com/ui/network/authorize",
         validator=colander.url,
     )
-    authorization_url = colander.SchemaNode(
+    token_url = colander.SchemaNode(
         colander.String(),
         description="URL that provides the Oauth token endpoint for another Magpie node (instance) in the network.",
         example="https://nodea.example.com/network/token",
