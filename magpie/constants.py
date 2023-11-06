@@ -255,7 +255,7 @@ def network_enabled(settings_container=None):
     # type: (Optional[AnySettingsContainer]) -> bool
     if sys.version_info.major < 3 or sys.version_info.minor < 6:
         return False
-    return bool(network_enabled(settings_container=settings_container))
+    return bool(get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container))
 
 
 def get_constant_setting_name(name):
