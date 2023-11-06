@@ -26,7 +26,7 @@ gunicorn>=20; python_version >= "3"
 humanize
 jsonschema<4; python_version < "3.6"
 jsonschema>=4; python_version >= "3.6"
-jwcrypto==1.5.0
+jwcrypto==1.5.0; python_version >= "3.6"
 lxml>=3.7
 mako  # controlled by pyramid_mako
 paste
