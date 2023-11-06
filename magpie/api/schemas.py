@@ -3584,13 +3584,8 @@ class NetworkNode_PATCH_RequestSchema(BaseRequestSchemaAPI):
     body = NetworkNode_PATCH_RequestBodySchema()
 
 
-class NetworkNode_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+class NetworkNode_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Network Node could not be found."
-    body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
-
-
-class NetworkNodes_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Nodes could not be found."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
@@ -3653,11 +3648,6 @@ class NetworkNode_POST_RequestSchema(BaseRequestSchemaAPI):
 class NetworkNodes_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     description = "Network Node created."
     body = BaseResponseBodySchema(code=HTTPCreated.code, description=description)
-
-
-class NetworkNodes_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Missing required parameter."
-    body = BaseResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
 class NetworkNodes_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
@@ -3786,15 +3776,15 @@ class NetworkRemoteUsers_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 
 class NetworkRemoteUsersSequence(colander.SequenceSchema):
-    node = NetworkRemoteUser_BodySchema()
+    remote_user = NetworkRemoteUser_BodySchema()
 
 
 class NetworkRemoteUsers_GET_OkResponseBodySchema(BaseResponseBodySchema):
-    nodes = NetworkRemoteUsersSequence()
+    remote_users = NetworkRemoteUsersSequence()
 
 
 class NetworkRemoteUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Nodes found."
+    description = "Remote Users found."
     body = NetworkRemoteUsers_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
 
 
@@ -3812,7 +3802,7 @@ class NetworkRemoteUsers_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class NetworkRemoteUsers_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+class NetworkRemoteUser_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Remote user deleted."
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
@@ -3827,11 +3817,6 @@ NetworkRemoteUser_PATCH_ConflictResponseSchema = NetworkRemoteUsers_POST_Conflic
 
 class NetworkRemoteUser_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Network Node updated."
-    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
-
-
-class NetworkRemoteUser_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Network Node deleted."
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
@@ -3860,6 +3845,11 @@ class NetworkNodeLink_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
     body = InternalServerErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
+class NetworkNodeLink_POST_FoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Redirecting to authorize endpoint on other network node."
+    body = BaseResponseBodySchema(code=HTTPFound.code, description=description)
+
+
 class NetworkToken_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
     description = "Access token created or refreshed."
     body = BaseResponseBodySchema(code=HTTPCreated.code, description=description)
@@ -3871,6 +3861,26 @@ NetworkToken_DELETE_OkResponseSchema = NetworkNodeToken_DELETE_OkResponseSchema
 class NetworkNodeToken_DELETE_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Unable to delete an access token. Does not exist."
     body = BaseResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkJSONWebKeySet_KeySchema(colander.MappingSchema):
+    kid = colander.SchemaNode(colander.String(), description="key id", example="keyidtext")
+    kty = colander.SchemaNode(colander.String(), description="key type", example="RSA")
+    e = colander.SchemaNode(colander.String(), description="public key exponent part", example="publickeyexponentpart")
+    n = colander.SchemaNode(colander.String(), description="public key modulus part", example="publickeymoduluspart")
+
+
+class NetworkJSONWebKeySet_KeysSchema(colander.SequenceSchema):
+    key = NetworkJSONWebKeySet_KeySchema()
+
+
+class NetworkJSONWebKeySet_GET_OkBodyResponseSchema(BaseResponseBodySchema):
+    keys = NetworkJSONWebKeySet_KeysSchema()
+
+
+class NetworkJSONWebKeySet_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "JSON Web Key Set found"
+    body = NetworkJSONWebKeySet_GET_OkBodyResponseSchema(code=HTTPOk.code, description=description)
 
 
 class NetworkRemoteUsers_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -4626,23 +4636,25 @@ SwaggerAPI_GET_responses = {
 }
 NetworkToken_POST_responses = {
     "201": NetworkToken_POST_CreatedResponseSchema(),
-    "404": NetworkNode_GET_NotFoundResponseSchema(),
+    "404": NetworkNode_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkToken_DELETE_responses = {
-
+    "201": NetworkToken_DELETE_OkResponseSchema(),
+    "404": NetworkNodeToken_DELETE_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 NetworkJSONWebKeySet_GET_responses = {
-
+    "200": NetworkJSONWebKeySet_GET_OkResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 NetworkNode_GET_responses = {
     "200": NetworkNode_GET_OkResponseSchema(),
-    "404": NetworkNode_GET_NotFoundResponseSchema(),
+    "404": NetworkNode_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkNodes_GET_responses = {
     "200": NetworkNodes_GET_OkResponseSchema(),
-    "404": NetworkNodes_GET_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkNodes_POST_responses = {
@@ -4654,41 +4666,46 @@ NetworkNodes_POST_responses = {
 NetworkNode_PATCH_responses = {
     "200": NetworkNode_PATCH_OkResponseSchema(),
     "400": BadRequestResponseSchema(),
+    "404": NetworkNode_NotFoundResponseSchema(),
     "409": NetworkNodes_CheckInfo_NameValue_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkNode_DELETE_responses = {
     "200": NetworkNode_DELETE_OkResponseSchema(),
-    "400": BadRequestResponseSchema(),
+    "404": NetworkNode_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkNodeToken_GET_responses = {
     "200": NetworkNodeToken_GET_OkResponseSchema(),
-    "404": NetworkNode_GET_NotFoundResponseSchema(),
+    "404": NetworkNode_NotFoundResponseSchema(),
     "500": NetworkNodeToken_GET_InternalServerErrorResponseSchema()
 }
 NetworkNodeToken_DELETE_responses = {
     "200": NetworkNodeToken_DELETE_OkResponseSchema(),
-    "404": NetworkNode_GET_NotFoundResponseSchema(),
+    "404": NetworkNode_NotFoundResponseSchema(),
     "500": NetworkNodeToken_DELETE_InternalServerErrorResponseSchema()
 }
 NetworkNodesLink_GET_responses = {
-
+    "200": NetworkNodeLink_GET_OkResponseSchema(),
+    "400": NetworkNodeLink_GET_BadRequestResponseSchema(),
+    "404": NetworkNode_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 NetworkNodeLink_POST_responses = {
-
+    "302": NetworkNodeLink_POST_FoundResponseSchema(),
+    "404": NetworkNode_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
 }
 NetworkRemoteUser_GET_responses = {
     "200": NetworkRemoteUser_GET_OkResponseSchema(),
     "404": NetworkRemoteUser_GET_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-NetworkRemoteUsersCurrent_GET_responses = NetworkRemoteUser_GET_responses
 NetworkRemoteUsers_GET_responses = {
     "200": NetworkRemoteUsers_GET_OkResponseSchema(),
-    "404": NetworkRemoteUsers_GET_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
+NetworkRemoteUsersCurrent_GET_responses = NetworkRemoteUsers_GET_responses
 NetworkRemoteUsers_POST_responses = {
     "201": NetworkRemoteUsers_POST_CreatedResponseSchema(),
     "400": BadRequestResponseSchema(),
@@ -4698,12 +4715,14 @@ NetworkRemoteUsers_POST_responses = {
 NetworkRemoteUser_PATCH_responses = {
     "200": NetworkRemoteUser_PATCH_OkResponseSchema(),
     "400": BadRequestResponseSchema(),
+    "404": NetworkRemoteUser_GET_NotFoundResponseSchema(),
     "409": NetworkRemoteUser_PATCH_ConflictResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkRemoteUser_DELETE_responses = {
     "200": NetworkRemoteUser_DELETE_OkResponseSchema(),
     "400": BadRequestResponseSchema(),
+    "404": NetworkRemoteUser_GET_NotFoundResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 

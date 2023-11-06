@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import math
 import uuid
 from typing import TYPE_CHECKING
@@ -30,7 +31,6 @@ from ziggurat_foundations.models.user_group import UserGroupMixin
 from ziggurat_foundations.models.user_permission import UserPermissionMixin
 from ziggurat_foundations.models.user_resource_permission import UserResourcePermissionMixin
 from ziggurat_foundations.permissions import permission_to_pyramid_acls
-from cryptography.fernet import Fernet
 
 from magpie.api import exception as ax
 from magpie.constants import get_constant
@@ -1014,10 +1014,11 @@ class NetworkRemoteUser(BaseModel, Base):
                                 sa.ForeignKey("network_nodes.id", onupdate="CASCADE", ondelete="CASCADE"),
                                 nullable=False)
     network_token_id = sa.Column(sa.Integer,
-                                 sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="CASCADE"))
+                                 sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="CASCADE"),
+                                 unique=True)
     name = sa.Column(sa.Unicode(128))
     network_node = relationship("NetworkNode", foreign_keys=[network_node_id])
-    network_token = relationship("NetworkToken", foreign_keys=[network_token_id])
+    network_token = relationship("NetworkToken", foreign_keys=[network_token_id], back_populates="network_remote_user")
 
     __table_args__ = (UniqueConstraint('user_id', 'network_node_id'),
                       UniqueConstraint('name', 'network_node_id'))
@@ -1039,24 +1040,26 @@ class NetworkToken(BaseModel, Base):
 
     def __init__(self, *_, **__):
         super(NetworkToken, self).__init__(*_, **__)
-        if not self.token:
-            self.refresh_token()
+        if self.token:
+            # The token should not be created with the object, instead call refresh_token after the object is created
+            # Otherwise, the unhashed token will never be available to the user
+            self.token = None
 
     @staticmethod
-    def _encrypt(token):
-        # type: (Union[Str, UUID]) -> bytes
+    def _hash_token(token):
+        # type: (Str) -> Str
         if isinstance(token, str):
             token = uuid.UUID(token)
-        return Fernet(get_constant("MAGPIE_SECRET")).encrypt(token.bytes)
+        h = hashlib.sha256()
+        h.update(token.bytes)
+        return h.hexdigest()
 
     def refresh_token(self):
-        # type: () -> None
-        self.token = self._encrypt(uuid.uuid4())
+        # type: () -> str
+        unhashed_token = str(uuid.uuid4())
+        self.token = self._hash_token(unhashed_token)
         self.created = datetime.datetime.utcnow()
-
-    def decrypted_token(self):
-        # type: () -> UUID
-        return uuid.UUID(bytes=Fernet(get_constant("MAGPIE_SECRET")).decrypt(self.token))
+        return unhashed_token
 
     def expired(self):
         # type: () -> bool
@@ -1071,17 +1074,17 @@ class NetworkToken(BaseModel, Base):
         return db_session.query(cls).filter(cls.created < expiry_date_time)
 
     @classmethod
-    def by_decrypted_token(cls, token, db_session=None):
-        # type: (Union[Str, UUID], Optional[Session]) -> Optional[NetworkToken]
+    def by_token(cls, token, db_session=None):
+        # type: (Str, Optional[Session]) -> Optional[NetworkToken]
         db_session = get_db_session(db_session)
-        return db_session.query(cls).filter(cls.token == cls._encrypt(token)).first()
+        return db_session.query(cls).filter(cls.token == cls._hash_token(token)).first()
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
-    token = sa.Column(sa.LargeBinary, nullable=False, unique=True)
+    token = sa.Column(sa.String, nullable=False, unique=True)
     created = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
-    user_id = sa.Column(sa.Integer,
-                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    user = relationship("User", foreign_keys=[user_id])
+    network_remote_user = relationship("NetworkRemoteUser", back_populates="network_token",
+                                       single_parent=True,
+                                       uselist=False)
 
 
 class NetworkNode(BaseModel, Base):

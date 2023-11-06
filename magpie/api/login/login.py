@@ -279,10 +279,10 @@ def network_login(request):
         if token_type != "Bearer":
             ax.raise_http(http_error=HTTPBadRequest,
                           detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
-        network_token = models.NetworkToken.by_decrypted_token(token)
+        network_token = models.NetworkToken.by_token(token)
         if network_token is None or network_token.expired():
             return login_failure_view(request, reason=s.Signin_POST_UnauthorizedResponseSchema.description)
-        authenticated_user = network_token.user
+        authenticated_user = network_token.network_remote_user.user
         # We should never create a token for protected users but just in case
         anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=request)
         ax.verify_param(authenticated_user.name, not_matches=True, param_compare=anonymous_regex,

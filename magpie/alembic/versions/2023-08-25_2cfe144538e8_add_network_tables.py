@@ -25,10 +25,8 @@ Session = sessionmaker()
 def upgrade():
     op.create_table("network_tokens",
                     sa.Column("id", sa.Integer, primary_key=True, nullable=False, autoincrement=True),
-                    sa.Column("token", sa.LargeBinary, nullable=False, unique=True),
-                    sa.Column("created", sa.DateTime, default=datetime.datetime.utcnow),
-                    sa.Column("user_id", sa.Integer,
-                              sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
+                    sa.Column("token", sa.String, nullable=False, unique=True),
+                    sa.Column("created", sa.DateTime, default=datetime.datetime.utcnow)
                     )
     op.create_table("network_nodes",
                     sa.Column("id", sa.Integer, primary_key=True, nullable=False, autoincrement=True),
@@ -47,7 +45,7 @@ def upgrade():
                               nullable=False),
                     sa.Column("name", sa.Unicode(128)),
                     sa.Column("network_token_id", sa.Integer,
-                              sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="CASCADE"))
+                              sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="CASCADE"), unique=True)
                     )
     op.create_unique_constraint("uq_network_remote_users_user_id_network_node_id", "network_remote_users",
                                 ["user_id", "network_node_id"])

@@ -155,7 +155,7 @@ def get_network_models_from_request_token(request, create_network_remote_user=Fa
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
-        msg_on_fail=s.NetworkNode_GET_NotFoundResponseSchema.description)
+        msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     decoded_token = decode_jwt(token, node, request)
     user_name = decoded_token.get("user_name")
     network_remote_user = (request.db.query(models.NetworkRemoteUser)

@@ -6,7 +6,7 @@ from pyramid.httpexceptions import (
     HTTPCreated,
     HTTPInternalServerError,
     HTTPForbidden,
-    HTTPTemporaryRedirect
+    HTTPFound
 )
 from pyramid.security import Authenticated
 from pyramid.view import view_config
@@ -37,7 +37,7 @@ def get_network_node_view(request):
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
-        msg_on_fail=s.NetworkNode_GET_NotFoundResponseSchema.description)
+        msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, detail=s.NetworkNode_GET_OkResponseSchema.description,
                          content=node.as_dict())
 
@@ -52,7 +52,7 @@ def post_network_nodes_view(request):
         if param in request.POST:
             kwargs[param] = request.POST[param]
         else:
-            ax.raise_http(http_error=HTTPBadRequest, detail=s.NetworkNodes_POST_BadRequestResponseSchema.description)
+            ax.raise_http(http_error=HTTPBadRequest, detail=s.BadRequestResponseSchema.description)
     if "redirect_uris" in request.POST:
         kwargs["redirect_uris"] = request.POST.get("redirect_uris")
     check_network_node_info(request.db, **kwargs)
@@ -71,7 +71,7 @@ def patch_network_node_view(request):
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
-        msg_on_fail=s.NetworkNode_GET_NotFoundResponseSchema.description)
+        msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     params = ("name", "jwks_url", "token_url", "authorization_url", "redirect_uris")
     kwargs = {}
     for param in params:
@@ -96,7 +96,7 @@ def delete_network_node_view(request):
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
-        msg_on_fail=s.NetworkNode_GET_NotFoundResponseSchema.description)
+        msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     ax.evaluate_call(lambda: delete_network_node(request, node),
                      http_error=HTTPInternalServerError,
                      fallback=lambda: request.db.rollback(),
@@ -111,7 +111,7 @@ def get_network_node_token_view(request):
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
-        msg_on_fail=s.NetworkNode_GET_NotFoundResponseSchema.description)
+        msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     token = encode_jwt({"user_name": request.user.user_name}, node_name, request)
     access_token = ax.evaluate_call(lambda: requests.post(node.token_url, json={"token": token}).json()["token"],
                                     http_error=HTTPInternalServerError,
@@ -127,7 +127,7 @@ def delete_network_node_token_view(request):
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
-        msg_on_fail=s.NetworkNode_GET_NotFoundResponseSchema.description)
+        msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     token = encode_jwt({"user_name": request.user.user_name}, node_name, request)
     ax.evaluate_call(lambda: requests.delete(node.token_url, json={"token": token}).raise_for_status(),
                      http_error=HTTPInternalServerError,
@@ -144,7 +144,7 @@ def get_network_node_link_view(request):
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
-        msg_on_fail=s.NetworkNode_GET_NotFoundResponseSchema.description)
+        msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     decoded_token = decode_jwt(token, node, request)
     remote_user_name = ax.evaluate_call(lambda: decoded_token["user_name"],
                                         http_error=HTTPBadRequest,
@@ -157,7 +157,7 @@ def get_network_node_link_view(request):
     new_remote_user = models.NetworkRemoteUser(user_id=request.user.id, network_node_id=node.id,
                                                name=remote_user_name)
     request.db.add(new_remote_user)
-    return ax.valid_http(http_success=HTTPOk, detail=s.NetworkNodeLink_GET_OkResponseSchema)
+    return ax.valid_http(http_success=HTTPOk, detail=s.NetworkNodeLink_GET_OkResponseSchema.description)
 
 
 @s.NetworkNodeLinkAPI.post(tags=[s.NetworkTag], response_schemas=s.NetworkNodeLink_POST_responses)
@@ -167,7 +167,7 @@ def post_network_node_link_view(request):
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
-        msg_on_fail=s.NetworkNode_GET_NotFoundResponseSchema.description
+        msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description
     )
     location_tuple = up.urlparse(node.authorization_url)
     location_query_list = up.parse_qsl(location_tuple.query)
@@ -177,4 +177,6 @@ def post_network_node_link_view(request):
         ("redirect_uri", request.route_url(s.NetworkNodesLinkAPI.name))
     ))
     location = up.urlunparse(location_tuple._replace(query=up.urlencode(location_query_list, doseq=True)))
-    return ax.valid_http(http_success=HTTPTemporaryRedirect, http_kwargs={"location": location})
+    return ax.valid_http(http_success=HTTPFound,
+                         detail=s.NetworkNodeLink_POST_FoundResponseSchema.description,
+                         http_kwargs={"location": location})

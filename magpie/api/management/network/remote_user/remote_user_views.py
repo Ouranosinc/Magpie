@@ -108,7 +108,7 @@ def delete_network_remote_user_view(request):
     remote_user = requested_remote_user(request)
     check_remote_user_access_permissions(request, remote_user)
     request.db.delete(remote_user)
-    return ax.valid_http(http_success=HTTPOk, detail=s.NetworkRemoteUsers_DELETE_OkResponseSchema.description)
+    return ax.valid_http(http_success=HTTPOk, detail=s.NetworkRemoteUser_DELETE_OkResponseSchema.description)
 
 
 @s.NetworkRemoteUsersCurrentAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUsersCurrent_GET_responses)

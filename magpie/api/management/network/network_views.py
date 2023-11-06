@@ -20,11 +20,13 @@ def post_network_token_view(request):
     node, network_remote_user = get_network_models_from_request_token(request, create_network_remote_user=True)
     network_token = network_remote_user.network_token
     if network_token:
-        network_token.refresh_token()
+        token = network_token.refresh_token()
     else:
-        network_token = models.NetworkToken(user_id=network_remote_user.user_id)
+        network_token = models.NetworkToken()
+        token = network_token.refresh_token()
+        request.db.add(network_token)
         network_remote_user.network_token = network_token
-    return ax.valid_http(http_success=HTTPCreated, content={"token": network_token.decrypted_token()},
+    return ax.valid_http(http_success=HTTPCreated, content={"token": token},
                          detail=s.NetworkToken_POST_CreatedResponseSchema.description)
 
 
@@ -46,4 +48,6 @@ def delete_network_token_view(request):
 @s.NetworkJSONWebKeySetAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkJSONWebKeySet_GET_responses)
 @view_config(route_name=s.NetworkJSONWebKeySetAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
 def get_network_jwks_view(_request):
-    return ax.valid_http(http_success=HTTPOk, content=jwks().export(private_keys=False, as_dict=True))
+    return ax.valid_http(http_success=HTTPOk,
+                         detail=s.NetworkJSONWebKeySet_GET_OkResponseSchema.description,
+                         content=jwks().export(private_keys=False, as_dict=True))
