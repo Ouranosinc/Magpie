@@ -33,7 +33,9 @@ paste
 pastedeploy
 pluggy
 psycopg2-binary>=2.7.1
-PyJWT[crypto]==2.8.0
+PyJWT[crypto]==2.8.0; python_version >= "3.8"
+PyJWT[crypto]==2.7.0; python_version == "3.7"
+PyJWT[crypto]==2.4.0; python_version == "3.6"
 pyramid>=1.10.2,<2
 pyramid_beaker==0.8
 pyramid_chameleon>=0.3

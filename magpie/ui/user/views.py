@@ -6,7 +6,7 @@ from pyramid.settings import asbool
 from pyramid.view import view_config
 
 from magpie.api import schemas
-from magpie.constants import get_constant
+from magpie.constants import get_constant, network_enabled
 from magpie.models import UserGroupStatus, NetworkNode, NetworkRemoteUser
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json, get_logger
@@ -90,7 +90,7 @@ class UserViews(BaseViews):
                                                                raise_missing=False, raise_not_set=False))
         user_info["user_with_error"] = schemas.UserStatuses.get(user_info["status"]) != schemas.UserStatuses.OK
         # add network information
-        if get_constant("MAGPIE_NETWORK_ENABLED", self.request):
+        if network_enabled(self.request):
             network_remote_users = (self.request.db.query(NetworkRemoteUser)
                                     .filter(NetworkRemoteUser.user_id == self.request.user.id)
                                     .all())

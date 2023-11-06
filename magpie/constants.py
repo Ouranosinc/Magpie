@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import shutil
+import sys
 import warnings
 from typing import TYPE_CHECKING
 
@@ -201,7 +202,7 @@ def protected_user_name_regex(include_admin=True,
         patterns.append(get_constant("MAGPIE_ADMIN_USER", settings_container=settings_container))
     if include_anonymous:
         patterns.append(get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings_container))
-    if include_network and get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container):
+    if include_network and network_enabled(settings_container=settings_container):
         patterns.append(
             "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
         )
@@ -223,7 +224,7 @@ def protected_user_email_regex(include_admin=True,
         patterns.append(get_constant("MAGPIE_ADMIN_EMAIL", settings_container=settings_container))
     if include_anonymous:
         patterns.append(get_constant("MAGPIE_ANONYMOUS_EMAIL", settings_container=settings_container))
-    if include_network and get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container):
+    if include_network and network_enabled(settings_container=settings_container):
         email_form = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT", settings_container=settings_container)
         patterns.append(email_form.format('.*'))
     return "^({})$".format("|".join(patterns))
@@ -243,11 +244,18 @@ def protected_group_name_regex(include_admin=True,
         patterns.append(get_constant("MAGPIE_ADMIN_GROUP", settings_container=settings_container))
     if include_anonymous:
         patterns.append(get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings_container))
-    if include_network and get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container):
+    if include_network and network_enabled(settings_container=settings_container):
         patterns.append(
             "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
         )
     return "^({})$".format("|".join(patterns))
+
+
+def network_enabled(settings_container=None):
+    # type: (Optional[AnySettingsContainer]) -> bool
+    if sys.version_info.major < 3 or sys.version_info.minor < 6:
+        return False
+    return bool(network_enabled(settings_container=settings_container))
 
 
 def get_constant_setting_name(name):

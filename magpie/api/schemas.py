@@ -2,7 +2,6 @@ import uuid
 from typing import TYPE_CHECKING
 
 import colander
-import jwt
 import six
 from cornice import Service
 from cornice.service import get_services
@@ -3531,7 +3530,7 @@ class JWTRequestBodySchema(colander.MappingSchema):
     token = colander.SchemaNode(
         colander.String(),
         description="JSON Web Token.",
-        example=jwt.encode({"example": "content"}, "example_secret", algorithm="HS256")
+        example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleGFtcGxlIjoiIn0.3DUg2Qivw_NF8v_LArZFFpsf1-Evv19ewhCVXbh6G2U"
     )
 
 

@@ -439,6 +439,10 @@ Users with accounts on multiple instances in the network can also choose to link
 use access tokens to ensure that they have the same access to resources that they would have if they logged in to
 `Magpie` using any other method.
 
+.. warning::
+    Network Mode is only supported when the python version is at least 3.6. If the python version is less than 3.6,
+    setting the :envvar:`MAGPIE_NETWORK_ENABLED` will have no effect.
+
 Managing the Network
 ~~~~~~~~~~~~~~~~~~~~
 

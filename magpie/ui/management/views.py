@@ -22,7 +22,7 @@ from magpie import register
 from magpie.api import schemas
 from magpie.cli.sync_resources import OUT_OF_SYNC, fetch_single_service, get_last_sync, merge_local_and_remote_resources
 from magpie.cli.sync_services import SYNC_SERVICES_TYPES
-from magpie.constants import get_constant
+from magpie.constants import get_constant, network_enabled
 # FIXME: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
 from magpie.models import (
     REMOTE_RESOURCE_TREE_SERVICE,
@@ -169,7 +169,7 @@ class ManagementViews(AdminRequests, BaseViews):
             user_info["reason_{}".format(field)] = ""
 
         # add network information
-        if get_constant("MAGPIE_NETWORK_ENABLED", self.request):
+        if network_enabled(self.request):
             network_remote_users = (self.request.db.query(NetworkRemoteUser)
                                     .join(User).filter(User.user_name == user_name)
                                     .all())

@@ -21,7 +21,7 @@ from magpie import __meta__
 from magpie.api import schemas
 from magpie.api.generic import get_exception_info, get_request_info
 from magpie.api.requests import get_logged_user
-from magpie.constants import get_constant, protected_user_name_regex, protected_group_name_regex
+from magpie.constants import get_constant, protected_user_name_regex, protected_group_name_regex, network_enabled
 from magpie.models import UserGroupStatus
 from magpie.security import mask_credentials
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_json, get_logger, get_magpie_url
@@ -592,7 +592,7 @@ class AdminRequests(BaseViews):
         if (user_email or "").lower() in [usr["email"].lower() for usr in user_details]:
             data["invalid_user_email"] = True
             data["reason_user_email"] = "Conflict"
-        if get_constant("MAGPIE_NETWORK_ENABLED", self.request):
+        if network_enabled(self.request):
             anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=self.request)
             if re.match(anonymous_regex, user_name):
                 data["invalid_user_name"] = True

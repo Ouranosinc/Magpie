@@ -9,7 +9,7 @@ from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
 from magpie.api.management.group import group_utils as gu
 from magpie.api.management.service import service_utils as su
-from magpie.constants import get_constant, protected_group_name_regex
+from magpie.constants import get_constant, protected_group_name_regex, network_enabled
 from magpie.models import TemporaryToken, TokenOperation, UserGroupStatus
 
 
@@ -85,7 +85,7 @@ def edit_group_view(request):
         ax.verify_param(GroupService.by_group_name(new_group_name, db_session=request.db),
                         is_none=True, http_error=HTTPConflict, with_param=False,  # don't return group as value
                         msg_on_fail=s.Group_PATCH_ConflictResponseSchema.description)
-        if get_constant("MAGPIE_NETWORK_ENABLED"):
+        if network_enabled():
             anonymous_regex = protected_group_name_regex(include_admin=False)
             ax.verify_param(new_group_name, not_matches=True, param_compare=anonymous_regex,
                             http_error=HTTPBadRequest,
