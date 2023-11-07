@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
+from pyramid.httpexceptions import HTTPForbidden, HTTPNotFound
 
 from magpie import models
 from magpie.api import exception as ax
@@ -10,7 +10,9 @@ from magpie.constants import get_constant
 
 if TYPE_CHECKING:
     from typing import Optional
+
     from pyramid.request import Request
+
     from magpie.typedefs import Session, Str
 
 

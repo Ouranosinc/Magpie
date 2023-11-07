@@ -9,7 +9,7 @@ from magpie.api import schemas as s
 from magpie.api.management.group import group_formats as gf
 from magpie.api.management.group import group_utils as gu
 from magpie.api.management.service import service_utils as su
-from magpie.constants import get_constant, protected_group_name_regex, network_enabled
+from magpie.constants import get_constant, network_enabled, protected_group_name_regex
 from magpie.models import TemporaryToken, TokenOperation, UserGroupStatus
 
 

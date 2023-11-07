@@ -8,7 +8,6 @@ from magpie.models import NetworkNode
 from magpie.ui.utils import BaseViews
 from magpie.utils import get_logger
 
-
 LOGGER = get_logger(__name__)
 
 

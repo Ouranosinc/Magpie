@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 import jwt
 from cryptography.hazmat.primitives import serialization
 from jwcrypto import jwk
-
 from pyramid.httpexceptions import HTTPInternalServerError, HTTPNotFound
+
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
@@ -14,15 +14,17 @@ from magpie.constants import get_constant
 from magpie.utils import get_logger
 
 if TYPE_CHECKING:
-    from typing import List, Optional, Dict, Tuple
-    from magpie.typedefs import JSON, Str, AnySettingsContainer
+    from typing import Dict, List, Optional, Tuple
+
     from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
     from pyramid.request import Request
+
+    from magpie.typedefs import JSON, AnySettingsContainer, Str
 
 LOGGER = get_logger(__name__)
 
 PEM_FILE_DELIMITER = ":"
-PEM_PASSWORD_DELIMITER = ":"
+PEM_PASSWORD_DELIMITER = ":"  # nosec: B105
 
 
 def _pem_file_content(primary=False):
@@ -33,7 +35,7 @@ def _pem_file_content(primary=False):
     pem_files = get_constant("MAGPIE_NETWORK_PEM_FILES").split(PEM_FILE_DELIMITER)
     content = []
     for pem_file in pem_files:
-        with open(pem_file, 'rb') as f:
+        with open(pem_file, "rb") as f:
             content.append(f.read())
         if primary:
             break
@@ -143,8 +145,8 @@ def decode_jwt(token, node, settings_container=None):
 def get_network_models_from_request_token(request, create_network_remote_user=False):
     # type: (Request, bool) -> Tuple[models.NetworkNode, Optional[models.NetworkRemoteUser]]
     """
-    Return a ``NetworkNode`` and associated ``NetworkRemoteUser`` determined by parsing the claims in the JWT included in the
-    ``request`` argument.
+    Return a ``NetworkNode`` and associated ``NetworkRemoteUser`` determined by parsing the claims in the JWT included
+    in the ``request`` argument.
 
     If the ``NetworkRemoteUser`` does not exist and ``create_network_remote_user`` is ``True``, this creates a new
     ``NetworkRemoteUser`` associated with the anonymous user for the given ``NetworkNode`` and adds it to the current

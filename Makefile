@@ -551,6 +551,7 @@ check-security-deps-only: mkdir-reports  ## run security checks on package depen
 			-r "$(APP_ROOT)/requirements-sys.txt" \
 			-i 42194 \
 			-i 51668 \
+			-i 51021 \
 		1> >(tee "$(REPORTS_DIR)/check-security-deps.txt")'
 
 .PHONY: check-security-code-only

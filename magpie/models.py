@@ -1020,8 +1020,8 @@ class NetworkRemoteUser(BaseModel, Base):
     network_node = relationship("NetworkNode", foreign_keys=[network_node_id])
     network_token = relationship("NetworkToken", foreign_keys=[network_token_id], back_populates="network_remote_user")
 
-    __table_args__ = (UniqueConstraint('user_id', 'network_node_id'),
-                      UniqueConstraint('name', 'network_node_id'))
+    __table_args__ = (UniqueConstraint("user_id", "network_node_id"),
+                      UniqueConstraint("name", "network_node_id"))
 
     def as_dict(self):
         # type: () -> Dict[Str, Str]

@@ -33,7 +33,7 @@ from magpie.api.webhooks import (
     get_permission_update_params,
     process_webhook_requests
 )
-from magpie.constants import get_constant, protected_user_name_regex, protected_user_email_regex
+from magpie.constants import get_constant, protected_user_email_regex, protected_user_name_regex
 from magpie.models import TemporaryToken, TokenOperation
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT, service_factory
@@ -886,7 +886,10 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
                         msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
         if check_anonymous:
             anonymous_user_name_regex = protected_user_name_regex()
-            ax.verify_param(user_name, not_matches=True, param_compare=anonymous_user_name_regex, param_name="user_name",
+            ax.verify_param(user_name,
+                            not_matches=True,
+                            param_compare=anonymous_user_name_regex,
+                            param_name="user_name",
                             http_error=HTTPBadRequest,
                             msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
     if check_email:

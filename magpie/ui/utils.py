@@ -21,7 +21,7 @@ from magpie import __meta__
 from magpie.api import schemas
 from magpie.api.generic import get_exception_info, get_request_info
 from magpie.api.requests import get_logged_user
-from magpie.constants import get_constant, protected_user_name_regex, protected_group_name_regex, network_enabled
+from magpie.constants import get_constant, network_enabled, protected_group_name_regex, protected_user_name_regex
 from magpie.models import UserGroupStatus
 from magpie.security import mask_credentials
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_json, get_logger, get_magpie_url

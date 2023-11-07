@@ -17,10 +17,11 @@ from magpie import models
 from magpie.cli.utils import make_logging_options, setup_logger_from_options
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
-from magpie.utils import get_logger, raise_log, print_log
+from magpie.utils import get_logger, print_log, raise_log
 
 if TYPE_CHECKING:
     from typing import Optional, Sequence
+
     from magpie.typedefs import Str
 
 LOGGER = get_logger(__name__,
@@ -50,7 +51,7 @@ def main(args=None, parser=None, namespace=None):
     # clean up unused records in the database (no need to keep records associated with anonymous network users)
     (db_session.query(models.NetworkRemoteUser)
      .filter(models.NetworkRemoteUser.user_id.in_(anonymous_network_user_ids))
-     .filter(models.NetworkRemoteUser.network_token_id == None)   # noqa: E711
+     .filter(models.NetworkRemoteUser.network_token_id == None)  # noqa: E711 # pylint: disable=singleton-comparison
      .delete())
     try:
         transaction.commit()

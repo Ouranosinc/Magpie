@@ -34,7 +34,7 @@ from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
-from magpie.constants import get_constant, protected_user_name_regex, protected_user_email_regex
+from magpie.constants import get_constant, protected_user_email_regex, protected_user_name_regex
 from magpie.security import authomatic_setup, get_providers
 from magpie.utils import (
     CONTENT_TYPE_JSON,
@@ -276,7 +276,7 @@ def network_login(request):
     """
     if "Authorization" in request.headers:
         token_type, token = request.headers.get("Authorization").split()
-        if token_type != "Bearer":
+        if token_type != "Bearer":  # nosec: B105
             ax.raise_http(http_error=HTTPBadRequest,
                           detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
         network_token = models.NetworkToken.by_token(token)
@@ -288,9 +288,8 @@ def network_login(request):
         ax.verify_param(authenticated_user.name, not_matches=True, param_compare=anonymous_regex,
                         http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
         return login_success_external(request, authenticated_user)
-    else:
-        ax.raise_http(http_error=HTTPBadRequest,
-                      detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
+    ax.raise_http(http_error=HTTPBadRequest,
+                  detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
 
 
 @s.ProviderSigninAPI.get(schema=s.ProviderSignin_GET_RequestSchema, tags=[s.SessionTag],
@@ -306,65 +305,63 @@ def external_login_view(request):
     try:
         if provider_name == get_constant("MAGPIE_NETWORK_PROVIDER", request):
             return network_login(request)
+        authomatic_handler = authomatic_setup(request)
+        # if we directly have the Authorization header, bypass authomatic login and retrieve 'userinfo' to signin
+        if "Authorization" in request.headers and "authomatic" not in request.cookies:
+            provider_config = authomatic_handler.config.get(provider_name, {})
+            provider_class = resolve_provider_class(provider_config.get("class_"))
+            provider = provider_class(authomatic_handler, adapter=None, provider_name=provider_name)
+            # provide the token user data, let the external provider update it on login afterwards
+            token_type, access_token = request.headers.get("Authorization").split()
+            data = {"access_token": access_token, "token_type": token_type}
+            cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type,
+                               provider=provider)
+            provider.credentials = cred
+            result = LoginResult(provider)
+            # pylint: disable=W0212
+            result.provider.user = result.provider._update_or_create_user(data, credentials=cred)  # noqa: W0212
+
+        # otherwise, use the standard login procedure
         else:
-            authomatic_handler = authomatic_setup(request)
+            result = authomatic_handler.login(WebObAdapter(request, response), provider_name)
+            if result is None:
+                if response.location is not None:
+                    return HTTPTemporaryRedirect(location=response.location, headers=response.headers)
+                return response
 
-            # if we directly have the Authorization header, bypass authomatic login and retrieve 'userinfo' to signin
-            if "Authorization" in request.headers and "authomatic" not in request.cookies:
-                provider_config = authomatic_handler.config.get(provider_name, {})
-                provider_class = resolve_provider_class(provider_config.get("class_"))
-                provider = provider_class(authomatic_handler, adapter=None, provider_name=provider_name)
-                # provide the token user data, let the external provider update it on login afterwards
-                token_type, access_token = request.headers.get("Authorization").split()
-                data = {"access_token": access_token, "token_type": token_type}
-                cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type,
-                                   provider=provider)
-                provider.credentials = cred
-                result = LoginResult(provider)
-                # pylint: disable=W0212
-                result.provider.user = result.provider._update_or_create_user(data, credentials=cred)  # noqa: W0212
-
-            # otherwise, use the standard login procedure
-            else:
-                result = authomatic_handler.login(WebObAdapter(request, response), provider_name)
-                if result is None:
-                    if response.location is not None:
-                        return HTTPTemporaryRedirect(location=response.location, headers=response.headers)
-                    return response
-
-            if result:
-                if result.error:
-                    # Login procedure finished with an error.
-                    error = result.error.to_dict() if hasattr(result.error, "to_dict") else result.error
-                    LOGGER.debug("Login failure with error. [%r]", error)
-                    return login_failure_view(request, reason=result.error.message)
-                if result.user:
-                    # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
-                    # update the user to get more info.
-                    if not (result.user.name and result.user.id):
-                        try:
-                            response = result.user.update()
-                        # this error can happen if providing incorrectly formed authorization header
-                        except OAuth2Error as exc:
-                            LOGGER.debug("Login failure with Authorization header.")
-                            ax.raise_http(http_error=HTTPBadRequest, content={"reason": str(exc.message)},
-                                          detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
-                        # verify that the update procedure succeeded with provided token
-                        if 400 <= response.status < 500:
-                            LOGGER.debug("Login failure with invalid token.")
-                            ax.raise_http(http_error=HTTPUnauthorized,
-                                          detail=s.ProviderSignin_GET_UnauthorizedResponseSchema.description)
-                    # create/retrieve the user using found details from login provider
-                    # find possibly already registered user by external_id/provider
-                    external_id = result.user.username or result.user.id
-                    user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name,
-                                                                                    request.db)
-                    if user is None:
-                        # create new user with an External Identity
-                        user = new_user_external(external_user_name=result.user.name, external_id=external_id,
-                                                 email=result.user.email, provider_name=result.provider.name,
-                                                 db_session=request.db)
-                    return login_success_external(request, user)
+        if result:
+            if result.error:
+                # Login procedure finished with an error.
+                error = result.error.to_dict() if hasattr(result.error, "to_dict") else result.error
+                LOGGER.debug("Login failure with error. [%r]", error)
+                return login_failure_view(request, reason=result.error.message)
+            if result.user:
+                # OAuth 2.0 and OAuth 1.0a provide only limited user data on login,
+                # update the user to get more info.
+                if not (result.user.name and result.user.id):
+                    try:
+                        response = result.user.update()
+                    # this error can happen if providing incorrectly formed authorization header
+                    except OAuth2Error as exc:
+                        LOGGER.debug("Login failure with Authorization header.")
+                        ax.raise_http(http_error=HTTPBadRequest, content={"reason": str(exc.message)},
+                                      detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
+                    # verify that the update procedure succeeded with provided token
+                    if 400 <= response.status < 500:
+                        LOGGER.debug("Login failure with invalid token.")
+                        ax.raise_http(http_error=HTTPUnauthorized,
+                                      detail=s.ProviderSignin_GET_UnauthorizedResponseSchema.description)
+                # create/retrieve the user using found details from login provider
+                # find possibly already registered user by external_id/provider
+                external_id = result.user.username or result.user.id
+                user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name,
+                                                                                request.db)
+                if user is None:
+                    # create new user with an External Identity
+                    user = new_user_external(external_user_name=result.user.name, external_id=external_id,
+                                             email=result.user.email, provider_name=result.provider.name,
+                                             db_session=request.db)
+                return login_success_external(request, user)
     except Exception as exc:
         exc_msg = "Unhandled error during external provider '{}' login. [{!s}]".format(provider_name, exc)
         LOGGER.exception(exc_msg, exc_info=True)

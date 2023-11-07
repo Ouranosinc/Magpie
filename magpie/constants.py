@@ -24,7 +24,7 @@ from pyramid.settings import asbool
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Optional, List
+    from typing import List, Optional
 
     from magpie.typedefs import AnySettingsContainer, SettingValue, Str
 
@@ -153,7 +153,7 @@ MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must be itself (either l
 MAGPIE_CONTEXT_PERMISSION = "MAGPIE_CONTEXT_USER"  # path user must be itself, MAGPIE_LOGGED_USER or unauthenticated
 MAGPIE_LOGGED_USER = "current"
 MAGPIE_DEFAULT_PROVIDER = "ziggurat"
-MAGPIE_NETWORK_TOKEN_NAME = "magpie_token"
+MAGPIE_NETWORK_TOKEN_NAME = "magpie_token"  # nosec: B105
 MAGPIE_NETWORK_PROVIDER = "magpie_network"
 MAGPIE_NETWORK_NAME_PREFIX = "anonymous_network_"
 MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT = "{}{}@mail.com".format(MAGPIE_NETWORK_NAME_PREFIX, "{}")
@@ -226,7 +226,7 @@ def protected_user_email_regex(include_admin=True,
         patterns.append(get_constant("MAGPIE_ANONYMOUS_EMAIL", settings_container=settings_container))
     if include_network and network_enabled(settings_container=settings_container):
         email_form = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT", settings_container=settings_container)
-        patterns.append(email_form.format('.*'))
+        patterns.append(email_form.format(".*"))
     return "^({})$".format("|".join(patterns))
 
 

@@ -27,10 +27,11 @@ from magpie.constants import get_constant, network_enabled
 from magpie.models import (
     REMOTE_RESOURCE_TREE_SERVICE,
     RESOURCE_TYPE_DICT,
-    UserGroupStatus,
-    UserStatuses,
     NetworkNode,
-    User, NetworkRemoteUser
+    NetworkRemoteUser,
+    User,
+    UserGroupStatus,
+    UserStatuses
 )
 from magpie.permissions import Permission, PermissionSet
 # FIXME: remove (SERVICE_TYPE_DICT), implement getters via API

@@ -1,19 +1,14 @@
-from pyramid.httpexceptions import (
-    HTTPBadRequest,
-    HTTPNotFound,
-    HTTPOk,
-    HTTPCreated,
-    HTTPForbidden
-)
+from pyramid.httpexceptions import HTTPBadRequest, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk
 from pyramid.security import Authenticated
-
 from pyramid.view import view_config
 
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.api.management.network.remote_user.remote_user_utils import requested_remote_user, \
-    check_remote_user_access_permissions
+from magpie.api.management.network.remote_user.remote_user_utils import (
+    check_remote_user_access_permissions,
+    requested_remote_user
+)
 from magpie.constants import protected_user_name_regex
 
 

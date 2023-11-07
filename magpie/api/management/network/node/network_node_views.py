@@ -1,25 +1,29 @@
 import jwt
+import requests
 from pyramid.httpexceptions import (
     HTTPBadRequest,
-    HTTPNotFound,
-    HTTPOk,
     HTTPCreated,
-    HTTPInternalServerError,
     HTTPForbidden,
-    HTTPFound
+    HTTPFound,
+    HTTPInternalServerError,
+    HTTPNotFound,
+    HTTPOk
 )
 from pyramid.security import Authenticated
 from pyramid.view import view_config
 from six.moves.urllib import parse as up
-import requests
 
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import requests as ar
 from magpie.api import schemas as s
-from magpie.api.management.network.network_utils import encode_jwt, decode_jwt
-from magpie.api.management.network.node.network_node_utils import delete_network_node, \
-    check_network_node_info, create_associated_user_groups, update_associated_user_groups
+from magpie.api.management.network.network_utils import decode_jwt, encode_jwt
+from magpie.api.management.network.node.network_node_utils import (
+    check_network_node_info,
+    create_associated_user_groups,
+    delete_network_node,
+    update_associated_user_groups
+)
 
 
 @s.NetworkNodesAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkNodes_GET_responses)

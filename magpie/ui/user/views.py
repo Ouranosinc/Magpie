@@ -7,7 +7,7 @@ from pyramid.view import view_config
 
 from magpie.api import schemas
 from magpie.constants import get_constant, network_enabled
-from magpie.models import UserGroupStatus, NetworkNode, NetworkRemoteUser
+from magpie.models import NetworkNode, NetworkRemoteUser, UserGroupStatus
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json, get_logger
 

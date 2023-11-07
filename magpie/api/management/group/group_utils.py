@@ -22,7 +22,7 @@ from magpie.api.management.resource.resource_formats import format_resource
 from magpie.api.management.resource.resource_utils import check_valid_service_or_resource_permission
 from magpie.api.management.service import service_formats as sf
 from magpie.api.webhooks import WebhookAction, get_permission_update_params, process_webhook_requests
-from magpie.constants import protected_group_name_regex, network_enabled
+from magpie.constants import network_enabled, protected_group_name_regex
 from magpie.permissions import PermissionSet, PermissionType, format_permissions
 from magpie.services import SERVICE_TYPE_DICT
 

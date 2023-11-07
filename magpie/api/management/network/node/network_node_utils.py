@@ -1,16 +1,18 @@
 from typing import TYPE_CHECKING
 
+from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict
+
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.exception import URL_REGEX
 from magpie.cli.register_defaults import register_user_with_group
 from magpie.constants import get_constant
-from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict
 
 if TYPE_CHECKING:
-    from magpie.typedefs import Str, Optional, Session
     from pyramid.request import Request
+
+    from magpie.typedefs import Optional, Session, Str
 
 NAME_REGEX = r"^[\w-]+$"
 
