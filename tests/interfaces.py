@@ -7663,7 +7663,6 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         body = utils.check_ui_response_basic_info(resp)
         utils.check_val_is_in("Conflict", html.unescape(body))
 
-
     @runner.MAGPIE_TEST_STATUS
     def test_AddGroup_PageStatus(self):
         path = "/ui/groups/add"
