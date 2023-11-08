@@ -484,7 +484,8 @@ class UserSearchService(UserService):
         users = list(cls.by_status(status=status, db_session=db_session))
         if not users:
             return None
-        users = [user for user in users if user.user_name == user_name]
+        # replicate functionality of UserService.by_user_name, which does a case-insensitive search for usernames
+        users = [user for user in users if user.user_name.lower() == user_name.lower()]
         if not users:
             return None
         if len(users) == 1:
@@ -513,7 +514,9 @@ class UserSearchService(UserService):
             if status is not None:
                 status = [int(status) for status in status]
                 query = query.in_(status)
-            return query.filter((User.user_name == user_name) | (func.lower(User.email) == email.lower())).first()
+            # replicate functionality of UserService.by_user_name, which does a case-insensitive search
+            return query.filter(
+                (func.lower(User.user_name) == user_name.lower()) | (func.lower(User.email) == email.lower())).first()
         user = cls.by_user_name(user_name=user_name, status=status, db_session=db_session)
         if user is not None:
             return user

@@ -135,7 +135,7 @@ def create_user(user_name,              # type: Str
     user_params = {"with_param": False}
     if user_checked:
         user_params["with_param"] = True
-        if compare_digest(user_checked.user_name, user_name):
+        if compare_digest(user_checked.user_name.lower(), user_name.lower()):
             user_params["msg_on_fail"] = s.User_Check_Name_ConflictResponseSchema.description
             user_params["param_name"] = "user_name"
             user_params["param_content"] = {"value": user_name, "conditions": [{"unique": False}]}

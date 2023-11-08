@@ -567,7 +567,7 @@ class AdminRequests(BaseViews):
         if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH", self.request):
             data["invalid_user_name"] = True
             data["reason_user_name"] = "Too Long"
-        if user_name in [usr["user_name"] for usr in user_details]:
+        if user_name.lower() in [usr["user_name"].lower() for usr in user_details]:
             data["invalid_user_name"] = True
             data["reason_user_name"] = "Conflict"
         if user_name == "":
