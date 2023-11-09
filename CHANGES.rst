@@ -9,10 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Do not allow users to have the same username that only differs in terms of upper/lowercase
-  Ziggurat foundations assumes that users will not have usernames that differ in terms of case.
-  This means that if the database contains a user with the username "Test" and another with the username "test". The
-  login procedure will not know to differentiate the two.
+Bug Fixes
+~~~~~~~~~
+
+* Do not allow any `User` to have the same ``user_name`` as another `User` that only differs in terms of upper/lowercase
+  Ziggurat foundations assumes that a `User` will not have a ``user_name`` that differs from another only in terms of case.
+  This means that if the database contains a `User` with the ``user_name`` "Test" and another with the ``user_name``
+  "test". The login procedure will not know to differentiate the two.
   (fixes `#595 <https://github.com/Ouranosinc/Magpie/issues/595>`_).
 
 .. _changes_3.37.1:
