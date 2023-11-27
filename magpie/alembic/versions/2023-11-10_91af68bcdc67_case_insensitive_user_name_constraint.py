@@ -5,10 +5,8 @@ Revision ID: 91af68bcdc67
 Revises: 5e5acc33adce
 Create Date: 2023-11-10 15:58:23.068465
 """
-import sqlalchemy
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy import func
 from sqlalchemy.orm.session import sessionmaker
 
 # Revision identifiers, used by Alembic.
@@ -37,7 +35,7 @@ def upgrade():
             [sa.text("lower(user_name)")],
             unique=True,
         )
-    except sqlalchemy.exc.IntegrityError as e:
+    except sa.exc.IntegrityError as e:
         raise Exception("{}\nPlease manually update conflicting user_names and try again".format(e)) from e
     session = Session(bind=op.get_bind())
     for user in session.execute(sa.select(users)):
