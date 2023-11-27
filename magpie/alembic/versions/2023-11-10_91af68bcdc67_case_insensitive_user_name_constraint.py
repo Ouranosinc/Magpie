@@ -5,9 +5,10 @@ Revision ID: 91af68bcdc67
 Revises: 5e5acc33adce
 Create Date: 2023-11-10 15:58:23.068465
 """
-
+import sqlalchemy
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import func
 from sqlalchemy.orm.session import sessionmaker
 
 # Revision identifiers, used by Alembic.
@@ -27,15 +28,19 @@ users = sa.table(
 
 
 def upgrade():
-    op.create_index(
-        "ix_users_user_name_unique_case_insensitive",
-        "users",
-        [sa.text("lower(user_name)")],
-        unique=True,
-    )
+    # If users with conflicting user_names already exist, the following will fail. The conflicting user_names
+    # must be updated manually and then this migration script can be re-run.
+    try:
+        op.create_index(
+            "ix_users_user_name_unique_case_insensitive",
+            "users",
+            [sa.text("lower(user_name)")],
+            unique=True,
+        )
+    except sqlalchemy.exc.IntegrityError as e:
+        raise Exception("{}\nPlease manually update conflicting user_names and try again".format(e)) from e
     session = Session(bind=op.get_bind())
-    for user in session.execute(sa.select(users)):
-        session.execute(users.update().where(users.c.id == user.id).values(user_name=user.user_name.lower()))
+    session.execute(users.update().values({users.c.user_name: func.lower(users.c.user_name)}))
     session.commit()
 
 
