@@ -40,7 +40,13 @@ def upgrade():
     except sqlalchemy.exc.IntegrityError as e:
         raise Exception("{}\nPlease manually update conflicting user_names and try again".format(e)) from e
     session = Session(bind=op.get_bind())
-    session.execute(users.update().values({users.c.user_name: func.lower(users.c.user_name)}))
+    for user in session.execute(sa.select(users)):
+        lower_user_name = user.user_name.lower()
+        if user.user_name != lower_user_name:
+            print(
+                "Converting user_name from {} to {} (users.id == {})".format(user.user_name, lower_user_name, user.id)
+            )
+            session.execute(users.update().where(users.c.id == user.id).values(user_name=lower_user_name))
     session.commit()
 
 
