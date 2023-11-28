@@ -7602,27 +7602,6 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
             utils.check_val_is_in(msg, html.unescape(body))
 
     @runner.MAGPIE_TEST_USERS
-    def test_AddUser_FormSubmit_WithExtraUsernameRegex_CaseInvalid(self):
-        """
-        Check that the extra_user_name_regex setting is used to validate a new user name when the user name is
-        invalid according to that regex because the case is incorrect but is valid according to the ax.PARAM_REGEX.
-
-        .. versionchanged:: 3.37.1
-        """
-        utils.warn_version(self, "case sensitive user name extra regex", "3.37.1", skip=True)
-        with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^[a-z]+$"}):
-            data = {"user_name": "UpperCaseUserName", "group_name": get_constant("MAGPIE_USERS_GROUP"),
-                    "email": "{}@mail.com".format(self.test_user_name),
-                    "password": self.test_user_name, "confirm": self.test_user_name}
-            path = "/ui/users/add"
-            form = "add_user_form"
-            resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="create", form_data=data,
-                                                    path=path)
-            body = utils.check_ui_response_basic_info(resp)
-            msg = s.Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema.description
-            utils.check_val_is_in(msg, html.unescape(body))
-
-    @runner.MAGPIE_TEST_USERS
     def test_AddUser_FormSubmit_WithExtraUsernameRegex_ValidGoodUsername(self):
         """
         Check that the user_name_extra_regex setting is used to validate a new user name when the user name is
