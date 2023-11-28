@@ -9,7 +9,21 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~
+
+* Ensure that ``user_name`` values for all `User` are lowercase and do not contain whitespace.
+
+  Ziggurat foundations assumes that a `User` will not have a ``user_name`` that differs from another only in terms of
+  case. The simplest way to enforce this is to ensure that all ``user_name`` values are lowercase.
+  Previously, this was not enforced so we could create two `User` which could not be differentiated properly.
+
+  This change includes a database migration that will convert all ``user_name`` that contain uppercase characters
+  to lowercase. This may cause a database conflict if there are two ``user_name`` values that differ only in terms of
+  case. For example "Test" and "test". If this occurs, please manually update those ``user_name`` values to no longer
+  conflict and try the migration again.
+
+  This also prevents new users from being created that contain whitespace.
 
 .. _changes_3.37.1:
 
