@@ -24,15 +24,7 @@ from magpie.cli.sync_resources import OUT_OF_SYNC, fetch_single_service, get_las
 from magpie.cli.sync_services import SYNC_SERVICES_TYPES
 from magpie.constants import get_constant, network_enabled
 # FIXME: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
-from magpie.models import (
-    REMOTE_RESOURCE_TREE_SERVICE,
-    RESOURCE_TYPE_DICT,
-    NetworkNode,
-    NetworkRemoteUser,
-    User,
-    UserGroupStatus,
-    UserStatuses
-)
+from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
 from magpie.permissions import Permission, PermissionSet
 # FIXME: remove (SERVICE_TYPE_DICT), implement getters via API
 from magpie.services import SERVICE_TYPE_DICT

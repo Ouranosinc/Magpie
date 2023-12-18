@@ -1,6 +1,6 @@
 import jwt
 import sqlalchemy
-from pyramid.httpexceptions import HTTPCreated, HTTPNotFound, HTTPOk, HTTPBadRequest
+from pyramid.httpexceptions import HTTPBadRequest, HTTPCreated, HTTPNotFound, HTTPOk
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.settings import asbool
 from pyramid.view import view_config
@@ -8,7 +8,7 @@ from pyramid.view import view_config
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.api.management.network.network_utils import get_network_models_from_request_token, jwks, decode_jwt
+from magpie.api.management.network.network_utils import decode_jwt, get_network_models_from_request_token, jwks
 from magpie.models import NetworkNode, NetworkToken
 
 

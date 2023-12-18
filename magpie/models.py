@@ -1099,7 +1099,7 @@ class NetworkNode(BaseModel, Base):
     jwks_url = sa.Column(URLType(), nullable=False)
     token_url = sa.Column(URLType(), nullable=False)
     authorization_url = sa.Column(URLType(), nullable=False)
-    redirect_uris = sa.Column(sa.JSON, nullable=False, server_default='[]')
+    redirect_uris = sa.Column(sa.JSON, nullable=False, server_default="[]")
 
     def anonymous_user_name(self):
         # type: () -> Str

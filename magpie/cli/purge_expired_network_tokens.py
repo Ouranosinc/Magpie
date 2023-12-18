@@ -38,7 +38,7 @@ def make_parser():
                         help="Configuration INI file to retrieve database connection settings (default: %(default)s).")
     subparsers = parser.add_subparsers(help="run with API or directly access the database", dest="api_or_db")
     api_parser = subparsers.add_parser("api")
-    _db_parser = subparsers.add_parser("db")
+    subparsers.add_parser("db")
 
     api_parser.add_argument("url", help="URL used to access the magpie service.")
     api_parser.add_argument("username", help="Admin username for magpie login.")

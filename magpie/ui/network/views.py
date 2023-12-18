@@ -1,15 +1,13 @@
 from urllib.parse import urlparse
 
-import jwt
 from pyramid.authentication import Authenticated
 from pyramid.httpexceptions import HTTPBadRequest
 from pyramid.view import view_config
 
 from magpie.api import schemas
-from magpie.api.management.network.network_utils import decode_jwt, encode_jwt
-from magpie.models import NetworkNode
-from magpie.ui.utils import BaseViews, request_api, check_response, AdminRequests
-from magpie.utils import get_logger, get_json
+from magpie.api.management.network.network_utils import encode_jwt
+from magpie.ui.utils import AdminRequests, check_response, request_api
+from magpie.utils import get_json, get_logger
 
 LOGGER = get_logger(__name__)
 

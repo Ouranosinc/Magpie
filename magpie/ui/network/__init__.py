@@ -1,4 +1,4 @@
-from magpie.utils import get_logger, fully_qualified_name
+from magpie.utils import fully_qualified_name, get_logger
 
 LOGGER = get_logger(__name__)
 
