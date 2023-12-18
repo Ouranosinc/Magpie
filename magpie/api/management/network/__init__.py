@@ -9,6 +9,7 @@ def includeme(config):
     config.add_route(**s.service_api_route_info(s.NetworkTokenAPI))
     config.add_route(**s.service_api_route_info(s.NetworkJSONWebKeySetAPI))
     config.add_route(**s.service_api_route_info(s.NetworkDecodeJWTAPI))
+    config.add_route(**s.service_api_route_info(s.NetworkTokensAPI))
     config.include("magpie.api.management.network.node")
     config.include("magpie.api.management.network.remote_user")
     config.scan()

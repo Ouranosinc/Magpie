@@ -45,7 +45,7 @@ def delete_network_token_view(request):
 
 @s.NetworkTokensAPI.delete(schema=s.NetworkTokens_DELETE_RequestSchema, tags=[s.NetworkTag],
                            response_schemas=s.NetworkTokens_DELETE_responses)
-@view_config(route_name=s.NetworkTokenAPI.name, request_method="DELETE")
+@view_config(route_name=s.NetworkTokensAPI.name, request_method="DELETE")
 def delete_network_tokens_view(request):
     if asbool(request.GET.get("expired_only")):
         deleted = models.NetworkToken.delete_expired(request.db)
