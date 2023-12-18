@@ -24,12 +24,19 @@ from magpie.api.management.network.node.network_node_utils import (
     delete_network_node,
     update_associated_user_groups
 )
+from magpie.constants import get_constant
 
 
 @s.NetworkNodesAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkNodes_GET_responses)
-@view_config(route_name=s.NetworkNodesAPI.name, request_method="GET")
+@view_config(route_name=s.NetworkNodesAPI.name, request_method="GET", permission=Authenticated)
 def get_network_nodes_view(request):
+    is_admin = False
+    if request.user is not None:
+        admin_group = get_constant("MAGPIE_ADMIN_GROUP", settings_container=request)
+        is_admin = admin_group in [group.group_name for group in request.user.groups]
     nodes = [n.as_dict() for n in request.db.query(models.NetworkNode).all()]
+    if not is_admin:
+        nodes = [{"name": n["name"]} for n in nodes]
     return ax.valid_http(http_success=HTTPOk, detail=s.NetworkNodes_GET_OkResponseSchema.description,
                          content={"nodes": nodes})
 
@@ -139,11 +146,11 @@ def delete_network_node_token_view(request):
     return ax.valid_http(http_success=HTTPOk, detail=s.NetworkNodeToken_DELETE_OkResponseSchema)
 
 
-@s.NetworkNodesLinkAPI.get(schema=s.NetworkNodesLink_GET_RequestSchema, tags=[s.NetworkTag],
-                           response_schemas=s.NetworkNodesLink_GET_responses)
-@view_config(route_name=s.NetworkNodesLinkAPI.name, request_method="GET", permission=Authenticated)
+@s.NetworkLinkAPI.get(schema=s.NetworkLink_GET_RequestSchema, tags=[s.NetworkTag],
+                      response_schemas=s.NetworkLink_GET_responses)
+@view_config(route_name=s.NetworkLinkAPI.name, request_method="GET", permission=Authenticated)
 def get_network_node_link_view(request):
-    token = request.POST.get("token")
+    token = request.GET.get("token")
     node_name = jwt.decode(token, options={"verify_signature": False}).get("iss")
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
@@ -178,7 +185,7 @@ def post_network_node_link_view(request):
     location_query_list.extend((
         ("token", encode_jwt({"user_name": request.user.user_name}, node.name, request)),
         ("response_type", "id_token"),
-        ("redirect_uri", request.route_url(s.NetworkNodesLinkAPI.name))
+        ("redirect_uri", request.route_url(s.NetworkLinkAPI.name))
     ))
     location = up.urlunparse(location_tuple._replace(query=up.urlencode(location_query_list, doseq=True)))
     return ax.valid_http(http_success=HTTPFound,

@@ -34,7 +34,7 @@ def upgrade():
                     sa.Column("jwks_url", URLType(), nullable=False),
                     sa.Column("token_url", URLType(), nullable=False),
                     sa.Column("authorization_url", URLType(), nullable=False),
-                    sa.Column("redirect_uris", sa.String)
+                    sa.Column("redirect_uris", sa.JSON, nullable=False, server_default='[]')
                     )
     op.create_table("network_remote_users",
                     sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),

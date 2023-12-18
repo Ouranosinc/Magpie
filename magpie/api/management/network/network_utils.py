@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 from itertools import zip_longest
 from typing import TYPE_CHECKING
@@ -54,15 +55,13 @@ def _pem_file_passwords(primary=False):
     ``["password1", None, "password2"]``
     """
     pem_passwords = get_constant("MAGPIE_NETWORK_PEM_PASSWORDS", raise_missing=False, raise_not_set=False)
-    passwords = []
-    if pem_passwords:
-        for password in pem_passwords.split(PEM_PASSWORD_DELIMITER):
-            if password:
-                passwords.append(password.encode())
-            else:
-                passwords.append(None)
-            if primary:
-                break
+    try:
+        passwords = json.loads(pem_passwords)
+    except json.decoder.JSONDecodeError:
+        passwords = [pem_passwords]
+    passwords = [p.encode() if p else None for p in passwords]
+    if primary:
+        return passwords[:1]
     return passwords
 
 

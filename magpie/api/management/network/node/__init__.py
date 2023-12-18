@@ -9,7 +9,7 @@ def includeme(config):
     config.add_route(**s.service_api_route_info(s.NetworkNodesAPI))
     config.add_route(**s.service_api_route_info(s.NetworkNodeAPI))
     config.add_route(**s.service_api_route_info(s.NetworkNodeTokenAPI))
-    config.add_route(**s.service_api_route_info(s.NetworkNodesLinkAPI))
+    config.add_route(**s.service_api_route_info(s.NetworkLinkAPI))
     config.add_route(**s.service_api_route_info(s.NetworkNodeLinkAPI))
 
     config.scan()

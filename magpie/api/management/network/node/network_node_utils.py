@@ -100,7 +100,7 @@ def check_network_node_info(db_session=None, name=None, jwks_url=None, token_url
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.NetworkNodes_CheckInfo_AuthorizationURLValue_BadRequestResponseSchema.description)
     if redirect_uris is not None:
-        for uri in redirect_uris.split():
+        for uri in redirect_uris:
             ax.verify_param(uri, matches=True, param_name="redirect_uris", param_compare=URL_REGEX,
                             http_error=HTTPBadRequest,
                             msg_on_fail=s.NetworkNodes_CheckInfo_RedirectURIsValue_BadRequestResponseSchema.description)

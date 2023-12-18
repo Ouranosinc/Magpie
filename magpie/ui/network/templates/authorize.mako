@@ -13,10 +13,15 @@
         </tr>
         <tr>
             <td>
-                <img title="This resource is absent from the remote server." class="icon-warning"
+                This request originated from a Magpie node at ${referrer}.
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <img title="This will give this user full access to your account." class="icon-warning"
                      src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}" alt="WARNING" />
                 This will give this user full access to your account.
-                <img title="This resource is absent from the remote server." class="icon-warning"
+                <img title="This will give this user full access to your account." class="icon-warning"
                      src="${request.static_url('magpie.ui.home:static/exclamation-triangle.png')}" alt="WARNING" />
             </td>
         </tr>

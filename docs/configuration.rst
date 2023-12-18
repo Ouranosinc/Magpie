@@ -1097,11 +1097,12 @@ to authenticate users for each other. All variables defined in this section are 
 
     Password used to encrypt the PEM files in :envvar:`MAGPIE_NETWORK_PEM_FILES`.
 
-    If multiple files require passwords, they can be listed with a ``:`` character separator (Note that this means that
-    passwords cannot contain a ``:``. An empty string will be treated the same as no password.
+    If multiple files require passwords, they can be listed as a JSON array. An empty string will be treated the same as
+    no password.
 
     For example, if you have four files specified in :envvar:`MAGPIE_NETWORK_PEM_FILES` and only the first and third
-    file require a password, set this variable to ``pass1::pass2:`` where ``pass1`` and ``pass2`` are the passwords.
+    file require a password, set this variable to ``["pass1", "" ,"pass2", ""]`` where ``pass1`` and ``pass2`` are the
+    passwords.
 
 .. _config_phoenix:
 

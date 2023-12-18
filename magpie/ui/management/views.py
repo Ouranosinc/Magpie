@@ -171,12 +171,10 @@ class ManagementViews(AdminRequests, BaseViews):
 
         # add network information
         if network_enabled(self.request):
-            network_remote_users = (self.request.db.query(NetworkRemoteUser)
-                                    .join(User).filter(User.user_name == user_name)
-                                    .all())
-            existing_network_remote_user_nodes = {nu.network_node_id: nu.name for nu in network_remote_users}
-            network_nodes = self.request.db.query(NetworkNode).order_by(NetworkNode.id).all()
-            user_info["network_nodes"] = [(n.name, existing_network_remote_user_nodes.get(n.id)) for n in network_nodes]
+            request_uri = "{}?user_name={}".format(schemas.NetworkRemoteUsersAPI.path, user_name)
+            resp = request_api(self.request, request_uri, "GET")
+            check_response(resp)
+            user_info["network_nodes"] = [(n["node_name"], n["remote_user_name"]) for n in get_json(resp)["nodes"]]
             user_info["network_routes"] = {"create": schemas.NetworkRemoteUsersAPI.name,
                                            "delete": schemas.NetworkRemoteUserAPI.name}
 

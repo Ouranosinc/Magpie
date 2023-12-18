@@ -192,7 +192,7 @@ def protected_user_name_regex(include_admin=True,
                               include_network=True,
                               additional_patterns=None,
                               settings_container=None):
-    # type: (bool, bool, bool, Optional[List[Str]], Optional[AnySettingsContainer]) -> Str
+    # type: (bool, bool, bool, Optional[List[Str]], Optional[AnySettingsContainer]) -> re.Pattern
     """
     Return a regular expression that matches all user names that are protected, meaning that they are generated
     by Magpie itself and no regular user account should be created with these user names.
@@ -206,7 +206,7 @@ def protected_user_name_regex(include_admin=True,
         patterns.append(
             "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
         )
-    return "^({})$".format("|".join(patterns))
+    return re.compile("^({})$".format("|".join(patterns)))
 
 
 def protected_user_email_regex(include_admin=True,
@@ -214,7 +214,7 @@ def protected_user_email_regex(include_admin=True,
                                include_network=True,
                                additional_patterns=None,
                                settings_container=None):
-    # type: (bool, bool, bool, Optional[List[Str]], Optional[AnySettingsContainer]) -> Str
+    # type: (bool, bool, bool, Optional[List[Str]], Optional[AnySettingsContainer]) -> re.Pattern
     """
     Return a regular expression that matches all user emails that are protected, meaning that they are generated
     by Magpie itself and no regular user account should be created with these user emails.
@@ -227,14 +227,14 @@ def protected_user_email_regex(include_admin=True,
     if include_network and network_enabled(settings_container=settings_container):
         email_form = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT", settings_container=settings_container)
         patterns.append(email_form.format(".*"))
-    return "^({})$".format("|".join(patterns))
+    return re.compile("^({})$".format("|".join(patterns)))
 
 
 def protected_group_name_regex(include_admin=True,
                                include_anonymous=True,
                                include_network=True,
                                settings_container=None):
-    # type: (bool, bool, bool, Optional[AnySettingsContainer]) -> Str
+    # type: (bool, bool, bool, Optional[AnySettingsContainer]) -> re.Pattern
     """
     Return a regular expression that matches all group names that are protected, meaning that they are generated
     by Magpie itself and no regular user account should be created with these group names.
@@ -248,7 +248,7 @@ def protected_group_name_regex(include_admin=True,
         patterns.append(
             "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
         )
-    return "^({})$".format("|".join(patterns))
+    return re.compile("^({})$".format("|".join(patterns)))
 
 
 def network_enabled(settings_container=None):

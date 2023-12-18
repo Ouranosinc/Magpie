@@ -458,16 +458,16 @@ In order to register another `Magpie` instance as part of the same network, an a
 * ``authorization_url``
     * URL that provides the instance's Oauth authorize endpoint.
     * This is usually ``https://{hostname}/ui/network/authorize`` where ``{hostname}`` is the hostname of the other
-      instance
+      instance.
 * ``token_url``
     * URL that provides the instances Oauth token endpoint.
-    * This is usually ``https://{hostname}/network/token`` where ``{hostname}`` is the hostname of the other instance
+    * This is usually ``https://{hostname}/network/token`` where ``{hostname}`` is the hostname of the other instance.
 * ``redirect_uris``
-    * Space delimited list of valid redirect URIs for the instance. These are used by the instance's Oauth authorize
+    * JSON array of valid redirect URIs for the instance. These are used by the instance's Oauth authorize
       endpoint to safely redirect the user back once they have authorized `Magpie` to link their accounts on two
       different instances.
-    * This is usually ``https://{hostname}/network/nodes/link`` where ``{hostname}`` is the hostname of the other
-      instance
+    * This is usually ``https://{hostname}/network/link`` where ``{hostname}`` is the hostname of the other
+      instance.
 
 
 Once a :term:`Network Node` is registered, `Magpie` can treat the other instance as if they are in the same network as

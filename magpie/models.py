@@ -1001,7 +1001,8 @@ class TemporaryToken(BaseModel, Base):
 
 class NetworkRemoteUser(BaseModel, Base):
     """
-    Model that defines a relationship between a User and a User that is authenticated on a different NetworkNode.
+    Model that defines a relationship between a :class:`User` and a :class:`User` that is authenticated on a different
+    :class:`NetworkNode`.
     """
     __tablename__ = "network_remote_users"
 
@@ -1067,11 +1068,11 @@ class NetworkToken(BaseModel, Base):
         return (datetime.datetime.utcnow() - self.created) > expiry
 
     @classmethod
-    def get_expired(cls, db_session):
-        # type: (Session) -> Query
+    def delete_expired(cls, db_session):
+        # type: (Session) -> int
         token_expiry = int(get_constant("MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY"))
         expiry_date_time = datetime.datetime.utcnow() - datetime.timedelta(seconds=token_expiry)
-        return db_session.query(cls).filter(cls.created < expiry_date_time)
+        return db_session.query(cls).filter(cls.created < expiry_date_time).delete()
 
     @classmethod
     def by_token(cls, token, db_session=None):
@@ -1098,7 +1099,7 @@ class NetworkNode(BaseModel, Base):
     jwks_url = sa.Column(URLType(), nullable=False)
     token_url = sa.Column(URLType(), nullable=False)
     authorization_url = sa.Column(URLType(), nullable=False)
-    redirect_uris = sa.Column(sa.String)
+    redirect_uris = sa.Column(sa.JSON, nullable=False, server_default='[]')
 
     def anonymous_user_name(self):
         # type: () -> Str

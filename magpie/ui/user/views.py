@@ -7,7 +7,7 @@ from pyramid.view import view_config
 
 from magpie.api import schemas
 from magpie.constants import get_constant, network_enabled
-from magpie.models import NetworkNode, NetworkRemoteUser, UserGroupStatus
+from magpie.models import UserGroupStatus
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json, get_logger
 
@@ -91,12 +91,14 @@ class UserViews(BaseViews):
         user_info["user_with_error"] = schemas.UserStatuses.get(user_info["status"]) != schemas.UserStatuses.OK
         # add network information
         if network_enabled(self.request):
-            network_remote_users = (self.request.db.query(NetworkRemoteUser)
-                                    .filter(NetworkRemoteUser.user_id == self.request.user.id)
-                                    .all())
-            existing_network_remote_user_nodes = {nu.network_node_id: nu.name for nu in network_remote_users}
-            network_nodes = self.request.db.query(NetworkNode).order_by(NetworkNode.id).all()
-            user_info["network_nodes"] = [(n.name, existing_network_remote_user_nodes.get(n.id)) for n in network_nodes]
+            node_resp = request_api(self.request, schemas.NetworkNodesAPI.path, "GET")
+            check_response(node_resp)
+            nodes = {node["name"]: None for node in get_json(node_resp)["nodes"]}
+            user_resp = request_api(self.request, schemas.NetworkRemoteUsersCurrentAPI.path, "GET")
+            check_response(user_resp)
+            for info in get_json(user_resp)["nodes"]:
+                nodes[info["node_name"]] = info["remote_user_name"]
+            user_info["network_nodes"] = list(nodes.items())
             user_info["network_routes"] = {"create": schemas.NetworkNodeLinkAPI.name,
                                            "delete": schemas.NetworkRemoteUserAPI.name}
         # reset error messages/flags

@@ -15,7 +15,10 @@ from magpie.constants import protected_user_name_regex
 @s.NetworkRemoteUsersAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUsers_GET_responses)
 @view_config(route_name=s.NetworkRemoteUsersAPI.name, request_method="GET")
 def get_network_remote_users_view(request):
-    nodes = [n.as_dict() for n in request.db.query(models.NetworkRemoteUser).all()]
+    query = request.db.query(models.NetworkRemoteUser)
+    if request.GET.get("user_name"):
+        query = query.join(models.User).filter(models.User.user_name == request.GET["user_name"])
+    nodes = [n.as_dict() for n in query.all()]
     return ax.valid_http(http_success=HTTPOk, detail=s.NetworkRemoteUsers_GET_OkResponseSchema.description,
                          content={"nodes": nodes})
 

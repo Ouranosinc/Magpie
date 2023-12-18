@@ -285,9 +285,9 @@ NetworkNodesAPI = Service(
 NetworkNodeTokenAPI = Service(
     path="/network/nodes/{node_name}/token",
     name="NetworkNodeToken")
-NetworkNodesLinkAPI = Service(
-    path="/network/nodes/link",
-    name="NetworkNodesLink")
+NetworkLinkAPI = Service(
+    path="/network/link",
+    name="NetworkLink")
 NetworkNodeLinkAPI = Service(
     path="/network/nodes/{node_name}/link",
     name="NetworkNodeLink")
@@ -303,10 +303,15 @@ NetworkRemoteUsersCurrentAPI = Service(
 NetworkTokenAPI = Service(
     path="/network/token",
     name="NetworkToken")
+NetworkTokensAPI = Service(
+    path="/network/tokens",
+    name="NetworkTokens")
 NetworkJSONWebKeySetAPI = Service(
     path="/network/jwks",
-    name="NetworkJSONWebKeySet"
-)
+    name="NetworkJSONWebKeySet")
+NetworkDecodeJWTAPI = Service(
+    path="/network/decode_jwt",
+    name="NetworkDecodeJWT")
 
 # Path parameters
 GroupNameParameter = colander.SchemaNode(
@@ -3542,6 +3547,19 @@ class NetworkToken_DELETE_RequestSchema(BaseRequestSchemaAPI):
     body = JWTRequestBodySchema()
 
 
+class NetworkTokens_DELETE_RequestBodySchema(colander.MappingSchema):
+    expired_only = colander.SchemaNode(
+        colander.Boolean(),
+        description="Boolean indicating whether to only delete expired tokens.",
+        missing=colander.drop,
+        example=True
+    )
+
+
+class NetworkTokens_DELETE_RequestSchema(BaseRequestSchemaAPI):
+    body = NetworkTokens_DELETE_RequestBodySchema()
+
+
 class NetworkNode_PATCH_RequestBodySchema(colander.MappingSchema):
     name = colander.SchemaNode(
         colander.String(),
@@ -3572,9 +3590,8 @@ class NetworkNode_PATCH_RequestBodySchema(colander.MappingSchema):
     )
     redirect_uris = colander.SchemaNode(
         colander.String(),
-        description="Space delimited list of valid redirect URIs for another Magpie node (instance) in the "
-                    "network.",
-        example="https://node.example.com/network/nodes/link https://node.example.com/some/other/uri",
+        description="JSON array of valid redirect URIs for another Magpie node (instance) in the network.",
+        example="https://node.example.com/network/link https://node.example.com/some/other/uri",
         missing=colander.drop
     )
 
@@ -3614,8 +3631,8 @@ class NetworkNode_BodySchema(colander.MappingSchema):
     )
     redirect_uris = colander.SchemaNode(
         colander.String(),
-        description="Space delimited list of valid redirect URIs for another Magpie node (instance) in the network",
-        example="https://node.example.com/network/nodes/link https://node.example.com/some/other/uri",
+        description="JSON array of valid redirect URIs for another Magpie node (instance) in the network",
+        example="https://node.example.com/network/link https://node.example.com/some/other/uri",
     )
 
 
@@ -3694,7 +3711,7 @@ class NetworkNode_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class NetworkNodesLink_GET_RequestSchema(BaseRequestSchemaAPI):
+class NetworkLink_GET_RequestSchema(BaseRequestSchemaAPI):
     body = JWTRequestBodySchema()
 
 
@@ -3834,6 +3851,11 @@ class NetworkNodeToken_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
+class NetworkTokens_DELETE_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Successfully deleted access tokens."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
 class NetworkNodeToken_DELETE_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
     description = "Unable to delete an access token."
     body = InternalServerErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
@@ -3880,6 +3902,15 @@ class NetworkJSONWebKeySet_GET_OkBodyResponseSchema(BaseResponseBodySchema):
 class NetworkJSONWebKeySet_GET_OkResponseSchema(BaseResponseSchemaAPI):
     description = "JSON Web Key Set found"
     body = NetworkJSONWebKeySet_GET_OkBodyResponseSchema(code=HTTPOk.code, description=description)
+
+
+class NetworkDecodeJWT_GET_OkBodyResponseSchema(BaseResponseBodySchema):
+    jwt_content = colander.MappingSchema()
+
+
+class NetworkDecodeJWT_GET_OkResponseSchema(BaseRequestSchemaAPI):
+    description = "JSON Web Token is Valid"
+    body = NetworkDecodeJWT_GET_OkBodyResponseSchema(code=HTTPOk.code, description=description)
 
 
 class NetworkRemoteUsers_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -4639,13 +4670,22 @@ NetworkToken_POST_responses = {
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkToken_DELETE_responses = {
-    "201": NetworkToken_DELETE_OkResponseSchema(),
+    "200": NetworkToken_DELETE_OkResponseSchema(),
     "404": NetworkNodeToken_DELETE_NotFoundResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+NetworkTokens_DELETE_responses = {
+    "200": NetworkTokens_DELETE_OkResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 NetworkJSONWebKeySet_GET_responses = {
     "200": NetworkJSONWebKeySet_GET_OkResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
+}
+NetworkDecodeJWT_GET_Responses = {
+    "200": NetworkDecodeJWT_GET_OkResponseSchema(),
+    "400": BadRequestResponseSchema(),
+    "500": InternalServerErrorResponseSchema()
 }
 NetworkNode_GET_responses = {
     "200": NetworkNode_GET_OkResponseSchema(),
@@ -4684,7 +4724,7 @@ NetworkNodeToken_DELETE_responses = {
     "404": NetworkNode_NotFoundResponseSchema(),
     "500": NetworkNodeToken_DELETE_InternalServerErrorResponseSchema()
 }
-NetworkNodesLink_GET_responses = {
+NetworkLink_GET_responses = {
     "200": NetworkNodeLink_GET_OkResponseSchema(),
     "400": NetworkNodeLink_GET_BadRequestResponseSchema(),
     "404": NetworkNode_NotFoundResponseSchema(),
