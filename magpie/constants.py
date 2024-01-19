@@ -11,6 +11,7 @@ settings formatted as ``magpie.[variable_name]`` in the ``magpie.ini`` configura
     constant ``MAGPIE_INI_FILE_PATH`` (or any other `path variable` defined before it - see below) has to be defined
     by environment variable if the default location is not desired (ie: if you want to provide your own configuration).
 """
+import functools
 import logging
 import os
 import re
@@ -187,6 +188,7 @@ MAGPIE_CONSTANTS = [
 _REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
 
 
+@functools.lru_cache
 def protected_user_name_regex(include_admin=True,
                               include_anonymous=True,
                               include_network=True,
@@ -209,6 +211,7 @@ def protected_user_name_regex(include_admin=True,
     return re.compile("^({})$".format("|".join(patterns)))
 
 
+@functools.lru_cache
 def protected_user_email_regex(include_admin=True,
                                include_anonymous=True,
                                include_network=True,
@@ -230,6 +233,7 @@ def protected_user_email_regex(include_admin=True,
     return re.compile("^({})$".format("|".join(patterns)))
 
 
+@functools.lru_cache
 def protected_group_name_regex(include_admin=True,
                                include_anonymous=True,
                                include_network=True,
