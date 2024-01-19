@@ -188,7 +188,7 @@ MAGPIE_CONSTANTS = [
 _REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
 
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=128)
 def protected_user_name_regex(include_admin=True,
                               include_anonymous=True,
                               include_network=True,
@@ -211,7 +211,7 @@ def protected_user_name_regex(include_admin=True,
     return re.compile("^({})$".format("|".join(patterns)))
 
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=128)
 def protected_user_email_regex(include_admin=True,
                                include_anonymous=True,
                                include_network=True,
@@ -233,7 +233,7 @@ def protected_user_email_regex(include_admin=True,
     return re.compile("^({})$".format("|".join(patterns)))
 
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=128)
 def protected_group_name_regex(include_admin=True,
                                include_anonymous=True,
                                include_network=True,
