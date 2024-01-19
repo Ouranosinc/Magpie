@@ -228,7 +228,7 @@ def update_user(user, request, new_user_name=None, new_password=None, new_email=
     # logged user updating itself is forbidden if it corresponds to special users
     # cannot edit reserved keywords nor apply them to another user
     forbidden_user_names_regex = protected_user_name_regex(
-        additional_patterns=[get_constant("MAGPIE_LOGGED_USER", request)], settings_container=request
+        additional_patterns=(get_constant("MAGPIE_LOGGED_USER", request),), settings_container=request
     )
     check_user_name_cases = [user.user_name, new_user_name] if update_username else [user.user_name]
     for check_user_name in check_user_name_cases:

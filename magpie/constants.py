@@ -25,7 +25,7 @@ from pyramid.settings import asbool
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import List, Optional
+    from typing import Optional, Tuple
 
     from magpie.typedefs import AnySettingsContainer, SettingValue, Str
 
@@ -194,12 +194,12 @@ def protected_user_name_regex(include_admin=True,
                               include_network=True,
                               additional_patterns=None,
                               settings_container=None):
-    # type: (bool, bool, bool, Optional[List[Str]], Optional[AnySettingsContainer]) -> re.Pattern
+    # type: (bool, bool, bool, Optional[Tuple[Str]], Optional[AnySettingsContainer]) -> re.Pattern
     """
     Return a regular expression that matches all user names that are protected, meaning that they are generated
     by Magpie itself and no regular user account should be created with these user names.
     """
-    patterns = additional_patterns or []
+    patterns = list(additional_patterns or [])
     if include_admin:
         patterns.append(get_constant("MAGPIE_ADMIN_USER", settings_container=settings_container))
     if include_anonymous:
@@ -217,12 +217,12 @@ def protected_user_email_regex(include_admin=True,
                                include_network=True,
                                additional_patterns=None,
                                settings_container=None):
-    # type: (bool, bool, bool, Optional[List[Str]], Optional[AnySettingsContainer]) -> re.Pattern
+    # type: (bool, bool, bool, Optional[Tuple[Str]], Optional[AnySettingsContainer]) -> re.Pattern
     """
     Return a regular expression that matches all user emails that are protected, meaning that they are generated
     by Magpie itself and no regular user account should be created with these user emails.
     """
-    patterns = additional_patterns or []
+    patterns = list(additional_patterns or [])
     if include_admin:
         patterns.append(get_constant("MAGPIE_ADMIN_EMAIL", settings_container=settings_container))
     if include_anonymous:
