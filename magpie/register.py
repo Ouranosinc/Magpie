@@ -339,7 +339,7 @@ def _magpie_add_register_services_perms(services, statuses, curl_cookies, reques
     for service_name in services:
         svc_available_perms_url = "{magpie}/services/{svc}/permissions" \
                                   .format(magpie=magpie_url, svc=service_name)
-        resp_available_perms = requests.get(svc_available_perms_url, cookies=request_cookies)
+        resp_available_perms = requests.get(svc_available_perms_url, cookies=request_cookies, timeout=5)
         if resp_available_perms.status_code == 401:
             raise_log("Invalid credentials, cannot update service permissions",
                       exception=RegistrationLoginError, logger=LOGGER)
@@ -355,13 +355,13 @@ def _magpie_add_register_services_perms(services, statuses, curl_cookies, reques
                 svc_anonym_add_perms_url = "{magpie}/groups/{grp}/services/{svc}/permissions" \
                                            .format(magpie=magpie_url, grp=anon_group, svc=service_name)
                 svc_anonym_perm_data = {"permission_name": Permission.GET_CAPABILITIES.value}
-                requests.post(svc_anonym_add_perms_url, data=svc_anonym_perm_data, cookies=request_cookies)
+                requests.post(svc_anonym_add_perms_url, data=svc_anonym_perm_data, cookies=request_cookies, timeout=5)
 
             # check service response so Phoenix doesn't refuse registration
             # try with both the 'direct' URL and the 'GetCapabilities' URL
             attempt = 0
             service_info_url = "{magpie}/services/{svc}".format(magpie=magpie_url, svc=service_name)
-            service_info_resp = requests.get(service_info_url, cookies=request_cookies)
+            service_info_resp = requests.get(service_info_url, cookies=request_cookies, timeout=5)
             service_url = get_json(service_info_resp).get(service_name).get("service_url")
             svc_getcap_url = "{svc_url}/wps?service=WPS&version=1.0.0&request=GetCapabilities" \
                              .format(svc_url=service_url)
@@ -396,12 +396,12 @@ def _magpie_update_services_conflict(conflict_services, services_dict, request_c
         statuses[svc_name] = 409
         svc_url_new = services_dict[svc_name]["url"]
         svc_url_db = "{magpie}/services/{svc}".format(magpie=magpie_url, svc=svc_name)
-        svc_resp = requests.get(svc_url_db, cookies=request_cookies)
+        svc_resp = requests.get(svc_url_db, cookies=request_cookies, timeout=5)
         svc_info = get_json(svc_resp).get(svc_name)
         svc_url_old = svc_info["service_url"]
         if svc_url_old != svc_url_new:
             svc_info["service_url"] = svc_url_new
-            res_svc_put = requests.patch(svc_url_db, data=svc_info, cookies=request_cookies)
+            res_svc_put = requests.patch(svc_url_db, data=svc_info, cookies=request_cookies, timeout=5)
             statuses[svc_name] = res_svc_put.status_code
             print_log("[{url_old}] => [{url_new}] Service URL update ({svc}): {resp}"
                       .format(svc=svc_name, url_old=svc_url_old, url_new=svc_url_new, resp=res_svc_put.status_code),
@@ -777,7 +777,7 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
             res_path = None
             if _use_request(cookies_or_session):
                 res_path = get_magpie_url() + ServiceResourcesAPI.path.format(service_name=svc_name)
-                res_resp = requests.get(res_path, cookies=cookies_or_session)
+                res_resp = requests.get(res_path, cookies=cookies_or_session, timeout=5)
                 svc_json = get_json(res_resp)[svc_name]  # type: JSON
                 res_dict = svc_json["resources"]
             else:
@@ -817,7 +817,7 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                 res_type = resource_type or svc_res_types[0]
                 if _use_request(cookies_or_session):
                     body = {"resource_name": res, "resource_type": res_type, "parent_id": parent}
-                    resp = requests.post(res_path, json=body, cookies=cookies_or_session)
+                    resp = requests.post(res_path, json=body, cookies=cookies_or_session, timeout=5)
                 else:
                     from magpie.api.management.resource.resource_utils import create_resource
                     resp = create_resource(res, res, res_type, parent, db_session=cookies_or_session)
@@ -920,11 +920,11 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         }
         if _use_request(cookies_or_session):
             if _usr_name:
-                path = "{url}{path}".format(url=magpie_url, path=UsersAPI.path)
-                return requests.post(path, json=usr_data)
+                path = "{url}{path}".format(url=magpie_url, path=UsersAPI.path, timeout=5)
+                return requests.post(path, json=usr_data, timeout=5)
             if _grp_name:
                 path = "{url}{path}".format(url=magpie_url, path=GroupsAPI.path)
-                return requests.post(path, json=grp_data)
+                return requests.post(path, json=grp_data, timeout=5)
         else:
             if _usr_name:
                 from magpie.api.management.user.user_utils import create_user
@@ -1099,7 +1099,7 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
         svc_name = perm_cfg["service"]
         if _use_request(cookies_or_session):
             svc_path = magpie_url + ServiceAPI.path.format(service_name=svc_name)
-            svc_resp = requests.get(svc_path, cookies=cookies_or_session)
+            svc_resp = requests.get(svc_path, cookies=cookies_or_session, timeout=5)
             if svc_resp.status_code != 200:
                 _handle_permission("Unknown service [{!s}]".format(svc_name), i, raise_errors=raise_errors)
                 continue
