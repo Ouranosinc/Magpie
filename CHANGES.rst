@@ -11,6 +11,16 @@ Changes
 
 * Nothing new for the moment.
 
+.. _changes_3.38.1:
+
+`3.38.1 <https://github.com/Ouranosinc/Magpie/tree/3.38.1>`_ (2024-01-26)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~
+
+* Maintenance release to update package dependencies and rebuild Dockers with latest vulnerability fixes.
+
 .. _changes_3.38.0:
 
 `3.38.0 <https://github.com/Ouranosinc/Magpie/tree/3.38.0>`_ (2023-11-28)
