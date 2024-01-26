@@ -521,7 +521,7 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
 
         getcap_perm = Permission.GET_CAPABILITIES
         if update_getcapabilities_permissions and anonymous_user is None:
-            print_log("Cannot update 'getcapabilities' permission of non existing anonymous user",
+            print_log("Cannot update 'getcapabilities' permission of non-existing anonymous user",
                       level=logging.WARN, logger=LOGGER)
         elif update_getcapabilities_permissions and getcap_perm in SERVICE_TYPE_DICT[svc_type].permissions:
             svc = db_session.query(models.Service.resource_id).filter_by(resource_name=svc_name).first()
@@ -800,7 +800,7 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
                 type_count = len(svc_res_types)
                 if type_count == 0:
                     _handle_permission("Cannot generate resource", entry_index, raise_errors=True,
-                                       detail="Service [{!s}] of type [{!s}] doesn't allows any sub-resource types. "
+                                       detail="Service [{!s}] of type [{!s}] doesn't allow any sub-resource types. "
                                        .format(svc_name, svc_type))
                 if type_count != 1 and not (isinstance(resource_type, six.string_types) and resource_type):
                     _handle_permission("Cannot automatically generate resource", entry_index, raise_errors=True,
@@ -920,7 +920,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         }
         if _use_request(cookies_or_session):
             if _usr_name:
-                path = "{url}{path}".format(url=magpie_url, path=UsersAPI.path, timeout=5)
+                path = "{url}{path}".format(url=magpie_url, path=UsersAPI.path)
                 return requests.post(path, json=usr_data, timeout=5)
             if _grp_name:
                 path = "{url}{path}".format(url=magpie_url, path=GroupsAPI.path)

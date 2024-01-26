@@ -14,8 +14,7 @@ doc8; python_version < "3.6"
 doc8>=0.8; python_version >= "3.6"
 docformatter==1.4; python_version < "3.6"  # pyup: ignore
 docformatter; python_version >= "3.6"
-flake8; python_version < "3.6"
-flake8>=3.8.3,<3.9; python_version >= "3.6"
+flake8
 # Fix for https://github.com/PyCQA/flake8/issues/1701
 importlib-metadata>=1.1.0,<4.3; python_version < "3.8"
 isort; python_version < "3.6"
