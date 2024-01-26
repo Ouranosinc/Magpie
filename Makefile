@@ -539,7 +539,7 @@ check-security-only: check-security-code-only check-security-deps-only  ## run s
 # ignored codes:
 #	42194: https://github.com/kvesteri/sqlalchemy-utils/issues/166  # not fixed since 2015
 #	51668: https://github.com/sqlalchemy/sqlalchemy/pull/8563  # still in beta + major version change sqlalchemy 2.0.0b1
-#   51021: This is patched in jwcrypto>=1.4.0 but that version is not available for python version < 3.6
+#	51021: This is patched in jwcrypto>=1.4.0 but that version is not available for python version < 3.6
 .PHONY: check-security-deps-only
 check-security-deps-only: mkdir-reports  ## run security checks on package dependencies
 	@echo "Running security checks of dependencies..."
