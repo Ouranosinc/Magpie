@@ -92,7 +92,7 @@ class SyncServiceGeoserver(SyncServiceInterface):
         # Only workspaces are fetched for now
         resource_type = "route"
         workspaces_url = "{}/{}".format(self.url, "workspaces")
-        resp = requests.get(workspaces_url, headers={"Accept": CONTENT_TYPE_JSON})
+        resp = requests.get(workspaces_url, headers={"Accept": CONTENT_TYPE_JSON}, timeout=5)
         resp.raise_for_status()
         workspaces_list = resp.json().get("workspaces", {}).get("workspace", {})
 
@@ -123,7 +123,7 @@ class SyncServiceProjectAPI(SyncServiceInterface):
         # Only workspaces are fetched for now
         resource_type = "route"
         projects_url = "/".join([self.url, "Projects"])
-        resp = requests.get(projects_url)
+        resp = requests.get(projects_url, timeout=5)
         resp.raise_for_status()
 
         projects = {p["id"]: {"children": {},

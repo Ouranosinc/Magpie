@@ -56,7 +56,7 @@ class LoginViews(AdminRequests, BaseViews):
                 # keep using the external requests for external providers
                 if is_external:
                     signin_url = "{}{}".format(self.magpie_url, schemas.SigninAPI.path)
-                    response = requests.post(signin_url, data=data, allow_redirects=True)
+                    response = requests.post(signin_url, data=data, allow_redirects=True, timeout=5)
                 # use sub request for internal to avoid retry connection errors
                 else:
                     response = request_api(self.request, schemas.SigninAPI.path, "POST", data=data)
