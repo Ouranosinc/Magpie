@@ -422,3 +422,116 @@ Furthermore, as described in the `procedure`_, :envvar:`MAGPIE_USER_REGISTRATION
 specify whether administrator approval is required or not. This additional step is purely up to the developers and
 server managers that use `Magpie` to decide if they desire more control over which individuals can join and access
 their services.
+
+.. _Network Mode:
+
+Network Mode
+------------
+
+If the :envvar:`MAGPIE_NETWORK_ENABLED` is enabled, `Magpie` instances can be linked in a network which allows them to
+associate user accounts across the network and provide limited resource access to users who have accounts on other
+`Magpie` instances in the network. Each `Magpie` instance is considered a node in the network.
+
+Users who have an account on one `Magpie` instance can request an access token from another instance in the network
+which the user can use to access resources protected by the other `Magpie` instance.
+
+Users with accounts on multiple instances in the network can also choose to link their accounts. This allows users who
+use access tokens to ensure that they have the same access to resources that they would have if they logged in to
+`Magpie` using any other method.
+
+
+Managing the Network
+~~~~~~~~~~~~~~~~~~~~
+
+Each `Magpie` instance must be made aware of the existence of the other instances in the network so that they know where
+to send token requests and account linking requests.
+
+In order to register another `Magpie` instance as part of the same network, an admin user can create a
+:term:`Network Node` with a request to ``POST /network/nodes``. The parameters given to that request includes
+
+* ``name``:
+    * the name of that other `Magpie` instance in the network and should correspond to the same value as the
+      :envvar:`MAGPIE_NETWORK_INSTANCE_NAME` value set by the other `Magpie` instance.
+* ``jwks_url``:
+    * URL that provides the instance's public key in the form of a JSON Web Key Set.
+    * This is usually ``https://{hostname}/network/jwks`` where ``{hostname}`` is the hostname of the other instance
+* ``authorization_url``
+    * URL that provides the instance's Oauth authorize endpoint.
+    * This is usually ``https://{hostname}/ui/network/authorize`` where ``{hostname}`` is the hostname of the other
+      instance.
+* ``token_url``
+    * URL that provides the instances Oauth token endpoint.
+    * This is usually ``https://{hostname}/network/token`` where ``{hostname}`` is the hostname of the other instance.
+* ``redirect_uris``
+    * JSON array of valid redirect URIs for the instance. These are used by the instance's Oauth authorize
+      endpoint to safely redirect the user back once they have authorized `Magpie` to link their accounts on two
+      different instances.
+    * This is usually ``https://{hostname}/network/link`` where ``{hostname}`` is the hostname of the other
+      instance.
+
+
+Once a :term:`Network Node` is registered, `Magpie` can treat the other instance as if they are in the same network as
+long as:
+
+* Both instances have :envvar:`MAGPIE_NETWORK_ENABLED` enabled
+* Both instances have :envvar:`MAGPIE_NETWORK_INSTANCE_NAME` set
+* Both instances have :envvar:`MAGPIE_NETWORK_PEM_FILES` set in order to verify communication between nodes using an
+  asymmetric public/private key-pair.
+
+
+Managing Personal Access Tokens
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A :term:`User` can request a new access token from another node with a request to the
+``GET /network/nodes/{node_name}/token`` route.
+
+Every time a :term:`User` makes a request to this route, `Magpie` send a request to the other instance, and provides it
+to the user. A new token is generated every time. This effectively cancels all previously created tokens for that user.
+
+To cancel an existing token without generating a new one. A :term:`User` can make a request to the
+``DELETE /network/nodes/{node_name}/token`` route.
+
+Authentication
+~~~~~~~~~~~~~~
+
+Once a :term:`User` gets an access token, they can use that token to authenticate with the instance that issued that
+token.
+
+When a user makes a request, they should set the ``provider_name`` parameter to the value of
+:envvar:`MAGPIE_NETWORK_PROVIDER` and provide the network token in the Authorization header in the following format:
+
+.. code-block:: http
+
+    Authorization: Bearer <network_token>
+
+When using the :ref:`Magpie Adapter <utilities_adapter>`, the token can also be passed as a parameter to the request,
+where the parameter name set by :envvar:`MAGPIE_NETWORK_TOKEN_NAME` and the value is the personal network token.
+
+Authorization
+~~~~~~~~~~~~~
+
+Managing authorization for :term:`Users` who authenticate using access tokens is complicated by the fact that
+a :term:`User` is not required to have a full account on both `Magpie` instances in order to using this authentication
+mechanism. This means that a :term:`User` may be logged in as a node-specific "anonymous" user.
+
+When another `Magpie` instance is registered as a :term:`Network Node`, a few additional entities are created:
+
+#. a group used to manage the permissions of all users who authenticate using the new :term:`Network Node`.
+   * this group's name will be the :envvar:`MAGPIE_NETWORK_NAME_PREFIX` followed by the :term:`Network Node` name
+#. a group used to manage the permissions of all users who authenticate using *any* other instance in the network
+   * this group's name will be the :envvar:`MAGPIE_NETWORK_GROUP_NAME`
+   * this group will only be created once, when the first :term:`Network Node` is registered
+#. an anonymous user that belongs to the two groups that were just created.
+   * this user name will be the :envvar:`MAGPIE_NETWORK_NAME_PREFIX` followed by the :term:`Network Node` name
+
+Here is an example to illustrate this point:
+
+* There are 3 `Magpie` instances in the network named A, B, and C
+* There is a :term:`User` named ``"toto"`` registered on instance A
+* There is no :term:`User` named ``"toto"`` who belongs to the ``"anonymous_network_A"`` group registered on instance B
+* There is a :term:`User` named ``"toto"`` who belongs to the ``"anonymous_network_A"`` group registered on instance C
+* Instance A is registered as a :term:`Network Node` on instances B and C
+* when ``"toto"`` gets a personal network token from instance A and uses it to log in on instance B they log in as the
+  the temporary ``"anonymous_network_A"`` user.
+* when ``"toto"`` gets a personal network token from instance A and uses it to log in on instance C they log in as the
+  ``"toto"`` user on instance C.

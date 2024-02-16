@@ -10,4 +10,5 @@ def includeme(config):
     config.include("magpie.api.management.service")
     config.include("magpie.api.management.resource")
     config.include("magpie.api.management.register")
+    config.include("magpie.api.management.network")
     config.scan()
