@@ -124,7 +124,9 @@ def get_network_node_token_view(request):
         http_error=HTTPNotFound,
         msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     token = encode_jwt({"user_name": request.user.user_name}, node_name, request)
-    access_token = ax.evaluate_call(lambda: requests.post(node.token_url, json={"token": token}).json()["token"],
+    access_token = ax.evaluate_call(lambda: requests.post(node.token_url,
+                                                          json={"token": token},
+                                                          timeout=5).json()["token"],
                                     http_error=HTTPInternalServerError,
                                     msg_on_fail=s.NetworkNodeToken_GET_InternalServerErrorResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, content={"token": access_token},
@@ -140,7 +142,7 @@ def delete_network_node_token_view(request):
         http_error=HTTPNotFound,
         msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
     token = encode_jwt({"user_name": request.user.user_name}, node_name, request)
-    ax.evaluate_call(lambda: requests.delete(node.token_url, json={"token": token}).raise_for_status(),
+    ax.evaluate_call(lambda: requests.delete(node.token_url, json={"token": token}, timeout=5).raise_for_status(),
                      http_error=HTTPInternalServerError,
                      msg_on_fail=s.NetworkNodeToken_DELETE_InternalServerErrorResponseSchema.description)
     return ax.valid_http(http_success=HTTPOk, detail=s.NetworkNodeToken_DELETE_OkResponseSchema)
