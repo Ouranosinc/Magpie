@@ -9,7 +9,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~
+
+* The ``cornice`` package dropped support for python 3.5 as of version 6.1.0. Update the requirements file to ensure
+  that a supported version of ``cornice`` is installed for python 3.5.
 
 .. _changes_3.38.1:
 
