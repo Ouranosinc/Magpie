@@ -678,7 +678,7 @@ def get_admin_cookies(container, verify=True, raise_message=None):
     cred = {"user_name": get_constant("MAGPIE_ADMIN_USER", container),
             "password": get_constant("MAGPIE_ADMIN_PASSWORD", container)}
     headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
-    resp = requests.post(magpie_login_url, json=cred, headers=headers, verify=verify)
+    resp = requests.post(magpie_login_url, json=cred, headers=headers, verify=verify, timeout=5)
     if resp.status_code != HTTPOk.code:
         if raise_message:
             raise_log(raise_message, logger=LOGGER)
@@ -689,7 +689,7 @@ def get_admin_cookies(container, verify=True, raise_message=None):
     request_cookies = resp.cookies
     magpie_cookies = list(filter(lambda cookie: cookie.name == token_name, request_cookies))
     magpie_domain = urlparse(magpie_url).hostname if len(magpie_cookies) > 1 else None
-    session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)
+    session_cookies = RequestsCookieJar.get(request_cookies, token_name, domain=magpie_domain)  # nosec: B113
 
     return {token_name: session_cookies}
 

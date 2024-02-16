@@ -109,7 +109,7 @@ class MagpieServiceStore(ServiceStoreInterface):
         services = []
         path = "{}{}".format(self.magpie_url, ServicesAPI.path)
         resp = requests.get(path, cookies=self.magpie_admin_token, headers={"Accept": CONTENT_TYPE_JSON},
-                            verify=self.twitcher_ssl_verify)
+                            verify=self.twitcher_ssl_verify, timeout=5)
         if resp.status_code != HTTPOk.code:
             raise resp.raise_for_status()
         json_body = resp.json()
