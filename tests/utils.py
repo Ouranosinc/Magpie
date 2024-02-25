@@ -34,6 +34,7 @@ from webtest.forms import Form
 from webtest.response import TestResponse
 
 from magpie import __meta__, app, services
+from magpie.api import schemas
 from magpie.compat import LooseVersion
 from magpie.constants import get_constant
 from magpie.permissions import Access, PermissionSet, Scope
@@ -729,6 +730,52 @@ def mocked_get_settings(test_func=None, settings=None):
     if callable(test_func):
         return mocked_get_settings_decorator(test_func)
     return mocked_get_settings_decorator
+
+
+def check_network_mode(_test_func=None, enable=True):
+    # type: (Optional[Callable[[Callable], Any]], bool) -> Callable
+    """
+    Returns a decorator that checks whether a test function is marked as local or remote according to the
+    :class:`RunOptionDecorator` on the current test.
+    If local, then ensure that the test application has network mode enabled (if :paramref:`enable` is ``True``) or
+    disabled (if :paramref:`enable` is ``False``).
+    If remote, then check whether the network mode is enabled or not for the remote application. If the network mode
+    status does not match the :paramref:`enable` value, then skip the test. For example, if the remote application has
+    network mode enabled but :paramref:`enable` is ``False`` then the test is skipped.
+
+    .. note::
+
+        A test cannot affect the settings of a remote application. For this reason, we skip tests that would fail only
+        because a remote application is not configured in a way that would allow the test to pass.
+
+    :param _test_func: Test function being decorated.
+    :param enable: Boolean value indicating whether ``_test_func`` expects network mode to be enabled in order to pass.
+    """
+    if enable:
+        settings = {"magpie.network_enabled": True, "magpie.network_instance_name": "node1"}
+    else:
+        settings = {"magpie.network_enabled": False}
+
+    def decorator_func(test_func):
+        @functools.wraps(test_func)
+        def wrapper(*args, **kwargs):
+            test = args[0]
+            if hasattr(test, "pytestmark") and any(mark.name == "remote" for mark in test.pytestmark):
+                resp = test_request(test, "GET", schemas.NetworkJSONWebKeySetAPI.path)
+                remote_enabled = get_json_body(resp).get("code") != 501
+                if enable and not remote_enabled:
+                    test.skipTest("Test requires remote to be running with network mode enabled.")
+                elif not enable and remote_enabled:
+                    test.skipTest("Test requires remote to be running without network mode enabled.")
+                return test_func(*args, **kwargs)
+            else:
+                # assume local test
+                return mocked_get_settings(settings=settings)(test_func)(*args, **kwargs)
+        return wrapper
+    if _test_func is None:
+        return decorator_func
+    else:
+        return decorator_func(_test_func)
 
 
 def mock_request(request_path_query="",     # type: Str

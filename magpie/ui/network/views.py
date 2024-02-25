@@ -6,6 +6,7 @@ from pyramid.view import view_config
 
 from magpie.api import schemas
 from magpie.api.management.network.network_utils import encode_jwt
+from magpie.api.requests import check_network_mode_enabled
 from magpie.ui.utils import AdminRequests, check_response, request_api
 from magpie.utils import get_json, get_logger
 
@@ -14,6 +15,7 @@ LOGGER = get_logger(__name__)
 
 class NetworkViews(AdminRequests):
     @view_config(route_name="magpie.ui.network.views.NetworkViews.authorize",
+                 decorator=check_network_mode_enabled,
                  renderer="templates/authorize.mako", permission=Authenticated)
     def authorize(self):
         token = self.request.GET.get("token")

@@ -474,6 +474,137 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         resp = utils.test_request(self, "POST", s.SigninAPI.path, json=data, expect_errors=True)
         utils.check_response_basic_info(resp, 403, expected_method="POST")
 
+    @runner.MAGPIE_TEST_NETWORK
+    @runner.MAGPIE_TEST_LOGIN
+    @utils.check_network_mode
+    def test_LoginProtectedUsername_Forbidden(self):
+        """
+        Test different login variations and ensure that users with usernames that start with
+        ``MAGPIE_NETWORK_NAME_PREFIX`` are blocked in network mode.
+
+        .. versionadded:: 3.38
+        """
+
+        utils.warn_version(self, "Login protected usernames explicitly blocked.", "3.38.0", skip=True)
+        protected_username = "{}{!s}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), uuid.uuid4())
+        data = {
+            "user_name": protected_username,
+            "password": get_constant("MAGPIE_ANONYMOUS_PASSWORD")
+        }
+        headers = {"Accept": CONTENT_TYPE_JSON}
+
+        resp = utils.test_request(self, "GET", s.SigninAPI.path, params=data, headers=headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="GET")
+
+        form = "user_name={user_name}&password={password}".format(**data)
+        headers["Content-Type"] = CONTENT_TYPE_FORM
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, data=form, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="POST")
+
+        headers["Content-Type"] = CONTENT_TYPE_JSON
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, json=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="POST")
+
+    @runner.MAGPIE_TEST_NETWORK
+    @runner.MAGPIE_TEST_LOGIN
+    @utils.check_network_mode
+    def test_LoginProtectedEmail_Forbidden(self):
+        """
+        Test different login variations and ensure that users with emails that start with
+        ``MAGPIE_NETWORK_NAME_PREFIX`` are blocked in network mode.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Login protected emails explicitly blocked.", "3.38.0", skip=True)
+        protected_email = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format(uuid.uuid4())
+        data = {
+            "user_name": protected_email,
+            "password": get_constant("MAGPIE_ANONYMOUS_PASSWORD")
+        }
+        headers = {"Accept": CONTENT_TYPE_JSON}
+
+        resp = utils.test_request(self, "GET", s.SigninAPI.path, params=data, headers=headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="GET")
+
+        form = "user_name={user_name}&password={password}".format(**data)
+        headers["Content-Type"] = CONTENT_TYPE_FORM
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, data=form, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="POST")
+
+        headers["Content-Type"] = CONTENT_TYPE_JSON
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, json=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 403, expected_method="POST")
+
+    @runner.MAGPIE_TEST_NETWORK
+    @runner.MAGPIE_TEST_LOGIN
+    @utils.check_network_mode(enable=False)
+    def test_LoginProtectedUsername_Allowed(self):
+        """
+        Test different login variations and ensure that users with usernames that start with
+        ``MAGPIE_NETWORK_NAME_PREFIX`` are allowed if network mode is not enabled.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Login protected usernames explicitly blocked.", "3.38.0", skip=True)
+        protected_username = "{}{!s}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), uuid.uuid4())
+        self.login_admin()
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_user_name=protected_username, override_cookies=self.cookies)
+
+        data = {
+            "user_name": protected_username,
+            "password": protected_username
+        }
+        headers = {"Accept": CONTENT_TYPE_JSON}
+
+        resp = utils.test_request(self, "GET", s.SigninAPI.path, params=data, headers=headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        form = "user_name={user_name}&password={password}".format(**data)
+        headers["Content-Type"] = CONTENT_TYPE_FORM
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, data=form, expect_errors=True)
+        utils.check_response_basic_info(resp, 200, expected_method="POST")
+
+        headers["Content-Type"] = CONTENT_TYPE_JSON
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, json=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 200, expected_method="POST")
+
+    @runner.MAGPIE_TEST_NETWORK
+    @runner.MAGPIE_TEST_LOGIN
+    @utils.check_network_mode(enable=False)
+    def test_LoginProtectedEmail_Allowed(self):
+        """
+        Test different login variations and ensure that users with emails that start with
+        ``MAGPIE_NETWORK_NAME_PREFIX`` are allowed if network mode is not enabled.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Login protected emails explicitly blocked.", "3.38.0", skip=True)
+        protected_email = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format(uuid.uuid4())
+        user_name = "{!s}".format(uuid.uuid4())
+        self.login_admin()
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_user_name=user_name,
+                                        override_email=protected_email,
+                                        override_cookies=self.cookies)
+        data = {
+            "user_name": protected_email,
+            "password": user_name
+        }
+        headers = {"Accept": CONTENT_TYPE_JSON}
+
+        resp = utils.test_request(self, "GET", s.SigninAPI.path, params=data, headers=headers, expect_errors=True)
+        utils.check_response_basic_info(resp, 200, expected_method="GET")
+
+        form = "user_name={user_name}&password={password}".format(**data)
+        headers["Content-Type"] = CONTENT_TYPE_FORM
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, data=form, expect_errors=True)
+        utils.check_response_basic_info(resp, 200, expected_method="POST")
+
+        headers["Content-Type"] = CONTENT_TYPE_JSON
+        resp = utils.test_request(self, "POST", s.SigninAPI.path, json=data, expect_errors=True)
+        utils.check_response_basic_info(resp, 200, expected_method="POST")
+
     @runner.MAGPIE_TEST_LOGIN
     def test_Login_GetRequestFormat(self):
         """

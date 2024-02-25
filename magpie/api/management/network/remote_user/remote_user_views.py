@@ -9,11 +9,12 @@ from magpie.api.management.network.remote_user.remote_user_utils import (
     check_remote_user_access_permissions,
     requested_remote_user
 )
+from magpie.api.requests import check_network_mode_enabled
 from magpie.constants import protected_user_name_regex
 
 
 @s.NetworkRemoteUsersAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUsers_GET_responses)
-@view_config(route_name=s.NetworkRemoteUsersAPI.name, request_method="GET")
+@view_config(route_name=s.NetworkRemoteUsersAPI.name, request_method="GET", decorator=check_network_mode_enabled)
 def get_network_remote_users_view(request):
     query = request.db.query(models.NetworkRemoteUser)
     if request.GET.get("user_name"):
@@ -24,7 +25,8 @@ def get_network_remote_users_view(request):
 
 
 @s.NetworkRemoteUserAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUser_GET_responses)
-@view_config(route_name=s.NetworkRemoteUserAPI.name, request_method="GET", permission=Authenticated)
+@view_config(route_name=s.NetworkRemoteUserAPI.name, request_method="GET",
+             decorator=check_network_mode_enabled, permission=Authenticated)
 def get_network_remote_user_view(request):
     remote_user = requested_remote_user(request)
     check_remote_user_access_permissions(request, remote_user)
@@ -34,7 +36,7 @@ def get_network_remote_user_view(request):
 
 @s.NetworkRemoteUsersAPI.post(schema=s.NetworkRemoteUsers_POST_RequestSchema, tags=[s.NetworkTag],
                               response_schemas=s.NetworkRemoteUsers_POST_responses)
-@view_config(route_name=s.NetworkRemoteUsersAPI.name, request_method="POST")
+@view_config(route_name=s.NetworkRemoteUsersAPI.name, request_method="POST", decorator=check_network_mode_enabled)
 def post_network_remote_users_view(request):
     required_params = ("remote_user_name", "user_name", "node_name")
     for param in required_params:
@@ -69,7 +71,7 @@ def post_network_remote_users_view(request):
 
 @s.NetworkRemoteUserAPI.patch(schema=s.NetworkRemoteUser_PATCH_RequestSchema,
                               tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUser_PATCH_responses)
-@view_config(route_name=s.NetworkRemoteUserAPI.name, request_method="PATCH")
+@view_config(route_name=s.NetworkRemoteUserAPI.name, request_method="PATCH", decorator=check_network_mode_enabled)
 def patch_network_remote_user_view(request):
     update_params = [p for p in request.POST if p in ("remote_user_name", "user_name", "node_name")]
     if not update_params:
@@ -101,7 +103,8 @@ def patch_network_remote_user_view(request):
 
 
 @s.NetworkRemoteUserAPI.delete(tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUser_DELETE_responses)
-@view_config(route_name=s.NetworkRemoteUserAPI.name, request_method="DELETE", permission=Authenticated)
+@view_config(route_name=s.NetworkRemoteUserAPI.name, request_method="DELETE",
+             decorator=check_network_mode_enabled, permission=Authenticated)
 def delete_network_remote_user_view(request):
     remote_user = requested_remote_user(request)
     check_remote_user_access_permissions(request, remote_user)
@@ -110,7 +113,8 @@ def delete_network_remote_user_view(request):
 
 
 @s.NetworkRemoteUsersCurrentAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUsersCurrent_GET_responses)
-@view_config(route_name=s.NetworkRemoteUsersCurrentAPI.name, request_method="GET", permission=Authenticated)
+@view_config(route_name=s.NetworkRemoteUsersCurrentAPI.name, request_method="GET",
+             decorator=check_network_mode_enabled, permission=Authenticated)
 def get_network_remote_users_current_view(request):
     nodes = [n.as_dict() for n in
              request.db.query(models.NetworkRemoteUser).filter(models.NetworkRemoteUser.user_id == request.user.id)]

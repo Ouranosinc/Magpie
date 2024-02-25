@@ -24,11 +24,13 @@ from magpie.api.management.network.node.network_node_utils import (
     delete_network_node,
     update_associated_user_groups
 )
+from magpie.api.requests import check_network_mode_enabled
 from magpie.constants import get_constant
 
 
 @s.NetworkNodesAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkNodes_GET_responses)
-@view_config(route_name=s.NetworkNodesAPI.name, request_method="GET", permission=Authenticated)
+@view_config(route_name=s.NetworkNodesAPI.name, request_method="GET",
+             decorator=check_network_mode_enabled, permission=Authenticated)
 def get_network_nodes_view(request):
     is_admin = False
     if request.user is not None:
@@ -42,7 +44,7 @@ def get_network_nodes_view(request):
 
 
 @s.NetworkNodeAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkNode_GET_responses)
-@view_config(route_name=s.NetworkNodeAPI.name, request_method="GET")
+@view_config(route_name=s.NetworkNodeAPI.name, request_method="GET", decorator=check_network_mode_enabled)
 def get_network_node_view(request):
     node_name = ar.get_value_matchdict_checked(request, "node_name")
     node = ax.evaluate_call(
@@ -55,7 +57,7 @@ def get_network_node_view(request):
 
 @s.NetworkNodesAPI.post(schema=s.NetworkNode_POST_RequestSchema, tags=[s.NetworkTag],
                         response_schemas=s.NetworkNodes_POST_responses)
-@view_config(route_name=s.NetworkNodesAPI.name, request_method="POST")
+@view_config(route_name=s.NetworkNodesAPI.name, request_method="POST", decorator=check_network_mode_enabled)
 def post_network_nodes_view(request):
     required_params = ("name", "jwks_url", "token_url", "authorization_url")
     kwargs = {}
@@ -76,7 +78,7 @@ def post_network_nodes_view(request):
 
 @s.NetworkNodeAPI.patch(schema=s.NetworkNode_PATCH_RequestSchema,
                         tags=[s.NetworkTag], response_schemas=s.NetworkNode_PATCH_responses)
-@view_config(route_name=s.NetworkNodeAPI.name, request_method="PATCH")
+@view_config(route_name=s.NetworkNodeAPI.name, request_method="PATCH", decorator=check_network_mode_enabled)
 def patch_network_node_view(request):
     node_name = ar.get_value_matchdict_checked(request, "node_name")
     node = ax.evaluate_call(
@@ -101,7 +103,7 @@ def patch_network_node_view(request):
 
 
 @s.NetworkNodeAPI.delete(tags=[s.NetworkTag], response_schemas=s.NetworkNode_DELETE_responses)
-@view_config(route_name=s.NetworkNodeAPI.name, request_method="DELETE")
+@view_config(route_name=s.NetworkNodeAPI.name, request_method="DELETE", decorator=check_network_mode_enabled)
 def delete_network_node_view(request):
     node_name = ar.get_value_matchdict_checked(request, "node_name")
     node = ax.evaluate_call(
@@ -116,7 +118,8 @@ def delete_network_node_view(request):
 
 
 @s.NetworkNodeTokenAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkNodeToken_GET_responses)
-@view_config(route_name=s.NetworkNodeTokenAPI.name, request_method="GET", permission=Authenticated)
+@view_config(route_name=s.NetworkNodeTokenAPI.name, request_method="GET",
+             decorator=check_network_mode_enabled, permission=Authenticated)
 def get_network_node_token_view(request):
     node_name = ar.get_value_matchdict_checked(request, "node_name")
     node = ax.evaluate_call(
@@ -134,7 +137,8 @@ def get_network_node_token_view(request):
 
 
 @s.NetworkNodeTokenAPI.delete(tags=[s.NetworkTag], response_schemas=s.NetworkNodeToken_DELETE_responses)
-@view_config(route_name=s.NetworkNodeTokenAPI.name, request_method="DELETE", permission=Authenticated)
+@view_config(route_name=s.NetworkNodeTokenAPI.name, request_method="DELETE",
+             decorator=check_network_mode_enabled, permission=Authenticated)
 def delete_network_node_token_view(request):
     node_name = ar.get_value_matchdict_checked(request, "node_name")
     node = ax.evaluate_call(
@@ -150,7 +154,8 @@ def delete_network_node_token_view(request):
 
 @s.NetworkLinkAPI.get(schema=s.NetworkLink_GET_RequestSchema, tags=[s.NetworkTag],
                       response_schemas=s.NetworkLink_GET_responses)
-@view_config(route_name=s.NetworkLinkAPI.name, request_method="GET", permission=Authenticated)
+@view_config(route_name=s.NetworkLinkAPI.name, request_method="GET",
+             decorator=check_network_mode_enabled, permission=Authenticated)
 def get_network_node_link_view(request):
     token = request.GET.get("token")
     node_name = jwt.decode(token, options={"verify_signature": False}).get("iss")
@@ -174,7 +179,8 @@ def get_network_node_link_view(request):
 
 
 @s.NetworkNodeLinkAPI.post(tags=[s.NetworkTag], response_schemas=s.NetworkNodeLink_POST_responses)
-@view_config(route_name=s.NetworkNodeLinkAPI.name, request_method="POST", permission=Authenticated)
+@view_config(route_name=s.NetworkNodeLinkAPI.name, request_method="POST",
+             decorator=check_network_mode_enabled, permission=Authenticated)
 def post_network_node_link_view(request):
     node_name = ar.get_value_matchdict_checked(request, "node_name")
     node = ax.evaluate_call(

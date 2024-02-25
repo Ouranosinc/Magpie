@@ -17,6 +17,7 @@ from pyramid.httpexceptions import (
     HTTPInternalServerError,
     HTTPMethodNotAllowed,
     HTTPNotAcceptable,
+    HTTPNotImplemented,
     HTTPNotFound,
     HTTPOk,
     HTTPUnauthorized,
@@ -3916,6 +3917,11 @@ class NetworkDecodeJWT_GET_OkResponseSchema(BaseRequestSchemaAPI):
 class NetworkRemoteUsers_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
     description = "Targeted user update not allowed by requesting user."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
+
+
+class NetworkMode_NotEnabledResponseSchema(BaseRequestSchemaAPI):
+    description = "Network Mode is not enabled."
+    body = ErrorResponseBodySchema(code=HTTPNotImplemented.code, description=description)
 
 
 # Responses for specific views

@@ -191,6 +191,10 @@ class TestUtils(unittest.TestCase):
         utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=r"[0-9]+"), HTTPBadRequest)
         utils.check_raises(lambda: ax.verify_param("abc", matches=True, param_compare=re.compile(r"[0-9]+")),
                            HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("abc", not_matches=True, param_compare=r"[a-z]+"),
+                           HTTPBadRequest)
+        utils.check_raises(lambda: ax.verify_param("abc", not_matches=True, param_compare=re.compile(r"[a-z]+")),
+                           HTTPBadRequest)
 
         # with requested error
         utils.check_raises(lambda:
@@ -218,6 +222,16 @@ class TestUtils(unittest.TestCase):
                                            param_compare=re.compile(r"[0-9]+"),
                                            http_error=HTTPForbidden),
                            HTTPForbidden)
+        utils.check_raises(lambda:
+                           ax.verify_param("abc", not_matches=True,
+                                           param_compare=r"[a-z]+",
+                                           http_error=HTTPForbidden),
+                           HTTPForbidden)
+        utils.check_raises(lambda:
+                           ax.verify_param("abc", not_matches=True,
+                                           param_compare=re.compile(r"[a-z]+"),
+                                           http_error=HTTPForbidden),
+                           HTTPForbidden)
 
     def test_verify_param_proper_verifications_passed(self):
         ax.verify_param("x", param_compare=["a", "b"], not_in=True)
@@ -235,6 +249,8 @@ class TestUtils(unittest.TestCase):
         ax.verify_param("", is_empty=True)
         ax.verify_param("abc", matches=True, param_compare=r"[a-z]+")
         ax.verify_param("abc", matches=True, param_compare=re.compile(r"[a-z]+"))
+        ax.verify_param("abc", not_matches=True, param_compare=r"[0-9]+")
+        ax.verify_param("abc", not_matches=True, param_compare=re.compile(r"[0-9]+"))
 
     def test_verify_param_args_incorrect_usage(self):
         """
@@ -252,8 +268,10 @@ class TestUtils(unittest.TestCase):
                            HTTPInternalServerError, msg="incorrect non-iterable compare should raise invalid type")
         utils.check_raises(lambda: ax.verify_param("a", matches=True, param_compare=1),
                            HTTPInternalServerError, msg="incorrect matching pattern not a string or compiled pattern")
+        utils.check_raises(lambda: ax.verify_param("a", not_matches=True, param_compare=1),
+                           HTTPInternalServerError, msg="incorrect matching pattern not a string or compiled pattern")
         for flag in ["not_none", "not_empty", "not_in", "not_equal", "is_none", "is_empty", "is_in", "is_equal",
-                     "is_true", "is_false", "is_type", "matches"]:
+                     "is_true", "is_false", "is_type", "matches", "not_matches"]:
             utils.check_raises(lambda: ax.verify_param("x", **{flag: 1}),
                                HTTPInternalServerError, msg="invalid flag '{}' type should be caught".format(flag))
 

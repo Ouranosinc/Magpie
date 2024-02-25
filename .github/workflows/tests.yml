@@ -67,6 +67,13 @@ jobs:
             python-version: "3.11"
             allow-failure: true
             test-case: start test-remote
+          # remote network tests using a remote server with network mode enabled
+          - os: ubuntu-latest
+            python-version: "3.11"
+            allow-failure: true
+            test-case: start test-remote
+            test-option: >- 
+              PYTEST_ADDOPTS='-m "remote and network"' MAGPIE_NETWORK_ENABLED=on MAGPIE_NETWORK_INSTANCE_NAME=example
           # coverage test
           - os: ubuntu-latest
             python-version: "3.11"

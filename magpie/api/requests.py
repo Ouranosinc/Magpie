@@ -1,3 +1,4 @@
+import functools
 from typing import TYPE_CHECKING
 
 import six
@@ -8,6 +9,7 @@ from pyramid.httpexceptions import (
     HTTPForbidden,
     HTTPInternalServerError,
     HTTPNotFound,
+    HTTPNotImplemented,
     HTTPUnprocessableEntity
 )
 from ziggurat_foundations.models.services.group import GroupService
@@ -17,13 +19,13 @@ from ziggurat_foundations.models.services.user import UserService
 from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
-from magpie.constants import get_constant
+from magpie.constants import get_constant, network_enabled
 from magpie.permissions import PermissionSet
 from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Dict, Iterable, List, Optional, Union
+    from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
     from pyramid.request import Request
 
@@ -379,3 +381,27 @@ def get_query_param(request, case_insensitive_key, default=None):
             if param.lower() == key.lower():
                 return request.params.get(param)
     return default
+
+
+def check_network_mode_enabled(view_func):
+    # type: (Callable) -> Callable
+    """
+    Decorator for views that returns a :class:`HTTPNotImplemented` response if network mode is not enabled.
+    This is intended to be used for all views that should only be accessed if network mode is enabled.
+
+    Instead of decorating a view function directly, pass this function to the ``decorator`` argument of the
+    ``view_config`` decorator. For example:
+
+    .. code-block:: python
+
+        @view_config(..., decorator=check_network_mode_enabled)
+        def get_some_view(request):
+            ...
+    """
+    @functools.wraps(view_func)
+    def wrapper(context, request):
+        if not network_enabled(request):
+            return ax.raise_http(http_error=HTTPNotImplemented,
+                                 detail=s.NetworkMode_NotEnabledResponseSchema.description)
+        return view_func(context, request)
+    return wrapper
