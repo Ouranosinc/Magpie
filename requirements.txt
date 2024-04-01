@@ -15,7 +15,8 @@ bcrypt>=3.1.6
 beaker @ https://github.com/crim-ca/beaker/archive/0ac88bcd8cca063a571fc385ffbe9bcc8acaa690.zip
 colander
 cornice<5; python_version < "3"
-cornice; python_version >= "3"
+cornice; python_version >= "3.6"
+cornice<6.1; python_version == "3.5"
 cornice_swagger>=0.7.0
 dicttoxml
 # futures is required for gunicorn threads
