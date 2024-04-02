@@ -1116,7 +1116,7 @@ class NetworkNode(BaseModel, Base):
 
     def anonymous_group(self, db_session):
         # type: (Optional[Session]) -> User
-        return db_session.query(Group).filter(Group.name == self.anonymous_user_name()).one()
+        return db_session.query(Group).filter(Group.group_name == self.anonymous_user_name()).one()
 
     def as_dict(self):
         # type: () -> Dict[Str, Any]

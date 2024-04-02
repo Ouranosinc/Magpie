@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING
 import jwt
 from cryptography.hazmat.primitives import serialization
 from jwcrypto import jwk
-from pyramid.httpexceptions import HTTPInternalServerError, HTTPNotFound
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound
 
 from magpie import models
 from magpie.api import exception as ax
+from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.constants import get_constant
 from magpie.utils import get_logger
@@ -56,7 +57,7 @@ def _pem_file_passwords(primary=False):
     """
     pem_passwords = get_constant("MAGPIE_NETWORK_PEM_PASSWORDS", raise_missing=False, raise_not_set=False)
     try:
-        passwords = json.loads(pem_passwords)
+        passwords = json.loads(pem_passwords or "")
     except json.decoder.JSONDecodeError:
         passwords = [pem_passwords]
     passwords = [p.encode() if p else None for p in passwords]
@@ -151,7 +152,9 @@ def get_network_models_from_request_token(request, create_network_remote_user=Fa
     ``NetworkRemoteUser`` associated with the anonymous user for the given ``NetworkNode`` and adds it to the current
     database transaction.
     """
-    token = request.POST.get("token")
+    token = ar.get_multiformat_body(request, "token", default=None)
+    if token is None:
+        ax.raise_http(http_error=HTTPBadRequest, detail=s.BadRequestResponseSchema.description)
     node_name = jwt.decode(token, options={"verify_signature": False}).get("iss")
     node = ax.evaluate_call(
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),

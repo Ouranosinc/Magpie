@@ -4,6 +4,7 @@ from pyramid.view import view_config
 
 from magpie import models
 from magpie.api import exception as ax
+from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.network.remote_user.remote_user_utils import (
     check_remote_user_access_permissions,
@@ -17,11 +18,12 @@ from magpie.constants import protected_user_name_regex
 @view_config(route_name=s.NetworkRemoteUsersAPI.name, request_method="GET", decorator=check_network_mode_enabled)
 def get_network_remote_users_view(request):
     query = request.db.query(models.NetworkRemoteUser)
-    if request.GET.get("user_name"):
-        query = query.join(models.User).filter(models.User.user_name == request.GET["user_name"])
+    user_name = ar.get_multiformat_body(request, "user_name", default=None)
+    if user_name is not None:
+        query = query.join(models.User).filter(models.User.user_name == user_name)
     nodes = [n.as_dict() for n in query.all()]
     return ax.valid_http(http_success=HTTPOk, detail=s.NetworkRemoteUsers_GET_OkResponseSchema.description,
-                         content={"nodes": nodes})
+                         content={"remote_users": nodes})
 
 
 @s.NetworkRemoteUserAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUser_GET_responses)
@@ -39,27 +41,29 @@ def get_network_remote_user_view(request):
 @view_config(route_name=s.NetworkRemoteUsersAPI.name, request_method="POST", decorator=check_network_mode_enabled)
 def post_network_remote_users_view(request):
     required_params = ("remote_user_name", "user_name", "node_name")
+    kwargs = {}
     for param in required_params:
-        if param not in request.POST:
+        value = ar.get_multiformat_body(request, param, default=None)
+        if value is None:
             ax.raise_http(http_error=HTTPBadRequest,
                           detail=s.NetworkRemoteUsers_POST_BadRequestResponseSchema.description)
+        kwargs[param] = value
     node = ax.evaluate_call(
-        lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == request.POST["node_name"]).one(),
+        lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == kwargs["node_name"]).one(),
         http_error=HTTPNotFound,
-        msg_on_fail="No network node with name '{}' found".format(request.POST["node_name"])
+        msg_on_fail="No network node with name '{}' found".format(kwargs["node_name"])
     )
     forbidden_user_names_regex = protected_user_name_regex(include_admin=False, settings_container=request)
-    user_name = request.POST["user_name"]
-    ax.verify_param(user_name, not_matches=True, param_compare=forbidden_user_names_regex,
+    ax.verify_param(kwargs["user_name"], not_matches=True, param_compare=forbidden_user_names_regex,
                     param_name="user_name",
-                    http_error=HTTPForbidden, content={"user_name": user_name},
+                    http_error=HTTPForbidden, content={"user_name": kwargs["user_name"]},
                     msg_on_fail=s.NetworkRemoteUsers_POST_ForbiddenResponseSchema.description)
     user = ax.evaluate_call(
-        lambda: request.db.query(models.User).filter(models.User.user_name == request.POST["user_name"]).one(),
+        lambda: request.db.query(models.User).filter(models.User.user_name == kwargs["user_name"]).one(),
         http_error=HTTPNotFound,
-        msg_on_fail="No user with user_name '{}' found".format(request.POST["user_name"])
+        msg_on_fail="No user with user_name '{}' found".format(kwargs["user_name"])
     )
-    remote_user_name = request.POST["remote_user_name"]
+    remote_user_name = kwargs["remote_user_name"]
     ax.verify_param(remote_user_name, not_empty=True,
                     param_name="remote_user_name",
                     http_error=HTTPForbidden,
@@ -73,30 +77,31 @@ def post_network_remote_users_view(request):
                               tags=[s.NetworkTag], response_schemas=s.NetworkRemoteUser_PATCH_responses)
 @view_config(route_name=s.NetworkRemoteUserAPI.name, request_method="PATCH", decorator=check_network_mode_enabled)
 def patch_network_remote_user_view(request):
-    update_params = [p for p in request.POST if p in ("remote_user_name", "user_name", "node_name")]
-    if not update_params:
+    kwargs = {p: ar.get_multiformat_body(request, p, default=None) for p in
+              ("remote_user_name", "user_name", "node_name")}
+    if not any(kwargs.values()):
         ax.raise_http(http_error=HTTPBadRequest, detail=s.NetworkRemoteUser_PATCH_BadRequestResponseSchema.description)
     remote_user = requested_remote_user(request)
-    if "remote_user_name" in request.POST:
-        remote_user_name = request.POST["remote_user_name"]
+    if "remote_user_name" in kwargs:
+        remote_user_name = kwargs["remote_user_name"]
         ax.verify_param(remote_user_name, not_empty=True,
                         param_name="remote_user_name",
                         http_error=HTTPForbidden,
                         msg_on_fail="remote_user_name is empty")
         remote_user.name = remote_user_name
-    if "user_name" in request.POST:
+    if "user_name" in kwargs:
         user = ax.evaluate_call(
-            lambda: request.db.query(models.User).filter(models.User.user_name == request.POST["user_name"]).one(),
+            lambda: request.db.query(models.User).filter(models.User.user_name == kwargs["user_name"]).one(),
             http_error=HTTPNotFound,
-            msg_on_fail="No user with user_name '{}' found".format(request.POST["user_name"])
+            msg_on_fail="No user with user_name '{}' found".format(kwargs["user_name"])
         )
         remote_user.user_id = user.id
-    if "node_name" in request.POST:
+    if "node_name" in kwargs:
         node = ax.evaluate_call(
             lambda: request.db.query(models.NetworkNode).filter(
-                models.NetworkNode.name == request.POST["node_name"]).one(),
+                models.NetworkNode.name == kwargs["node_name"]).one(),
             http_error=HTTPNotFound,
-            msg_on_fail="No network node with name '{}' found".format(request.POST["node_name"])
+            msg_on_fail="No network node with name '{}' found".format(kwargs["node_name"])
         )
         remote_user.network_node_id = node.id
     return ax.valid_http(http_success=HTTPOk, detail=s.NetworkRemoteUsers_PATCH_OkResponseSchema.description)

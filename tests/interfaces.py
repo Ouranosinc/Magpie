@@ -48,7 +48,7 @@ from magpie.utils import (
     CONTENT_TYPE_TXT_XML
 )
 from tests import runner, utils
-from tests.utils import TestVersion
+from tests.utils import TestVersion, check_network_mode
 
 if six.PY3:
     # WARNING: Twitcher does not support Python 2 since 0.4.0, adapter cannot work without it
@@ -99,6 +99,15 @@ class ConfigTestCase(object):
     test_admin = None                       # type: Optional[Str]
     test_user_name = None                   # type: Optional[Str]  # also used as password when creating test user
     test_group_name = None                  # type: Optional[Str]
+    test_node_host = None                    # type: Optional[Str]
+    test_node_port = None                   # type: Optional[int]
+    test_node_name = None                   # type: Optional[Str]
+    test_node_jwks_url = None               # type: Optional[Str]
+    test_node_token_url = None              # type: Optional[Str]
+    test_authorization_url = None           # type: Optional[Str]
+    test_redirect_uris = None               # type: Optional[JSON]
+    test_remote_user_name = None            # type: Optional[Str]
+
     # extra parameters to indicate cleanup on final tear down
     # add new test values on test case startup before they *potentially* get interrupted because of error
     reserved_users = None                   # type: Optional[List[Str]]
@@ -107,6 +116,9 @@ class ConfigTestCase(object):
     extra_group_names = set()               # type: Set[Str]
     extra_resource_ids = set()              # type: Set[int]
     extra_service_names = set()             # type: Set[Str]
+    extra_node_names = set()                # type: Set[Str]
+    extra_remote_user_names = set()         # type: Set[Tuple[Str, Str]]
+    extra_network_tokens = set()            # type: Set[Tuple[Str, Str]]
 
 
 @six.add_metaclass(ABCMeta)
@@ -171,6 +183,18 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         cls.extra_user_names.add(cls.test_admin)
         cls.extra_user_names.add(cls.test_user_name)
         cls.extra_group_names.add(cls.test_group_name)
+        for remote_user_name, node_name in list(cls.extra_network_tokens):
+            check_network_mode(utils.TestSetup.delete_TestNetworkToken,
+                               enable=True)(cls,
+                                            override_remote_user_name=remote_user_name,
+                                            override_node_name=node_name)
+
+            cls.extra_network_tokens.discard((remote_user_name, node_name))
+        for remote_user_name, node_name in list(cls.extra_remote_user_names):
+            check_network_mode(utils.TestSetup.delete_TestNetworkRemoteUser,
+                               enable=True)(cls, override_remote_user_name=remote_user_name,
+                                            override_node_name=node_name)
+            cls.extra_remote_user_names.discard((remote_user_name, node_name))
         for usr in list(cls.extra_user_names):  # copy to update removed ones
             if usr not in cls.reserved_users:
                 utils.TestSetup.delete_TestUser(cls, override_user_name=usr)
@@ -187,6 +211,10 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         for res in list(cls.extra_resource_ids):  # copy to update removed ones
             utils.TestSetup.delete_TestResource(cls, res)
             cls.extra_resource_ids.discard(res)
+        for node in list(cls.extra_node_names):
+            check_network_mode(utils.TestSetup.delete_TestNetworkNode,
+                               enable=True)(cls, override_name=node)
+            cls.extra_node_names.discard(node)
 
     @property
     def update_method(self):

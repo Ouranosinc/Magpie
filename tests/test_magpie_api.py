@@ -46,6 +46,16 @@ class TestCase_MagpieAPI_NoAuth_Local(ti.Interface_MagpieAPI_NoAuth, unittest.Te
                                           raise_missing=False, raise_not_set=False)
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-no-auth_api-group-local",
                                            raise_missing=False, raise_not_set=False)
+        cls.test_node_name = "node2"
+        cls.test_remote_user_name = "remote_user_1"
+        cls.test_node_host = get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_HOST", default_value="localhost",
+                                         raise_missing=False, raise_not_set=False)
+        cls.test_node_port = int(get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_PORT", default_value=2002,
+                                              raise_missing=False, raise_not_set=False))
+        cls.test_node_jwks_url = "http://{}:{}/network/jwks".format(cls.test_node_host, cls.test_node_port)
+        cls.test_node_token_url = "http://{}:{}/network/token".format(cls.test_node_host, cls.test_node_port)
+        cls.test_authorization_url = "http://{}:{}/ui/network/authorize".format(cls.test_node_host, cls.test_node_port)
+        cls.test_redirect_uris = '["http://{}:{}/network/link"]'.format(cls.test_node_host, cls.test_node_port)
 
 
 @runner.MAGPIE_TEST_API
@@ -662,6 +672,16 @@ class TestCase_MagpieAPI_NoAuth_Remote(ti.Interface_MagpieAPI_NoAuth, unittest.T
                                           raise_missing=False, raise_not_set=False)
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-no-auth_api-group-remote",
                                            raise_missing=False, raise_not_set=False)
+        cls.test_node_name = "node2"
+        cls.test_remote_user_name = "remote_user_1"
+        cls.test_node_host = get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_HOST", default_value="localhost",
+                                         raise_missing=False, raise_not_set=False)
+        cls.test_node_port = int(get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_PORT", default_value=2002,
+                                              raise_missing=False, raise_not_set=False))
+        cls.test_node_jwks_url = "http://{}:{}/network/jwks".format(cls.test_node_host, cls.test_node_port)
+        cls.test_node_token_url = "http://{}:{}/network/token".format(cls.test_node_host, cls.test_node_port)
+        cls.test_authorization_url = "http://{}:{}/ui/network/authorize".format(cls.test_node_host, cls.test_node_port)
+        cls.test_redirect_uris = '["http://{}:{}/network/link"]'.format(cls.test_node_host, cls.test_node_port)
 
 
 @runner.MAGPIE_TEST_API

@@ -1,5 +1,8 @@
+import json
+
 import jwt
 import requests
+import six
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPCreated,
@@ -62,12 +65,21 @@ def post_network_nodes_view(request):
     required_params = ("name", "jwks_url", "token_url", "authorization_url")
     kwargs = {}
     for param in required_params:
-        if param in request.POST:
-            kwargs[param] = request.POST[param]
-        else:
+        value = ar.get_multiformat_body(request, param, default=None)
+        if value is None:
             ax.raise_http(http_error=HTTPBadRequest, detail=s.BadRequestResponseSchema.description)
-    if "redirect_uris" in request.POST:
-        kwargs["redirect_uris"] = request.POST.get("redirect_uris")
+        kwargs[param] = value
+    redirect_uris = ar.get_multiformat_body(request, "redirect_uris", default=None)
+    if redirect_uris is not None:
+        if isinstance(redirect_uris, six.string_types):
+            kwargs["redirect_uris"] = ax.evaluate_call(
+                lambda: json.loads(redirect_uris),
+                http_error=HTTPBadRequest,
+                fallback=lambda: request.db.rollback(),
+                msg_on_fail=s.NetworkNodes_CheckInfo_RedirectURIsValue_BadRequestResponseSchema.description
+            )
+        else:
+            kwargs["redirect_uris"] = redirect_uris
     check_network_node_info(request.db, **kwargs)
 
     node = models.NetworkNode(**kwargs)
