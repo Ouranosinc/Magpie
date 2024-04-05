@@ -1015,7 +1015,7 @@ class NetworkRemoteUser(BaseModel, Base):
                                 sa.ForeignKey("network_nodes.id", onupdate="CASCADE", ondelete="CASCADE"),
                                 nullable=False)
     network_token_id = sa.Column(sa.Integer,
-                                 sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="CASCADE"),
+                                 sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="SET NULL"),
                                  unique=True)
     name = sa.Column(sa.Unicode(128))
     network_node = relationship("NetworkNode", foreign_keys=[network_node_id])
@@ -1064,8 +1064,8 @@ class NetworkToken(BaseModel, Base):
 
     def expired(self):
         # type: () -> bool
-        expiry = int(get_constant("MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY"))
-        return (datetime.datetime.utcnow() - self.created) > expiry
+        expire = int(get_constant("MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY"))
+        return (datetime.datetime.utcnow() - self.created) > datetime.timedelta(seconds=expire)
 
     @classmethod
     def delete_expired(cls, db_session):
@@ -1078,7 +1078,11 @@ class NetworkToken(BaseModel, Base):
     def by_token(cls, token, db_session=None):
         # type: (Str, Optional[Session]) -> Optional[NetworkToken]
         db_session = get_db_session(db_session)
-        return db_session.query(cls).filter(cls.token == cls._hash_token(token)).first()
+        try:
+            hashed_token = cls._hash_token(token)
+        except ValueError:
+            return
+        return db_session.query(cls).filter(cls.token == hashed_token).first()
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
     token = sa.Column(sa.String, nullable=False, unique=True)

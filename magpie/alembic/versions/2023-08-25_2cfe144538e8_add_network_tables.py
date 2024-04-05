@@ -45,7 +45,7 @@ def upgrade():
                               nullable=False),
                     sa.Column("name", sa.Unicode(128)),
                     sa.Column("network_token_id", sa.Integer,
-                              sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="CASCADE"), unique=True)
+                              sa.ForeignKey("network_tokens.id", onupdate="CASCADE", ondelete="SET NULL"), unique=True)
                     )
     op.create_unique_constraint("uq_network_remote_users_user_id_network_node_id", "network_remote_users",
                                 ["user_id", "network_node_id"])

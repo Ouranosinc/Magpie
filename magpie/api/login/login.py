@@ -34,7 +34,7 @@ from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
-from magpie.constants import get_constant, protected_user_email_regex, protected_user_name_regex
+from magpie.constants import get_constant, protected_user_email_regex, protected_user_name_regex, network_enabled
 from magpie.security import authomatic_setup, get_providers
 from magpie.utils import (
     CONTENT_TYPE_JSON,
@@ -46,7 +46,7 @@ from magpie.utils import (
 )
 
 if TYPE_CHECKING:
-    from magpie.typedefs import Session, Str
+    from magpie.typedefs import AnySettingsContainer, Session, Str
 
 LOGGER = get_logger(__name__)
 
@@ -77,14 +77,17 @@ def process_sign_in_external(request, username, provider):
     return HTTPTemporaryRedirect(location=external_login_route, headers=request.response.headers)
 
 
-def verify_provider(provider_name):
-    # type: (Str) -> None
+def verify_provider(provider_name, settings_container=None):
+    # type: (Str, AnySettingsContainer) -> None
     """
     Verifies that the specified name is a valid external provider against the login configuration providers.
 
     :raises HTTPNotFound: if provider name is not one of known providers.
     """
-    ax.verify_param(provider_name, param_name="provider_name", param_compare=list(MAGPIE_PROVIDER_KEYS), is_in=True,
+    provider_keys = list(MAGPIE_PROVIDER_KEYS)
+    if network_enabled(settings_container):
+        provider_keys.append(get_constant("MAGPIE_NETWORK_PROVIDER", settings_container))
+    ax.verify_param(provider_name, param_name="provider_name", param_compare=provider_keys, is_in=True,
                     http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
 
 
@@ -138,7 +141,7 @@ def sign_in_view(request):
                         http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
     except HTTPForbidden as http_error:
         return http_error
-    verify_provider(provider_name)
+    verify_provider(provider_name, request)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS:
         # password can be None for external login, validate only here as it is required for internal login
@@ -275,17 +278,22 @@ def network_login(request):
     Sign in a user authenticating using a `Magpie` network access token.
     """
     if "Authorization" in request.headers:
-        token_type, token = request.headers.get("Authorization").split()
+        token_list = request.headers.get("Authorization").split(maxsplit=1)
+        if len(token_list) != 2:
+            return ax.raise_http(http_error=HTTPUnauthorized,
+                                 detail=s.Signin_POST_UnauthorizedResponseSchema.description, nothrow=True)
+        token_type, token = token_list
         if token_type != "Bearer":  # nosec: B105
-            ax.raise_http(http_error=HTTPBadRequest,
-                          detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
-        network_token = models.NetworkToken.by_token(token)
+            return ax.raise_http(http_error=HTTPBadRequest,
+                                 detail=s.ProviderSignin_GET_BadRequestResponseSchema.description, nothrow=True)
+        network_token = models.NetworkToken.by_token(token, db_session=request.db)
         if network_token is None or network_token.expired():
-            return login_failure_view(request, reason=s.Signin_POST_UnauthorizedResponseSchema.description)
+            return ax.raise_http(http_error=HTTPUnauthorized,
+                                 detail=s.Signin_POST_UnauthorizedResponseSchema.description, nothrow=True)
         authenticated_user = network_token.network_remote_user.user
         # We should never create a token for protected users but just in case
         anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=request)
-        ax.verify_param(authenticated_user.name, not_matches=True, param_compare=anonymous_regex,
+        ax.verify_param(authenticated_user.user_name, not_matches=True, param_compare=anonymous_regex,
                         http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
         return login_success_external(request, authenticated_user)
     ax.raise_http(http_error=HTTPBadRequest,

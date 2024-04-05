@@ -37,10 +37,10 @@ def post_network_token_view(request):
              decorator=check_network_mode_enabled, permission=NO_PERMISSION_REQUIRED)
 def delete_network_token_view(request):
     node, network_remote_user = get_network_models_from_request_token(request)
-    if network_remote_user.network_token:
+    if network_remote_user and network_remote_user.network_token:
         request.db.delete(network_remote_user.network_token)
         if (network_remote_user.user.id == node.anonymous_user(request.db).id and
-                sqlalchemy.inspect(network_remote_user).persisted):
+                sqlalchemy.inspect(network_remote_user).persistent):
             request.db.delete(network_remote_user)  # clean up unused record in the database
         return ax.valid_http(http_success=HTTPOk, detail=s.NetworkToken_DELETE_OkResponseSchema.description)
     ax.raise_http(http_error=HTTPNotFound, detail=s.NetworkNodeToken_DELETE_NotFoundResponseSchema.description)
@@ -54,7 +54,7 @@ def delete_network_tokens_view(request):
         deleted = models.NetworkToken.delete_expired(request.db)
     else:
         deleted = request.db.query(NetworkToken).delete()
-    anonymous_network_user_ids = [n.anonymous_user().id for n in request.db.query(models.NetworkNode).all()]
+    anonymous_network_user_ids = [n.anonymous_user(request.db).id for n in request.db.query(models.NetworkNode).all()]
     # clean up unused records in the database (no need to keep records associated with anonymous network users)
     (request.db.query(models.NetworkRemoteUser)
      .filter(models.NetworkRemoteUser.user_id.in_(anonymous_network_user_ids))
