@@ -9,7 +9,7 @@ from magpie import models
 from magpie.api import exception as ax
 from magpie.api import schemas as s
 from magpie.api.management.network.network_utils import decode_jwt, get_network_models_from_request_token, jwks
-from magpie.api.requests import check_network_mode_enabled
+from magpie.api.requests import check_network_mode_enabled, get_multiformat_body
 from magpie.models import NetworkNode, NetworkToken
 
 
@@ -50,7 +50,7 @@ def delete_network_token_view(request):
                            response_schemas=s.NetworkTokens_DELETE_responses)
 @view_config(route_name=s.NetworkTokensAPI.name, request_method="DELETE", decorator=check_network_mode_enabled)
 def delete_network_tokens_view(request):
-    if asbool(request.GET.get("expired_only")):
+    if asbool(get_multiformat_body(request, "expired_only", default=False)):
         deleted = models.NetworkToken.delete_expired(request.db)
     else:
         deleted = request.db.query(NetworkToken).delete()
@@ -68,10 +68,10 @@ def delete_network_tokens_view(request):
 @s.NetworkJSONWebKeySetAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkJSONWebKeySet_GET_responses)
 @view_config(route_name=s.NetworkJSONWebKeySetAPI.name, request_method="GET",
              decorator=check_network_mode_enabled, permission=NO_PERMISSION_REQUIRED)
-def get_network_jwks_view(_request):
+def get_network_jwks_view(request):
     return ax.valid_http(http_success=HTTPOk,
                          detail=s.NetworkJSONWebKeySet_GET_OkResponseSchema.description,
-                         content=jwks().export(private_keys=False, as_dict=True))
+                         content=jwks(settings_container=request).export(private_keys=False, as_dict=True))
 
 
 @s.NetworkDecodeJWTAPI.get(tags=[s.NetworkTag], response_schemas=s.NetworkDecodeJWT_GET_Responses)

@@ -1104,6 +1104,17 @@ to authenticate users for each other. All variables defined in this section are 
     file require a password, set this variable to ``["pass1", "" ,"pass2", ""]`` where ``pass1`` and ``pass2`` are the
     passwords.
 
+.. envvar:: MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.38
+
+    If enabled *and* there is a single file specified in :envvar:`MAGPIE_NETWORK_PEM_FILES` *and* that file is missing,
+    `Magpie` will generate a new private key file when starting up. If a password is specified for that file in
+    :envvar:`MAGPIE_NETWORK_PEM_PASSWORDS` then the private key file will be encrypted with that password as well.
+
 .. _config_phoenix:
 
 Phoenix Settings

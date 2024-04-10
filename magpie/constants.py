@@ -113,6 +113,7 @@ MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY = int(os.getenv("MAGPIE_NETWORK_DEFAULT_TOKE
 MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY = int(os.getenv("MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY", 30))
 MAGPIE_NETWORK_PEM_FILES = os.getenv("MAGPIE_NETWORK_PEM_FILES", os.path.join(MAGPIE_ROOT, "key.pem"))
 MAGPIE_NETWORK_PEM_PASSWORDS = os.getenv("MAGPIE_NETWORK_PEM_PASSWORDS")
+MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE = asbool(os.getenv("MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE", False))
 MAGPIE_LOG_LEVEL = os.getenv("MAGPIE_LOG_LEVEL", _get_default_log_level())      # log level to apply to the loggers
 MAGPIE_LOG_PRINT = asbool(os.getenv("MAGPIE_LOG_PRINT", False))                 # log also forces print to the console
 MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))              # log detail of every incoming request
@@ -259,7 +260,7 @@ def network_enabled(settings_container=None):
     # type: (Optional[AnySettingsContainer]) -> bool
     if sys.version_info.major < 3 or sys.version_info.minor < 6:
         return False
-    return bool(get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container))
+    return asbool(get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container))
 
 
 def get_constant_setting_name(name):

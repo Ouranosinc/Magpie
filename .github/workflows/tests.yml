@@ -73,7 +73,7 @@ jobs:
             allow-failure: true
             test-case: start test-remote
             test-option: >- 
-              PYTEST_ADDOPTS='-m "remote and network"' MAGPIE_NETWORK_ENABLED=on MAGPIE_NETWORK_INSTANCE_NAME=example
+              PYTEST_ADDOPTS='-m "remote and network"' MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True MAGPIE_NETWORK_ENABLED=on MAGPIE_NETWORK_INSTANCE_NAME=example
           # coverage test
           - os: ubuntu-latest
             python-version: "3.11"

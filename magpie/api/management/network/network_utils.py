@@ -1,10 +1,12 @@
 import json
+import os
 from datetime import datetime, timedelta
 from itertools import zip_longest
 from typing import TYPE_CHECKING
 
 import jwt
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from jwcrypto import jwk
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPNotFound
 
@@ -25,18 +27,24 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
-PEM_FILE_DELIMITER = ":"
-PEM_PASSWORD_DELIMITER = ":"  # nosec: B105
+
+def pem_files(settings_container=None):
+    # type: (Optional[AnySettingsContainer]) -> List[Str]
+    pem_files_ = get_constant("MAGPIE_NETWORK_PEM_FILES", settings_container=settings_container)
+    try:
+        return json.loads(pem_files_)
+    except json.decoder.JSONDecodeError:
+        return [pem_files_]
 
 
-def _pem_file_content(primary=False):
-    # type: (bool) -> List[bytes]
+def _pem_file_content(primary=False, settings_container=None):
+    # type: (bool, Optional[AnySettingsContainer]) -> List[bytes]
     """
     Return the content of all PEM files
     """
-    pem_files = get_constant("MAGPIE_NETWORK_PEM_FILES").split(PEM_FILE_DELIMITER)
+
     content = []
-    for pem_file in pem_files:
+    for pem_file in pem_files(settings_container=settings_container):
         with open(pem_file, "rb") as f:
             content.append(f.read())
         if primary:
@@ -44,8 +52,8 @@ def _pem_file_content(primary=False):
     return content
 
 
-def _pem_file_passwords(primary=False):
-    # type: (bool) -> List[Optional[bytes]]
+def _pem_file_passwords(primary=False, settings_container=None):
+    # type: (bool, Optional[AnySettingsContainer]) -> List[Optional[bytes]]
     """
     Return the passwords used to encrypt the PEM files.
     The passwords will be returned in the same order as the file content from `_pem_file_content`.
@@ -55,7 +63,8 @@ def _pem_file_passwords(primary=False):
     For example: if there are 4 PEM files and the second and fourth are not encrypted, this will return
     ``["password1", None, "password2"]``
     """
-    pem_passwords = get_constant("MAGPIE_NETWORK_PEM_PASSWORDS", raise_missing=False, raise_not_set=False)
+    pem_passwords = get_constant("MAGPIE_NETWORK_PEM_PASSWORDS", settings_container=settings_container,
+                                 raise_missing=False, raise_not_set=False)
     try:
         passwords = json.loads(pem_passwords or "")
     except json.decoder.JSONDecodeError:
@@ -66,14 +75,44 @@ def _pem_file_passwords(primary=False):
     return passwords
 
 
-def jwks(primary=False):
-    # type: (bool) -> jwk.JWKSet
+def create_private_key(filename, password=None, settings_container=None):
+    # type: (Str, Optional[bytes], Optional[AnySettingsContainer]) -> None
+    """
+    Create a private key file at the specified filename. Encrypt it using the password if specified.
+    If password is None and the filename matches a file in MAGPIE_NETWORK_PEM_FILES, the associated
+    password specified in MAGPIE_NETWORK_PEM_PASSWORDS will be used instead.
+
+    .. warning::
+        This function should only be used to create a file if MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE is
+        truthy. This is not enforced in this function.
+    """
+    if password is None:
+        for pem_file, pem_password in zip_longest(pem_files(settings_container),
+                                                  _pem_file_passwords(False, settings_container)):
+            if os.path.realpath(pem_file) == os.path.realpath(filename):
+                password = pem_password
+
+    LOGGER.info("Creating a valid PEM file at '{}'.".format(filename))
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    if password:
+        encryption_algorithm = serialization.BestAvailableEncryption(password)
+    else:
+        encryption_algorithm = serialization.NoEncryption()
+    private_bytes = private_key.private_bytes(serialization.Encoding.PEM,
+                                              serialization.PrivateFormat.TraditionalOpenSSL, encryption_algorithm)
+    with open(filename, mode='wb') as f:
+        f.write(private_bytes)
+
+
+def jwks(primary=False, settings_container=None):
+    # type: (bool, Optional[AnySettingsContainer]) -> jwk.JWKSet
     """
     Return a JSON Web Key Set containing all JSON Web Keys loaded from the PEM files listed
     in ``MAGPIE_NETWORK_PEM_FILES``.
     """
     jwks_ = jwk.JWKSet()
-    for pem_content, pem_password in zip_longest(_pem_file_content(primary), _pem_file_passwords(primary)):
+    for pem_content, pem_password in zip_longest(_pem_file_content(primary, settings_container),
+                                                 _pem_file_passwords(primary, settings_container)):
         jwks_["keys"].add(jwk.JWK.from_pem(pem_content, password=pem_password))
     return jwks_
 
