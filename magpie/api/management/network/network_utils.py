@@ -177,7 +177,7 @@ def decode_jwt(token, node, settings_container=None):
                                                algorithms=["RS256"],
                                                issuer=node.name,
                                                audience=instance_name),
-                            http_error=HTTPInternalServerError,
+                            http_error=HTTPBadRequest,
                             msg_on_fail="Cannot verify JWT")
 
 

@@ -1522,6 +1522,28 @@ def check_val_type(val, ref, msg=None):
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 
 
+@contextlib.contextmanager
+def patch_datetime(patches):
+    # type: (Dict[Str, Any]) -> Any
+    """
+    Patch functions in the datetime.datetime module where keys in patches are names of functions and values are their
+    patched return values.
+
+    Note: mocking datetime is complicated because it's implemented in C. The technique used here is inspired by:
+          https://williambert.online/2011/07/how-to-unit-testing-in-django-with-mocking-and-patching/
+    """
+
+    from datetime import datetime as org_datetime
+    class FakeDatetime(org_datetime):
+        def __new__(cls, *args, **kwargs):
+            return org_datetime.__new__(org_datetime, *args, **kwargs)
+
+    with mock.patch("datetime.datetime", FakeDatetime):
+        for method, return_value in patches.items():
+            setattr(FakeDatetime, method, classmethod(lambda cls: return_value))
+        yield
+
+
 def check_raises(func, exception_type, msg=None):
     # type: (Callable[[], Any], Type[Exception], Optional[Str]) -> Exception
     """
@@ -3148,6 +3170,7 @@ class TestSetup(object):
                   override_jwt_claims=null,   # type: Optional[Dict[Str, Str]]
                   override_jwt_headers=null,  # type: Optional[Dict[Str, Str]]
                   override_jwt_issuer=null,   # type: Optional[Str]
+                  override_jwt_expiry=null,   # type: Optional[datetime]
                   override_jwks_url=null,     # type: Optional[Str]
                   override_node_host=null,    # type: Optional[Str]
                   override_node_port=null     # type: Optional[int]
@@ -3171,8 +3194,11 @@ class TestSetup(object):
         jwt_headers = {} if override_jwt_headers is null else override_jwt_headers
         issuer = test_case.test_node_name if override_jwt_issuer is null else override_jwt_issuer
         jwt_claims = {} if override_jwt_claims is null else override_jwt_claims
-        expiry = int(get_constant("MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY"))
-        expiry_time = datetime.utcnow() + timedelta(seconds=expiry)
+        if override_jwt_expiry is null:
+            expiry = int(get_constant("MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY"))
+            expiry_time = datetime.utcnow() + timedelta(seconds=expiry)
+        else:
+            expiry_time = override_jwt_expiry
         audience = get_constant("MAGPIE_NETWORK_INSTANCE_NAME")
         claims = {"iss": issuer, "aud": audience, "exp": expiry_time, **jwt_claims}
         token = jwt.encode(claims, private_bytes, headers={"kid": jwk["kid"], **jwt_headers}, algorithm="RS256")

@@ -7,6 +7,7 @@ test_magpie_api
 
 Tests for :mod:`magpie.api` module.
 """
+import datetime
 import unittest
 
 import mock
@@ -17,7 +18,7 @@ from magpie.constants import get_constant
 from magpie.models import UserGroupStatus, UserStatuses
 from magpie.utils import CONTENT_TYPE_JSON
 from tests import runner, utils
-from tests.utils import TestVersion
+from tests.utils import TestVersion, patch_datetime
 
 
 @runner.MAGPIE_TEST_API
@@ -555,6 +556,53 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
             resp = utils.test_request(self, "POST", "/users", data=data,
                                       headers=self.json_headers, cookies=self.cookies, expect_errors=True)
             utils.check_response_basic_info(resp, 201, expected_method="POST")
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_DeleteNetworkTokens_AndAnonymousNetworkUsers_ExpiredOnly(self):
+        """
+        Test deleting only expired network tokens and their associated anonymous network users.
+
+        Note that this test only runs locally because it requires mocking the expiry time.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Delete expired network tokens", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test1")
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test2")
+        utils.TestSetup.create_TestNetworkToken(self, override_remote_user_name="test1", override_node_name="test1")
+
+        with patch_datetime({"utcnow": datetime.datetime.utcnow() - datetime.timedelta(days=365)}):
+            utils.TestSetup.create_TestNetworkToken(self, override_remote_user_name="test2", override_node_name="test2")
+
+
+        utils.test_request(self, "DELETE", "/network/tokens", data={"expired_only": True}, cookies=self.cookies,
+                           headers=self.headers)
+
+        resp = utils.test_request(self, "GET", "/network/remote_users", cookies=self.cookies, headers=self.headers)
+        json_body = utils.get_json_body(resp)
+        assert {u["remote_user_name"] for u in json_body["remote_users"]} == {"test1"}
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetDecodeJWT_DifferentAudience(self):
+        """
+        Test raise error when decoding a JSON web token for a different audience.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        with utils.TestSetup.valid_jwt(self) as token:
+            with utils.mocked_get_settings(settings={"MAGPIE_NETWORK_INSTANCE_NAME": "some_other_instance"}):
+                resp = utils.test_request(self, "GET", "/network/decode_jwt?token={}".format(token),
+                                          cookies=self.cookies, headers=self.headers, expect_errors=True)
+        json_info = utils.check_response_basic_info(resp, expected_code=400)
+        assert json_info.get("call", {}).get("exception") == "InvalidAudienceError"
 
 
 @runner.MAGPIE_TEST_API

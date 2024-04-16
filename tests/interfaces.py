@@ -1,3 +1,4 @@
+import datetime
 import html
 import itertools
 import os
@@ -1385,6 +1386,25 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         resp = utils.TestSetup.delete_TestNetworkToken(self, override_remote_user_name="some_other_user",
                                                        allow_missing=True)
         utils.check_response_basic_info(resp, expected_code=404, expected_method="DELETE")
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetJSONWebKeySet(self):
+        """
+        Test get a valid JSON Web Key Set.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Get a valid JSON Web Key Set", "3.38.0", skip=True)
+        resp = utils.test_request(self, "GET", "/network/jwks")
+        utils.check_response_basic_info(resp)
+        json_body = utils.get_json_body(resp)
+        assert json_body.get("keys")
+        for key in json_body["keys"]:
+            assert key.get("kty") == "RSA"
+            assert key.get("kid")
+            assert key.get("n")
+            assert key.get("e")
 
 
 @runner.MAGPIE_TEST_API
@@ -7742,6 +7762,106 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", "/network/remote_users", cookies=self.cookies, headers=self.headers)
         json_body = utils.get_json_body(resp)
         assert not json_body["remote_users"]
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetDecodeJWT(self):
+        """
+        Test decode a JSON web token.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        claims = {"test": 123, "test2": "another value"}
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims=claims) as token:
+            resp = utils.test_request(self, "GET", "/network/decode_jwt?token={}".format(token), cookies=self.cookies,
+                                      headers=self.headers)
+        utils.check_response_basic_info(resp)
+        json_body = utils.get_json_body(resp)
+        assert json_body.get("jwt_content")
+        assert json_body["jwt_content"].get("iss") == self.test_node_name
+        assert json_body["jwt_content"].get("aud") == get_constant("MAGPIE_NETWORK_INSTANCE_NAME")
+        for key, val in claims.items():
+            assert json_body["jwt_content"].get(key) == val
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetDecodeJWT_NoToken(self):
+        """
+        Test that decoding an empty JSON web token returns an error.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+
+        resp = utils.test_request(self, "GET", "/network/decode_jwt", cookies=self.cookies,
+                                  headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=400)
+        json_body = utils.get_json_body(resp)
+        assert "Missing token" in json_body.get("detail", '')
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetDecodeJWT_BadToken(self):
+        """
+        Test that decoding an improperly formatted JSON web token returns an error.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+
+        resp = utils.test_request(self, "GET", "/network/decode_jwt?token=abc123", cookies=self.cookies,
+                                  headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=400)
+        json_body = utils.get_json_body(resp)
+        assert "Token is improperly formatted" in json_body.get("detail", '')
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetDecodeJWT_BadIssuer(self):
+        """
+        Test that decoding a JSON web token with an issuer that doesn't exist as a node returns an error.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+
+        with utils.TestSetup.valid_jwt(self) as token:
+            resp = utils.test_request(self, "GET", "/network/decode_jwt?token={}".format(token), cookies=self.cookies,
+                                      headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=400)
+        json_body = utils.get_json_body(resp)
+        assert "invalid or missing issuer claim" in json_body.get("detail", '')
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetDecodeJWT_Expired(self):
+        """
+        Test raise error when decoding a JSON web token that has expired.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        expiry = datetime.datetime.utcnow() - datetime.timedelta(days=365)
+        with utils.TestSetup.valid_jwt(self, override_jwt_expiry=expiry) as token:
+            resp = utils.test_request(self, "GET", "/network/decode_jwt?token={}".format(token),
+                                      cookies=self.cookies, headers=self.headers, expect_errors=True)
+        json_info = utils.check_response_basic_info(resp, expected_code=400)
+        assert json_info.get("call", {}).get("exception") == "ExpiredSignatureError"
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkNodes(self):
+        """
+        Test admin can view full information of all network nodes.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network node information", "3.38.0", skip=True)
 
 
 @runner.MAGPIE_TEST_UI

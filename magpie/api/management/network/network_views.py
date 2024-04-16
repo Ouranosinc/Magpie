@@ -79,14 +79,14 @@ def get_network_jwks_view(request):
 def get_decode_jwt(request):
     token = request.GET.get("token")
     if token is None:
-        raise HTTPBadRequest("Missing token")
+        ax.raise_http(http_error=HTTPBadRequest, detail="Missing token")
     try:
         node_name = jwt.decode(token, options={"verify_signature": False}).get("iss")
     except jwt.exceptions.DecodeError:
-        raise HTTPBadRequest("Token is improperly formatted")
+        ax.raise_http(http_error=HTTPBadRequest, detail="Token is improperly formatted")
     node = request.db.query(NetworkNode).filter(NetworkNode.name == node_name).first()
     if node is None:
-        raise HTTPBadRequest("Invalid token: invalid or missing issuer claim")
+        ax.raise_http(http_error=HTTPBadRequest, detail="Invalid token: invalid or missing issuer claim")
     jwt_content = decode_jwt(token, node, request)
     return ax.valid_http(http_success=HTTPOk,
                          content={"jwt_content": jwt_content},
