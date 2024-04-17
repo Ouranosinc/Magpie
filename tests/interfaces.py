@@ -204,7 +204,7 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
             cls.extra_resource_ids.discard(res)
         for node in list(cls.extra_node_names):
             check_network_mode(utils.TestSetup.delete_TestNetworkNode,
-                               enable=True)(cls, override_name=node)
+                               enable=True)(cls, override_name=node, allow_missing=True)
             cls.extra_node_names.discard(node)
         for remote_user_name, node_name in list(cls.extra_network_tokens):
             check_network_mode(utils.TestSetup.delete_TestNetworkToken,
@@ -273,6 +273,22 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
                 utils.TestSetup.assign_TestUserGroup(cls, override_group_name=cls.grp, override_user_name=cls.usr,
                                                      override_headers=admin_headers, override_cookies=admin_cookies)
             utils.check_or_try_logout_user(cls)
+
+    @classmethod
+    def setup_network_attrs(cls):
+        """
+        Sets initial default attributes and values for use in network tests
+        """
+        cls.test_node_name = "node2"
+        cls.test_remote_user_name = "remote_user_1"
+        cls.test_node_host = get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_HOST", default_value="localhost",
+                                         raise_missing=False, raise_not_set=False)
+        cls.test_node_port = int(get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_PORT", default_value=2002,
+                                              raise_missing=False, raise_not_set=False))
+        cls.test_node_jwks_url = "http://{}:{}/network/jwks".format(cls.test_node_host, cls.test_node_port)
+        cls.test_node_token_url = "http://{}:{}/network/token".format(cls.test_node_host, cls.test_node_port)
+        cls.test_authorization_url = "http://{}:{}/ui/network/authorize".format(cls.test_node_host, cls.test_node_port)
+        cls.test_redirect_uris = '["http://{}:{}/network/link"]'.format(cls.test_node_host, cls.test_node_port)
 
     @classmethod
     def login_admin(cls):
@@ -2316,6 +2332,62 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", path, cookies=self.cookies, headers=self.headers)
         utils.check_response_basic_info(resp, 200)
 
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkNodes_NameOnly(self):
+        """
+        Test user can view network node names.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network node names", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test123")
+        headers, cookies = self.login_test_user()
+        resp = utils.test_request(self, "GET", "/network/nodes", cookies=cookies, headers=headers)
+
+        utils.check_response_basic_info(resp)
+        json_body = utils.get_json_body(resp)
+        node_info = json_body.get("nodes", [{}])[0]
+        assert node_info == {"name": "test123"}, node_info
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkNodeToken(self):
+        """
+        Test can get a token from another node in the network for the current user.
+
+        .. versionadded:: 3.38
+        """
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        node_server = utils.TestSetup.remote_node(self)
+        token = str(uuid.uuid4())
+        path = urlparse(self.test_node_token_url).path
+        node_server.expect_request(path, method="POST").respond_with_json({"token": token})
+
+        resp = utils.test_request(self, "GET", "/network/nodes/{}/token".format(self.test_node_name),
+                                  cookies=self.cookies, headers=self.headers)
+        utils.check_response_basic_info(resp)
+        json_body = utils.get_json_body(resp)
+        assert json_body.get("token") == token
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_DeleteNetworkNodeToken(self):
+        """
+        Test can delete a token from another node in the network for the current user.
+
+        .. versionadded:: 3.38
+        """
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        node_server = utils.TestSetup.remote_node(self)
+        path = urlparse(self.test_node_token_url).path
+        node_server.expect_request(path, method="DELETE").respond_with_json({})
+
+        resp = utils.test_request(self, "DELETE", "/network/nodes/{}/token".format(self.test_node_name),
+                                  cookies=self.cookies, headers=self.headers)
+        utils.check_response_basic_info(resp, expected_method="DELETE")
+
 
 @runner.MAGPIE_TEST_API
 @six.add_metaclass(ABCMeta)
@@ -2366,17 +2438,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         cls.test_group_name = "magpie-unittest-dummy-group"
         cls.test_user_name = "magpie-unittest-toto"
-
-        cls.test_node_name = "node2"
-        cls.test_remote_user_name = "remote_user_1"
-        cls.test_node_host = get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_HOST", default_value="localhost",
-                                         raise_missing=False, raise_not_set=False)
-        cls.test_node_port = int(get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_PORT", default_value=2002,
-                                              raise_missing=False, raise_not_set=False))
-        cls.test_node_jwks_url = "http://{}:{}/network/jwks".format(cls.test_node_host, cls.test_node_port)
-        cls.test_node_token_url = "http://{}:{}/network/token".format(cls.test_node_host, cls.test_node_port)
-        cls.test_authorization_url = "http://{}:{}/ui/network/authorize".format(cls.test_node_host, cls.test_node_port)
-        cls.test_redirect_uris = '["http://{}:{}/network/link"]'.format(cls.test_node_host, cls.test_node_port)
+        cls.setup_network_attrs()
 
     @runner.MAGPIE_TEST_STATUS
     def test_unauthorized_forbidden_responses(self):
@@ -7855,13 +7917,294 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
-    def test_GetNetworkNodes(self):
+    def test_GetNetworkNodes_AllInfo(self):
         """
         Test admin can view full information of all network nodes.
 
         .. versionadded:: 3.38
         """
         utils.warn_version(self, "View network node information", "3.38.0", skip=True)
+
+        expected_node_info = {
+            "name": "test123",
+            "jwks_url": "http://test1.example.com/jwks",
+            "token_url": "http://test1.example.com/token",
+            "authorization_url": "http://test1.example.com/authorization",
+            "redirect_uris": ["http://uri.test.some.example.com"]
+        }
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_data=expected_node_info)
+        resp = utils.test_request(self, "GET", "/network/nodes", cookies=self.cookies, headers=self.headers)
+
+        utils.check_response_basic_info(resp)
+        json_body = utils.get_json_body(resp)
+        node_info = json_body.get("nodes", [{}])[0]
+        assert {k: v for k, v in node_info.items() if k in expected_node_info} == expected_node_info
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkNode_AllInfo(self):
+        """
+        Test admin can view full information of a network node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network node information", "3.38.0", skip=True)
+
+        expected_node_info = {
+            "name": "test123",
+            "jwks_url": "http://test1.example.com/jwks",
+            "token_url": "http://test1.example.com/token",
+            "authorization_url": "http://test1.example.com/authorization",
+            "redirect_uris": ["http://uri.test.some.example.com"]
+        }
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_data=expected_node_info)
+        resp = utils.test_request(self, "GET", "/network/nodes/test123", cookies=self.cookies, headers=self.headers)
+
+        utils.check_response_basic_info(resp)
+        json_body = utils.get_json_body(resp)
+        assert {k: v for k, v in json_body.items() if k in expected_node_info} == expected_node_info
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkNode_NotFound(self):
+        """
+        Test non-existant node returns 404 error.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Can't find non-existant node", "3.38.0", skip=True)
+
+        resp = utils.test_request(self, "GET", "/network/nodes/test123", cookies=self.cookies, headers=self.headers,
+                                  expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkNode(self):
+        """
+        Test create a new network node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a network node", "3.38.0", skip=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkNode_CreateAssociatedRecords(self):
+        """
+        Test create a new network node and check that the associated Group and anonymous User are created.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a network node", "3.38.0", skip=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+
+        anonymous_name = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
+
+        resp = utils.test_request(self, "GET", "/users/{}".format(anonymous_name), cookies=self.cookies,
+                                  headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp)
+
+        resp = utils.test_request(self, "GET", "/groups/{}".format(anonymous_name), cookies=self.cookies,
+                                  headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp)
+
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkNode_MissingParamName(self):
+        """
+        Test cannot create a new network node without required parameters.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a network node without required parameters", "3.38.0", skip=True)
+        node_info = {
+            "name": "test1",
+            "jwks_url": "http://test1.example.com/jwks",
+            "token_url": "http://test1.example.com/token",
+            "authorization_url": "http://test1.example.com/authorization",
+            "redirect_uris": ["http://uri.test.some.example.com"]
+        }
+
+        for param, value in node_info.items():
+            json_body = utils.TestSetup.create_TestNetworkNode(self, override_exist=True,
+                                                               override_data={**node_info, param: None},
+                                                               expect_errors=True)
+            assert json_body.get("code") == 201 if param == "redirect_uris" else 400
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkNode_InvalidParam(self):
+        """
+        Test cannot create a new network node with invalid params.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a network node with invalid parameters", "3.38.0", skip=True)
+        node_info = {
+            "name": "test1",
+            "jwks_url": "http://test1.example.com/jwks",
+            "token_url": "http://test1.example.com/token",
+            "authorization_url": "http://test1.example.com/authorization",
+            "redirect_uris": ["http://uri.test.some.example.com"]
+        }
+
+        for param in node_info.keys():
+            json_body = utils.TestSetup.create_TestNetworkNode(self, override_exist=True,
+                                                               override_data={**node_info, param: ""},
+                                                               expect_errors=True)
+            assert json_body.get("code") == 400
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PatchNetworkNode(self):
+        """
+        Test can update attributes of a network node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Update a network node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        node_info = {
+            "name": "test123",
+            "jwks_url": "http://test1.example.com/jwks",
+            "token_url": "http://test1.example.com/token",
+            "authorization_url": "http://test1.example.com/authorization",
+            "redirect_uris": ["http://uri.test.some.example.com"]
+        }
+        resp = utils.test_request(self, "PATCH", "/network/nodes/{}".format(self.test_node_name), cookies=self.cookies,
+                                  headers=self.headers, data=node_info)
+        utils.check_response_basic_info(resp, expected_method="PATCH")
+        self.extra_node_names.add("test123")  # indicate potential removal at a later point
+
+        resp = utils.test_request(self, "GET", "/network/nodes/test123", cookies=self.cookies, headers=self.headers)
+        json_body = utils.check_response_basic_info(resp)
+
+        assert {k: v for k, v in json_body.items() if k in node_info} == node_info
+
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PatchNetworkNode_CreateAssociatedRecords(self):
+        """
+        Test can update attributes of a network node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Update a network node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        resp = utils.test_request(self, "PATCH", "/network/nodes/{}".format(self.test_node_name), cookies=self.cookies,
+                                  headers=self.headers, data={"name": "test123"})
+        utils.check_response_basic_info(resp, expected_method="PATCH")
+        self.extra_node_names.add("test123")  # indicate potential removal at a later point
+
+        anonymous_name = "{}test123".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"))
+
+        resp = utils.test_request(self, "GET", "/users/{}".format(anonymous_name), cookies=self.cookies,
+                                  headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp)
+
+        resp = utils.test_request(self, "GET", "/groups/{}".format(anonymous_name), cookies=self.cookies,
+                                  headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PatchNetworkNode_DuplicateName(self):
+        """
+        Test cannot update attributes of a network node if another node exists with the same name.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Update a network node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test123")
+        node_info = {
+            "name": "test123",
+            "jwks_url": "http://test1.example.com/jwks",
+            "token_url": "http://test1.example.com/token",
+            "authorization_url": "http://test1.example.com/authorization",
+            "redirect_uris": ["http://uri.test.some.example.com"]
+        }
+        resp = utils.test_request(self, "PATCH", "/network/nodes/{}".format(self.test_node_name), cookies=self.cookies,
+                                  headers=self.headers, data=node_info, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_method="PATCH", expected_code=409)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PatchNetworkNode_InvalidName(self):
+        """
+        Test cannot update attributes of a network node if the new name is invalid.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Update a network node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        node_info = {
+            "name": "test123",
+            "jwks_url": "http://test1.example.com/jwks",
+            "token_url": "http://test1.example.com/token",
+            "authorization_url": "http://test1.example.com/authorization",
+            "redirect_uris": ["http://uri.test.some.example.com"]
+        }
+
+        for param in node_info.keys():
+            resp = utils.test_request(self, "PATCH", "/network/nodes/{}".format(self.test_node_name),
+                                      cookies=self.cookies, headers=self.headers,
+                                      data={**node_info, param: ""}, expect_errors=True)
+            utils.check_response_basic_info(resp, expected_method="PATCH", expected_code=400)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_DeleteNetworkNode(self):
+        """
+        Test can delete a network node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Delete a network node", "3.38.0", skip=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.delete_TestNetworkNode(self)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_DeleteNetworkNode_BadName(self):
+        """
+        Test cannot delete a network node if the node doesn't exist.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Delete a network node", "3.38.0", skip=True)
+        resp = utils.TestSetup.delete_TestNetworkNode(self, allow_missing=True)
+        utils.check_response_basic_info(resp, expected_method="DELETE", expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_DeleteNetworkNode_RemoveAssociatedRecords(self):
+        """
+        Test can delete a network node and the associated User and Group records are removed as well.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Delete a network node", "3.38.0", skip=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.delete_TestNetworkNode(self)
+
+        anonymous_name = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
+
+        resp = utils.test_request(self, "GET", "/users/{}".format(anonymous_name), cookies=self.cookies,
+                                  headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=404)
+
+        resp = utils.test_request(self, "GET", "/groups/{}".format(anonymous_name), cookies=self.cookies,
+                                  headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=404)
 
 
 @runner.MAGPIE_TEST_UI

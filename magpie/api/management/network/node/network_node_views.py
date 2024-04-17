@@ -1,8 +1,5 @@
-import json
-
 import jwt
 import requests
-import six
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPCreated,
@@ -25,7 +22,7 @@ from magpie.api.management.network.node.network_node_utils import (
     check_network_node_info,
     create_associated_user_groups,
     delete_network_node,
-    update_associated_user_groups
+    update_associated_user_groups, load_redirect_uris
 )
 from magpie.api.requests import check_network_mode_enabled
 from magpie.constants import get_constant
@@ -71,15 +68,7 @@ def post_network_nodes_view(request):
         kwargs[param] = value
     redirect_uris = ar.get_multiformat_body(request, "redirect_uris", default=None)
     if redirect_uris is not None:
-        if isinstance(redirect_uris, six.string_types):
-            kwargs["redirect_uris"] = ax.evaluate_call(
-                lambda: json.loads(redirect_uris),
-                http_error=HTTPBadRequest,
-                fallback=lambda: request.db.rollback(),
-                msg_on_fail=s.NetworkNodes_CheckInfo_RedirectURIsValue_BadRequestResponseSchema.description
-            )
-        else:
-            kwargs["redirect_uris"] = redirect_uris
+        kwargs["redirect_uris"] = load_redirect_uris(redirect_uris, request)
     check_network_node_info(request.db, **kwargs)
 
     node = models.NetworkNode(**kwargs)
@@ -100,8 +89,12 @@ def patch_network_node_view(request):
     params = ("name", "jwks_url", "token_url", "authorization_url", "redirect_uris")
     kwargs = {}
     for param in params:
-        if param in request.POST:
-            kwargs[param] = request.POST[param]
+        param_value = ar.get_multiformat_body(request, param, default=None)
+        if param_value is not None:
+            if param == "redirect_uris":
+                kwargs[param] = load_redirect_uris(param_value, request)
+            else:
+                kwargs[param] = param_value
     if not kwargs:
         ax.raise_http(http_error=HTTPBadRequest, detail=s.NetworkNodes_PATCH_BadRequestResponseSchema.description)
 

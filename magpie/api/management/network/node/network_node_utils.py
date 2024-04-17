@@ -1,5 +1,7 @@
+import json
 from typing import TYPE_CHECKING
 
+import six
 from pyramid.httpexceptions import HTTPBadRequest, HTTPConflict
 
 from magpie import models
@@ -12,7 +14,7 @@ from magpie.constants import get_constant
 if TYPE_CHECKING:
     from pyramid.request import Request
 
-    from magpie.typedefs import Optional, Session, Str
+    from magpie.typedefs import AnyRequestType, JSON, List, Optional, Session, Str
 
 NAME_REGEX = r"^[\w-]+$"
 
@@ -60,6 +62,7 @@ def update_associated_user_groups(node, old_node_name, request):
         anonymous_user = request.db.query(models.User).filter(models.User.user_name == old_anonymous_name).one()
         anonymous_group = request.db.query(models.Group).filter(models.Group.group_name == old_anonymous_name).one()
         anonymous_user.user_name = node.anonymous_user_name()
+        anonymous_user.email = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format(node.name)
         anonymous_group.group_name = node.anonymous_user_name()
 
 
@@ -104,3 +107,19 @@ def check_network_node_info(db_session=None, name=None, jwks_url=None, token_url
             ax.verify_param(uri, matches=True, param_name="redirect_uris", param_compare=URL_REGEX,
                             http_error=HTTPBadRequest,
                             msg_on_fail=s.NetworkNodes_CheckInfo_RedirectURIsValue_BadRequestResponseSchema.description)
+
+
+def load_redirect_uris(uris, request):
+    # type: (JSON, AnyRequestType) -> List[Str]
+    """
+    If the uris are a string type, load them as a JSON into a list and return the list.
+    """
+    if isinstance(uris, six.string_types):
+        return ax.evaluate_call(
+            lambda: json.loads(uris),
+            http_error=HTTPBadRequest,
+            fallback=lambda: request.db.rollback(),
+            msg_on_fail=s.NetworkNodes_CheckInfo_RedirectURIsValue_BadRequestResponseSchema.description
+        )
+    else:
+        return uris

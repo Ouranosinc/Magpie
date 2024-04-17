@@ -3016,7 +3016,8 @@ class TestSetup(object):
                                override_headers=null,            # type: Optional[HeadersType]
                                override_cookies=null,            # type: Optional[CookiesType]
                                override_exist=False,             # type: bool
-                               override_data=null                # type: Optional[JSON]
+                               override_data=null,               # type: Optional[JSON]
+                               expect_errors=False,              # type: bool
                                ):                                # type: (...) -> JSON
         """
         Creates a Network Node
@@ -3037,8 +3038,8 @@ class TestSetup(object):
         headers = override_headers if override_headers is not null else test_case.json_headers
         cookies = override_cookies if override_cookies is not null else test_case.cookies
 
-        resp = test_request(app_or_url, "POST", "/network/nodes", json=data, expect_errors=override_exist,
-                            headers=headers, cookies=cookies)
+        resp = test_request(app_or_url, "POST", "/network/nodes", json=data,
+                            expect_errors=(override_exist or expect_errors), headers=headers, cookies=cookies)
 
         if data.get("name"):
             test_case.extra_node_names.add(data["name"])  # indicate potential removal at a later point
@@ -3052,8 +3053,11 @@ class TestSetup(object):
                                                     override_data=data,
                                                     override_headers=headers,
                                                     override_cookies=cookies,
-                                                    override_exist=False)
+                                                    override_exist=False,
+                                                    expect_errors=expect_errors)
 
+        if expect_errors:
+            return get_json_body(resp)
         return check_response_basic_info(resp, 201, expected_method="POST")
 
     @staticmethod
@@ -3061,16 +3065,19 @@ class TestSetup(object):
                                override_name=null,     # type: Optional[Str]
                                override_headers=null,  # type: Optional[HeadersType]
                                override_cookies=null,  # type: Optional[CookiesType]
-                               ):                      # type: (...) -> None
+                               allow_missing=False,    # type: bool
+                               ):                      # type: (...) -> Optional[AnyResponseType]
         """
         Deletes a Network Node.
         """
         app_or_url = get_app_or_url(test_case)
         headers = override_headers if override_headers is not null else test_case.json_headers
         cookies = override_cookies if override_cookies is not null else test_case.cookies
-        name = override_name if override_name is not null else test_case.test_user_name
+        name = override_name if override_name is not null else test_case.test_node_name
         path = "/network/nodes/{}".format(name)
-        resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies)
+        resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies, expect_errors=allow_missing)
+        if resp.status_code == 404 and allow_missing:
+            return resp
         check_response_basic_info(resp, 200, expected_method="DELETE")
 
     @staticmethod
@@ -3147,7 +3154,7 @@ class TestSetup(object):
 
     @staticmethod
     def remote_node(test_case, override_node_host=null, override_node_port=null, clear=True):
-        # type: (AnyMagpieTestCaseType, Optional[Str], Optional[int], bool) -> Any
+        # type: (AnyMagpieTestCaseType, Optional[Str], Optional[int], bool) -> HTTPServer
         """
         Starts a :class:`pytest_httpserver.HTTPServer` instance which can be used to generate fake responses
         from a fake network node.
