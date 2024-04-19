@@ -1,6 +1,7 @@
 import datetime
 import html
 import itertools
+import json
 import os
 import secrets
 import string
@@ -10,12 +11,13 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
+import jwt
 import pyramid.testing
 import pytest
 import six
 import yaml
 from pyramid.interfaces import IRequestExtensions
-from six.moves.urllib.parse import urlparse
+from six.moves.urllib.parse import parse_qs, urlparse
 from webtest.app import TestApp
 
 from magpie import __meta__
@@ -689,8 +691,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
             resp_cookies = resp.cookies
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=resp_cookies)
         session_json = utils.get_json_body(resp)
-        assert session_json.get("authenticated")
-        assert session_json.get("user", {}).get("user_name") == self.test_user_name
+        utils.check_val_true(session_json.get("authenticated"))
+        utils.check_val_equal(session_json.get("user", {}).get("user_name"), self.test_user_name)
 
     @runner.MAGPIE_TEST_NETWORK
     @runner.MAGPIE_TEST_LOGIN
@@ -712,7 +714,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         initial_token = utils.TestSetup.create_TestNetworkToken(self)
         token = utils.TestSetup.create_TestNetworkToken(self)
 
-        assert token != initial_token
+        utils.check_val_not_equal(token, initial_token)
 
         headers = {"Accept": CONTENT_TYPE_JSON, "Authorization": "Bearer {}".format(token["token"])}
         path = s.ProviderSigninAPI.path.format(provider_name=get_constant("MAGPIE_NETWORK_PROVIDER"))
@@ -727,8 +729,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
             resp_cookies = resp.cookies
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=resp_cookies)
         session_json = utils.get_json_body(resp)
-        assert session_json.get("authenticated")
-        assert session_json.get("user", {}).get("user_name") == self.test_user_name
+        utils.check_val_true(bool(session_json.get("authenticated")))
+        utils.check_val_equal(session_json.get("user", {}).get("user_name"), self.test_user_name)
 
     @runner.MAGPIE_TEST_NETWORK
     @runner.MAGPIE_TEST_LOGIN
@@ -761,8 +763,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
             resp_cookies = resp.cookies
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=resp_cookies)
         session_json = utils.get_json_body(resp)
-        assert session_json.get("authenticated") is False
-        assert session_json.get("user", {}).get("user_name") is None
+        utils.check_val_false(session_json.get("authenticated"))
+        utils.check_val_equal(session_json.get("user", {}).get("user_name"), None)
 
     @runner.MAGPIE_TEST_NETWORK
     @runner.MAGPIE_TEST_LOGIN
@@ -797,8 +799,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
             resp_cookies = resp.cookies
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=resp_cookies)
         session_json = utils.get_json_body(resp)
-        assert session_json.get("authenticated") is False
-        assert session_json.get("user", {}).get("user_name") is None
+        utils.check_val_false(session_json.get("authenticated"))
+        utils.check_val_equal(session_json.get("user", {}).get("user_name"), None)
 
     @runner.MAGPIE_TEST_NETWORK
     @runner.MAGPIE_TEST_LOGIN
@@ -824,8 +826,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
             resp_cookies = resp.cookies
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=resp_cookies)
         session_json = utils.get_json_body(resp)
-        assert session_json.get("authenticated") is False
-        assert session_json.get("user", {}).get("user_name") is None
+        utils.check_val_false(session_json.get("authenticated"))
+        utils.check_val_equal(session_json.get("user", {}).get("user_name"), None)
 
     @runner.MAGPIE_TEST_NETWORK
     @runner.MAGPIE_TEST_LOGIN
@@ -858,8 +860,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
             resp_cookies = resp.cookies
         resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=resp_cookies)
         session_json = utils.get_json_body(resp)
-        assert session_json.get("authenticated") is False
-        assert session_json.get("user", {}).get("user_name") is None
+        utils.check_val_false(session_json.get("authenticated"))
+        utils.check_val_equal(session_json.get("user", {}).get("user_name"), None)
 
     @runner.MAGPIE_TEST_LOGIN
     def test_Login_GetRequestFormat(self):
@@ -1232,7 +1234,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         utils.check_or_try_logout_user(self)
         self.cookies = self.headers = None
         token = utils.TestSetup.create_TestNetworkToken(self)
-        assert token.get("token")
+        utils.check_val_true(bool(token.get("token")))
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -1257,7 +1259,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
                                   headers=self.headers, cookies=type(self).cookies)
         json_body = utils.get_json_body(resp)
         anon_user_name = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
-        assert json_body.get("user_name") == anon_user_name
+        utils.check_val_equal(json_body.get("user_name"), anon_user_name)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -1276,8 +1278,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         utils.check_or_try_logout_user(self)
         self.cookies = self.headers = None
         token = utils.TestSetup.create_TestNetworkToken(self, override_node_name="some_other_node", expect_errors=True)
-        assert token.get("token") is None
-        assert token.get("code") == 404
+        utils.check_val_equal(token.get("token"), None)
+        utils.check_val_equal(token.get("code"), 404)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -1297,9 +1299,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         utils.check_or_try_logout_user(self)
         self.cookies = self.headers = None
         token = utils.TestSetup.create_TestNetworkToken(self, expect_errors=True)
-        assert token.get("token") is None
-        assert token.get("code") == 500
-        assert token.get("call", {}).get("exception") == "PyJWKClientConnectionError"
+        utils.check_val_equal(token.get("token"), None)
+        utils.check_val_equal(token.get("code"), 500)
+        utils.check_val_equal(token.get("call", {}).get("exception"), "PyJWKClientConnectionError")
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -1340,7 +1342,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
         resp = utils.test_request(self, "GET", "/network/remote_users", cookies=self.cookies, headers=self.headers)
         json_body = utils.get_json_body(resp)
-        assert json_body.get("remote_users", [{}])[0].get("remote_user_name") == self.test_remote_user_name
+        utils.check_val_equal(json_body.get("remote_users", [{}])[0].get("remote_user_name"),
+                              self.test_remote_user_name)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -1360,7 +1363,8 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
 
         resp = utils.test_request(self, "GET", "/network/remote_users", cookies=self.cookies, headers=self.headers)
         json_body = utils.get_json_body(resp)
-        assert not json_body["remote_users"]
+        utils.check_val_false(bool(json_body["remote_users"]))
+
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -1415,12 +1419,12 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", "/network/jwks")
         utils.check_response_basic_info(resp)
         json_body = utils.get_json_body(resp)
-        assert json_body.get("keys")
+        utils.check_val_true(bool(json_body.get("keys")))
         for key in json_body["keys"]:
-            assert key.get("kty") == "RSA"
-            assert key.get("kid")
-            assert key.get("n")
-            assert key.get("e")
+            utils.check_val_equal(key.get("kty"), "RSA")
+            utils.check_val_true(bool(key.get("kid")))
+            utils.check_val_true(bool(key.get("n")))
+            utils.check_val_true(bool(key.get("e")))
 
 
 @runner.MAGPIE_TEST_API
@@ -2349,7 +2353,7 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         utils.check_response_basic_info(resp)
         json_body = utils.get_json_body(resp)
         node_info = json_body.get("nodes", [{}])[0]
-        assert node_info == {"name": "test123"}, node_info
+        utils.check_val_equal(node_info, {"name": "test123"})
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -2359,17 +2363,19 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
 
         .. versionadded:: 3.38
         """
+        utils.warn_version(self, "Get token from another node", "3.38.0", skip=True)
+
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         node_server = utils.TestSetup.remote_node(self)
         token = str(uuid.uuid4())
         path = urlparse(self.test_node_token_url).path
         node_server.expect_request(path, method="POST").respond_with_json({"token": token})
-
+        headers, cookies = self.login_test_user()
         resp = utils.test_request(self, "GET", "/network/nodes/{}/token".format(self.test_node_name),
-                                  cookies=self.cookies, headers=self.headers)
+                                  cookies=cookies, headers=headers)
         utils.check_response_basic_info(resp)
         json_body = utils.get_json_body(resp)
-        assert json_body.get("token") == token
+        utils.check_val_equal(json_body.get("token"), token)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -2379,14 +2385,193 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
 
         .. versionadded:: 3.38
         """
+        utils.warn_version(self, "Delete token on another node", "3.38.0", skip=True)
+
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         node_server = utils.TestSetup.remote_node(self)
         path = urlparse(self.test_node_token_url).path
         node_server.expect_request(path, method="DELETE").respond_with_json({})
-
+        headers, cookies = self.login_test_user()
         resp = utils.test_request(self, "DELETE", "/network/nodes/{}/token".format(self.test_node_name),
-                                  cookies=self.cookies, headers=self.headers)
+                                  cookies=cookies, headers=headers)
         utils.check_response_basic_info(resp, expected_method="DELETE")
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkLink(self):
+        """
+        Test can create a NetworkRemoteUser associated with another node for the current user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        claims = {"user_name": "test123", "requesting_user_name": self.test_user_name}
+        headers, cookies = self.login_test_user()
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims=claims) as token:
+            resp = utils.test_request(self, "GET", "/network/link?token={}".format(token), cookies=cookies,
+                                      headers=headers)
+            utils.check_response_basic_info(resp)
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/test123".format(self.test_node_name),
+                                  cookies=self.cookies, headers=self.headers)
+        utils.check_response_basic_info(resp)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkLink_DifferentUser(self):
+        """
+        Test cannot create a NetworkRemoteUser associated with another node for a user other than the current user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        claims = {"user_name": "test123", "requesting_user_name": "some_other_user"}
+        headers, cookies = self.login_test_user()
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims=claims) as token:
+            resp = utils.test_request(self, "GET", "/network/link?token={}".format(token), cookies=cookies,
+                                      headers=headers, expect_errors=True)
+            utils.check_response_basic_info(resp, expected_code=403)
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/test123".format(self.test_node_name),
+                                  cookies=self.cookies, headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=404)
+
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkLink_MissingClaim_user_name(self):
+        """
+        Test cannot create a NetworkRemoteUser associated with another node if the user_name claim is missing.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        claims = {"requesting_user_name": self.test_user_name}
+        headers, cookies = self.login_test_user()
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims=claims) as token:
+            resp = utils.test_request(self, "GET", "/network/link?token={}".format(token), cookies=cookies,
+                                      headers=headers, expect_errors=True)
+            utils.check_response_basic_info(resp, expected_code=400)
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/test123".format(self.test_node_name),
+                                  cookies=self.cookies, headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkLink_MissingClaim_requesting_user_name(self):
+        """
+        Test cannot create a NetworkRemoteUser associated with another node if the requesting_user_name claim is
+        missing.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        claims = {"user_name": "test123"}
+        headers, cookies = self.login_test_user()
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims=claims) as token:
+            resp = utils.test_request(self, "GET", "/network/link?token={}".format(token), cookies=cookies,
+                                      headers=headers, expect_errors=True)
+            utils.check_response_basic_info(resp, expected_code=400)
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/test123".format(self.test_node_name),
+                                  cookies=self.cookies, headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkLink_InvalidIssuer(self):
+        """
+        Test cannot create a NetworkRemoteUser associated with another node if the issuer claim is for a different node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="some_other_name")
+        claims = {"user_name": "test123", "requesting_user_name": "some_other_user"}
+        headers, cookies = self.login_test_user()
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims=claims) as token:
+            resp = utils.test_request(self, "GET", "/network/link?token={}".format(token), cookies=cookies,
+                                      headers=headers, expect_errors=True)
+            utils.check_response_basic_info(resp, expected_code=404)
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/test123".format(self.test_node_name),
+                                  cookies=self.cookies, headers=self.headers, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkLink(self):
+        """
+        Test redirect to authorization url of the requested node with an appropriate request token.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Request a link with a remote node for the current user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        headers, cookies = self.login_test_user()
+        resp = utils.test_request(self, "POST", "/network/nodes/{}/link".format(self.test_node_name), cookies=cookies,
+                                  headers=headers, expect_errors=True, allow_redirects=False)
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=302)
+        redirect_uri = resp.headers.get("Location")
+        utils.check_val_true(bool(redirect_uri))
+
+        parsed_url = urlparse(redirect_uri)
+        utils.check_val_equal(parsed_url.hostname, self.test_node_host)
+        utils.check_val_equal(parsed_url.port, self.test_node_port)
+        utils.check_val_equal(parsed_url.path, "/ui/network/authorize")
+
+        query = parse_qs(parsed_url.query)
+        utils.check_val_equal(query.get("response_type", [None])[0], "id_token")
+        utils.check_val_is_in(urlparse(query.get("redirect_uri", [None])[0]).path,
+                              ["/network/link", "/magpie/network/link"])
+
+        token = query.get("token", [None])[0]
+        utils.check_val_true(bool(token))
+
+        jwt_claims = jwt.decode(token, options={"verify_signature": False})
+        jwt_claims.pop("exp")
+        utils.check_val_equal(jwt_claims,
+                              {"user_name": self.test_user_name,
+                               "iss": get_constant("MAGPIE_NETWORK_INSTANCE_NAME"),
+                               "aud": self.test_node_name})
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkLink_DifferentNode(self):
+        """
+        Test redirect to authorization url of the requested node if the node doesn't exist.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Request a link with a remote node for the current user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        headers, cookies = self.login_test_user()
+        resp = utils.test_request(self, "POST", "/network/nodes/{}/link".format(self.test_node_name), cookies=cookies,
+                                  headers=headers, expect_errors=True, allow_redirects=False)
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=404)
 
 
 @runner.MAGPIE_TEST_API
@@ -7801,7 +7986,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         resp = utils.test_request(self, "GET", "/network/remote_users", cookies=self.cookies, headers=self.headers)
         json_body = utils.get_json_body(resp)
-        assert {u.get("remote_user_name") for u in json_body.get("remote_users", [{}])} == {"test1", "test2"}
+        utils.check_val_equal({u.get("remote_user_name") for u in json_body.get("remote_users", [{}])},
+                              {"test1", "test2"})
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -7823,7 +8009,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         resp = utils.test_request(self, "GET", "/network/remote_users", cookies=self.cookies, headers=self.headers)
         json_body = utils.get_json_body(resp)
-        assert not json_body["remote_users"]
+        utils.check_val_false(bool(json_body["remote_users"]))
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -7842,11 +8028,11 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                       headers=self.headers)
         utils.check_response_basic_info(resp)
         json_body = utils.get_json_body(resp)
-        assert json_body.get("jwt_content")
-        assert json_body["jwt_content"].get("iss") == self.test_node_name
-        assert json_body["jwt_content"].get("aud") == get_constant("MAGPIE_NETWORK_INSTANCE_NAME")
+        utils.check_val_true(bool(json_body.get("jwt_content")))
+        utils.check_val_equal(json_body["jwt_content"].get("iss"), self.test_node_name)
+        utils.check_val_equal(json_body["jwt_content"].get("aud"), get_constant("MAGPIE_NETWORK_INSTANCE_NAME"))
         for key, val in claims.items():
-            assert json_body["jwt_content"].get(key) == val
+            utils.check_val_equal(json_body["jwt_content"].get(key), val)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -7862,7 +8048,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp, expected_code=400)
         json_body = utils.get_json_body(resp)
-        assert "Missing token" in json_body.get("detail", '')
+        utils.check_val_is_in("Missing token", json_body.get("detail", ''))
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -7878,7 +8064,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp, expected_code=400)
         json_body = utils.get_json_body(resp)
-        assert "Token is improperly formatted" in json_body.get("detail", '')
+        utils.check_val_is_in("Token is improperly formatted", json_body.get("detail", ''))
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -7895,7 +8081,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                       headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp, expected_code=400)
         json_body = utils.get_json_body(resp)
-        assert "invalid or missing issuer claim" in json_body.get("detail", '')
+        utils.check_val_is_in("invalid or missing issuer claim", json_body.get("detail", ''))
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -7913,7 +8099,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             resp = utils.test_request(self, "GET", "/network/decode_jwt?token={}".format(token),
                                       cookies=self.cookies, headers=self.headers, expect_errors=True)
         json_info = utils.check_response_basic_info(resp, expected_code=400)
-        assert json_info.get("call", {}).get("exception") == "ExpiredSignatureError"
+        utils.check_val_equal(json_info.get("call", {}).get("exception"), "ExpiredSignatureError")
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -7938,7 +8124,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp)
         json_body = utils.get_json_body(resp)
         node_info = json_body.get("nodes", [{}])[0]
-        assert {k: v for k, v in node_info.items() if k in expected_node_info} == expected_node_info
+        utils.check_val_equal({k: v for k, v in node_info.items() if k in expected_node_info}, expected_node_info)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -7962,7 +8148,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         utils.check_response_basic_info(resp)
         json_body = utils.get_json_body(resp)
-        assert {k: v for k, v in json_body.items() if k in expected_node_info} == expected_node_info
+        utils.check_val_equal({k: v for k, v in json_body.items() if k in expected_node_info}, expected_node_info)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -8032,7 +8218,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             json_body = utils.TestSetup.create_TestNetworkNode(self, override_exist=True,
                                                                override_data={**node_info, param: None},
                                                                expect_errors=True)
-            assert json_body.get("code") == 201 if param == "redirect_uris" else 400
+            utils.check_val_equal(json_body.get("code"), 201 if param == "redirect_uris" else 400)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -8055,7 +8241,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             json_body = utils.TestSetup.create_TestNetworkNode(self, override_exist=True,
                                                                override_data={**node_info, param: ""},
                                                                expect_errors=True)
-            assert json_body.get("code") == 400
+            utils.check_val_equal(json_body.get("code"), 400)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -8083,8 +8269,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", "/network/nodes/test123", cookies=self.cookies, headers=self.headers)
         json_body = utils.check_response_basic_info(resp)
 
-        assert {k: v for k, v in json_body.items() if k in node_info} == node_info
-
+        utils.check_val_equal({k: v for k, v in json_body.items() if k in node_info}, node_info)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode

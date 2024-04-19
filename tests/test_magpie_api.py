@@ -576,7 +576,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
 
         resp = utils.test_request(self, "GET", "/network/remote_users", cookies=self.cookies, headers=self.headers)
         json_body = utils.get_json_body(resp)
-        assert {u["remote_user_name"] for u in json_body["remote_users"]} == {"test1"}
+        utils.check_val_equal({u["remote_user_name"] for u in json_body["remote_users"]}, {"test1"})
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -594,7 +594,7 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
                 resp = utils.test_request(self, "GET", "/network/decode_jwt?token={}".format(token),
                                           cookies=self.cookies, headers=self.headers, expect_errors=True)
         json_info = utils.check_response_basic_info(resp, expected_code=400)
-        assert json_info.get("call", {}).get("exception") == "InvalidAudienceError"
+        utils.check_val_equal(json_info.get("call", {}).get("exception"), "InvalidAudienceError")
 
 
 @runner.MAGPIE_TEST_API
