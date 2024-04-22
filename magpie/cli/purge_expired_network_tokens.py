@@ -77,11 +77,9 @@ def main(args=None, parser=None, namespace=None):
     else:
         db_session = get_db_session_from_config_ini(args.ini_config)
         deleted = models.NetworkToken.delete_expired(db_session)
-        anonymous_network_user_ids = [n.anonymous_user(db_session).id for n in
-                                      db_session.query(models.NetworkNode).all()]
         # clean up unused records in the database (no need to keep records associated with anonymous network users)
         (db_session.query(models.NetworkRemoteUser)
-         .filter(models.NetworkRemoteUser.user_id.in_(anonymous_network_user_ids))
+         .filter(models.NetworkRemoteUser.user_id == None)  # noqa: E711 # pylint: disable=singleton-comparison
          .filter(models.NetworkRemoteUser.network_token_id == None)  # noqa: E711 # pylint: disable=singleton-comparison
          .delete())
         try:

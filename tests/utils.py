@@ -3089,18 +3089,22 @@ class TestSetup(object):
                                      override_node_port=null,         # type: Optional[int]
                                      override_headers=null,           # type: Optional[HeadersType]
                                      override_cookies=null,           # type: Optional[CookiesType]
+                                     override_data=null,              # type: Optional[JSON]
                                      override_exist=False,            # type: bool
                                      ):                               # type: (...) -> JSON
         """
         Creates a Network Remote User.
         """
         app_or_url = get_app_or_url(test_case)
-        data = {
-            "remote_user_name": (override_remote_user_name if override_remote_user_name is not null
-                                 else test_case.test_remote_user_name),
-            "user_name": override_user_name if override_user_name is not null else test_case.test_user_name,
-            "node_name": override_node_name if override_node_name is not null else test_case.test_node_name
-        }
+        if override_data is not null:
+            data = override_data
+        else:
+            data = {
+                "remote_user_name": (override_remote_user_name if override_remote_user_name is not null
+                                     else test_case.test_remote_user_name),
+                "user_name": override_user_name if override_user_name is not null else test_case.test_user_name,
+                "node_name": override_node_name if override_node_name is not null else test_case.test_node_name
+            }
         headers = override_headers if override_headers is not null else test_case.json_headers
         cookies = override_cookies if override_cookies is not null else test_case.cookies
 
@@ -3143,7 +3147,7 @@ class TestSetup(object):
         app_or_url = get_app_or_url(test_case)
         headers = override_headers if override_headers is not null else test_case.json_headers
         cookies = override_cookies if override_cookies is not null else test_case.cookies
-        name = override_remote_user_name if override_remote_user_name is not null else test_case.test_user_name
+        name = override_remote_user_name if override_remote_user_name is not null else test_case.test_remote_user_name
         node_name = override_node_name if override_node_name is not null else test_case.test_node_name
 
         path = "/network/nodes/{}/remote_users/{}".format(node_name, name)

@@ -291,8 +291,12 @@ def network_login(request):
             return ax.raise_http(http_error=HTTPUnauthorized,
                                  detail=s.Signin_POST_UnauthorizedResponseSchema.description, nothrow=True)
         authenticated_user = network_token.network_remote_user.user
+        if authenticated_user is None:
+            authenticated_user = network_token.network_remote_user.network_node.anonymous_user(request.db)
         # We should never create a token for protected users but just in case
-        anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=request)
+        # Note that we *should* create tokens for anonymous network users
+        anonymous_regex = protected_user_name_regex(include_admin=False, include_network=False,
+                                                    settings_container=request)
         ax.verify_param(authenticated_user.user_name, not_matches=True, param_compare=anonymous_regex,
                         http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
         return login_success_external(request, authenticated_user)

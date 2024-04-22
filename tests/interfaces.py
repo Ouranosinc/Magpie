@@ -697,6 +697,42 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_NETWORK
     @runner.MAGPIE_TEST_LOGIN
     @utils.check_network_mode
+    def test_Login_NetworkToken_Authorized_Anonymous(self):
+        """
+        Test logging in with a network token associated with an anonymous network user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Login with a network token", "3.38.0", skip=True)
+        self.login_admin()
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True,
+                                                     override_data={"node_name": self.test_node_name,
+                                                                    "remote_user_name": self.test_remote_user_name})
+        utils.check_or_try_logout_user(self)
+        self.cookies = self.headers = None
+        token = utils.TestSetup.create_TestNetworkToken(self)
+
+        headers = {"Accept": CONTENT_TYPE_JSON, "Authorization": "Bearer {}".format(token["token"])}
+        path = s.ProviderSigninAPI.path.format(provider_name=get_constant("MAGPIE_NETWORK_PROVIDER"))
+
+        resp = utils.test_request(self, "GET", path, headers=headers, expect_errors=True, allow_redirects=False)
+        utils.check_response_basic_info(resp, 302, expected_method="GET")
+
+        app_or_url = utils.get_app_or_url(self)
+        if isinstance(app_or_url, TestApp):
+            resp_cookies = app_or_url.cookies
+        else:
+            resp_cookies = resp.cookies
+        resp = utils.test_request(self, "GET", "/session", headers=self.json_headers, cookies=resp_cookies)
+        session_json = utils.get_json_body(resp)
+        utils.check_val_true(session_json.get("authenticated"))
+        anonymous_username = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
+        utils.check_val_equal(session_json.get("user", {}).get("user_name"), anonymous_username)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @runner.MAGPIE_TEST_LOGIN
+    @utils.check_network_mode
     def test_Login_NetworkToken_Authorized_Refreshed(self):
         """
         Test logging in with a refreshed network token.
@@ -1061,6 +1097,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp)
         info = utils.TestSetup.get_UserInfo(self, override_body=body)
         utils.check_val_equal(info["user_name"], anonymous)
+        utils.check_val_not_in("user_id", info)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_LOGGED
@@ -1089,6 +1126,7 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         body = utils.check_response_basic_info(resp)
         info = utils.TestSetup.get_UserInfo(self, override_body=body)
         utils.check_val_equal(info["user_name"], anonymous)
+        utils.check_val_not_in("user_id", info)
 
     @runner.MAGPIE_TEST_USERS
     @runner.MAGPIE_TEST_STATUS
@@ -2572,6 +2610,111 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         resp = utils.test_request(self, "POST", "/network/nodes/{}/link".format(self.test_node_name), cookies=cookies,
                                   headers=headers, expect_errors=True, allow_redirects=False)
         utils.check_response_basic_info(resp, expected_method="POST", expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkRemoteUser(self):
+        """
+        Test get remote user information for currently logged-in user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        headers, cookies = self.login_test_user()
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             self.test_remote_user_name),
+                                  cookies=cookies,
+                                  headers=headers)
+        json_body = utils.check_response_basic_info(resp)
+        expected = {"user_name": self.test_user_name,
+                    "remote_user_name": self.test_remote_user_name,
+                    "node_name": self.test_node_name}
+        actual = {k: v for k, v in json_body.items() if k in expected}
+        utils.check_val_equal(actual, expected)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkRemoteUser_DifferentUser(self):
+        """
+        Test cannot get remote user information for a user other than the currently logged-in user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True, override_user_name="test123",
+                                        override_password=self.test_user_name, override_email="test123@example.com")
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True, override_user_name="test123")
+
+        headers, cookies = self.login_test_user()
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             self.test_remote_user_name),
+                                  cookies=cookies,
+                                  headers=headers,
+                                  expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=403)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_DeleteNetworkRemoteUser(self):
+        """
+        Test delete a remote user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Delete remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        headers, cookies = self.login_test_user()
+        utils.TestSetup.delete_TestNetworkRemoteUser(self, override_cookies=cookies, override_headers=headers)
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             self.test_remote_user_name),
+                                  cookies=self.cookies,
+                                  headers=self.headers,
+                                  expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkRemoteUsersCurrent(self):
+        """
+        Test get all remote user information for currently logged-in user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        headers, cookies = self.login_test_user()
+        resp = utils.test_request(self, "GET",
+                                  "/network/remote_users/current",
+                                  cookies=cookies,
+                                  headers=headers)
+        json_body = utils.check_response_basic_info(resp)
+        expected = [{"user_name": self.test_user_name,
+                     "remote_user_name": self.test_remote_user_name,
+                     "node_name": self.test_node_name}]
+        utils.check_val_equal(json_body.get("remote_users"), expected)
 
 
 @runner.MAGPIE_TEST_API
@@ -8390,6 +8533,377 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, "GET", "/groups/{}".format(anonymous_name), cookies=self.cookies,
                                   headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp, expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkRemoteUsers(self):
+        """
+        Test get all remote user information.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        resp = utils.test_request(self, "GET", "/network/remote_users", cookies=self.cookies,
+                                  headers=self.headers)
+        json_body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(json_body.get("remote_users", [{}]), [{"user_name": self.test_user_name,
+                                                                     "remote_user_name": self.test_remote_user_name,
+                                                                     "node_name": self.test_node_name}])
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkRemoteUsers_OneUser(self):
+        """
+        Test get remote user information for a single user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True, override_user_name="test123",
+                                        override_password=self.test_user_name, override_email="test123@example.com")
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True, override_remote_user_name="test123",
+                                                     override_user_name="test123")
+
+        resp = utils.test_request(self, "GET", "/network/remote_users?user_name={}".format(self.test_user_name),
+                                  cookies=self.cookies, headers=self.headers)
+        json_body = utils.check_response_basic_info(resp)
+        utils.check_val_equal(json_body.get("remote_users", [{}]), [{"user_name": self.test_user_name,
+                                                                     "remote_user_name": self.test_remote_user_name,
+                                                                     "node_name": self.test_node_name}])
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_GetNetworkRemoteUser(self):
+        """
+        Test get remote user information for a single user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        resp = utils.test_request(self, "GET", 
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name, 
+                                                                             self.test_remote_user_name), 
+                                  cookies=self.cookies,
+                                  headers=self.headers)
+        json_body = utils.check_response_basic_info(resp)
+        expected = {"user_name": self.test_user_name,
+                    "remote_user_name": self.test_remote_user_name,
+                    "node_name": self.test_node_name}
+        actual = {k: v for k, v in json_body.items() if k in expected}
+        utils.check_val_equal(actual, expected)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser(self):
+        """
+        Test create a remote user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser_MissingRequiredParams(self):
+        """
+        Test cannot create a remote user if required params are missing.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+        data = {
+            "remote_user_name": self.test_remote_user_name,
+            "node_name": self.test_node_name
+        }
+        for key in data.keys():
+            resp = utils.test_request(self, "POST", "/network/remote_users", json={**data, key: None},
+                                      expect_errors=True, headers=self.headers, cookies=self.cookies)
+            utils.check_response_basic_info(resp, expected_method="POST", expected_code=400)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser_MissingNode(self):
+        """
+        Test cannot create a remote user when associated node is not found.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+
+        data = {
+            "remote_user_name": self.test_remote_user_name,
+            "user_name": self.test_user_name,
+            "node_name": self.test_node_name
+        }
+        resp = utils.test_request(self, "POST", "/network/remote_users", json=data,
+                                  expect_errors=True, headers=self.headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=404)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser_DuplicateRemoteUserName(self):
+        """
+        Test cannot create a remote user with the same name for the same node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True, override_user_name="test123",
+                                        override_password=self.test_user_name, override_email="test123@example.com")
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        data = {
+            "remote_user_name": self.test_remote_user_name,
+            "user_name": "test123",
+            "node_name": self.test_node_name
+        }
+        resp = utils.test_request(self, "POST", "/network/remote_users", json=data,
+                                  expect_errors=True, headers=self.headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=500)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser_DuplicateUser(self):
+        """
+        Test cannot create a remote user with the same associated user for the same node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        data = {
+            "remote_user_name": "some_other_name",
+            "user_name": self.test_user_name,
+            "node_name": self.test_node_name
+        }
+        resp = utils.test_request(self, "POST", "/network/remote_users", json=data,
+                                  expect_errors=True, headers=self.headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, expected_method="POST", expected_code=500)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser_DifferentUserAndName(self):
+        """
+        Test create a remote user with a different name and associated user for the same node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True, override_user_name="test123",
+                                        override_password=self.test_user_name, override_email="test123@example.com")
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        data = {
+            "remote_user_name": "test123",
+            "user_name": "test123",
+            "node_name": self.test_node_name
+        }
+        resp = utils.test_request(self, "POST", "/network/remote_users", json=data, headers=self.headers,
+                                  cookies=self.cookies)
+        utils.check_response_basic_info(resp, expected_code=201)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser_DifferentNodeSameName(self):
+        """
+        Test create a remote user with the same name and associated user for a different node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test123")
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True, override_node_name="test123")
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser_NoUser(self):
+        """
+        Test create a remote user with no user specified gets associated to the node's anonymous user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+
+        data = {
+            "remote_user_name": self.test_remote_user_name,
+            "node_name": self.test_node_name
+        }
+        resp = utils.test_request(self, "POST", "/network/remote_users", json=data, headers=self.headers,
+                                  cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=201, expected_method="POST")
+
+        self.extra_remote_user_names.add((self.test_remote_user_name, self.test_node_name))
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             self.test_remote_user_name),
+                                  cookies=self.cookies,
+                                  headers=self.headers)
+        json_body = utils.check_response_basic_info(resp)
+        data["user_name"] = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
+        actual = {k: v for k, v in json_body.items() if k in data}
+        utils.check_val_equal(actual, data)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PostNetworkRemoteUser_MultipleAnonymous(self):
+        """
+        Test create a remote user with no user specified gets associated to the node's anonymous user even when another
+        remote user is associated with the anonymous user for that node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        anonymous_username = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True,
+                                                     override_user_name=anonymous_username)
+
+        data = {
+            "remote_user_name": "other_remote_user_name",
+            "user_name": anonymous_username,
+            "node_name": self.test_node_name
+        }
+        resp = utils.test_request(self, "POST", "/network/remote_users", json=data, headers=self.headers,
+                                  cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, expected_code=201, expected_method="POST")
+
+        self.extra_remote_user_names.add((self.test_remote_user_name, self.test_node_name))
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             "other_remote_user_name"),
+                                  cookies=self.cookies,
+                                  headers=self.headers)
+        json_body = utils.check_response_basic_info(resp)
+        actual = {k: v for k, v in json_body.items() if k in data}
+        utils.check_val_equal(actual, data)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PatchNetworkRemoteUser(self):
+        """
+        Test update a remote user.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Update a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True, override_user_name="test123_user_name",
+                                        override_password=self.test_user_name, override_email="test123@example.com")
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test123_node_name")
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        data = {
+            "remote_user_name": "test123",
+            "user_name": "test123_user_name",
+            "node_name": "test123_node_name"
+        }
+
+        resp = utils.test_request(self, "PATCH",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             self.test_remote_user_name),
+                                  json=data,
+                                  headers=self.headers,
+                                  cookies=self.cookies)
+        utils.check_response_basic_info(resp, expected_code=200)
+        self.extra_remote_user_names.add(("test123_user_name", "test123_node_name"))
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/test123_node_name/remote_users/test123",
+                                  cookies=self.cookies,
+                                  headers=self.headers)
+        json_body = utils.check_response_basic_info(resp)
+        actual = {k: v for k, v in json_body.items() if k in data}
+        utils.check_val_equal(actual, data)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_PatchNetworkRemoteUser_AssignAnonymous(self):
+        """
+        Test update a remote user so that it is assigned with the anonymous user for the same node.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "Update a remote user", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        resp = utils.test_request(self, "PATCH",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             self.test_remote_user_name),
+                                  json={"assign_anonymous": True},
+                                  headers=self.headers,
+                                  cookies=self.cookies)
+        utils.check_response_basic_info(resp, expected_code=200)
+
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             self.test_remote_user_name),
+                                  cookies=self.cookies,
+                                  headers=self.headers)
+        json_body = utils.check_response_basic_info(resp)
+        anonymous_username = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
+        utils.check_val_equal(json_body.get("user_name"), anonymous_username)
 
 
 @runner.MAGPIE_TEST_UI

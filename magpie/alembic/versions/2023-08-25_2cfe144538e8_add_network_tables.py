@@ -39,7 +39,7 @@ def upgrade():
     op.create_table("network_remote_users",
                     sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
                     sa.Column("user_id", sa.Integer, sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"),
-                              nullable=False),
+                              nullable=True),
                     sa.Column("network_node_id", sa.Integer,
                               sa.ForeignKey("network_nodes.id", onupdate="CASCADE", ondelete="CASCADE"),
                               nullable=False),

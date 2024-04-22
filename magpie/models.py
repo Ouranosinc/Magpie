@@ -1007,8 +1007,11 @@ class NetworkRemoteUser(BaseModel, Base):
     __tablename__ = "network_remote_users"
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
+    # Note: a null user_id indicates that this NetworkRemoteUser is associated with the anonymous user for the
+    #       associated network node. This is to ensure that the unique constraint defined below allows for multiple
+    #       NetworkRemoteUsers to be associated with the anonymous users.
     user_id = sa.Column(sa.Integer,
-                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
+                        sa.ForeignKey("users.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
     user = relationship("User", foreign_keys=[user_id])
 
     network_node_id = sa.Column(sa.Integer,
@@ -1027,7 +1030,7 @@ class NetworkRemoteUser(BaseModel, Base):
     def as_dict(self):
         # type: () -> Dict[Str, Str]
         return {
-            "user_name": self.user.user_name,
+            "user_name": getattr(self.user, "user_name", self.network_node.anonymous_user_name()),
             "remote_user_name": self.name,
             "node_name": self.network_node.name
         }

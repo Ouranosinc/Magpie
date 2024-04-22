@@ -3724,7 +3724,7 @@ class NetworkNodeLink_GET_OkResponseSchema(BaseResponseSchemaAPI):
 class NetworkRemoteUser_PATCH_RequestBodySchema(colander.MappingSchema):
     remote_user_name = colander.SchemaNode(
         colander.String(),
-        description="Name of the associated user a remote Magpie node (instance) in the network.",
+        description="Name of the associated user from another remote Magpie node (instance) in the network.",
         example="userAremote",
         missing=colander.drop
     )
@@ -3739,6 +3739,13 @@ class NetworkRemoteUser_PATCH_RequestBodySchema(colander.MappingSchema):
         description="Name of another Magpie node (instance) in the network.",
         example="NodeA",
         missing=colander.drop
+    )
+    assign_anonymous = colander.SchemaNode(
+        colander.Boolean(),
+        description="Associate this network user with the anonymous user for the associated Magpie node (instance). "
+                    "Only has an effect if the user_name parameter is not specified.",
+        example=True,
+        default=False
     )
 
 
@@ -3759,6 +3766,14 @@ class NetworkRemoteUser_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
 class NetworkRemoteUsers_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Network User could not be found."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class NetworkRemoteUser_GET_BodySchema(colander.MappingSchema):
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="Name of the associated user on this Magpie node (instance).",
+        example="userAlocal"
+    )
 
 
 class NetworkRemoteUser_BodySchema(colander.MappingSchema):
@@ -3803,6 +3818,10 @@ class NetworkRemoteUsers_GET_OkResponseBodySchema(BaseResponseBodySchema):
 class NetworkRemoteUsers_GET_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Remote Users found."
     body = NetworkRemoteUsers_GET_OkResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class NetworkRemoteUsers_GET_RequestSchema(BaseRequestSchemaAPI):
+    body = NetworkRemoteUser_GET_BodySchema()
 
 
 class NetworkRemoteUsers_POST_RequestSchema(BaseRequestSchemaAPI):

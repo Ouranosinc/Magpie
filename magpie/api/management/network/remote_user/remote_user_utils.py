@@ -60,7 +60,11 @@ def check_remote_user_access_permissions(request, remote_user=None):
         remote_user = requested_remote_user(request)
     admin_group = get_constant("MAGPIE_ADMIN_GROUP", settings_container=request)
     is_admin = admin_group in [group.group_name for group in request.user.groups]
-    is_logged_user = request.user.user_name == remote_user.user.user_name
+    if remote_user.user is None:
+        associated_user = remote_user.network_node.anonymous_user(request.db)
+    else:
+        associated_user = remote_user.user
+    is_logged_user = request.user.user_name == associated_user.user_name
     if not (is_admin or is_logged_user):
         # admins can access any remote user, other users can only delete remote users associated with themselves
         ax.raise_http(http_error=HTTPForbidden,

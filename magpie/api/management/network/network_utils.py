@@ -206,7 +206,6 @@ def get_network_models_from_request_token(request, create_network_remote_user=Fa
                            .filter(models.NetworkRemoteUser.network_node_id == node.id)
                            .first())
     if network_remote_user is None and create_network_remote_user:
-        anonymous_user = node.anonymous_user(request.db)
-        network_remote_user = models.NetworkRemoteUser(user=anonymous_user, network_node=node, name=user_name)
+        network_remote_user = models.NetworkRemoteUser(network_node=node, name=user_name)
         request.db.add(network_remote_user)
     return node, network_remote_user
