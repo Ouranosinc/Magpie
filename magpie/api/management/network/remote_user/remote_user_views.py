@@ -59,6 +59,10 @@ def post_network_remote_users_view(request):
     if kwargs["user_name"] is None:
         user = anonymous_user
     else:
+        anonymous_regex = protected_user_name_regex(include_admin=False)
+        ax.verify_param(kwargs["user_name"], not_matches=True, param_compare=anonymous_regex, param_name="user_name",
+                        http_error=HTTPForbidden,
+                        msg_on_fail="Cannot explicitly assign to an anonymous user.")
         user = ax.evaluate_call(
             lambda: request.db.query(models.User).filter(models.User.user_name == kwargs["user_name"]).one(),
             http_error=HTTPNotFound,
@@ -103,6 +107,10 @@ def patch_network_remote_user_view(request):
         )
         remote_user.network_node_id = node.id
     if kwargs["user_name"]:
+        anonymous_regex = protected_user_name_regex(include_admin=False)
+        ax.verify_param(kwargs["user_name"], not_matches=True, param_compare=anonymous_regex, param_name="user_name",
+                        http_error=HTTPForbidden,
+                        msg_on_fail="Cannot explicitly assign to an anonymous user.")
         user = ax.evaluate_call(
             lambda: request.db.query(models.User).filter(models.User.user_name == kwargs["user_name"]).one(),
             http_error=HTTPNotFound,
