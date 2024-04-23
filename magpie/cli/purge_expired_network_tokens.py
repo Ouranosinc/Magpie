@@ -58,7 +58,7 @@ def get_login_session(magpie_url, username, password):
 
 
 def main(args=None, parser=None, namespace=None):
-    # type: (Optional[Sequence[Str]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> None
+    # type: (Optional[Sequence[Str]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> int
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
@@ -92,6 +92,7 @@ def main(args=None, parser=None, namespace=None):
         print_log("{} expired network tokens deleted".format(deleted), logger=LOGGER)
     else:
         print_log("No expired network tokens found", logger=LOGGER)
+    return 0
 
 
 if __name__ == "__main__":

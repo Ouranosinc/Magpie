@@ -1,8 +1,10 @@
+import re
+
 import mock
 import pytest
 
 from magpie import constants as c
-from tests import runner
+from tests import runner, utils
 
 
 @runner.MAGPIE_TEST_UTILS
@@ -130,3 +132,123 @@ def test_constant_protected_no_override():
         with mock.patch.dict("os.environ", {const_name: "override-value"}):
             const = c.get_constant(const_name)
             assert const != "override-value"
+
+
+@runner.MAGPIE_TEST_UTILS
+class TestProtectedUserNameRegex:
+    def test_include_admin(self):
+        c.protected_user_name_regex.cache_clear()
+        assert re.search(c.protected_user_name_regex(), c.get_constant("MAGPIE_ADMIN_USER"))
+
+    def test_include_anonymous(self):
+        c.protected_user_name_regex.cache_clear()
+        assert re.search(c.protected_user_name_regex(), c.get_constant("MAGPIE_ANONYMOUS_USER"))
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_include_network(self):
+        c.protected_user_name_regex.cache_clear()
+        assert re.search(c.protected_user_name_regex(), c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test")
+
+    def test_extra_patterns(self):
+        assert re.search(c.protected_user_name_regex(additional_patterns=("test.*end",)), "test abc end")
+
+    def test_no_admin(self):
+        assert re.search(c.protected_user_name_regex(include_admin=False), c.get_constant("MAGPIE_ADMIN_USER")) is None
+
+    def test_no_anonymous(self):
+        assert re.search(c.protected_user_name_regex(include_anonymous=False),
+                         c.get_constant("MAGPIE_ANONYMOUS_USER")) is None
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_no_network_network_mode_on(self):
+        assert re.search(c.protected_user_name_regex(include_network=False),
+                         c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test") is None
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode(enable=False)
+    def test_include_network(self):
+        c.protected_user_name_regex.cache_clear()
+        assert re.search(c.protected_user_name_regex(),
+                         c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test") is None
+
+
+@runner.MAGPIE_TEST_UTILS
+class TestProtectedUserEmailRegex:
+    def test_include_admin(self):
+        c.protected_user_email_regex.cache_clear()
+        assert re.search(c.protected_user_email_regex(), c.get_constant("MAGPIE_ADMIN_EMAIL"))
+
+    def test_include_anonymous(self):
+        c.protected_user_email_regex.cache_clear()
+        assert re.search(c.protected_user_email_regex(), c.get_constant("MAGPIE_ANONYMOUS_EMAIL"))
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_include_network(self):
+        c.protected_user_email_regex.cache_clear()
+        assert re.search(c.protected_user_email_regex(),
+                         c.get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format("test"))
+
+    def test_extra_patterns(self):
+        assert re.search(c.protected_user_email_regex(additional_patterns=("test.*end",)), "test abc end")
+
+    def test_no_admin(self):
+        assert re.search(c.protected_user_email_regex(include_admin=False),
+                         c.get_constant("MAGPIE_ADMIN_EMAIL")) is None
+
+    def test_no_anonymous(self):
+        assert re.search(c.protected_user_email_regex(include_anonymous=False),
+                         c.get_constant("MAGPIE_ANONYMOUS_EMAIL")) is None
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_no_network_network_mode_on(self):
+        assert re.search(c.protected_user_email_regex(include_network=False),
+                         c.get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format("test")) is None
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode(enable=False)
+    def test_include_network(self):
+        c.protected_user_email_regex.cache_clear()
+        assert re.search(c.protected_user_email_regex(),
+                         c.get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format("test")) is None
+
+
+@runner.MAGPIE_TEST_UTILS
+class TestProtectedGroupNameRegex:
+    def test_include_admin(self):
+        c.protected_group_name_regex.cache_clear()
+        assert re.search(c.protected_group_name_regex(), c.get_constant("MAGPIE_ADMIN_GROUP"))
+
+    def test_include_anonymous(self):
+        c.protected_group_name_regex.cache_clear()
+        assert re.search(c.protected_group_name_regex(), c.get_constant("MAGPIE_ANONYMOUS_GROUP"))
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_include_network(self):
+        c.protected_group_name_regex.cache_clear()
+        assert re.search(c.protected_group_name_regex(), c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test")
+
+    def test_no_admin(self):
+        assert re.search(c.protected_group_name_regex(include_admin=False), c.get_constant("MAGPIE_ADMIN_GROUP")) is None
+
+    def test_no_anonymous(self):
+        assert re.search(c.protected_group_name_regex(include_anonymous=False),
+                         c.get_constant("MAGPIE_ANONYMOUS_GROUP")) is None
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_no_network_network_mode_on(self):
+        assert re.search(c.protected_group_name_regex(include_network=False),
+                         c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test") is None
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode(enable=False)
+    def test_include_network(self):
+        c.protected_group_name_regex.cache_clear()
+        assert re.search(c.protected_group_name_regex(),
+                         c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test") is None
+

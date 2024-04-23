@@ -14,9 +14,10 @@ import subprocess
 import tempfile
 
 import mock
+import requests
 import six
 
-from magpie.cli import batch_update_users, magpie_helper_cli
+from magpie.cli import batch_update_users, magpie_helper_cli, purge_expired_network_tokens
 from magpie.constants import get_constant
 from tests import runner, utils
 
@@ -31,7 +32,8 @@ KNOWN_HELPERS = [
     "register_providers",
     "run_db_migration",
     "send_email",
-    "sync_resources"
+    "sync_resources",
+    "purge_expired_network_tokens"
 ]
 
 
@@ -266,3 +268,42 @@ def test_magpie_sync_resources_help_directly():
     out_lines = run_and_get_output("magpie_sync_resources --help")
     assert "usage: magpie_sync_resources" in out_lines[0]
     assert "Synchronize local and remote resources based on Magpie Service sync-type" in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_purge_expired_network_tokens_help_via_magpie_helper():
+    out_lines = run_and_get_output("magpie_helper purge_expired_network_tokens --help")
+    assert "usage: magpie_helper purge_expired_network_tokens" in out_lines[0]
+    assert "Delete all expired network tokens." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_purge_expired_network_tokens_help_directly():
+    out_lines = run_and_get_output("magpie_purge_expired_network_tokens --help")
+    assert "usage: magpie_purge_expired_network_tokens" in out_lines[0]
+    assert "Delete all expired network tokens." in out_lines[1]
+
+
+def test_purge_expired_network_tokens():
+    test_url = "http://localhost"
+    test_username = "test_username"
+    test_password = "qwertyqwerty"
+
+    def mocked_request(*args, **_kwargs):
+        method, url, *_ = args
+        response = requests.Response()
+        response.status_code = 200
+        if method == "DELETE":
+            response._content = '{"deleted": 101}'.encode()
+        return response
+
+    with mock.patch("requests.Session.request", side_effect=mocked_request) as session_mock:
+        cmd = ["api", test_url, test_username, test_password]
+        assert purge_expired_network_tokens.main(cmd) == 0, "failed execution due to invalid arguments"
+        session_mock.assert_any_call("POST", "{}/signin".format(test_url), data=None,
+                                     json={'user_name': 'test_username', 'password': 'qwertyqwerty'})
+        session_mock.assert_any_call("DELETE", "{}/network/tokens?expired_only=true".format(test_url))
