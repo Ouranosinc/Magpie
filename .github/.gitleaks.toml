@@ -116,3 +116,4 @@ title = "gitleaks config"
     # old commit files with false positives or dummy data
     '''magpie/login/login.py''',
     '''.+(.js.map)$''']
+    regexes = ['''#\s*nogitleaks''']
