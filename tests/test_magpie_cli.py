@@ -335,11 +335,11 @@ def test_create_private_key_help_directly():
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_NETWORK
 def test_create_private_key_create_file():
-    tmp_file = tempfile.NamedTemporaryFile(mode="w")
+    tmp_file = tempfile.NamedTemporaryFile(mode="w")  # pylint: disable=R1732
     tmp_file.close()
     try:
         run_and_get_output("magpie_create_private_key --key-file {}".format(tmp_file.name), expect_output=False)
-        with open(tmp_file.name) as f:
+        with open(tmp_file.name, encoding="utf-8") as f:
             key_content = f.read()
             assert key_content.startswith("-----BEGIN RSA PRIVATE KEY-----")
             assert "ENCRYPTED" not in key_content
@@ -351,7 +351,7 @@ def test_create_private_key_create_file():
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_NETWORK
 def test_create_private_key_create_file_no_force_exists():
-    tmp_file = tempfile.NamedTemporaryFile(mode="w", delete=False)
+    tmp_file = tempfile.NamedTemporaryFile(mode="w", delete=False)  # pylint: disable=R1732
     tmp_file.close()
     try:
         out = run_and_get_output("magpie_create_private_key --key-file {}".format(tmp_file.name), expect_output=False)
@@ -364,11 +364,11 @@ def test_create_private_key_create_file_no_force_exists():
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_NETWORK
 def test_create_private_key_create_file_force_exists():
-    tmp_file = tempfile.NamedTemporaryFile(mode="w")
+    tmp_file = tempfile.NamedTemporaryFile(mode="w")  # pylint: disable=R1732
     tmp_file.close()
     try:
         run_and_get_output("magpie_create_private_key --force --key-file {}".format(tmp_file.name), expect_output=False)
-        with open(tmp_file.name) as f:
+        with open(tmp_file.name, encoding="utf-8") as f:
             key_content = f.read()
             assert key_content.startswith("-----BEGIN RSA PRIVATE KEY-----")
             assert "ENCRYPTED" not in key_content
@@ -381,12 +381,12 @@ def test_create_private_key_create_file_force_exists():
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_NETWORK
 def test_create_private_key_create_file_with_password():
-    tmp_file = tempfile.NamedTemporaryFile(mode="w")
+    tmp_file = tempfile.NamedTemporaryFile(mode="w")  # pylint: disable=R1732
     tmp_file.close()
     try:
         run_and_get_output("magpie_create_private_key --password qwertqwerty --key-file {}".format(tmp_file.name),
                            expect_output=False)
-        with open(tmp_file.name) as f:
+        with open(tmp_file.name, encoding="utf-8") as f:
             key_content = f.read()
             assert key_content.startswith("-----BEGIN RSA PRIVATE KEY-----")
             assert "ENCRYPTED" in key_content

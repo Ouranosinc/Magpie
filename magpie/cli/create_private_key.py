@@ -11,7 +11,7 @@ import os.path
 import sys
 from typing import TYPE_CHECKING
 
-from magpie.api.management.network.network_utils import pem_files, create_private_key
+from magpie.api.management.network.network_utils import create_private_key, pem_files
 from magpie.cli.utils import make_logging_options, setup_logger_from_options
 from magpie.constants import get_constant
 from magpie.utils import get_logger, get_settings_from_config_ini
