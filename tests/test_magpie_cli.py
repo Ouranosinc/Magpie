@@ -312,6 +312,7 @@ def test_purge_expired_network_tokens():
                                      json={"user_name": "test_username", "password": "qwertyqwerty"})
         session_mock.assert_any_call("DELETE", "{}/network/tokens?expired_only=true".format(test_url))
 
+
 @runner.MAGPIE_TEST_CLI
 @runner.MAGPIE_TEST_LOCAL
 @runner.MAGPIE_TEST_NETWORK
