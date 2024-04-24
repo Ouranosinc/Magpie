@@ -52,7 +52,7 @@ jobs:
         allow-failure: [false]
         test-case: [test-local]
         # can use below option to set environment variables or makefile settings applied during test execution
-        test-option: [""]
+        test-option: ["MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True"]
         include:
           # linter tests
           - os: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
             python-version: "3.10"
             allow-failure: false
             test-case: check
-          # remote test
+          # remote test (note that network tests are skipped since the remote server won't have network mode enabled)
           - os: ubuntu-latest
             python-version: "3.11"
             allow-failure: true
@@ -89,10 +89,12 @@ jobs:
             python-version: "3.5"
             allow-failure: true
             test-case: test-local
+            test-option: PYTEST_ADDOPTS='-m "not network"'  # network mode is not supported for python version < 3.6
           - os: ubuntu-20.04
             python-version: "3.6"
             allow-failure: true
             test-case: test-local
+            test-option: "MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True"
           # test allowed failing for recent versions
           # - os: ubuntu-latest
           #   python-version: 3.12

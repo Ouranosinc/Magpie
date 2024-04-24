@@ -8805,13 +8805,14 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
-        anonymous_username = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
         utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True,
-                                                     override_user_name=anonymous_username)
+                                                     override_data={
+                                                         "remote_user_name": self.test_remote_user_name,
+                                                         "node_name": self.test_node_name
+                                                     })
 
         data = {
             "remote_user_name": "other_remote_user_name",
-            "user_name": anonymous_username,
             "node_name": self.test_node_name
         }
         resp = utils.test_request(self, "POST", "/network/remote_users", json=data, headers=self.headers,
@@ -8828,6 +8829,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         json_body = utils.check_response_basic_info(resp)
         actual = {k: v for k, v in json_body.items() if k in data}
         utils.check_val_equal(actual, data)
+        anonymous_username = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
+        utils.check_val_equal(json_body["user_name"], anonymous_username)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
