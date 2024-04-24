@@ -49,6 +49,10 @@ title = "gitleaks config"
 	description = "Asymmetric Private Key"
 	regex = '''-----BEGIN ((EC|PGP|DSA|RSA|OPENSSH) )?PRIVATE KEY( BLOCK)?-----'''
 	tags = ["key", "AsymmetricPrivateKey"]
+	[rules.allowlist]
+		description = "test for presence of private keys"
+		paths = ['''tests/test_magpie_cli.py''']
+		commits = ["704f2bc3c20731522b6984cad687d3ff8741b96e", "336e5c3c9a19c63cdf42f34525baa8ba24d8e239", "34a1dd0928c5a4c5ec2c5778720faa6f2861d24c"]
 [[rules]]
 	description = "Generic Credential"
 	regex = '''(?i)(api_key|apikey|secret)(.{0,20})?['|"][0-9a-zA-Z]{16,45}['|"]'''
