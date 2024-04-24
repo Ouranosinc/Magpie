@@ -9168,6 +9168,192 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         self.login_admin()
         utils.TestSetup.check_NonExistingTestUser(self, override_user_name=other_user)
 
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_UserAccount_NetworkInfo_WithRemoteUser(self):
+        """
+        Test that remote user information is visible in a table
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+
+        self.login_test_user()
+        path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path)
+
+        nodes_table = utils.find_html_body_contents(resp, [{"class": ["content"]}, {"id": "network_node_list"}])
+        utils.check_val_true(bool(nodes_table))
+
+        node_info = nodes_table.find_all("tr", recursive=True)[-1].find_all("td")
+        utils.check_val_equal(node_info[0].text, self.test_node_name)
+        utils.check_val_equal(node_info[1].text, self.test_remote_user_name)
+        utils.check_val_equal(node_info[2].find("input").attrs.get("name"),
+                              "delete_node_link_{}".format(self.test_node_name))
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_UserAccount_NetworkInfo_WithoutRemoteUser(self):
+        """
+        Test that node information is visible in a table even if there is no remote user for that node
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+
+        self.login_test_user()
+        path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path)
+
+        nodes_table = utils.find_html_body_contents(resp, [{"class": ["content"]}, {"id": "network_node_list"}])
+        utils.check_val_true(bool(nodes_table))
+
+        node_info = nodes_table.find_all("tr", recursive=True)[-1].find_all("td")
+        utils.check_val_equal(node_info[0].text, self.test_node_name)
+        utils.check_val_equal(node_info[1].text.strip(), "")
+        utils.check_val_equal(node_info[2].find("input").attrs.get("name"),
+                              "create_node_link_{}".format(self.test_node_name))
+
+    @runner.MAGPIE_TEST_USERS
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode(enable=False)
+    def test_UserAccount_NetworkInfo_NetworkModeOff(self):
+        """
+        Test that node information is not visible when network mode is off.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+
+        self.login_test_user()
+        path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path)
+
+        nodes_table = utils.find_html_body_contents(resp, [{"class": ["content"]}, {"id": "network_node_list"}])
+        utils.check_val_false(bool(nodes_table))
+
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_UserNetworkAuthorization(self):
+        """
+        Test that authorization view is shown if there is a valid token in the request.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims={"user_name": "test123"}) as token:
+            self.login_test_user()
+            path = "/ui/network/authorize?token={}&response_type=id_token&redirect_uri={}".format(
+                token, json.loads(self.test_redirect_uris)[0]
+            )
+            resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_title="Magpie")
+        node_form = utils.find_html_body_contents(resp, [{"class": ["content"]}, {"id": "authorize_node_link"}])
+        utils.check_val_true(bool(node_form))
+        utils.check_val_is_in(
+            "Magpie is requesting permission to link your account with the test123 user's account",
+            node_form.text
+        )
+        utils.check_val_is_in(
+            'on the Magpie instance named "{}"'.format(self.test_node_name),
+            node_form.text
+        )
+        token_input = node_form.find_all("input", recursive=True)[0]
+        token = token_input.attrs.get("value")
+        utils.check_val_true(bool(token))
+        claims = jwt.decode(token, options={"verify_signature": False})
+        expected = {
+            "requesting_user_name": "test123",
+            "user_name": self.test_user_name,
+            "iss": get_constant("MAGPIE_NETWORK_INSTANCE_NAME"),
+            "aud": self.test_node_name
+        }
+        expiry = claims.pop("exp")
+        utils.check_val_type(expiry, int)
+        utils.check_val_equal(expected, claims)
+
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_UserNetworkAuthorization_BadResponseType(self):
+        """
+        Test that authorization view is not shown if the response type is invalid.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims={"user_name": "test123"}) as token:
+            headers, cookies = self.login_test_user()
+            path = "/ui/network/authorize?token={}&response_type=other&redirect_uri={}".format(
+                token, json.loads(self.test_redirect_uris)[0]
+            )
+            resp = utils.test_request(self, "GET", path, headers=headers, cookies=cookies, expect_errors=True)
+            utils.check_val_equal(resp.status_code, 400)
+
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_UserNetworkAuthorization_NoToken(self):
+        """
+        Test that authorization view is not shown if the token is missing.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+
+        headers, cookies = self.login_test_user()
+        path = "/ui/network/authorize?response_type=id_token&redirect_uri={}".format(
+            json.loads(self.test_redirect_uris)[0])
+        resp = utils.test_request(self, "GET", path, headers=headers, cookies=cookies, expect_errors=True)
+        utils.check_val_equal(resp.status_code, 400)
+
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_UserNetworkAuthorization_InvalidToken(self):
+        """
+        Test that authorization view is not shown if the token is missing.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+
+        headers, cookies = self.login_test_user()
+        path = "/ui/network/authorize?token=123123&response_type=id_token&redirect_uri={}".format(
+            json.loads(self.test_redirect_uris)[0])
+        resp = utils.test_request(self, "GET", path, headers=headers, cookies=cookies, expect_errors=True)
+        utils.check_val_equal(resp.status_code, 400)
+
+    @runner.MAGPIE_TEST_LOGGED
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_UserNetworkAuthorization_BadRedirectURI(self):
+        """
+        Test that authorization view is not shown if the response type is invalid.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+
+        with utils.TestSetup.valid_jwt(self, override_jwt_claims={"user_name": "test123"}) as token:
+            headers, cookies = self.login_test_user()
+            path = "/ui/network/authorize?token={}&response_type=id_token&redirect_uri=blah".format(token)
+            resp = utils.test_request(self, "GET", path, headers=headers, cookies=cookies, expect_errors=True)
+            utils.check_val_equal(resp.status_code, 400)
 
 @runner.MAGPIE_TEST_UI
 @six.add_metaclass(ABCMeta)
@@ -9248,6 +9434,70 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestUser(self)
         path = "/ui/users/{}/default".format(self.test_user_name)
         utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_EditUser_NetworkInfo_WithRemoteUser(self):
+        """
+        Test that remote user information is visible in a table
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
+        path = "/ui/users/{}/default".format(self.test_user_name)
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+
+        nodes_table = utils.find_html_body_contents(resp, [{"class": ["content"]}, {"id": "network_node_list"}])
+        utils.check_val_true(bool(nodes_table))
+
+        node_info = nodes_table.find_all("tr", recursive=True)[-1].find_all("td")
+        utils.check_val_equal(node_info[0].text, self.test_node_name)
+        utils.check_val_equal(node_info[1].text, self.test_remote_user_name)
+        utils.check_val_equal(node_info[2].find("input").attrs.get("name"),
+                              "delete_node_link_{}".format(self.test_node_name))
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode
+    def test_EditUser_NetworkInfo_WithoutRemoteUser(self):
+        """
+        Test that remote user information is not visible when there are no remote users for the given user
+        but that the table is still visible.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
+        path = "/ui/users/{}/default".format(self.test_user_name)
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+
+        nodes_table = utils.find_html_body_contents(resp, [{"class": ["content"]}, {"id": "network_node_list"}])
+        utils.check_val_true(bool(nodes_table))
+        utils.check_val_equal(len(nodes_table.find_all("tr", recursive=True)), 1)  # header row only
+
+    @runner.MAGPIE_TEST_NETWORK
+    @utils.check_network_mode(enable=False)
+    def test_EditUser_NetworkInfo_NetworkModeOff(self):
+        """
+        Test that remote user information and table is not visible when network mode is off.
+
+        .. versionadded:: 3.38
+        """
+        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+        utils.TestSetup.create_TestGroup(self, override_exist=True)
+        utils.TestSetup.create_TestUser(self, override_exist=True)
+        path = "/ui/users/{}/default".format(self.test_user_name)
+        resp = utils.TestSetup.check_UpStatus(self, method="GET", path=path, expected_type=CONTENT_TYPE_HTML)
+
+        nodes_table = utils.find_html_body_contents(resp, [{"class": ["content"]}, {"id": "network_node_list"}])
+        utils.check_val_false(bool(nodes_table))
 
     @runner.MAGPIE_TEST_USERS
     def test_EditUser_DisplayedInheritedPermissionPriority(self):

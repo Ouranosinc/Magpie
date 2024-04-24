@@ -1779,12 +1779,12 @@ def find_html_body_contents(response_or_body, html_search=None):
             # ignore 'dont care' items like comments
             hasattr(item, "attrs") and
             # filter by class names, any one matched if element as any
-            (len(item.attrs.get("class", [])) and
-             any(str(css_cls) in search_element.get("class", []) for css_cls in item.attrs.get("class", []))) or
-            # filter by html element name
-            (search_element.get("name", "") != "" and str(search_element.get("name")) == item.name) or
-            # filter by html element id
-            (search_element.get("id", "") != "" and str(search_element.get("id")) == item.attrs.get("id", ""))
+            ((len(item.attrs.get("class", [])) and
+              any(str(css_cls) in search_element.get("class", []) for css_cls in item.attrs.get("class", []))) or
+             # filter by html element name
+             (search_element.get("name", "") != "" and str(search_element.get("name")) == item.name) or
+             # filter by html element id
+             (search_element.get("id", "") != "" and str(search_element.get("id")) == item.attrs.get("id", "")))
         ]
         if i + 1 != len(html_search):
             elem_idx = search_element.get("index")

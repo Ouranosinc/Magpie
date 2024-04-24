@@ -96,8 +96,9 @@ class UserViews(BaseViews):
             nodes = {node["name"]: None for node in get_json(node_resp)["nodes"]}
             user_resp = request_api(self.request, schemas.NetworkRemoteUsersCurrentAPI.path, "GET")
             check_response(user_resp)
-            for info in get_json(user_resp)["nodes"]:
+            for info in get_json(user_resp)["remote_users"]:
                 nodes[info["node_name"]] = info["remote_user_name"]
+            user_info["network_enabled"] = True
             user_info["network_nodes"] = list(nodes.items())
             user_info["network_routes"] = {"create": schemas.NetworkNodeLinkAPI.name,
                                            "delete": schemas.NetworkRemoteUserAPI.name}

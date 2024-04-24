@@ -166,7 +166,9 @@ class ManagementViews(AdminRequests, BaseViews):
             request_uri = "{}?user_name={}".format(schemas.NetworkRemoteUsersAPI.path, user_name)
             resp = request_api(self.request, request_uri, "GET")
             check_response(resp)
-            user_info["network_nodes"] = [(n["node_name"], n["remote_user_name"]) for n in get_json(resp)["nodes"]]
+            user_info["network_enabled"] = True
+            user_info["network_nodes"] = [(n["node_name"], n["remote_user_name"]) for n in
+                                          get_json(resp)["remote_users"]]
             user_info["network_routes"] = {"create": schemas.NetworkRemoteUsersAPI.name,
                                            "delete": schemas.NetworkRemoteUserAPI.name}
 

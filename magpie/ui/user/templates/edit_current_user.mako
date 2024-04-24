@@ -273,7 +273,7 @@ ${membership_alerts.edit_membership_alerts()}
     </table>
 </form>
 
-%if network_nodes:
+%if network_enabled:
     <h3>Network Account Links</h3>
     <table class="simple-list" id="network_node_list">
         <tr>

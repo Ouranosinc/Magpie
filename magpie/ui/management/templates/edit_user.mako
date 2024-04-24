@@ -384,7 +384,7 @@ ${membership_alerts.edit_membership_alerts()}
 </span>
 </%def>
 
-%if network_nodes and user_name not in MAGPIE_FIXED_USERS_REFS:
+%if network_enabled and user_name not in MAGPIE_FIXED_USERS_REFS:
     <h3>Network Account Links</h3>
     <table class="simple-list" id="network_node_list">
         <tr>
