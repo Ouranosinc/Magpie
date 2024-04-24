@@ -23,7 +23,7 @@ from webtest.app import TestApp
 from magpie import __meta__
 from magpie.api import schemas as s
 from magpie.api.webhooks import webhook_update_error_status
-from magpie.constants import MAGPIE_ROOT, get_constant
+from magpie.constants import MAGPIE_ROOT, get_constant, network_mode_supported
 from magpie.models import RESOURCE_TYPE_DICT, Directory, File, Layer, Process, Route, Service, UserStatuses, Workspace
 from magpie.permissions import (
     PERMISSION_REASON_DEFAULT,
@@ -204,27 +204,28 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         for res in list(cls.extra_resource_ids):  # copy to update removed ones
             utils.TestSetup.delete_TestResource(cls, res)
             cls.extra_resource_ids.discard(res)
-        for node in list(cls.extra_node_names):
-            check_network_mode(utils.TestSetup.delete_TestNetworkNode,
-                               enable=True)(cls, override_name=node, allow_missing=True)
-            cls.extra_node_names.discard(node)
-        for remote_user_name, node_name in list(cls.extra_network_tokens):
-            check_network_mode(utils.TestSetup.delete_TestNetworkToken,
-                               enable=True)(cls,
-                                            override_remote_user_name=remote_user_name,
-                                            override_node_name=node_name,
-                                            allow_missing=True)  # should already be deleted with associated models
-            cls.extra_network_tokens.discard((remote_user_name, node_name))
-        for remote_user_name, node_name in list(cls.extra_remote_user_names):
-            check_network_mode(utils.TestSetup.delete_TestNetworkRemoteUser,
-                               enable=True)(cls, override_remote_user_name=remote_user_name,
-                                            override_node_name=node_name,
-                                            allow_missing=True)  # should already be deleted with associated models
-            cls.extra_remote_user_names.discard((remote_user_name, node_name))
-        for host_port, server in list(cls.extra_remote_servers.items()):
-            if server.is_running():
-                server.stop()
-            cls.extra_remote_servers.pop(host_port)
+        if network_mode_supported():  # This check is required when the python version is < 3.6
+            for node in list(cls.extra_node_names):
+                check_network_mode(utils.TestSetup.delete_TestNetworkNode,
+                                   enable=True)(cls, override_name=node, allow_missing=True)
+                cls.extra_node_names.discard(node)
+            for remote_user_name, node_name in list(cls.extra_network_tokens):
+                check_network_mode(utils.TestSetup.delete_TestNetworkToken,
+                                   enable=True)(cls,
+                                                override_remote_user_name=remote_user_name,
+                                                override_node_name=node_name,
+                                                allow_missing=True)  # should already be deleted with associated models
+                cls.extra_network_tokens.discard((remote_user_name, node_name))
+            for remote_user_name, node_name in list(cls.extra_remote_user_names):
+                check_network_mode(utils.TestSetup.delete_TestNetworkRemoteUser,
+                                   enable=True)(cls, override_remote_user_name=remote_user_name,
+                                                override_node_name=node_name,
+                                                allow_missing=True)  # should already be deleted with associated models
+                cls.extra_remote_user_names.discard((remote_user_name, node_name))
+            for host_port, server in list(cls.extra_remote_servers.items()):
+                if server.is_running():
+                    server.stop()
+                cls.extra_remote_servers.pop(host_port)
 
     @property
     def update_method(self):

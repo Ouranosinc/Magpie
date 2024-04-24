@@ -256,9 +256,20 @@ def protected_group_name_regex(include_admin=True,
     return re.compile("^({})$".format("|".join(patterns)))
 
 
+def network_mode_supported():
+    # type: () -> bool
+    """
+    Return whether the current python version supports network mode.
+    """
+    return (sys.version_info.major, sys.version_info.minor) > (3, 5)
+
+
 def network_enabled(settings_container=None):
     # type: (Optional[AnySettingsContainer]) -> bool
-    if sys.version_info.major < 3 or sys.version_info.minor < 6:
+    """
+    Return whether network mode is enabled.
+    """
+    if not network_mode_supported():
         return False
     return asbool(get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container))
 
