@@ -294,16 +294,16 @@ def test_purge_expired_network_tokens():
     test_password = "qwertyqwerty"
 
     def mocked_request(*args, **_kwargs):
-        method, url, *_ = args
+        method, *_ = args
         response = requests.Response()
         response.status_code = 200
         if method == "DELETE":
-            response._content = '{"deleted": 101}'.encode()
+            response._content = '{"deleted": 101}'.encode()  # pylint: disable=C4001,W0212
         return response
 
     with mock.patch("requests.Session.request", side_effect=mocked_request) as session_mock:
         cmd = ["api", test_url, test_username, test_password]
         assert purge_expired_network_tokens.main(cmd) == 0, "failed execution due to invalid arguments"
         session_mock.assert_any_call("POST", "{}/signin".format(test_url), data=None,
-                                     json={'user_name': 'test_username', 'password': 'qwertyqwerty'})
+                                     json={"user_name": "test_username", "password": "qwertyqwerty"})
         session_mock.assert_any_call("DELETE", "{}/network/tokens?expired_only=true".format(test_url))

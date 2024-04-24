@@ -17,8 +17,8 @@ from pyramid.httpexceptions import (
     HTTPInternalServerError,
     HTTPMethodNotAllowed,
     HTTPNotAcceptable,
-    HTTPNotImplemented,
     HTTPNotFound,
+    HTTPNotImplemented,
     HTTPOk,
     HTTPUnauthorized,
     HTTPUnprocessableEntity

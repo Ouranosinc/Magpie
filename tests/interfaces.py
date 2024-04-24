@@ -61,10 +61,10 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Dict, List, Optional, Set, Tuple, Union
 
+    from pytest_httpserver import HTTPServer
     from sqlalchemy.orm.session import Session
 
     from magpie.typedefs import JSON, CookiesType, HeadersType, PermissionDict, SettingsType, Str
-    from pytest_httpserver import HTTPServer
 
 
 @six.add_metaclass(ABCMeta)
@@ -284,13 +284,13 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         cls.test_node_name = "node2"
         cls.test_remote_user_name = "remote_user_1"
         cls.test_node_host = get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_HOST", default_value="localhost",
-                                         raise_missing=False, raise_not_set=False)
+                                          raise_missing=False, raise_not_set=False)
         cls.test_node_port = int(get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_PORT", default_value=2002,
                                               raise_missing=False, raise_not_set=False))
         cls.test_node_jwks_url = "http://{}:{}/network/jwks".format(cls.test_node_host, cls.test_node_port)
         cls.test_node_token_url = "http://{}:{}/network/token".format(cls.test_node_host, cls.test_node_port)
         cls.test_authorization_url = "http://{}:{}/ui/network/authorize".format(cls.test_node_host, cls.test_node_port)
-        cls.test_redirect_uris = '["http://{}:{}/network/link"]'.format(cls.test_node_host, cls.test_node_port)
+        cls.test_redirect_uris = "[\"http://{}:{}/network/link\"]".format(cls.test_node_host, cls.test_node_port)
 
     @classmethod
     def login_admin(cls):
@@ -1403,7 +1403,6 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         json_body = utils.get_json_body(resp)
         utils.check_val_false(bool(json_body["remote_users"]))
 
-
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
     def test_DeleteNetworkToken_InvalidNode(self):
@@ -2481,7 +2480,6 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
                                   "/network/nodes/{}/remote_users/test123".format(self.test_node_name),
                                   cookies=self.cookies, headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp, expected_code=404)
-
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -8191,7 +8189,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp, expected_code=400)
         json_body = utils.get_json_body(resp)
-        utils.check_val_is_in("Missing token", json_body.get("detail", ''))
+        utils.check_val_is_in("Missing token", json_body.get("detail", ""))
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -8207,7 +8205,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp, expected_code=400)
         json_body = utils.get_json_body(resp)
-        utils.check_val_is_in("Token is improperly formatted", json_body.get("detail", ''))
+        utils.check_val_is_in("Token is improperly formatted", json_body.get("detail", ""))
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -8224,7 +8222,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                       headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp, expected_code=400)
         json_body = utils.get_json_body(resp)
-        utils.check_val_is_in("invalid or missing issuer claim", json_body.get("detail", ''))
+        utils.check_val_is_in("invalid or missing issuer claim", json_body.get("detail", ""))
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
@@ -8339,7 +8337,6 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
                                   headers=self.headers, expect_errors=True)
         utils.check_response_basic_info(resp)
 
-
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
     def test_PostNetworkNode_MissingParamName(self):
@@ -8357,7 +8354,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             "redirect_uris": ["http://uri.test.some.example.com"]
         }
 
-        for param, value in node_info.items():
+        for param in node_info:
             json_body = utils.TestSetup.create_TestNetworkNode(self, override_exist=True,
                                                                override_data={**node_info, param: None},
                                                                expect_errors=True)
@@ -8380,7 +8377,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             "redirect_uris": ["http://uri.test.some.example.com"]
         }
 
-        for param in node_info.keys():
+        for param in node_info:
             json_body = utils.TestSetup.create_TestNetworkNode(self, override_exist=True,
                                                                override_data={**node_info, param: ""},
                                                                expect_errors=True)
@@ -8482,7 +8479,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             "redirect_uris": ["http://uri.test.some.example.com"]
         }
 
-        for param in node_info.keys():
+        for param in node_info:
             resp = utils.test_request(self, "PATCH", "/network/nodes/{}".format(self.test_node_name),
                                       cookies=self.cookies, headers=self.headers,
                                       data={**node_info, param: ""}, expect_errors=True)
@@ -8597,9 +8594,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
 
-        resp = utils.test_request(self, "GET", 
-                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name, 
-                                                                             self.test_remote_user_name), 
+        resp = utils.test_request(self, "GET",
+                                  "/network/nodes/{}/remote_users/{}".format(self.test_node_name,
+                                                                             self.test_remote_user_name),
                                   cookies=self.cookies,
                                   headers=self.headers)
         json_body = utils.check_response_basic_info(resp)
@@ -8642,7 +8639,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             "remote_user_name": self.test_remote_user_name,
             "node_name": self.test_node_name
         }
-        for key in data.keys():
+        for key in data:
             resp = utils.test_request(self, "POST", "/network/remote_users", json={**data, key: None},
                                       expect_errors=True, headers=self.headers, cookies=self.cookies)
             utils.check_response_basic_info(resp, expected_method="POST", expected_code=400)
@@ -9254,7 +9251,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
-        
+
         with utils.TestSetup.valid_jwt(self, override_jwt_claims={"user_name": "test123"}) as token:
             self.login_test_user()
             path = "/ui/network/authorize?token={}&response_type=id_token&redirect_uri={}".format(
@@ -9268,7 +9265,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
             node_form.text
         )
         utils.check_val_is_in(
-            'on the Magpie instance named "{}"'.format(self.test_node_name),
+            'on the Magpie instance named "{}"'.format(self.test_node_name),  # pylint: disable=C4001
             node_form.text
         )
         token_input = node_form.find_all("input", recursive=True)[0]
@@ -9354,6 +9351,7 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
             path = "/ui/network/authorize?token={}&response_type=id_token&redirect_uri=blah".format(token)
             resp = utils.test_request(self, "GET", path, headers=headers, cookies=cookies, expect_errors=True)
             utils.check_val_equal(resp.status_code, 400)
+
 
 @runner.MAGPIE_TEST_UI
 @six.add_metaclass(ABCMeta)

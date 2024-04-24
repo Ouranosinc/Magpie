@@ -14,7 +14,7 @@ from magpie.constants import get_constant
 if TYPE_CHECKING:
     from pyramid.request import Request
 
-    from magpie.typedefs import AnyRequestType, JSON, List, Optional, Session, Str
+    from magpie.typedefs import JSON, AnyRequestType, List, Optional, Session, Str
 
 NAME_REGEX = r"^[\w-]+$"
 
@@ -121,5 +121,4 @@ def load_redirect_uris(uris, request):
             fallback=lambda: request.db.rollback(),
             msg_on_fail=s.NetworkNodes_CheckInfo_RedirectURIsValue_BadRequestResponseSchema.description
         )
-    else:
-        return uris
+    return uris

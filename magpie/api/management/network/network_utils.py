@@ -92,7 +92,7 @@ def create_private_key(filename, password=None, settings_container=None):
             if os.path.realpath(pem_file) == os.path.realpath(filename):
                 password = pem_password
 
-    LOGGER.info("Creating a valid PEM file at '{}'.".format(filename))
+    LOGGER.info("Creating a valid PEM file at '%s'.", filename)
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     if password:
         encryption_algorithm = serialization.BestAvailableEncryption(password)
@@ -100,7 +100,7 @@ def create_private_key(filename, password=None, settings_container=None):
         encryption_algorithm = serialization.NoEncryption()
     private_bytes = private_key.private_bytes(serialization.Encoding.PEM,
                                               serialization.PrivateFormat.TraditionalOpenSSL, encryption_algorithm)
-    with open(filename, mode='wb') as f:
+    with open(filename, mode="wb") as f:
         f.write(private_bytes)
 
 

@@ -22,7 +22,8 @@ from magpie.api.management.network.node.network_node_utils import (
     check_network_node_info,
     create_associated_user_groups,
     delete_network_node,
-    update_associated_user_groups, load_redirect_uris
+    load_redirect_uris,
+    update_associated_user_groups
 )
 from magpie.api.requests import check_network_mode_enabled
 from magpie.constants import get_constant

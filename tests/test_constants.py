@@ -168,7 +168,7 @@ class TestProtectedUserNameRegex:
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode(enable=False)
-    def test_include_network(self):
+    def test_include_network_network_mode_off(self):
         c.protected_user_name_regex.cache_clear()
         assert re.search(c.protected_user_name_regex(),
                          c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test") is None
@@ -210,7 +210,7 @@ class TestProtectedUserEmailRegex:
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode(enable=False)
-    def test_include_network(self):
+    def test_include_network_network_mode_off(self):
         c.protected_user_email_regex.cache_clear()
         assert re.search(c.protected_user_email_regex(),
                          c.get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format("test")) is None
@@ -233,7 +233,8 @@ class TestProtectedGroupNameRegex:
         assert re.search(c.protected_group_name_regex(), c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test")
 
     def test_no_admin(self):
-        assert re.search(c.protected_group_name_regex(include_admin=False), c.get_constant("MAGPIE_ADMIN_GROUP")) is None
+        assert re.search(c.protected_group_name_regex(include_admin=False),
+                         c.get_constant("MAGPIE_ADMIN_GROUP")) is None
 
     def test_no_anonymous(self):
         assert re.search(c.protected_group_name_regex(include_anonymous=False),
@@ -247,8 +248,7 @@ class TestProtectedGroupNameRegex:
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode(enable=False)
-    def test_include_network(self):
+    def test_include_network_network_mode_off(self):
         c.protected_group_name_regex.cache_clear()
         assert re.search(c.protected_group_name_regex(),
                          c.get_constant("MAGPIE_NETWORK_NAME_PREFIX") + "test") is None
-

@@ -22,7 +22,7 @@ import requests.exceptions
 import six
 from beaker.cache import cache_managers, cache_regions
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
+from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 from jwt.utils import to_base64url_uint
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPException
@@ -776,14 +776,12 @@ def check_network_mode(_test_func=None, enable=True):
                 elif not enable and remote_enabled:
                     test.skipTest("Test requires remote to be running without network mode enabled.")
                 return test_func(*args, **kwargs)
-            else:
-                # assume local test
-                return mocked_get_settings(settings=settings)(test_func)(*args, **kwargs)
+            # assume local test
+            return mocked_get_settings(settings=settings)(test_func)(*args, **kwargs)
         return wrapper
     if _test_func is None:
         return decorator_func
-    else:
-        return decorator_func(_test_func)
+    return decorator_func(_test_func)
 
 
 def mock_request(request_path_query="",     # type: Str
@@ -1533,10 +1531,9 @@ def patch_datetime(patches):
           https://williambert.online/2011/07/how-to-unit-testing-in-django-with-mocking-and-patching/
     """
 
-    from datetime import datetime as org_datetime
-    class FakeDatetime(org_datetime):
+    class FakeDatetime(datetime):
         def __new__(cls, *args, **kwargs):
-            return org_datetime.__new__(org_datetime, *args, **kwargs)
+            return datetime.__new__(datetime, *args, **kwargs)
 
     with mock.patch("datetime.datetime", FakeDatetime):
         for method, return_value in patches.items():

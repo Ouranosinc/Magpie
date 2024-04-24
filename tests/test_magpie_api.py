@@ -570,7 +570,6 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         with patch_datetime({"utcnow": datetime.datetime.utcnow() - datetime.timedelta(days=365)}):
             utils.TestSetup.create_TestNetworkToken(self, override_remote_user_name="test2", override_node_name="test2")
 
-
         utils.test_request(self, "DELETE", "/network/tokens", data={"expired_only": True}, cookies=self.cookies,
                            headers=self.headers)
 

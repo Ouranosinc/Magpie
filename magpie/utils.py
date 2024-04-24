@@ -1194,7 +1194,7 @@ def check_network_configured(settings_container=None):
             raise ConfigurationError("MAGPIE_NETWORK_INSTANCE_NAME is required when network mode is enabled.") from exc
 
         # import here to avoid a potential cyclical import
-        from magpie.api.management.network.network_utils import jwks, pem_files, create_private_key
+        from magpie.api.management.network.network_utils import create_private_key, jwks, pem_files
         try:
             jwks(settings_container=settings_container)
         except Exception as exc:
@@ -1202,8 +1202,8 @@ def check_network_configured(settings_container=None):
                 get_constant("MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE", settings_container=settings_container))
             pem_files_ = pem_files(settings_container)
             if isinstance(exc, FileNotFoundError) and create_missing and len(pem_files_) == 1:
-                    LOGGER.warning("No network PEM files found")
-                    create_private_key(pem_files_[0], settings_container=settings_container)
+                LOGGER.warning("No network PEM files found")
+                create_private_key(pem_files_[0], settings_container=settings_container)
             else:
                 msg = ("Error occurred when loading PEM keys which are required when network mode is enabled. "
                        "Check that the MAGPIE_NETWORK_PEM_FILES and MAGPIE_NETWORK_PEM_PASSWORDS are set properly. "

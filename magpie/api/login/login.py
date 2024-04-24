@@ -34,7 +34,7 @@ from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
-from magpie.constants import get_constant, protected_user_email_regex, protected_user_name_regex, network_enabled
+from magpie.constants import get_constant, network_enabled, protected_user_email_regex, protected_user_name_regex
 from magpie.security import authomatic_setup, get_providers
 from magpie.utils import (
     CONTENT_TYPE_JSON,
