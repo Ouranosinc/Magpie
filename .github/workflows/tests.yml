@@ -50,9 +50,9 @@ jobs:
         os: [ubuntu-latest]
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         allow-failure: [false]
-        test-case: [test-local]
+        test-case: ["create-private-key test-local"]
         # can use below option to set environment variables or makefile settings applied during test execution
-        test-option: ["MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True"]
+        test-option: [""]
         include:
           # linter tests
           - os: ubuntu-latest
@@ -93,8 +93,7 @@ jobs:
           - os: ubuntu-20.04
             python-version: "3.6"
             allow-failure: true
-            test-case: test-local
-            test-option: "MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True"
+            test-case: create-private-key test-local
           # test allowed failing for recent versions
           # - os: ubuntu-latest
           #   python-version: 3.12

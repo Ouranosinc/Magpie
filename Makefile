@@ -818,3 +818,7 @@ conda-env: conda-base	## create conda environment if missing and required
 			echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
 		 	"$(CONDA_BIN)" create -y -n "$(CONDA_ENV_NAME)" python=$(PYTHON_VERSION)) \
 		)
+
+.PHONY: create-private-key
+create-private-key:  ## create a private key file according to the MAGPIE_NETWORK_PEM_FILES and MAGPIE_NETWORK_PEM_PASSWORDS settings
+	@bash -c '$(CONDA_CMD) magpie_create_private_key --config "$(APP_INI)"'
