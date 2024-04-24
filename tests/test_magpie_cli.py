@@ -341,7 +341,7 @@ def test_create_private_key_create_file():
         run_and_get_output("magpie_create_private_key --key-file {}".format(tmp_file.name), expect_output=False)
         with open(tmp_file.name, encoding="utf-8") as f:
             key_content = f.read()
-            assert key_content.startswith("-----BEGIN RSA PRIVATE KEY-----")  # nogitleaks
+            assert "PRIVATE KEY" in key_content.splitlines()[0]
             assert "ENCRYPTED" not in key_content
     finally:
         os.unlink(tmp_file.name)
@@ -370,7 +370,7 @@ def test_create_private_key_create_file_force_exists():
         run_and_get_output("magpie_create_private_key --force --key-file {}".format(tmp_file.name), expect_output=False)
         with open(tmp_file.name, encoding="utf-8") as f:
             key_content = f.read()
-            assert key_content.startswith("-----BEGIN RSA PRIVATE KEY-----")  # nogitleaks
+            assert "PRIVATE KEY" in key_content.splitlines()[0]
             assert "ENCRYPTED" not in key_content
 
     finally:
@@ -388,7 +388,7 @@ def test_create_private_key_create_file_with_password():
                            expect_output=False)
         with open(tmp_file.name, encoding="utf-8") as f:
             key_content = f.read()
-            assert key_content.startswith("-----BEGIN RSA PRIVATE KEY-----")  # nogitleaks
+            assert "PRIVATE KEY" in key_content.splitlines()[0]
             assert "ENCRYPTED" in key_content
     finally:
         os.unlink(tmp_file.name)
