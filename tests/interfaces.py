@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 import string
+import sys
 import unittest
 import uuid
 from abc import ABCMeta, abstractmethod
@@ -1340,7 +1341,14 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         token = utils.TestSetup.create_TestNetworkToken(self, expect_errors=True)
         utils.check_val_equal(token.get("token"), None)
         utils.check_val_equal(token.get("code"), 500)
-        utils.check_val_equal(token.get("call", {}).get("exception"), "PyJWKClientConnectionError")
+        # python version < 3.7 uses pyjwt version < 2.5.0
+        # pyjwt 2.5.0 changed the error type from HTTPError to PyJWKClientConnectionError if a valid JWKS could not
+        # be found at the given uri.
+        if (sys.version_info.major, sys.version_info.minor) < (3, 7):
+            error_type = "HTTPError"
+        else:
+            error_type = "PyJWKClientConnectionError"
+        utils.check_val_equal(token.get("call", {}).get("exception"), error_type)
 
     @runner.MAGPIE_TEST_NETWORK
     @utils.check_network_mode
