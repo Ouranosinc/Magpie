@@ -128,7 +128,7 @@ jobs:
           hash -r
           env | sort
       - name: Create private key for network testing
-        if: ${{ matrix.test-case == 'test_local' }}
+        if: ${{ matrix.test-case == 'test-local' }}
         run: ${{ matrix.test-option }} make create-private-key
       # run '-only' test variations since dependencies are preinstalled, skip some resolution time
       - name: Run Tests
