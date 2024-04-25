@@ -217,7 +217,7 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
     ],
-    python_requires=">=3.8, <4",
+    python_requires=">=3.5, <4",
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],

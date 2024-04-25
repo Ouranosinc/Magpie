@@ -5,8 +5,11 @@ alembic>=1.10
 #   old variants:
 #       -e git+https://github.com/fmigneault/authomatic.git@httplib-port#egg=Authomatic
 #       https://github.com/fmigneault/authomatic/archive/httplib-port.zip#egg=Authomatic-1.0.1
-#   new authomatic handles openid install correctly
-#   leave http port until merged:
+#   - new authomatic handles openid install correctly
+#   - https://github.com/authomatic/authomatic/tree/master includes #195 (http-po#rt)
+#     via https://github.com/authomatic/authomatic/pull/227
+#     However, this is not the latest tag https://github.com/authomatic/authomatic/tree/1.2.1 (done before #227).
+#   - Requires https://github.com/authomatic/authomatic/issues/233 for Python 3.12 (temporary patch in magpie.__init__)
 authomatic[OpenID] @ https://github.com/fmigneault/authomatic/archive/httplib-port.zip
 bcrypt>=3.1.6
 # FIXME: integrate when implemnted by official package (see https://github.com/bbangert/beaker/issues/201)

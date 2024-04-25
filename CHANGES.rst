@@ -12,6 +12,14 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
+* | Add support of Python 3.12.
+  |
+  | **NOTE**:
+  | Requires patch of ``authomatic.six.moves`` in ``magpie.__init__.py`` to work around vendor-specific definitions.
+    Fix inspiration
+    from `dpkp/kafka-python#2401 <https://github.com/dpkp/kafka-python/issues/2401#issuecomment-1760208950>`_.
+    Pending official fix (see `authomatic/authomatic#233 <https://github.com/authomatic/authomatic/issues/233>`_).
+
 * Drop support of Python 3.5, 3.6 and 3.7. Minimum version is Python 3.8.
 * Pin ``gunicorn>=22`` to address CVE-2024-1135.
 

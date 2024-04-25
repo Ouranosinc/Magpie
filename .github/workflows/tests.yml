@@ -48,7 +48,7 @@ jobs:
       matrix:
         # os: [ubuntu-latest, windows-latest]
         os: [ubuntu-latest]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         allow-failure: [false]
         test-case: [test-local]
         # can use below option to set environment variables or makefile settings applied during test execution
@@ -79,18 +79,9 @@ jobs:
             test-case: test-docker
           # test allowed failing for legacy versions
           - os: ubuntu-20.04
-            python-version: "3.5"
+            python-version: "3.7"
             allow-failure: true
             test-case: test-local
-          - os: ubuntu-20.04
-            python-version: "3.6"
-            allow-failure: true
-            test-case: test-local
-          # test allowed failing for recent versions
-          # - os: ubuntu-latest
-          #   python-version: 3.12
-          #   allow-failure: true
-          #   test-case: test-local
     steps:
       - uses: actions/checkout@v2
         with:
