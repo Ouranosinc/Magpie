@@ -77,11 +77,6 @@ jobs:
             python-version: none
             allow-failure: true
             test-case: test-docker
-          # test allowed failing for legacy versions
-          - os: ubuntu-20.04
-            python-version: "3.7"
-            allow-failure: true
-            test-case: test-local
     steps:
       - uses: actions/checkout@v2
         with:
