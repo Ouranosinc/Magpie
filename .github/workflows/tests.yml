@@ -71,7 +71,7 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.11"
             allow-failure: true
-            test-case: start test-all  # the tests that are run are limited by the PYTEST_ADDOPTS in test-option below
+            test-case: start test  # the tests that are run are limited by the PYTEST_ADDOPTS in test-option below
             test-option: >- 
               PYTEST_ADDOPTS='-m "remote and network"' MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True MAGPIE_NETWORK_ENABLED=on MAGPIE_NETWORK_INSTANCE_NAME=example
           # coverage test
@@ -88,7 +88,7 @@ jobs:
           - os: ubuntu-20.04
             python-version: "3.5"
             allow-failure: true
-            test-case: test-all  # the tests that are run are limited by the PYTEST_ADDOPTS in test-option below
+            test-case: test  # the tests that are run are limited by the PYTEST_ADDOPTS in test-option below
             test-option: PYTEST_ADDOPTS='-m "local and not network"'  # network mode is not supported for python version < 3.6
           - os: ubuntu-20.04
             python-version: "3.6"
