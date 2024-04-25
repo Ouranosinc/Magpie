@@ -9,6 +9,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Drop support of Python 3.5, 3.6 and 3.7. Minimum version is Python 3.8.
+* Pin ``gunicorn>=22`` to address CVE-2024-1135.
+
 Bug Fixes
 ~~~~~~~~~
 
