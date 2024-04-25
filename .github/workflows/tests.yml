@@ -50,7 +50,7 @@ jobs:
         os: [ubuntu-latest]
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         allow-failure: [false]
-        test-case: ["create-private-key test-local"]
+        test-case: [test-local]
         # can use below option to set environment variables or makefile settings applied during test execution
         test-option: [""]
         include:
@@ -127,6 +127,9 @@ jobs:
         run: |
           hash -r
           env | sort
+      - name: Create private key for network testing
+        if: ${{ matrix.test-case == 'test_local' }}
+        run: ${{ matrix.test-option }} make create-private-key
       # run '-only' test variations since dependencies are preinstalled, skip some resolution time
       - name: Run Tests
         run: ${{ matrix.test-option }} make stop ${{ matrix.test-case }}-only
