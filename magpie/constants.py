@@ -16,7 +16,6 @@ import logging
 import os
 import re
 import shutil
-import sys
 import warnings
 from typing import TYPE_CHECKING
 
