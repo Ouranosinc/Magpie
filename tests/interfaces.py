@@ -5,7 +5,6 @@ import json
 import os
 import secrets
 import string
-import sys
 import unittest
 import uuid
 from abc import ABCMeta, abstractmethod
