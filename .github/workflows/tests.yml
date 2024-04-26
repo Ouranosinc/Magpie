@@ -48,7 +48,7 @@ jobs:
       matrix:
         # os: [ubuntu-latest, windows-latest]
         os: [ubuntu-latest]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         allow-failure: [false]
         test-case: [test-local]
         # can use below option to set environment variables or makefile settings applied during test execution
@@ -69,7 +69,7 @@ jobs:
             test-case: start test-remote
           # remote network tests using a remote server with network mode enabled
           - os: ubuntu-latest
-            python-version: "3.11"
+            python-version: "3.12"
             allow-failure: true
             test-case: start test  # the tests that are run are limited by the PYTEST_ADDOPTS in test-option below
             test-option: >- 
@@ -84,21 +84,6 @@ jobs:
             python-version: none
             allow-failure: true
             test-case: test-docker
-          # test allowed failing for legacy versions
-          - os: ubuntu-20.04
-            python-version: "3.5"
-            allow-failure: true
-            test-case: test  # the tests that are run are limited by the PYTEST_ADDOPTS in test-option below
-            test-option: PYTEST_ADDOPTS='-m "local and not network"'  # network mode is not supported for python version < 3.6
-          - os: ubuntu-20.04
-            python-version: "3.6"
-            allow-failure: true
-            test-case: create-private-key test-local
-          # test allowed failing for recent versions
-          # - os: ubuntu-latest
-          #   python-version: 3.12
-          #   allow-failure: true
-          #   test-case: test-local
     steps:
       - uses: actions/checkout@v2
         with:
