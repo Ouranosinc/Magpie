@@ -11,7 +11,6 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Security fix: bump ``pip>=24``.
 * Security fix: bump Docker base ``python:3.11-alpine3.19``.
 
 .. _changes_4.0.0:
