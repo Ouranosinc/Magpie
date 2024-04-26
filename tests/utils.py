@@ -42,7 +42,7 @@ from webtest.response import TestResponse
 from magpie import __meta__, app, services
 from magpie.api import schemas
 from magpie.compat import LooseVersion
-from magpie.constants import get_constant, network_mode_supported
+from magpie.constants import get_constant
 from magpie.permissions import Access, PermissionSet, Scope
 from magpie.services import SERVICE_TYPE_DICT, ServiceAccess
 from magpie.utils import (
@@ -759,7 +759,7 @@ def check_network_mode(_test_func=None, enable=True):
     :param _test_func: Test function being decorated.
     :param enable: Boolean value indicating whether ``_test_func`` expects network mode to be enabled in order to pass.
     """
-    if enable and network_mode_supported():
+    if enable:
         settings = {"magpie.network_enabled": True}
     else:
         settings = {"magpie.network_enabled": False}

@@ -539,14 +539,6 @@ check-security-only: check-security-code-only check-security-deps-only  ## run s
 # ignored codes:
 #	42194: https://github.com/kvesteri/sqlalchemy-utils/issues/166  # not fixed since 2015
 #	51668: https://github.com/sqlalchemy/sqlalchemy/pull/8563  # still in beta + major version change sqlalchemy 2.0.0b1
-#	51021: This is patched in jwcrypto>=1.4.0 but that version is not available for python version < 3.6
-#   66713: This is patched in jwcrypto>=1.5.1 but that version is not available for python version < 3.6
-#   63154: This is patched in jwcrypto>=1.5.1 but that version is not available for python version < 3.6
-#   64484: This is patched in bandit>=1.7.8 but that version is not available for python version < 3.8
-#   43407: This is an advisory that support for python < 3.6 is no longer supported in the next version
-#   43452: This is a duplicate of 43407
-#   43450: This is a duplicate of 43407
-#   43451: This is a duplicate of 43407
 .PHONY: check-security-deps-only
 check-security-deps-only: mkdir-reports  ## run security checks on package dependencies
 	@echo "Running security checks of dependencies..."
@@ -559,14 +551,6 @@ check-security-deps-only: mkdir-reports  ## run security checks on package depen
 			-r "$(APP_ROOT)/requirements-sys.txt" \
 			-i 42194 \
 			-i 51668 \
-			-i 51021 \
-			-i 66713 \
-			-i 63154 \
-			-i 64484 \
-			-i 43407 \
-			-i 43452 \
-			-i 43450 \
-			-i 43451 \
 		1> >(tee "$(REPORTS_DIR)/check-security-deps.txt")'
 
 .PHONY: check-security-code-only
