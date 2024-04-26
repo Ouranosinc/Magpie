@@ -1,2 +1,2 @@
-pip
+pip>=24
 setuptools>=65.5.1
