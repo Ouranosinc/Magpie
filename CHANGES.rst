@@ -9,7 +9,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Security fix: bump Docker base ``python:3.11-alpine3.19``.
 
 .. _changes_4.0.0:
 
