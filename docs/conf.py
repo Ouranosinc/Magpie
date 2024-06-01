@@ -212,6 +212,7 @@ linkcheck_ignore = [
     "CHANGES.rst",
     r"docs/\w+.rst",
     "https://wso2.com/",  # sporadic broken (probably robots or similar)
+    "https://docs.wso2.com/*",
     "https://pcmdi.llnl.gov/",  # works, but very often causes false-positive 'broken' links
 ] + ignore_down_providers()
 linkcheck_anchors_ignore = [
