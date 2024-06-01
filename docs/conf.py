@@ -211,6 +211,7 @@ linkcheck_ignore = [
     # ignore false-positive broken links to local doc files used for rendering on GitHub
     "CHANGES.rst",
     r"docs/\w+.rst",
+    "https://wso2.com/",  # sporadic broken (probably robots or similar)
     "https://pcmdi.llnl.gov/",  # works, but very often causes false-positive 'broken' links
 ] + ignore_down_providers()
 linkcheck_anchors_ignore = [
