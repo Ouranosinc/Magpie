@@ -13,6 +13,10 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Security fix: bump Docker base ``python:3.11-alpine3.19``.
 
+Bug Fixes
+~~~~~~~~~
+* Fix `Permission` update from configuration file using the ``requests`` code path.
+
 .. _changes_4.0.0:
 
 `4.0.0 <https://github.com/Ouranosinc/Magpie/tree/4.0.0>`_ (2024-04-26)

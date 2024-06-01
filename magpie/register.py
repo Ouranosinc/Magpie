@@ -776,10 +776,10 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
 
             res_path = None
             if _use_request(cookies_or_session):
-                res_path = get_magpie_url() + ServiceResourcesAPI.path.format(service_name=svc_name)
+                magpie_url = magpie_url or get_magpie_url()
+                res_path = magpie_url + ServiceResourcesAPI.path.format(service_name=svc_name)
                 res_resp = requests.get(res_path, cookies=cookies_or_session, timeout=5)
-                svc_json = get_json(res_resp)[svc_name]  # type: JSON
-                res_dict = svc_json["resources"]
+                res_dict = get_json(res_resp)[svc_name]  # type: JSON
             else:
                 from magpie.api.management.service.service_formats import format_service_resources
                 svc = models.Service.by_service_name(svc_name, db_session=cookies_or_session)
@@ -860,16 +860,16 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         Apply operation using HTTP request.
         """
         action_oper = None
-        if usr_name:
-            action_oper = UserResourcePermissionsAPI.format(user_name=_usr_name, resource_id=resource_id)
-        if grp_name:
-            action_oper = GroupResourcePermissionsAPI.format(group_name=_grp_name, resource_id=resource_id)
+        if _usr_name:
+            action_oper = UserResourcePermissionsAPI.path.format(user_name=_usr_name, resource_id=resource_id)
+        if _grp_name:
+            action_oper = GroupResourcePermissionsAPI.path.format(group_name=_grp_name, resource_id=resource_id)
         if not action_oper:
             return None
         action_func = requests.post if create_perm else requests.delete
         action_body = {"permission": perm.json()}
         action_path = "{url}{path}".format(url=magpie_url, path=action_oper)
-        action_resp = action_func(action_path, json=action_body, cookies=cookies_or_session)
+        action_resp = action_func(action_path, json=action_body, cookies=cookies_or_session, timeout=5)
         return action_resp
 
     def _apply_session(_usr_name=None, _grp_name=None):
@@ -921,10 +921,10 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         if _use_request(cookies_or_session):
             if _usr_name:
                 path = "{url}{path}".format(url=magpie_url, path=UsersAPI.path)
-                return requests.post(path, json=usr_data, timeout=5)
+                return requests.post(path, json=usr_data, cookies=cookies_or_session, timeout=5)
             if _grp_name:
                 path = "{url}{path}".format(url=magpie_url, path=GroupsAPI.path)
-                return requests.post(path, json=grp_data, timeout=5)
+                return requests.post(path, json=grp_data, cookies=cookies_or_session, timeout=5)
         else:
             if _usr_name:
                 from magpie.api.management.user.user_utils import create_user
@@ -1103,7 +1103,8 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
             if svc_resp.status_code != 200:
                 _handle_permission("Unknown service [{!s}]".format(svc_name), i, raise_errors=raise_errors)
                 continue
-            service_info = get_json(svc_resp)[svc_name]
+            service_json = get_json(svc_resp)
+            service_info = service_json.get(svc_name) or service_json.get("service")  # format depends on magpie version
         else:
             transaction.commit()    # force any pending transaction to be applied to find possible dependencies
             svc = models.Service.by_service_name(svc_name, db_session=cookies_or_session)
