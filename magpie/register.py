@@ -776,7 +776,6 @@ def _parse_resource_path(permission_config_entry,   # type: PermissionConfigItem
 
             res_path = None
             if _use_request(cookies_or_session):
-                magpie_url = magpie_url or get_magpie_url()
                 res_path = magpie_url + ServiceResourcesAPI.path.format(service_name=svc_name)
                 res_resp = requests.get(res_path, cookies=cookies_or_session, timeout=5)
                 res_dict = get_json(res_resp)[svc_name]  # type: JSON
