@@ -13,10 +13,8 @@ See https://pavics-magpie.readthedocs.io/en/latest/configuration.html#file-permi
 import argparse
 from typing import TYPE_CHECKING
 
-import yaml
-
 from magpie.cli.utils import make_logging_options, setup_logger_from_options
-from magpie.register import get_all_configs, magpie_register_permissions_from_config
+from magpie.register import magpie_register_permissions_from_config
 from magpie.utils import get_logger
 
 if TYPE_CHECKING:
