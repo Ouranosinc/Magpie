@@ -2,9 +2,11 @@
 """
 Magpie helper to create or delete a set of permissions.
 
-When parsing permissions to create, any underlying user, group, service or resource
-that are missing, but that can be resolved with reasonable defaults, will be dynamically
-created prior to setting the corresponding permission on it.
+When parsing permissions to create, any underlying user, group, or intermediate resource
+that are missing, but that can be resolved with reasonable defaults or with an explicit
+definition in the configuration file, will be dynamically created prior to setting the
+corresponding permission on it. All referenced services should exist beforehand. Consider
+using the 'register_providers' utility to register services beforehand as needed.
 
 See https://pavics-magpie.readthedocs.io/en/latest/configuration.html#file-permissions-cfg for more details.
 """
@@ -40,7 +42,7 @@ def make_parser():
     parser.add_argument("-P", "--password", "--magpie-admin-password", help=(
         "Admin password for magpie login (if omitted, will try using 'MAGPIE_ADMIN_PASSWORD' environment variable)."
     ))
-    parser.add_argument("-c", "--config", required=True, nargs="+", help=(
+    parser.add_argument("-c", "--config", required=True, nargs="+", action="append", help=(
         "Path to a single configuration file or a directory containing configuration file that contains permissions. "
         "The option can be specified multiple times to provide multiple lookup directories or specific files to load. "
         "Configuration files must be in JSON or YAML format, with their respective extensions, or the '.cfg' extension."
@@ -56,22 +58,11 @@ def main(args=None, parser=None, namespace=None):
     ns = parser.parse_args(args=args, namespace=namespace)
     setup_logger_from_options(LOGGER, ns)
 
-    all_configs = []
-    for cfg in ns.config:
-        configs = get_all_configs(cfg, "permissions", allow_missing=True)
-        all_configs.extend(configs)
-
-    if ns.verbose:
-        LOGGER.info(
-            "Resolved permissions to update:\n\n%s\n",
-            yaml.safe_dump(all_configs, allow_unicode=True, encoding="utf-8", indent=4, sort_keys=False)
-        )
-
-    if not all_configs or all(not cfg for cfg in all_configs):
-        LOGGER.error("Could not find any permissions configuration under specified locations.")
-        return ERROR_PARAMS
+    all_configs = [cfg for cfg_args in ns.config for cfg in cfg_args]
     try:
-        magpie_register_permissions_from_config(all_configs)
+        for config in all_configs:
+            LOGGER.info("Processing: [%s]", config)
+            magpie_register_permissions_from_config(config)
     except Exception as exc:
         LOGGER.error("Failed permissions parsing and update from specified configurations [%s].", str(exc))
         return ERROR_EXEC

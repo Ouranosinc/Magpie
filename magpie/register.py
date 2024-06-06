@@ -5,7 +5,7 @@ import string
 import subprocess  # nosec
 import time
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 import requests
 import six
@@ -61,6 +61,7 @@ if TYPE_CHECKING:
         CookiesOrSessionType,
         GroupsConfig,
         GroupsSettings,
+        Literal,
         MultiConfigs,
         PermissionConfigItem,
         PermissionsConfig,
@@ -68,7 +69,8 @@ if TYPE_CHECKING:
         ServicesSettings,
         Str,
         UsersConfig,
-        UsersSettings
+        UsersSettings,
+        WebhooksConfig
     )
 
 
@@ -573,6 +575,36 @@ def _load_config(path_or_dict, section, allow_missing=False):
 CONFIG_KNOWN_EXTENSIONS = frozenset([".cfg", ".json", ".yml", ".yaml"])
 
 
+@overload
+def get_all_configs(path_or_dict, section, allow_missing=False):
+    # type: (Union[Str, CombinedConfig], Literal["groups"], bool) -> GroupsConfig
+    ...
+
+
+@overload
+def get_all_configs(path_or_dict, section, allow_missing=False):
+    # type: (Union[Str, CombinedConfig], Literal["users"], bool) -> UsersConfig
+    ...
+
+
+@overload
+def get_all_configs(path_or_dict, section, allow_missing=False):
+    # type: (Union[Str, CombinedConfig], Literal["permissions"], bool) -> PermissionsConfig
+    ...
+
+
+@overload
+def get_all_configs(path_or_dict, section, allow_missing=False):
+    # type: (Union[Str, CombinedConfig], Literal["services"], bool) -> ServicesConfig
+    ...
+
+
+@overload
+def get_all_configs(path_or_dict, section, allow_missing=False):
+    # type: (Union[Str, CombinedConfig], Literal["webhooks"], bool) -> WebhooksConfig
+    ...
+
+
 def get_all_configs(path_or_dict, section, allow_missing=False):
     # type: (Union[Str, CombinedConfig], Str, bool) -> MultiConfigs
     """
@@ -1020,19 +1052,36 @@ def magpie_register_permissions_from_config(
         cookies_or_session = db_session
 
     LOGGER.debug("Loading configurations.")
-    permissions = get_all_configs(permissions_config, "permissions")  # type: List[PermissionsConfig]
+    if isinstance(permissions_config, list):
+        permissions = [permissions_config]
+    else:
+        permissions = get_all_configs(permissions_config, "permissions")
     perms_cfg_count = len(permissions)
     LOGGER.log(logging.INFO if perms_cfg_count else logging.WARNING,
                "Found %s permissions configurations.", perms_cfg_count)
     users_settings = groups_settings = None
     if perms_cfg_count:
-        users = get_all_configs(permissions_config, "users", allow_missing=True)    # type: List[UsersConfig]
-        groups = get_all_configs(permissions_config, "groups", allow_missing=True)  # type: List[GroupsConfig]
+        if isinstance(permissions_config, str):
+            users = get_all_configs(permissions_config, "users", allow_missing=True)
+        else:
+            users = []
+        if isinstance(permissions_config, str):
+            groups = get_all_configs(permissions_config, "groups", allow_missing=True)
+        else:
+            groups = []
         users_settings = _resolve_config_registry(users, "username") or {}
         groups_settings = _resolve_config_registry(groups, "name") or {}
     for i, perms in enumerate(permissions):
         LOGGER.info("Processing permissions from configuration (%s/%s).", i + 1, perms_cfg_count)
-        _process_permissions(perms, magpie_url, cookies_or_session, users_settings, groups_settings, raise_errors)
+        _process_permissions(
+            perms,
+            magpie_url,
+            cookies_or_session,
+            users_settings,
+            groups_settings,
+            settings,
+            raise_errors,
+        )
     LOGGER.info("All permissions processed.")
 
 
@@ -1061,8 +1110,15 @@ def _resolve_config_registry(config_files, key):
     return config_map
 
 
-def _process_permissions(permissions, magpie_url, cookies_or_session, users=None, groups=None, raise_errors=False):
-    # type: (PermissionsConfig, Str, Session, Optional[UsersSettings], Optional[GroupsSettings], bool) -> None
+def _process_permissions(
+    permissions,            # type: PermissionsConfig
+    magpie_url,             # type: Str
+    cookies_or_session,     # type: Session
+    users=None,             # type: Optional[UsersSettings]
+    groups=None,            # type: Optional[GroupsSettings]
+    settings=None,          # type: Optional[AnySettingsContainer]
+    raise_errors=False,     # type: bool
+):                          # type: (...) -> None
     """
     Processes a single `permissions` configuration.
     """
@@ -1070,7 +1126,7 @@ def _process_permissions(permissions, magpie_url, cookies_or_session, users=None
         LOGGER.warning("Permissions configuration are empty.")
         return
 
-    anon_user = get_constant("MAGPIE_ANONYMOUS_USER")
+    anon_user = get_constant("MAGPIE_ANONYMOUS_USER", settings)
     perm_count = len(permissions)
     LOGGER.log(logging.INFO if perm_count else logging.WARNING,
                "Found %s permissions to evaluate from configuration.", perm_count)
