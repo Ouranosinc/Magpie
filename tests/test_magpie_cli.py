@@ -7,7 +7,7 @@ test_magpie_cli
 
 Tests for :mod:`magpie.cli` module.
 """
-
+import contextlib
 import json
 import os
 import subprocess
@@ -16,7 +16,7 @@ import tempfile
 import mock
 import six
 
-from magpie.cli import batch_update_users, magpie_helper_cli
+from magpie.cli import batch_update_permissions, batch_update_users, magpie_helper_cli
 from magpie.constants import get_constant
 from tests import runner, utils
 
@@ -27,6 +27,7 @@ else:
 
 KNOWN_HELPERS = [
     "batch_update_users",
+    "batch_update_permissions",
     "register_defaults",
     "register_providers",
     "run_db_migration",
@@ -80,6 +81,110 @@ def test_magpie_helper_as_python():
             raise AssertionError("unexpected error raised instead of success exit code: [{!s}]".format(exc))
         else:
             raise AssertionError("expected exit code on help call not raised")
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_batch_update_permissions_help_via_magpie_helper():
+    out_lines = run_and_get_output("magpie_helper batch_update_permissions --help")
+    assert "usage: magpie_helper batch_update_permissions" in out_lines[0]
+    assert "Magpie helper to create or delete a set of permissions." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_batch_update_permissions_help_directly():
+    out_lines = run_and_get_output("magpie_batch_update_permissions --help")
+    assert "usage: magpie_batch_update_permissions" in out_lines[0]
+    assert "Magpie helper to create or delete a set of permissions." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_batch_update_permissions_command():
+    test_admin_usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_not_set=False, raise_missing=False)
+    test_admin_pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_not_set=False, raise_missing=False)
+    if not test_admin_usr or not test_admin_pwd:
+        test_admin_usr = get_constant("MAGPIE_ADMIN_USER")
+        test_admin_pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
+
+    test_grp = "unittest-batch-update-perms-cmd-group"
+    test_usr = "unittest-batch-update-perms-cmd-user"
+    test_api = "unittest-batch-update-perms-cmd-api"
+    test_wps = "unittest-batch-update-perms-cmd-wps"
+    test_url = "http://localhost"
+    test_app = utils.get_test_magpie_app()
+    test_args = [
+        "-u", test_url,
+        "-U", test_admin_usr,
+        "-P", test_admin_pwd,
+    ]
+
+    # cleanup in case of previous failure
+    _, test_admin_cookies = utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
+    utils.TestSetup.delete_TestUser(test_app, override_user_name=test_usr, override_cookies=test_admin_cookies)
+    utils.TestSetup.delete_TestGroup(test_app, override_group_name=test_grp, override_cookies=test_admin_cookies)
+    utils.TestSetup.delete_TestService(test_app, override_service_name=test_api, override_cookies=test_admin_cookies)
+    utils.TestSetup.delete_TestService(test_app, override_service_name=test_wps, override_cookies=test_admin_cookies)
+
+    def mock_request(*args, **kwargs):
+        method, url, args = args[0], args[1], args[2:]
+        path = url.replace(test_url, "")
+        # because CLI utility does multiple login tests, we must force TestApp logout to forget session
+        # otherwise, error is raised because of user session mismatch between previous login and new one requested
+        if path.startswith("/signin"):
+            utils.check_or_try_logout_user(test_app)
+        return utils.test_request(test_app, method, path, *args, **kwargs)
+
+    def run_command(operation_name, operation_args):
+        with tempfile2.TemporaryDirectory() as tmpdir:
+            with mock.patch("requests.Session.request", side_effect=mock_request):
+                with mock.patch("requests.request", side_effect=mock_request):
+                    err_code = batch_update_permissions.main(operation_args)
+                    assert err_code == 0, "failed execution due to invalid arguments"
+                    assert len(os.listdir(tmpdir)) == 1, "utility should have produced 1 output file"
+                    file = os.path.join(tmpdir, os.listdir(tmpdir)[0])
+                    utils.check_val_is_in(operation_name, file)
+                    assert os.path.isfile(file)
+                    with open(file, mode="r", encoding="utf-8") as fd:
+                        file_text = fd.read()
+
+    with contextlib.ExitStack() as stack:
+        tmp_file = stack.enter_context(tempfile.NamedTemporaryFile(mode="w", suffix=".json"))
+        perms1 = {
+            "permissions": [
+                {
+                    "group": test_grp,
+                    "service": test_api,
+                    "resource": "/api/v1",
+                    "permission": "read",
+                    "action": "create",
+                }
+            ]
+        }
+        tmp_file.write(json.dumps(perms1))
+        tmp_file.flush()
+        tmp_file.seek(0)
+        test_args += ["-c", tmp_file.name]
+
+        tmp_file = stack.enter_context(tempfile.NamedTemporaryFile(mode="w", suffix=".json"))
+        perms2 = {
+            "permissions": [
+                {
+                    "user": test_usr,
+                    "service": test_wps,
+                    "permission": "getcapabilities",
+                    "action": "create",
+                }
+            ]
+        }
+        tmp_file.write(json.dumps(perms2))
+        tmp_file.flush()
+        tmp_file.seek(0)
+        test_args += ["-c", tmp_file.name]
+
+        test_args += ["--verbose"]
+        run_command("batch_update_permissions", test_args)
 
 
 @runner.MAGPIE_TEST_CLI

@@ -56,6 +56,7 @@ if TYPE_CHECKING:
         AnyCookiesType,
         AnyResolvedSettings,
         AnyResponseType,
+        AnySettingsContainer,
         CombinedConfig,
         CookiesOrSessionType,
         GroupsConfig,
@@ -987,13 +988,19 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         _validate_response(lambda: _apply_session(usr_name, None), is_create=create_perm)
 
 
-def magpie_register_permissions_from_config(permissions_config, magpie_url=None, db_session=None, raise_errors=False):
-    # type: (Union[Str, PermissionsConfig], Optional[Str], Optional[Session], bool) -> None
+def magpie_register_permissions_from_config(
+    permissions_config,     # type: Union[Str, PermissionsConfig]
+    settings=None,          # type: Optional[AnySettingsContainer]
+    db_session=None,        # type: Optional[Session]
+    raise_errors=False,     # type: bool
+):                          # type: (...) -> None
     """
     Applies `permissions` specified in configuration(s) defined as file, directory with files or literal configuration.
 
     :param permissions_config: file/dir path to `permissions` config or JSON/YAML equivalent pre-loaded.
-    :param magpie_url: URL to magpie instance (when using requests; default: `magpie.url` from this app's config).
+    :param settings: Magpie settings to resolve an instance session when using requests instead of DB session.
+        Will look for ``magpie.url``, ``magpie.admin_user`` and ``magpie.admin_password`` by default, or any
+        corresponding environment variable resolution if omitted in the settings.
     :param db_session: db session to use instead of requests to directly create/remove permissions with config.
     :param raise_errors: raises errors related to permissions, instead of just logging the info.
 
@@ -1002,9 +1009,9 @@ def magpie_register_permissions_from_config(permissions_config, magpie_url=None,
     """
     LOGGER.info("Starting permissions processing.")
 
+    magpie_url = None
     if _use_request(db_session):
-        magpie_url = magpie_url or get_magpie_url()
-        settings = {"magpie.url": magpie_url}
+        magpie_url = get_magpie_url(settings)
         LOGGER.debug("Editing permissions using requests to [%s]...", magpie_url)
         err_msg = "Invalid credentials to register Magpie permissions."
         cookies_or_session = get_admin_cookies(settings, raise_message=err_msg)

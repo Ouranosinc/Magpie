@@ -2079,9 +2079,10 @@ class TestSetup(object):
         Validates that at the bare minimum, no underlying internal error occurred from the API or UI calls.
         """
         app_or_url = get_app_or_url(test_case)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         resp = test_request(app_or_url, method, path,
                             headers={"Accept": expected_type},
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies,
+                            cookies=cookies,
                             expect_errors=True)
         if path.startswith("/ui"):
             check_ui_response_basic_info(resp, expected_code=401, expected_type=expected_type)
@@ -2288,26 +2289,26 @@ class TestSetup(object):
         app_or_url = get_app_or_url(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
         svc_type = override_service_type if override_service_type is not null else test_case.test_service_type
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         svc_json = TestSetup.create_TestService(test_case,
                                                 override_service_name=svc_name, override_service_type=svc_type,
-                                                override_headers=override_headers, override_cookies=override_cookies)
+                                                override_headers=headers, override_cookies=cookies)
         path = "/services/{svc}/resources".format(svc=svc_name)
         data = override_data if override_data is not null else {
             "resource_name": override_resource_name or test_case.test_resource_name,
             "resource_type": override_resource_type or test_case.test_resource_type,
         }
-        resp = test_request(app_or_url, "POST", path, json=data, expect_errors=True,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        resp = test_request(app_or_url, "POST", path, json=data, expect_errors=True, headers=headers, cookies=cookies)
         if ignore_conflict and resp.status_code == 409:
             svc_info = TestSetup.get_ExistingTestServiceInfo(test_case,
                                                              override_service_info=svc_json,
-                                                             override_headers=override_headers,
-                                                             override_cookies=override_cookies)
+                                                             override_headers=headers,
+                                                             override_cookies=cookies)
             svc_res = TestSetup.get_TestServiceDirectResources(test_case,
                                                                override_service_name=svc_info["service_name"],
-                                                               override_headers=override_headers,
-                                                               override_cookies=override_cookies)
+                                                               override_headers=headers,
+                                                               override_cookies=cookies)
             res_found = [
                 res for res in svc_res
                 if res["resource_name"] == data["resource_name"] and res["resource_type"] == data["resource_type"]
@@ -2394,11 +2395,11 @@ class TestSetup(object):
 
         :raises AssertionError: if the response correspond to failure to create the test resource.
         """
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         app_or_url = get_app_or_url(test_case)
         path = "/resources/{}".format(parent_resource_id)
-        resp = test_request(app_or_url, "GET", path,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        resp = test_request(app_or_url, "GET", path, headers=headers, cookies=cookies)
         check_response_basic_info(resp)
         data = override_data if override_data is not null else {
             "resource_name": override_resource_name or test_case.test_resource_name,
@@ -2406,15 +2407,11 @@ class TestSetup(object):
             "parent_id": parent_resource_id,
         }
         # creation response provides only 'basic' info, fetch detailed ones with additional get
-        resp = test_request(app_or_url, "POST", "/resources", json=data,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        resp = test_request(app_or_url, "POST", "/resources", json=data, headers=headers, cookies=cookies)
         body = check_response_basic_info(resp, 201, expected_method="POST")
         info = TestSetup.get_ResourceInfo(test_case, override_body=body)
         path = "/resources/{}".format(info["resource_id"])
-        resp = test_request(app_or_url, "GET", path,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        resp = test_request(app_or_url, "GET", path, headers=headers, cookies=cookies)
         return check_response_basic_info(resp)
 
     @staticmethod
@@ -2459,9 +2456,9 @@ class TestSetup(object):
             raise ValueError("invalid item-type: [{}]".format(item_type))
         data = {"permission": PermissionSet(override_permission).json()}
         path = "{}/resources/{}/permissions".format(item_path, res_id)
-        resp = test_request(test_case, method, path, data=data,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
+        resp = test_request(test_case, method, path, data=data, headers=headers, cookies=cookies)
         code = 200
         if method == "PUT":
             code = [200, 201]
@@ -2572,6 +2569,8 @@ class TestSetup(object):
         resource creation. This is essentially the same as requesting the details directly with :paramref:`resource_id`.
         """
         body = override_body
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         if override_body:
             if TestVersion(test_case.version) >= TestVersion("0.6.3"):
                 # skip if sub-element was already extracted and provided as input override_body
@@ -2580,9 +2579,8 @@ class TestSetup(object):
                     check_val_type(body, dict)
             resource_id = body["resource_id"]
         if resource_id and full_detail:
-            resp = test_request(test_case, "GET", "/resources/{}".format(resource_id),
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            path = "/resources/{}".format(resource_id)
+            resp = test_request(test_case, "GET", path, headers=headers, cookies=cookies)
             body = check_response_basic_info(resp)
             body = TestSetup.get_ResourceInfo(test_case, override_body=body, resource_id=None, full_detail=False)
         return body
@@ -2600,14 +2598,14 @@ class TestSetup(object):
         :raises AssertionError: if the response correspond to missing service or failure to retrieve it.
         """
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         if override_service_info:
             json_body = override_service_info
         else:
             app_or_url = get_app_or_url(test_case)
             path = "/services/{svc}".format(svc=svc_name)
-            resp = test_request(app_or_url, "GET", path,
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            resp = test_request(app_or_url, "GET", path, headers=headers, cookies=cookies)
             json_body = get_json_body(resp)
         svc_getter = "service"
         if TestVersion(test_case.version) < TestVersion("0.9.1"):
@@ -2628,10 +2626,11 @@ class TestSetup(object):
         """
         app_or_url = get_app_or_url(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         path = "/services/{svc}/resources".format(svc=svc_name)
         resp = test_request(app_or_url, "GET", path,
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies,
+                            headers=headers, cookies=cookies,
                             expect_errors=ignore_missing_service)
         if ignore_missing_service and resp.status_code == 404:
             return []
@@ -2667,20 +2666,20 @@ class TestSetup(object):
 
         If the resource does not exist, skip. Otherwise, delete it and validate that it was indeed removed.
 
-        :raises AssertionError: if any response does not correspond to non existing service's resource after execution.
+        :raises AssertionError: if any response does not correspond to non-existing service's resource after execution.
         """
         app_or_url = get_app_or_url(test_case)
         resource_name = override_resource_name if override_resource_name is not null else test_case.test_resource_name
         resources = TestSetup.get_TestServiceDirectResources(test_case, ignore_missing_service=True)
         test_resource = list(filter(lambda r: r["resource_name"] == resource_name, resources))
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         # delete as required, skip if non-existing
         if len(test_resource) > 0:
             resource_id = test_resource[0]["resource_id"]
             svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
             path = "/services/{svc}/resources/{res_id}".format(svc=svc_name, res_id=resource_id)
-            resp = test_request(app_or_url, "DELETE", path,
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies)
             check_val_equal(resp.status_code, 200)
         TestSetup.check_NonExistingTestServiceResource(test_case)
 
@@ -2702,8 +2701,8 @@ class TestSetup(object):
         app_or_url = get_app_or_url(test_case)
         svc_name = override_service_name if override_service_name is not null else test_case.test_service_name
         svc_type = override_service_type if override_service_type is not null else test_case.test_service_type
-        override_headers = override_headers if override_headers is not null else test_case.json_headers
-        override_cookies = override_cookies if override_cookies is not null else test_case.cookies
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         data = {
             "service_name": svc_name,
             "service_type": svc_type,
@@ -2712,22 +2711,22 @@ class TestSetup(object):
         if svc_name:
             test_case.extra_service_names.add(svc_name)  # indicate potential removal at a later point
         resp = test_request(app_or_url, "POST", "/services", json=data, expect_errors=True,
-                            headers=override_headers, cookies=override_cookies)
+                            headers=headers, cookies=cookies)
         if resp.status_code == 409:
             if override_exist is not null and override_exist:
                 TestSetup.delete_TestService(test_case,
-                                             override_service_name=override_service_name,
-                                             override_headers=override_headers,
-                                             override_cookies=override_cookies)
+                                             override_service_name=svc_name,
+                                             override_headers=headers,
+                                             override_cookies=cookies)
                 return TestSetup.create_TestService(test_case,
-                                                    override_service_name=override_service_name,
-                                                    override_service_type=override_service_type,
-                                                    override_headers=override_headers,
-                                                    override_cookies=override_cookies,
+                                                    override_service_name=svc_name,
+                                                    override_service_type=svc_type,
+                                                    override_headers=headers,
+                                                    override_cookies=cookies,
                                                     override_exist=False)
             if override_exist is null:
                 path = "/services/{svc}".format(svc=svc_name)
-                resp = test_request(app_or_url, "GET", path, headers=override_headers, cookies=override_cookies)
+                resp = test_request(app_or_url, "GET", path, headers=headers, cookies=cookies)
                 body = check_response_basic_info(resp, 200, expected_method="GET")
                 if TestVersion(test_case.version) < TestVersion("0.9.1"):
                     body.update({"service": body[svc_name]})
@@ -2767,9 +2766,9 @@ class TestSetup(object):
         # delete as required, skip if non-existing
         if len(test_service) > 0:
             path = "/services/{svc_name}".format(svc_name=service_name)
-            resp = test_request(app_or_url, "DELETE", path,
-                                headers=override_headers if override_headers is not null else test_case.json_headers,
-                                cookies=override_cookies if override_cookies is not null else test_case.cookies)
+            headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+            cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
+            resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies)
             check_val_equal(resp.status_code, 200)
         TestSetup.check_NonExistingTestService(test_case, override_service_name=service_name)
 
@@ -2782,9 +2781,9 @@ class TestSetup(object):
         :raises AssertionError: if the response does not correspond to successful retrieval of user names.
         """
         app_or_url = get_app_or_url(test_case)
-        resp = test_request(app_or_url, "GET", "/services",
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
+        resp = test_request(app_or_url, "GET", "/services", headers=headers, cookies=cookies)
         json_body = check_response_basic_info(resp, 200, expected_method="GET")  # type: JSON
 
         # prepare a flat list of registered services
@@ -2825,10 +2824,11 @@ class TestSetup(object):
         :raises AssertionError: if the response does not correspond to successful retrieval of user names.
         """
         app_or_url = get_app_or_url(test_case)
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         resp = test_request(app_or_url, "GET", "/register/users" if pending else "/users",
                             expect_errors=pending,  # route does not exist if not enabled
-                            headers=override_headers if override_headers is not null else test_case.json_headers,
-                            cookies=override_cookies if override_cookies is not null else test_case.cookies)
+                            headers=headers, cookies=cookies)
         if pending and resp.status_code == 404:  # user-registration was not enabled
             return []
         json_body = check_response_basic_info(resp, 200, expected_method="GET")
@@ -2942,8 +2942,8 @@ class TestSetup(object):
         :raises AssertionError: if any request response does not match successful validation or removal from group.
         """
         app_or_url = get_app_or_url(test_case)
-        headers = override_headers if override_headers is not null else test_case.json_headers
-        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         users = TestSetup.get_RegisteredUsersList(test_case, pending=pending,
                                                   override_headers=headers, override_cookies=cookies)
         user_name = override_user_name if override_user_name is not null else test_case.test_user_name
@@ -2963,8 +2963,8 @@ class TestSetup(object):
         """
         Removes all existing pending user registrations.
         """
-        headers = override_headers if override_headers is not null else test_case.json_headers
-        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", null)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", null)
         users = TestSetup.get_RegisteredUsersList(test_case, pending=True,
                                                   override_headers=headers, override_cookies=cookies)
         for user in users:
@@ -3204,8 +3204,8 @@ class TestSetup(object):
         :return: nothing. Group is ensured to not exist.
         """
         app_or_url = get_app_or_url(test_case)
-        headers = override_headers if override_headers is not null else test_case.json_headers
-        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
+        cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         groups = TestSetup.get_RegisteredGroupsList(test_case, override_headers=headers, override_cookies=cookies)
         group_name = override_group_name if override_group_name is not null else test_case.test_group_name
         # delete as required, skip if non-existing
