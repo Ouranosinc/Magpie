@@ -2761,7 +2761,9 @@ class TestSetup(object):
         headers = override_headers if override_headers is not null else getattr(test_case, "json_headers", None)
         cookies = override_cookies if override_cookies is not null else getattr(test_case, "cookies", None)
         service_name = (
-            override_service_name if override_service_name is not null else getattr(test_case, "service_name", None)
+            override_service_name
+            if override_service_name is not null else
+            getattr(test_case, "test_service_name", None)
         )
         services_info = TestSetup.get_RegisteredServicesList(test_case,
                                                              override_headers=headers,
