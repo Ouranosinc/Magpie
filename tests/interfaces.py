@@ -3757,7 +3757,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             [(effect_perm1_deny, grp1_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
         )
 
-        # apply allow user permission on parent service (on level above, not same resource as previous tests)
+        # apply 'allow' user permission on parent service (on level above, not same resource as previous tests)
         # allow user permission takes priority over deny from second group, but only during effective resolution
         # even if second group deny still exists, the user allow permission takes priority as it is more specific
         # during check of local inherited permissions (no recursive considered), second group deny remains the result

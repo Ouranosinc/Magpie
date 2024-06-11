@@ -298,7 +298,7 @@ def get_constant(constant_name,             # type: Str
       5. search in environment variables
 
     Parameter :paramref:`constant_name` is expected to have the format ``MAGPIE_[VARIABLE_NAME]`` although any value can
-    be passed to retrieve generic settings from all above mentioned search locations.
+    be passed to retrieve generic settings from all above-mentioned search locations.
 
     If :paramref:`settings_name` is provided as alternative name, it is used as is to search for results if
     :paramref:`constant_name` was not found. Otherwise, ``magpie.[variable_name]`` is used for additional search when

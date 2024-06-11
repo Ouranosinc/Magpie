@@ -7,27 +7,34 @@ test_magpie_cli
 
 Tests for :mod:`magpie.cli` module.
 """
-
+import contextlib
 import json
 import os
 import subprocess
 import tempfile
+from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 import mock
 import requests
 import six
 
-from magpie.cli import batch_update_users, magpie_helper_cli, purge_expired_network_tokens
+from magpie.cli import batch_update_permissions, batch_update_users, magpie_helper_cli, purge_expired_network_tokens
 from magpie.constants import get_constant
+from magpie.permissions import Permission, PermissionType
+from magpie.services import ServiceAPI, ServiceWPS
 from tests import runner, utils
 
 if six.PY2:
     from backports import tempfile as tempfile2  # noqa  # pylint: disable=E0611,no-name-in-module  # Python 2
 else:
     tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
+if TYPE_CHECKING:
+    from magpie.typedefs import JSON
 
 KNOWN_HELPERS = [
     "batch_update_users",
+    "batch_update_permissions",
     "register_defaults",
     "register_providers",
     "run_db_migration",
@@ -83,6 +90,138 @@ def test_magpie_helper_as_python():
             raise AssertionError("unexpected error raised instead of success exit code: [{!s}]".format(exc))
         else:
             raise AssertionError("expected exit code on help call not raised")
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_batch_update_permissions_help_via_magpie_helper():
+    out_lines = run_and_get_output("magpie_helper batch_update_permissions --help")
+    assert "usage: magpie_helper batch_update_permissions" in out_lines[0]
+    assert "Magpie helper to create or delete a set of permissions." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_batch_update_permissions_help_directly():
+    out_lines = run_and_get_output("magpie_batch_update_permissions --help")
+    assert "usage: magpie_batch_update_permissions" in out_lines[0]
+    assert "Magpie helper to create or delete a set of permissions." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+def test_magpie_batch_update_permissions_command():
+    test_admin_usr = get_constant("MAGPIE_TEST_ADMIN_USERNAME", raise_not_set=False, raise_missing=False)
+    test_admin_pwd = get_constant("MAGPIE_TEST_ADMIN_PASSWORD", raise_not_set=False, raise_missing=False)
+    if not test_admin_usr or not test_admin_pwd:
+        test_admin_usr = get_constant("MAGPIE_ADMIN_USER")
+        test_admin_pwd = get_constant("MAGPIE_ADMIN_PASSWORD")
+
+    test_grp = "unittest-batch-update-perms-cmd-group"
+    test_usr = "unittest-batch-update-perms-cmd-user"
+    test_api = "unittest-batch-update-perms-cmd-api"
+    test_wps = "unittest-batch-update-perms-cmd-wps"
+    test_url = "http://localhost"
+    test_app = utils.get_test_magpie_app()
+    test_args = [
+        "-u", test_url,
+        "-U", test_admin_usr,
+        "-P", test_admin_pwd,
+    ]
+
+    def mock_request(method, url, *args, **kwargs):
+        _path = urlparse(url).path
+        # because CLI utility does multiple login tests, we must force TestApp logout to forget session
+        # otherwise, error is raised because of user session mismatch between previous login and new one requested
+        if _path.startswith("/signin"):
+            utils.check_or_try_logout_user(test_app)
+        return utils.test_request(test_app, method, _path, *args, **kwargs)
+
+    _, test_admin_cookies = utils.check_or_try_login_user(test_app, username=test_admin_usr, password=test_admin_pwd)
+
+    # cleanup in case of previous run
+    utils.TestSetup.delete_TestUser(test_app, override_user_name=test_usr, override_cookies=test_admin_cookies)
+    utils.TestSetup.delete_TestGroup(test_app, override_group_name=test_grp, override_cookies=test_admin_cookies)
+    utils.TestSetup.delete_TestService(test_app, override_service_name=test_api, override_cookies=test_admin_cookies)
+    utils.TestSetup.delete_TestService(test_app, override_service_name=test_wps, override_cookies=test_admin_cookies)
+
+    utils.TestSetup.create_TestService(test_app,
+                                       override_service_name=test_api,
+                                       override_service_type=ServiceAPI.service_type)
+    utils.TestSetup.create_TestService(test_app,
+                                       override_service_name=test_wps,
+                                       override_service_type=ServiceWPS.service_type)
+
+    def run_command(__operation_name, operation_args):
+        with mock.patch("requests.Session.request", side_effect=mock_request):
+            with mock.patch("requests.request", side_effect=mock_request):
+                err_code = batch_update_permissions.main(operation_args)
+                assert err_code == 0, "failed execution due to invalid arguments"
+
+    with contextlib.ExitStack() as stack:
+        tmp_file = stack.enter_context(tempfile.NamedTemporaryFile(mode="w", suffix=".json"))
+        perms1 = {
+            "permissions": [
+                {
+                    "group": test_grp,
+                    "service": test_api,
+                    "resource": "/v1",
+                    "permission": Permission.READ.value,
+                    "action": "create",
+                }
+            ]
+        }
+        tmp_file.write(json.dumps(perms1))
+        tmp_file.flush()
+        tmp_file.seek(0)
+        test_args += ["-c", tmp_file.name]
+
+        tmp_file = stack.enter_context(tempfile.NamedTemporaryFile(mode="w", suffix=".json"))
+        perms2 = {
+            "permissions": [
+                {
+                    "user": test_usr,
+                    "service": test_wps,
+                    "permission": Permission.GET_CAPABILITIES.value,
+                    "action": "create",
+                }
+            ]
+        }
+        tmp_file.write(json.dumps(perms2))
+        tmp_file.flush()
+        tmp_file.seek(0)
+        test_args += ["-c", tmp_file.name]
+
+        test_args += ["--verbose"]
+        run_command("batch_update_permissions", test_args)
+
+    path = f"/groups/{test_grp}/resources"
+    resp = utils.test_request(test_app, "GET", path)
+    body = utils.check_response_basic_info(resp)
+    res_api = body["resources"][ServiceAPI.service_type][test_api]  # type: JSON
+    res_wps = body["resources"][ServiceWPS.service_type][test_wps]  # type: JSON
+    perms_res_api = res_api["permissions"]
+    perms_res_wps = res_wps["permissions"]
+    utils.check_val_equal(len(perms_res_wps), 0)
+    utils.check_val_equal(len(perms_res_api), 0, msg="Permission should not be created directly on the service.")
+    res_res_api = res_api["resources"]
+    utils.check_val_equal(len(res_res_api), 1, msg="Resource should have been created dynamically.")
+    perms_sub_api = res_res_api[list(res_res_api)[0]]["permissions"]  # type: JSON
+    utils.check_val_equal(len(perms_sub_api), 1)
+    utils.check_val_equal(perms_sub_api[0]["name"], Permission.READ.value)
+    utils.check_val_equal(perms_sub_api[0]["type"], PermissionType.INHERITED.value)
+
+    path = f"/users/{test_usr}/resources"
+    resp = utils.test_request(test_app, "GET", path)
+    body = utils.check_response_basic_info(resp)
+    res_api = body["resources"][ServiceAPI.service_type][test_api]
+    res_wps = body["resources"][ServiceWPS.service_type][test_wps]
+    perms_res_api = res_api["permissions"]
+    perms_res_wps = res_wps["permissions"]
+    utils.check_val_equal(len(perms_res_api), 0)
+    utils.check_val_equal(len(perms_res_wps), 1)
+    utils.check_val_equal(perms_res_wps[0]["name"], Permission.GET_CAPABILITIES.value)
+    utils.check_val_equal(perms_res_wps[0]["type"], PermissionType.DIRECT.value)
 
 
 @runner.MAGPIE_TEST_CLI
