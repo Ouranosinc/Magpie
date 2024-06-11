@@ -19,7 +19,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :widths: 10,90
 
     * - dependencies
-      - | |py_ver_support| |py_ver_recommend| |dependencies|
+      - | |py_ver_recommend| |py_ver_support| |py_ver_legacy| |dependencies|
     * - tests status
       - | |github_latest| |github_tagged| |coverage| |codacy|
     * - docker status
@@ -27,12 +27,29 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - releases
       - | |version| |commits-since|
 
-.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28legacy%20support%29-3.5%2B-orange.svg
+.. list-table::
+    :header-rows: 1
+    :widths: 10,90
+
+    * - Python Versions
+      - Description
+    * - *Legacy*
+      - Older versions of Magpie could still work for these Python releases, but maintenance is dropped.
+    * - *Supported*
+      - Tested by the CI and maintained for backward compatibility.
+    * - *Recommended*
+      - Prefered minimal version to use for latest security updates and performance enhancements.
+
+.. |py_ver_legacy| image:: https://img.shields.io/badge/python%20%28legacy%29-3.5%20%2D%2D%203.7-orange.svg
     :alt: Python 3.5+ supported (legacy)
     :target: https://www.python.org/getit
 
-.. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.7%2B-blue.svg
-    :alt: Python 3.7+ recommended
+.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28supported%29-3.8%2B-yellow.svg
+    :alt: Python 3.8+ supported
+    :target: https://www.python.org/getit
+
+.. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.11%2B-blue.svg
+    :alt: Python 3.11+ recommended
     :target: https://www.python.org/getit
 
 .. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/4.1.0.svg
