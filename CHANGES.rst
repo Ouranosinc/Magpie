@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_4.1.0:
+
+`4.1.0 <https://github.com/Ouranosinc/Magpie/tree/4.1.0>`_ (2024-06-11)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add CLI helper ``batch_update_permissions`` that allows registering one or more `Permission` configuration files
