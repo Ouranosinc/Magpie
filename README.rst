@@ -29,12 +29,12 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 .. list-table::
     :header-rows: 1
-    :widths: 10,90
+    :widths: 15,85
 
     * - Python Versions
       - Description
     * - *Legacy*
-      - Older versions of Magpie could still work for these Python releases, but maintenance is dropped.
+      - Older versions could still work, but maintenance is dropped.
     * - *Supported*
       - Tested by the CI and maintained for backward compatibility.
     * - *Recommended*
