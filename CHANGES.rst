@@ -14,6 +14,10 @@ Features / Changes
 * Add CLI helper ``batch_update_permissions`` that allows registering one or more `Permission` configuration files
   against a running `Magpie` instance.
 * Security fix: bump Docker base ``python:3.11-alpine3.19``.
+* Update ``authomatic[OpenID]==1.3.0`` to resolve temporary workarounds
+  (relates to `authomatic/authomatic#195 <https://github.com/authomatic/authomatic/issues/195>`_
+  and `authomatic/authomatic#233 <https://github.com/authomatic/authomatic/issues/233>`_,
+  fixes `#583 <https://github.com/Ouranosinc/Magpie/issues/583>`_).
 
 Bug Fixes
 ~~~~~~~~~
