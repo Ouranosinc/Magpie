@@ -7,16 +7,6 @@ from __future__ import unicode_literals
 
 import sys
 
-# FIXME: patch workaround for Python 3.12 issue with vendor-specific 'six.moves'
-#   Inspired from https://github.com/dpkp/kafka-python/issues/2401#issuecomment-1760208950
-#   Applied here such that anything importing 'magpie' does it first, to avoid patch everywhere importing 'authomatic'.
-#   Official fix required (see https://github.com/authomatic/authomatic/issues/233).
-if sys.version_info >= (3, 12, 0):
-    import six
-    sys.modules["authomatic.six.moves"] = six.moves
-    sys.modules["authomatic.six.moves.urllib"] = six.moves.urllib
-    sys.modules["authomatic.six.moves.urllib.parse"] = six.moves.urllib.parse
-
 
 def includeme(config):
     # import needs to be here, otherwise ImportError happens during setup.py install (modules not yet installed)
