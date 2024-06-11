@@ -11,7 +11,13 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* Add CLI helper ``batch_update_permissions`` that allows registering one or more `Permission` configuration files
+  against a running `Magpie` instance.
 * Security fix: bump Docker base ``python:3.11-alpine3.19``.
+
+Bug Fixes
+~~~~~~~~~
+* Fix `Permission` update from configuration file using the ``requests`` code path.
 
 .. _changes_4.0.0:
 
