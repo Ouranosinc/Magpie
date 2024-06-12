@@ -1,4 +1,4 @@
-FROM python:3.11-alpine3.19
+FROM python:3.13.0b2-alpine3.19
 LABEL Description="Runs Magpie AuthN/AuthZ service for REST-API and UI interfaces."
 LABEL Maintainer="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
 LABEL Vendor="CRIM"
