@@ -17,7 +17,11 @@ Changes
 ------------------------------------------------------------------------------------
 
 Features / Changes
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
+
+* Introduce "Network Mode" which allows other Magpie instances to act as external authentication providers using access
+  tokens. This allows users registered across multiple Magpie instances in a network to more easily gain access to the
+  resources within the network, without requiring the duplication of user credentials across the network.
 * Add CLI helper ``batch_update_permissions`` that allows registering one or more `Permission` configuration files
   against a running `Magpie` instance.
 * Security fix: bump Docker base ``python:3.11-alpine3.19``.

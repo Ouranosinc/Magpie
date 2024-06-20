@@ -11,3 +11,4 @@ def includeme(config):
     config.include("magpie.ui.login")
     config.include("magpie.ui.management")
     config.include("magpie.ui.user")
+    config.include("magpie.ui.network")
