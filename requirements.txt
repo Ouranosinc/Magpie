@@ -41,3 +41,4 @@ webob
 ziggurat_foundations==0.9.1
 zope.interface>=4.7.2,<5
 zope.sqlalchemy==1.6
+setuptools>=70.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
