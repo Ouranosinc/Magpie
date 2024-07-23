@@ -1,2 +1,2 @@
 pip
-setuptools>=65.5.1
+setuptools>=71.0.3

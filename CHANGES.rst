@@ -9,7 +9,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Update docker with latest ``python:3.11-alpine3.20`` base.
+* Pin ``setuptools>=71.0.3`` for CVE-2024-6345.
+* Pin ``requests>=2.32.3`` for CVE-2024-35195.
+* Pin ``urllib3>=2.2.2`` for CVE-2024-37891.
+* Pin ``zipp>=3.19.1`` for CVE-2024-5569.
 
 .. _changes_4.1.0:
 
