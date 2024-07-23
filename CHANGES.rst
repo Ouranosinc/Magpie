@@ -17,6 +17,8 @@ Features / Changes
 * Pin ``requests>=2.32.3`` for CVE-2024-35195.
 * Pin ``urllib3>=2.2.2`` for CVE-2024-37891.
 * Pin ``zipp>=3.19.1`` for CVE-2024-5569.
+* Pin ``pyramid-twitcher>=0.10.0`` and ``birdhouse/twitcher:v0.10.0`` for same security updates as above
+  (relates to `bird-house/twitcher#136 <https://github.com/bird-house/twitcher/pull/136>`_).
 
 .. _changes_4.1.0:
 
