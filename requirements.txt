@@ -25,7 +25,7 @@ pyramid_retry==2.1.1
 pyramid_tm>=2.2.1
 python-dotenv
 pyyaml>=5.1
-requests
+requests>=2.32.3
 requests_file
 simplejson
 six>=1.12.0
@@ -36,8 +36,10 @@ sqlalchemy-utils==0.39.0  # pyup: ignore
 threddsclient>=0.4.2
 transaction
 typing_extensions
+urllib3>=2.2.2
 wheel>=0.38
 webob
 ziggurat_foundations==0.9.1
 zope.interface>=4.7.2,<5
 zope.sqlalchemy==1.6
+zipp>=3.19.1
