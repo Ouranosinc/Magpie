@@ -9,6 +9,29 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_4.1.1:
+
+`4.1.1 <https://github.com/Ouranosinc/Magpie/tree/4.1.1>`_ (2024-07-23)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Update docker with latest ``python:3.11-alpine3.20`` base.
+* Pin ``setuptools>=71.0.3`` for CVE-2024-6345.
+* Pin ``requests>=2.32.3`` for CVE-2024-35195.
+* Pin ``urllib3>=2.2.2`` for CVE-2024-37891.
+* Pin ``zipp>=3.19.1`` for CVE-2024-5569.
+* Pin ``pyramid-twitcher>=0.10.0`` and ``birdhouse/twitcher:v0.10.0`` for same security updates as above
+  (relates to `bird-house/twitcher#136 <https://github.com/bird-house/twitcher/pull/136>`_).
+
+.. _changes_4.1.0:
+
+`4.1.0 <https://github.com/Ouranosinc/Magpie/tree/4.1.0>`_ (2024-06-11)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~
 
@@ -18,6 +41,10 @@ Features / Changes
 * Add CLI helper ``batch_update_permissions`` that allows registering one or more `Permission` configuration files
   against a running `Magpie` instance.
 * Security fix: bump Docker base ``python:3.11-alpine3.19``.
+* Update ``authomatic[OpenID]==1.3.0`` to resolve temporary workarounds
+  (relates to `authomatic/authomatic#195 <https://github.com/authomatic/authomatic/issues/195>`_
+  and `authomatic/authomatic#233 <https://github.com/authomatic/authomatic/issues/233>`_,
+  fixes `#583 <https://github.com/Ouranosinc/Magpie/issues/583>`_).
 
 Bug Fixes
 ~~~~~~~~~

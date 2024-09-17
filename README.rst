@@ -19,7 +19,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :widths: 10,90
 
     * - dependencies
-      - | |py_ver_support| |py_ver_recommend| |dependencies|
+      - | |py_ver_recommend| |py_ver_support| |py_ver_legacy| |dependencies|
     * - tests status
       - | |github_latest| |github_tagged| |coverage| |codacy|
     * - docker status
@@ -27,21 +27,38 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - releases
       - | |version| |commits-since|
 
-.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28legacy%20support%29-3.5%2B-orange.svg
+.. list-table::
+    :header-rows: 1
+    :widths: 15,85
+
+    * - Python Versions
+      - Description
+    * - *Legacy*
+      - Older versions could still work, but maintenance is dropped.
+    * - *Supported*
+      - Tested by the CI and maintained for backward compatibility.
+    * - *Recommended*
+      - Prefered minimal version to use for latest security updates and performance enhancements.
+
+.. |py_ver_legacy| image:: https://img.shields.io/badge/python%20%28legacy%29-3.5%20%2D%2D%203.7-orange.svg
     :alt: Python 3.5+ supported (legacy)
     :target: https://www.python.org/getit
 
-.. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.7%2B-blue.svg
-    :alt: Python 3.7+ recommended
+.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28supported%29-3.8%2B-yellow.svg
+    :alt: Python 3.8+ supported
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/4.0.0.svg
-    :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/4.0.0...master
+.. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.11%2B-blue.svg
+    :alt: Python 3.11+ recommended
+    :target: https://www.python.org/getit
 
-.. |version| image:: https://img.shields.io/badge/tag-4.0.0-blue.svg?style=flat
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/4.1.1.svg
+    :alt: Commits since latest release
+    :target: https://github.com/Ouranosinc/Magpie/compare/4.1.1...master
+
+.. |version| image:: https://img.shields.io/badge/tag-4.1.1-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/4.0.0
+    :target: https://github.com/Ouranosinc/Magpie/tree/4.1.1
 
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/Magpie/shield.svg
     :alt: Dependencies Status
@@ -51,9 +68,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Github Actions CI Build Status (master branch)
     :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3Amaster
 
-.. |github_tagged| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/Magpie/tests.yml?label=4.0.0&branch=4.0.0
+.. |github_tagged| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/Magpie/tests.yml?label=4.1.1&branch=4.1.1
     :alt: Github Actions CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A4.0.0
+    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A4.1.1
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
     :alt: Readthedocs Build Status (master branch)
@@ -81,7 +98,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 .. |docker_semver_tag| image:: https://img.shields.io/docker/v/pavics/magpie?label=version&sort=semver
     :alt: Docker Version Tag
-    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=4.0.0
+    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=4.1.1
 
 .. end-badges
 
@@ -125,8 +142,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - ``pavics/magpie:4.0.0``
-      - ``pavics/twitcher:magpie-4.0.0``
+    * - ``pavics/magpie:4.1.1``
+      - ``pavics/twitcher:magpie-4.1.1``
     * - ``pavics/magpie:latest``
       - ``pavics/twitcher:magpie-latest``
 
