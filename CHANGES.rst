@@ -563,7 +563,7 @@ Features / Changes
   `Ouranosinc/Magpie#473 <https://github.com/Ouranosinc/Magpie/pull/473>`_,
   see also
   `Avoid Accessing the Authentication Policy
-  <https://docs.pylonsproject.org/projects/pyramid_tm/en/latest/#avoid-accessing-the-authentication-policy>`_).
+  <https://docs.pylonsproject.org/projects/pyramid-tm/en/latest/#avoid-accessing-the-authentication-policy>`_).
 
 .. _changes_3.17.1:
 
