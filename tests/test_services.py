@@ -532,7 +532,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         utils.check_val_is_in("data_type", svc_config)
         utils.check_val_is_in("metadata_type", svc_config)
         utils.check_val_equal(svc_config["file_patterns"], [".*\\.ncml", ".*\\.nc"])
-        utils.check_val_equal(svc_config["data_type"]["prefixes"], ["dodsC", "fileServer"])
+        utils.check_val_equal(svc_config["data_type"]["prefixes"], ["dodsC", "fileServer", "ncss/grid"])
         utils.check_val_equal(svc_config["metadata_type"]["prefixes"], [None, "catalog"])
 
         # create resources
