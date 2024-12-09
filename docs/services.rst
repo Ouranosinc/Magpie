@@ -326,8 +326,8 @@ by the below configuration.
 
 .. versionchanged:: 4.1.2
     ``prefixes`` can now contain a ``/`` character. This allows `ServiceTHREDDS`_ to properly handle `THREDDS`_ services
-    that have multiple path parts. For example, starting with `THREDDS`_ version 5, the ``ncss`` service contains two 
-    sub-services which are accessed using the path prefixes ``ncss/grid`` and ``ncss/point``.  
+    that have multiple path parts. For example, starting with `THREDDS`_ version 5, the ``ncss`` service contains two
+    sub-services which are accessed using the path prefixes ``ncss/grid`` and ``ncss/point``.
 
 Assuming a proxy intended to receive incoming requests configured with :class:`magpie.adapter.MagpieAdapter` such that
 ``{PROXY_URL}`` is the base path, the following path would point toward the registered service with the above YAML
