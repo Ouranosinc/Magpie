@@ -1442,7 +1442,7 @@ class ServiceTHREDDS(ServiceInterface):
                     return permission
                 elif pattern_prefix is not None:
                     pattern_prefix = pattern_prefix.strip("/")
-                    path_prefix = "/".join(path_parts[:pattern_prefix.count("/")+1])
+                    path_prefix = "/".join(path_parts[:pattern_prefix.count("/") + 1])
                     if self.is_match(path_prefix, pattern_prefix) is not None:
                         return permission
         return None  # automatically deny
