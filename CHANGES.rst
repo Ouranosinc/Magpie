@@ -9,7 +9,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+* Allow ``metadata_type.prefixes`` and ``data_type.prefixes`` in ``ServiceTHREDDS`` configuration to contain ``/`` character.
 
 .. _changes_4.1.1:
 

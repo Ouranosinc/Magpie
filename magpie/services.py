@@ -1433,18 +1433,18 @@ class ServiceTHREDDS(ServiceInterface):
         # type: () -> PermissionRequested
         cfg = self.get_config()
         path_parts = self.get_path_parts()
-        path_prefix = None  # in case of no `<prefix>`, simulate as `null`
-        if path_parts:
-            path_prefix = path_parts[0]
         for prefixes, permission in [
             (cfg["metadata_type"]["prefixes"], Permission.BROWSE),  # first to favor BROWSE over READ prefix conflicts
             (cfg["data_type"]["prefixes"], Permission.READ),
         ]:
             for pattern_prefix in prefixes:  # type: Str
-                if path_prefix is None and pattern_prefix is None:
+                if not path_parts and pattern_prefix is None:
                     return permission
-                if self.is_match(path_prefix, pattern_prefix) is not None:
-                    return permission
+                elif pattern_prefix is not None:
+                    pattern_prefix = pattern_prefix.strip("/")
+                    path_prefix = "/".join(path_parts[:pattern_prefix.count("/")+1])
+                    if self.is_match(path_prefix, pattern_prefix) is not None:
+                        return permission
         return None  # automatically deny
 
 

@@ -301,6 +301,8 @@ by the below configuration.
               - dap4
               - wcs
               - wms
+              - ncss/grid
+              - ncss/point
 
 ..  warning:: Regular Expression Patterns
 
@@ -321,6 +323,11 @@ by the below configuration.
     ``<prefix_type>`` position. A typical use case with `THREDDS`_ is the ``/thredds`` prefix it adds between its
     API entrypoint and `Tomcat` service running it. If this feature is not needed, it can be disabled by setting the
     parameter to ``null``.
+
+.. versionchanged:: 4.1.2
+    ``prefixes`` can now contain a ``/`` character. This allows `ServiceTHREDDS`_ to properly handle `THREDDS`_ services
+    that have multiple path parts. For example, starting with `THREDDS`_ version 5, the ``ncss`` service contains two 
+    sub-services which are accessed using the path prefixes ``ncss/grid`` and ``ncss/point``.  
 
 Assuming a proxy intended to receive incoming requests configured with :class:`magpie.adapter.MagpieAdapter` such that
 ``{PROXY_URL}`` is the base path, the following path would point toward the registered service with the above YAML
