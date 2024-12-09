@@ -1440,7 +1440,7 @@ class ServiceTHREDDS(ServiceInterface):
             for pattern_prefix in prefixes:  # type: Str
                 if not path_parts and pattern_prefix is None:
                     return permission
-                elif pattern_prefix is not None:
+                if pattern_prefix is not None:
                     pattern_prefix = pattern_prefix.strip("/")
                     path_prefix = "/".join(path_parts[:pattern_prefix.count("/") + 1])
                     if self.is_match(path_prefix, pattern_prefix) is not None:
