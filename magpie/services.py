@@ -1382,6 +1382,20 @@ class ServiceTHREDDS(ServiceInterface):
                 return path_parts[1:]  # remove extra '' added by split
         return path_parts
 
+    def _get_path_prefix_permission(self, path_parts):
+        # type: (List[str]) -> Tuple[Optional[Str], PermissionRequested]
+        cfg = self.get_config()
+        for prefixes, permission in ((cfg["metadata_type"]["prefixes"], Permission.BROWSE),
+                                     (cfg["data_type"]["prefixes"], Permission.READ)):
+            for prefix in prefixes:
+                if not path_parts and prefix is None:
+                    return prefix, permission
+                if prefix is not None:
+                    path_prefix = "/".join(path_parts[:prefix.count("/") + 1])
+                    if self.is_match(path_prefix, prefix) is not None:
+                        return path_prefix, permission
+        return None, None
+
     @staticmethod
     def is_match(value, pattern):
         # type: (Str, Str) -> Optional[Str]
@@ -1396,11 +1410,14 @@ class ServiceTHREDDS(ServiceInterface):
     def resource_requested(self):
         # type: () -> TargetResourceRequested
         path_parts = self.get_path_parts()
-
+        path_prefix, _ = self._get_path_prefix_permission(path_parts)
         # handle optional prefix as targeting the service directly
         if not path_parts or len(path_parts) < 2:
             return self.service, True
-        path_parts = path_parts[1:]
+        if path_prefix:
+            path_parts = path_parts[path_prefix.count("/") + 1:]
+        else:
+            path_parts = path_parts[1:]
         cfg = self.get_config()
 
         # find deepest possible resource matching either Directory or File by name
@@ -1431,21 +1448,9 @@ class ServiceTHREDDS(ServiceInterface):
 
     def permission_requested(self):
         # type: () -> PermissionRequested
-        cfg = self.get_config()
         path_parts = self.get_path_parts()
-        for prefixes, permission in [
-            (cfg["metadata_type"]["prefixes"], Permission.BROWSE),  # first to favor BROWSE over READ prefix conflicts
-            (cfg["data_type"]["prefixes"], Permission.READ),
-        ]:
-            for pattern_prefix in prefixes:  # type: Str
-                if not path_parts and pattern_prefix is None:
-                    return permission
-                if pattern_prefix is not None:
-                    pattern_prefix = pattern_prefix.strip("/")
-                    path_prefix = "/".join(path_parts[:pattern_prefix.count("/") + 1])
-                    if self.is_match(path_prefix, pattern_prefix) is not None:
-                        return permission
-        return None  # automatically deny
+        _, permission = self._get_path_prefix_permission(path_parts)
+        return permission
 
 
 class ServiceGeoserverWPS(ServiceGeoserverBase, ServiceWPS):  # order important to call overridden class properties
