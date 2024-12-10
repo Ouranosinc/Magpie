@@ -324,7 +324,7 @@ by the below configuration.
     API entrypoint and `Tomcat` service running it. If this feature is not needed, it can be disabled by setting the
     parameter to ``null``.
 
-.. versionchanged:: 4.1.2
+.. versionchanged:: 4.2.0
     ``prefixes`` can now contain a ``/`` character. This allows `ServiceTHREDDS`_ to properly handle `THREDDS`_ services
     that have multiple path parts. For example, starting with `THREDDS`_ version 5, the ``ncss`` service contains two
     sub-services which are accessed using the path prefixes ``ncss/grid`` and ``ncss/point``.

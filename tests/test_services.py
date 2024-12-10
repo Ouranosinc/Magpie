@@ -582,7 +582,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         # using unknown prefixes, otherwise allowed file should always be denied
         # purposely take normally allowed THREDDS prefixes, validate active config
-        unknown_prefixes = ["ncml", "dap4", "ncss/point"]
+        unknown_prefixes = ["ncml", "dap4", "ncss/point", "ncss", "grid"]
         allowed_resources = [dir_name, "{}/{}".format(dir_name, file_name), "{}/{}".format(dir_name, file_html_name)]
         for prefix in unknown_prefixes:
             for target in allowed_resources:
