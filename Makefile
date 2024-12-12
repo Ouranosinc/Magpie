@@ -470,26 +470,27 @@ docker-push-magpie: docker-build-magpie		## push only built docker image for Mag
 .PHONY: docker-push
 docker-push: docker-push-magpie docker-push-adapter	 ## push built docker images for Magpie application and MagpieAdapter for Twitcher
 
+DOCKER_COMPOSE_CMD ?= docker compose
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test-only
 docker-test-only:	## execute smoke test of the built image for Magpie application (validate that it boots)
 	@echo "Smoke test of built application docker image"
-	docker-compose $(DOCKER_TEST_COMPOSES) up -d
+	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
 	curl localhost:2001 | grep "Magpie Administration"
-	docker-compose $(DOCKER_TEST_COMPOSES) stop
+	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-test
 docker-test: docker-build-magpie docker-test-only	## execute smoke test of the built image for Magpie application (validate that it boots)
 
 .PHONY: docker-test-stop
 docker-test-stop:  ## explicitly stop any running instance that could remain from 'docker-test' target
-	docker-compose $(DOCKER_TEST_COMPOSES) stop
+	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-clean
 docker-clean: 	## remove any leftover images from docker target operations
 	docker rmi $(docker images -f "reference=$(MAGPIE_DOCKER_REPO)" -q)
-	docker-compose $(DOCKER_TEST_COMPOSES) down
+	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) down
 
 ## --- Static code check targets ---
 
