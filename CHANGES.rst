@@ -9,7 +9,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+* Allow ``metadata_type.prefixes`` and ``data_type.prefixes`` in ``ServiceTHREDDS`` configuration to contain ``/`` character.
 
 .. _changes_4.1.1:
 
@@ -563,7 +563,7 @@ Features / Changes
   `Ouranosinc/Magpie#473 <https://github.com/Ouranosinc/Magpie/pull/473>`_,
   see also
   `Avoid Accessing the Authentication Policy
-  <https://docs.pylonsproject.org/projects/pyramid_tm/en/latest/#avoid-accessing-the-authentication-policy>`_).
+  <https://docs.pylonsproject.org/projects/pyramid-tm/en/latest/#avoid-accessing-the-authentication-policy>`_).
 
 .. _changes_3.17.1:
 
