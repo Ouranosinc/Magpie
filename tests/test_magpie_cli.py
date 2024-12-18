@@ -16,9 +16,10 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import mock
+import requests
 import six
 
-from magpie.cli import batch_update_permissions, batch_update_users, magpie_helper_cli
+from magpie.cli import batch_update_permissions, batch_update_users, magpie_helper_cli, purge_expired_network_tokens
 from magpie.constants import get_constant
 from magpie.permissions import Permission, PermissionType
 from magpie.services import ServiceAPI, ServiceWPS
@@ -38,11 +39,12 @@ KNOWN_HELPERS = [
     "register_providers",
     "run_db_migration",
     "send_email",
-    "sync_resources"
+    "sync_resources",
+    "purge_expired_network_tokens"
 ]
 
 
-def run_and_get_output(command, trim=True):
+def run_and_get_output(command, trim=True, expect_output=True):
     cmd = " ".join(command) if isinstance(command, (list, tuple)) else command
     env = {"PATH": os.path.expandvars(os.environ["PATH"])}  # when debugging, explicit expand of install path required
     pipe = subprocess.PIPE
@@ -50,9 +52,10 @@ def run_and_get_output(command, trim=True):
         out, err = proc.communicate()
     assert not err, "process returned with error code {}".format(err)
     # when no output is present, it is either because CLI was not installed correctly, or caused by some other error
-    assert out != "", "process did not execute as expected, no output available"
     out_lines = [line for line in out.splitlines() if not trim or (line and not line.startswith(" "))]
-    assert len(out_lines), "could not retrieve any console output"
+    if expect_output:
+        assert out != "", "process did not execute as expected, no output available"
+        assert len(out_lines), "could not retrieve any console output"
     return out_lines
 
 
@@ -405,3 +408,126 @@ def test_magpie_sync_resources_help_directly():
     out_lines = run_and_get_output("magpie_sync_resources --help")
     assert "usage: magpie_sync_resources" in out_lines[0]
     assert "Synchronize local and remote resources based on Magpie Service sync-type" in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_purge_expired_network_tokens_help_via_magpie_helper():
+    out_lines = run_and_get_output("magpie_helper purge_expired_network_tokens --help")
+    assert "usage: magpie_helper purge_expired_network_tokens" in out_lines[0]
+    assert "Delete all expired network tokens." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_purge_expired_network_tokens_help_directly():
+    out_lines = run_and_get_output("magpie_purge_expired_network_tokens --help")
+    assert "usage: magpie_purge_expired_network_tokens" in out_lines[0]
+    assert "Delete all expired network tokens." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_purge_expired_network_tokens():
+    test_url = "http://localhost"
+    test_username = "test_username"
+    test_password = "qwertyqwerty"
+
+    def mocked_request(*args, **_kwargs):
+        method, *_ = args
+        response = requests.Response()
+        response.status_code = 200
+        if method == "DELETE":
+            response._content = '{"deleted": 101}'.encode()  # pylint: disable=C4001,W0212
+        return response
+
+    with mock.patch("requests.Session.request", side_effect=mocked_request) as session_mock:
+        cmd = ["api", test_url, test_username, test_password]
+        assert purge_expired_network_tokens.main(cmd) == 0, "failed execution due to invalid arguments"
+        session_mock.assert_any_call("POST", "{}/signin".format(test_url), data=None,
+                                     json={"user_name": "test_username", "password": "qwertyqwerty"})
+        session_mock.assert_any_call("DELETE", "{}/network/tokens?expired_only=true".format(test_url))
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_create_private_key_help_via_magpie_helper():
+    out_lines = run_and_get_output("magpie_helper create_private_key --help")
+    assert "usage: magpie_helper create_private_key" in out_lines[0]
+    assert "Create a private key used to generate a JSON Web Key." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_create_private_key_help_directly():
+    out_lines = run_and_get_output("magpie_create_private_key --help")
+    assert "usage: magpie_create_private_key" in out_lines[0]
+    assert "Create a private key used to generate a JSON Web Key." in out_lines[1]
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_create_private_key_create_file():
+    tmp_file = tempfile.NamedTemporaryFile(mode="w")  # pylint: disable=R1732
+    tmp_file.close()
+    try:
+        run_and_get_output("magpie_create_private_key --key-file {}".format(tmp_file.name), expect_output=False)
+        with open(tmp_file.name, encoding="utf-8") as f:
+            key_content = f.read()
+            assert "PRIVATE KEY" in key_content.splitlines()[0]
+            assert "ENCRYPTED" not in key_content
+    finally:
+        os.unlink(tmp_file.name)
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_create_private_key_create_file_no_force_exists():
+    tmp_file = tempfile.NamedTemporaryFile(mode="w", delete=False)  # pylint: disable=R1732
+    tmp_file.close()
+    try:
+        out = run_and_get_output("magpie_create_private_key --key-file {}".format(tmp_file.name), expect_output=False)
+        assert "File {} already exists.".format(tmp_file.name) in out[0]
+    finally:
+        os.unlink(tmp_file.name)
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_create_private_key_create_file_force_exists():
+    tmp_file = tempfile.NamedTemporaryFile(mode="w")  # pylint: disable=R1732
+    tmp_file.close()
+    try:
+        run_and_get_output("magpie_create_private_key --force --key-file {}".format(tmp_file.name), expect_output=False)
+        with open(tmp_file.name, encoding="utf-8") as f:
+            key_content = f.read()
+            assert "PRIVATE KEY" in key_content.splitlines()[0]
+            assert "ENCRYPTED" not in key_content
+
+    finally:
+        os.unlink(tmp_file.name)
+
+
+@runner.MAGPIE_TEST_CLI
+@runner.MAGPIE_TEST_LOCAL
+@runner.MAGPIE_TEST_NETWORK
+def test_create_private_key_create_file_with_password():
+    tmp_file = tempfile.NamedTemporaryFile(mode="w")  # pylint: disable=R1732
+    tmp_file.close()
+    try:
+        run_and_get_output("magpie_create_private_key --password qwertqwerty --key-file {}".format(tmp_file.name),
+                           expect_output=False)
+        with open(tmp_file.name, encoding="utf-8") as f:
+            key_content = f.read()
+            assert "PRIVATE KEY" in key_content.splitlines()[0]
+            assert "ENCRYPTED" in key_content
+    finally:
+        os.unlink(tmp_file.name)
