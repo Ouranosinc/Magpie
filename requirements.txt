@@ -43,3 +43,4 @@ ziggurat_foundations==0.9.1
 zope.interface>=4.7.2,<5
 zope.sqlalchemy==1.6
 zipp>=3.19.1
+setuptools>=78.1.1 # not directly required, pinned by Snyk to avoid a vulnerability
