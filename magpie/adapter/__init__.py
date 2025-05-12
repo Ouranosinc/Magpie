@@ -144,9 +144,9 @@ def verify_user(request):
         try:
             params = dict(parse_qsl(urlparse(request.url).query))
             if is_json_body(request.text) and not params:
-                return requests.post(magpie_url + SigninAPI.path, json=request.json,
+                return requests.post(magpie_url + SigninAPI.path, json=request.json, timeout=5,
                                      headers={"Content-Type": CONTENT_TYPE_JSON, "Accept": CONTENT_TYPE_JSON})
-            return requests.get(magpie_url + SigninAPI.path, data=request.text, params=params)
+            return requests.get(magpie_url + SigninAPI.path, data=request.text, params=params, timeout=5)
         except HTTPError as exc:
             if getattr(exc, "status_code", 500) >= 500:
                 raise

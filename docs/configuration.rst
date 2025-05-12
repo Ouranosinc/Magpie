@@ -947,6 +947,23 @@ remain available as described at the start of the :ref:`Configuration` section.
         This value **MUST NOT** be greater than the token length used to identify a :term:`User` to preserve internal
         functionalities.
 
+.. envvar:: MAGPIE_USER_NAME_EXTRA_REGEX
+
+    (Default: ``None``)
+
+    .. versionadded:: 3.37
+
+    A case sensitive (python3 syntax) regular expression used to validate a ``user_name`` when creating or updating a
+    :term:`User`.
+
+    For example, if ``MAGPIE_USER_NAME_EXTRA_REGEX='^\w+$'``, then a :term:`User` can have ``userA`` as a ``user_name``
+    but not ``user.A`` or ``user-A``.
+
+    Note that `Magpie` enforces other restrictions that must also be met for a ``user_name`` to be considered valid.
+    This creates an additional restriction, it does not replace an existing restriction on the ``user_name``.
+
+    If this variable is empty or unset, then no additional ``user_name`` validations will be performed.
+
 .. envvar:: MAGPIE_PASSWORD_MIN_LENGTH
 
     [:class:`int`]
@@ -1427,6 +1444,7 @@ approval procedures.
         will be sent only after the account was approved. Otherwise, it is sent as soon as email conformation is
         obtained from the :term:`Pending User`. Parameter ``approval_required`` is provided to generate alternative
         `Mako Template`_ contents in case different messages should be sent for each situation.
+
 
 .. envvar:: MAGPIE_USER_REGISTRATION_DECLINED_EMAIL_TEMPLATE
 

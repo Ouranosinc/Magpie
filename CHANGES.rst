@@ -9,9 +9,141 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_4.2.0:
+
+`4.2.0 <https://github.com/Ouranosinc/Magpie/tree/4.2.0>`_ (2024-12-12)
+------------------------------------------------------------------------------------
+
+* Allow ``metadata_type.prefixes`` and ``data_type.prefixes`` in ``ServiceTHREDDS`` configuration to contain ``/`` character.
+
+.. _changes_4.1.1:
+
+`4.1.1 <https://github.com/Ouranosinc/Magpie/tree/4.1.1>`_ (2024-07-23)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* n/a
+
+* Update docker with latest ``python:3.11-alpine3.20`` base.
+* Pin ``setuptools>=71.0.3`` for CVE-2024-6345.
+* Pin ``requests>=2.32.3`` for CVE-2024-35195.
+* Pin ``urllib3>=2.2.2`` for CVE-2024-37891.
+* Pin ``zipp>=3.19.1`` for CVE-2024-5569.
+* Pin ``pyramid-twitcher>=0.10.0`` and ``birdhouse/twitcher:v0.10.0`` for same security updates as above
+  (relates to `bird-house/twitcher#136 <https://github.com/bird-house/twitcher/pull/136>`_).
+
+.. _changes_4.1.0:
+
+`4.1.0 <https://github.com/Ouranosinc/Magpie/tree/4.1.0>`_ (2024-06-11)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add CLI helper ``batch_update_permissions`` that allows registering one or more `Permission` configuration files
+  against a running `Magpie` instance.
+* Security fix: bump Docker base ``python:3.11-alpine3.19``.
+* Update ``authomatic[OpenID]==1.3.0`` to resolve temporary workarounds
+  (relates to `authomatic/authomatic#195 <https://github.com/authomatic/authomatic/issues/195>`_
+  and `authomatic/authomatic#233 <https://github.com/authomatic/authomatic/issues/233>`_,
+  fixes `#583 <https://github.com/Ouranosinc/Magpie/issues/583>`_).
+
+Bug Fixes
+~~~~~~~~~
+* Fix `Permission` update from configuration file using the ``requests`` code path.
+
+.. _changes_4.0.0:
+
+`4.0.0 <https://github.com/Ouranosinc/Magpie/tree/4.0.0>`_ (2024-04-26)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* | Add support of Python 3.12.
+  |
+  | **NOTE**:
+  | Requires patch of ``authomatic.six.moves`` in ``magpie.__init__.py`` to work around vendor-specific definitions.
+    Fix inspiration
+    from `dpkp/kafka-python#2401 <https://github.com/dpkp/kafka-python/issues/2401#issuecomment-1760208950>`_.
+    Pending official fix (see `authomatic/authomatic#233 <https://github.com/authomatic/authomatic/issues/233>`_).
+
+* Drop support of Python 3.5, 3.6 and 3.7. Minimum version is Python 3.8.
+* Pin ``gunicorn>=22`` to address CVE-2024-1135.
+
+Bug Fixes
+~~~~~~~~~
+
+* The ``cornice`` package dropped support for python 3.5 as of version 6.1.0. Update the requirements file to ensure
+  that a supported version of ``cornice`` is installed for python 3.5.
+
+.. _changes_3.38.1:
+
+`3.38.1 <https://github.com/Ouranosinc/Magpie/tree/3.38.1>`_ (2024-01-26)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~
+
+* Maintenance release to update package dependencies and rebuild Dockers with latest vulnerability fixes.
+
+.. _changes_3.38.0:
+
+`3.38.0 <https://github.com/Ouranosinc/Magpie/tree/3.38.0>`_ (2023-11-28)
+------------------------------------------------------------------------------------
+
+Bug Fixes
+~~~~~~~~~
+
+* Ensure that ``user_name`` values for all `User` are lowercase and do not contain whitespace.
+
+  Ziggurat foundations assumes that a `User` will not have a ``user_name`` that differs from another only in terms of
+  case. The simplest way to enforce this is to ensure that all ``user_name`` values are lowercase.
+  Previously, this was not enforced so we could create two `User` which could not be differentiated properly.
+
+  This change includes a database migration that will convert all ``user_name`` that contain uppercase characters
+  to lowercase. This may cause a database conflict if there are two ``user_name`` values that differ only in terms of
+  case. For example "Test" and "test". If this occurs, please manually update those ``user_name`` values to no longer
+  conflict and try the migration again.
+
+  This also prevents new users from being created that contain whitespace.
+
+.. _changes_3.37.1:
+
+`3.37.1 <https://github.com/Ouranosinc/Magpie/tree/3.37.1>`_ (2023-10-27)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~
+
+* Ensure that the settings/environment variable ``MAGPIE_USER_NAME_EXTRA_REGEX`` is case sensitive.
+  Previously, the check was case insensitive meaning that it could not be used to restrict usernames based on case.
+  For example, setting this value to ``^[a-z]+$`` would have permit the username ``"someuser"`` as well as
+  ``"Someuser"``. Now, the same regular expression will not match ``"Someuser"`` since case sensitivity in enforced.
+
+.. _changes_3.37.0:
+
+`3.37.0 <https://github.com/Ouranosinc/Magpie/tree/3.37.0>`_ (2023-10-24)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~
+
+* Create an additional settings/environment variable ``MAGPIE_USER_NAME_EXTRA_REGEX`` that acts as an additional
+  check for whether a ``user_name`` is valid. This creates a further restriction on this value which is useful when there
+  are additional limits on the ``user_name`` that should be enforced by `Magpie`.
+
+.. _changes_3.36.0:
+
+`3.36.0 <https://github.com/Ouranosinc/Magpie/tree/3.36.0>`_ (2023-10-03)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Allow startup `Service` registration to update the ``type`` field if a change is detected when loading ``providers``
+  configurations. Note that modifying ``type`` of a `Service` with existing `Resource` or `Permission` definitions on
+  the `Service` itself or any of its children could break the `Magpie` instance if those definitions are not compatible.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
@@ -438,7 +570,7 @@ Features / Changes
   `Ouranosinc/Magpie#473 <https://github.com/Ouranosinc/Magpie/pull/473>`_,
   see also
   `Avoid Accessing the Authentication Policy
-  <https://docs.pylonsproject.org/projects/pyramid_tm/en/latest/#avoid-accessing-the-authentication-policy>`_).
+  <https://docs.pylonsproject.org/projects/pyramid-tm/en/latest/#avoid-accessing-the-authentication-policy>`_).
 
 .. _changes_3.17.1:
 

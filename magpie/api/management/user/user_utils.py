@@ -1,3 +1,4 @@
+import re
 from inspect import cleandoc
 from secrets import compare_digest  # noqa 'python2-secrets'
 from typing import TYPE_CHECKING
@@ -61,6 +62,8 @@ if TYPE_CHECKING:
         Str,
         UserServicesType
     )
+
+USERNAME_REGEX = re.compile(r"^[a-z0-9]+(?:[_\-\.][a-z0-9]+)*$")
 
 
 def create_user(user_name,              # type: Str
@@ -869,9 +872,17 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(user_name, not_none=True, not_empty=True, param_name="user_name",
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
-        ax.verify_param(user_name, matches=True, param_name="user_name", param_compare=ax.PARAM_REGEX,
+        ax.verify_param(user_name, matches=True, param_name="user_name", param_compare=USERNAME_REGEX,
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
+        extra_regex = get_constant("MAGPIE_USER_NAME_EXTRA_REGEX", raise_missing=False, raise_not_set=False)
+        if extra_regex:
+            ax.verify_param(
+                user_name, matches=True, param_name="user_name", param_compare=extra_regex,
+                http_error=HTTPBadRequest,
+                msg_on_fail=s.Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema.description,
+                param_content={"setting": "magpie.user_name_extra_regex"}
+            )
         name_range = range(1, 1 + get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))
         ax.verify_param(len(user_name), is_in=True, param_name="user_name", param_compare=name_range,
                         http_error=HTTPBadRequest,

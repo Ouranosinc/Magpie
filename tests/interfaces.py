@@ -1,3 +1,4 @@
+import html
 import itertools
 import os
 import secrets
@@ -2779,7 +2780,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
             [(effect_perm1_deny, grp1_reason), (effect_perm2_deny, PERMISSION_REASON_DEFAULT)]
         )
 
-        # apply allow user permission on parent service (on level above, not same resource as previous tests)
+        # apply 'allow' user permission on parent service (on level above, not same resource as previous tests)
         # allow user permission takes priority over deny from second group, but only during effective resolution
         # even if second group deny still exists, the user allow permission takes priority as it is more specific
         # during check of local inherited permissions (no recursive considered), second group deny remains the result
@@ -4549,6 +4550,40 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_response_basic_info(resp, 409, expected_method="POST")
 
     @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_Invalid_Name_Uppercase(self):
+        """
+        Do not allow creation of users that have uppercase characters.
+
+        .. versionadded:: 3.37.2
+        """
+        utils.warn_version(self, "do not allow uppercase characters or spaces in user_names", "3.37.2", skip=True)
+        data = {
+            "user_name": self.test_user_name.upper(),
+            "password": self.test_user_name,
+            "email": "{}@mail.com".format(self.test_user_name),
+        }
+        resp = utils.test_request(self, "POST", "/users", data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 400, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
+    def test_PostUsers_Invalid_Name_Whitespace(self):
+        """
+        Do not allow creation of users that have whitespace.
+
+        .. versionadded:: 3.37.2
+        """
+        utils.warn_version(self, "do not allow uppercase characters or spaces in user_names", "3.37.2", skip=True)
+        data = {
+            "user_name": "a {}".format(self.test_user_name),
+            "password": self.test_user_name,
+            "email": "{}@mail.com".format(self.test_user_name),
+        }
+        resp = utils.test_request(self, "POST", "/users", data=data,
+                                  headers=self.json_headers, cookies=self.cookies, expect_errors=True)
+        utils.check_response_basic_info(resp, 400, expected_method="POST")
+
+    @runner.MAGPIE_TEST_USERS
     def test_PostUsers_Conflict_Email(self):
         utils.warn_version(self, "user creation with duplicate email conflict", "3.11.0", skip=True)
 
@@ -4706,6 +4741,36 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
                                   headers=self.json_headers, cookies=self.cookies)
         utils.check_response_basic_info(resp, 403, expected_method=self.update_method)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_UpdateUser_username_Invalid_Uppercase(self):
+        """
+        Do not allow user_name that contains uppercase characters.
+
+        .. versionadded:: 3.37.2
+        """
+        utils.warn_version(self, "do not allow uppercase characters or spaces in user_names", "3.37.2", skip=True)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        data = {"user_name": self.test_user_name.upper()}
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_UpdateUser_username_Invalid_Whitespace(self):
+        """
+        Do not allow user_name that contains whitespace.
+
+        .. versionadded:: 3.37.2
+        """
+        utils.warn_version(self, "do not allow uppercase characters or spaces in user_names", "3.37.2", skip=True)
+        utils.TestSetup.create_TestUser(self, override_group_name=get_constant("MAGPIE_ANONYMOUS_GROUP"))
+        data = {"user_name": "a {}".format(self.test_user_name)}
+        path = "/users/{usr}".format(usr=self.test_user_name)
+        resp = utils.test_request(self, self.update_method, path, data=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 400, expected_method=self.update_method)
 
     @runner.MAGPIE_TEST_USERS
     def test_UpdateUser_email(self):
@@ -7514,6 +7579,113 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_is_in("<h1>Users</h1>", body)
         utils.check_val_is_in("id=\"view_users_list\"", body)
         utils.check_val_is_in(self.test_user_name, body)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_AddUser_FormSubmit_WithExtraUsernameRegex_Invalid(self):
+        """
+        Check that the extra_user_name_regex setting is used to validate a new user name when the user name is
+        invalid according to that regex but is valid according to the ax.PARAM_REGEX.
+
+        .. versionadded:: 3.37
+        """
+        utils.warn_version(self, "extra username regex added", "3.37", skip=True)
+        with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^$"}):
+            data = {"user_name": self.test_user_name, "group_name": get_constant("MAGPIE_USERS_GROUP"),
+                    "email": "{}@mail.com".format(self.test_user_name),
+                    "password": self.test_user_name, "confirm": self.test_user_name}
+            path = "/ui/users/add"
+            form = "add_user_form"
+            resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="create", form_data=data,
+                                                    path=path)
+            body = utils.check_ui_response_basic_info(resp)
+            msg = s.Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema.description
+            utils.check_val_is_in(msg, html.unescape(body))
+
+    @runner.MAGPIE_TEST_USERS
+    def test_AddUser_FormSubmit_WithExtraUsernameRegex_ValidGoodUsername(self):
+        """
+        Check that the user_name_extra_regex setting is used to validate a new user name when the user name is
+        valid according to that regex and the ax.PARAM_REGEX.
+
+        .. versionadded:: 3.37
+        """
+        utils.warn_version(self, "extra username regex added", "3.37", skip=True)
+        with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^.*$"}):
+            data = {"user_name": self.test_user_name, "group_name": get_constant("MAGPIE_USERS_GROUP"),
+                    "email": "{}@mail.com".format(self.test_user_name),
+                    "password": self.test_user_name, "confirm": self.test_user_name}
+            path = "/ui/users/add"
+            form = "add_user_form"
+            resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="create", form_data=data,
+                                                    path=path)
+            body = utils.check_ui_response_basic_info(resp)
+
+            # redirected response should be directly the list of users with the new one added
+            utils.check_val_is_in("<h1>Users</h1>", body)
+            utils.check_val_is_in("id=\"view_users_list\"", body)
+            utils.check_val_is_in(self.test_user_name, body)
+
+    @runner.MAGPIE_TEST_USERS
+    def test_AddUser_FormSubmit_WithExtraUsernameRegex_InvalidBadUsername(self):
+        """
+        Check that the extra_user_name_regex setting is used to validate a new user name when the user name is
+        valid according to that regex but not the ax.PARAM_REGEX.
+
+        .. versionadded:: 3.37
+        """
+        utils.warn_version(self, "extra username regex added", "3.37", skip=True)
+        with utils.mocked_get_settings(settings={"magpie.user_name_extra_regex": "^.*$"}):
+            email = "{}@mail.com".format(self.test_user_name)  # the @ symbol is invalid according to the ax.PARAM_REGEX
+            data = {"user_name": email, "group_name": get_constant("MAGPIE_USERS_GROUP"), "email": email,
+                    "password": self.test_user_name, "confirm": self.test_user_name}
+            path = "/ui/users/add"
+            form = "add_user_form"
+            resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="create", form_data=data,
+                                                    path=path)
+            body = utils.check_ui_response_basic_info(resp)
+
+            # the error message should indicate that the user name is invalid according to the original regex
+            # (ax.PARAM_REGEX) not the extra regex
+            msg = s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description
+            utils.check_val_is_in(msg, html.unescape(body))
+            msg = s.Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema.description
+            utils.check_val_not_in(msg, html.unescape(body))
+
+    @runner.MAGPIE_TEST_USERS
+    def test_AddUser_FormSubmit_InvalidUsername_Uppercase(self):
+        """
+        Check that the form submit to create a user fails if the user name contains uppercase characters.
+
+        .. versionadded:: 3.37.2
+        """
+        utils.warn_version(self, "do not allow case-insensitive matching usernames", "3.37.2", skip=True)
+        data = {"user_name": self.test_user_name.upper(), "group_name": get_constant("MAGPIE_USERS_GROUP"),
+                "email": "{}@mail.com".format(self.test_user_name), "password": self.test_user_name,
+                "confirm": self.test_user_name}
+        path = "/ui/users/add"
+        form = "add_user_form"
+        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="create", form_data=data,
+                                                path=path)
+        body = utils.check_ui_response_basic_info(resp)
+        utils.check_val_is_in("Invalid 'user_name' value specified.", html.unescape(body))
+
+    @runner.MAGPIE_TEST_USERS
+    def test_AddUser_FormSubmit_InvalidUsername_Whitespace(self):
+        """
+        Check that the form submit to create a user fails if the user name contains whitespace characters.
+
+        .. versionadded:: 3.37.2
+        """
+        utils.warn_version(self, "do not allow case-insensitive matching usernames", "3.37.2", skip=True)
+        data = {"user_name": "a {}".format(self.test_user_name), "group_name": get_constant("MAGPIE_USERS_GROUP"),
+                "email": "{}@mail.com".format(self.test_user_name), "password": self.test_user_name,
+                "confirm": self.test_user_name}
+        path = "/ui/users/add"
+        form = "add_user_form"
+        resp = utils.TestSetup.check_FormSubmit(self, form_match=form, form_submit="create", form_data=data,
+                                                path=path)
+        body = utils.check_ui_response_basic_info(resp)
+        utils.check_val_is_in("Invalid 'user_name' value specified.", html.unescape(body))
 
     @runner.MAGPIE_TEST_STATUS
     def test_AddGroup_PageStatus(self):

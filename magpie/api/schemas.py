@@ -1962,6 +1962,11 @@ class Users_CheckInfo_UserNameValue_BadRequestResponseSchema(BaseResponseSchemaA
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
+class Users_CheckInfo_UserNameValueExtraRegex_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid 'user_name' value specified. Does not match the extra user name regex."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
 class Users_CheckInfo_UserNameSize_BadRequestResponseSchema(BaseResponseSchemaAPI):
     description = "Invalid 'user_name' length specified (>{length} characters)." \
                   .format(length=get_constant("MAGPIE_USER_NAME_MAX_LENGTH"))

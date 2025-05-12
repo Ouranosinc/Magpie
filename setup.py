@@ -211,15 +211,13 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
-    python_requires=">=3.5, <4",
+    python_requires=">=3.8, <4",
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],
@@ -249,6 +247,7 @@ setup(
         "console_scripts": [
             "magpie_cli = magpie.cli:magpie_helper_cli",     # redirect to others below
             "magpie_helper = magpie.cli:magpie_helper_cli",  # alias to helper
+            "magpie_batch_update_permissions = magpie.cli.batch_update_permissions:main",
             "magpie_batch_update_users = magpie.cli.batch_update_users:main",
             "magpie_register_defaults = magpie.cli.register_defaults:main",
             "magpie_register_providers = magpie.cli.register_providers:main",
