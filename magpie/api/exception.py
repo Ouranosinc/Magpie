@@ -437,7 +437,8 @@ def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]
 
     # fail-fast if recursion generates too many calls
     # this would happen only if a major programming error occurred within this function
-    global RAISE_RECURSIVE_SAFEGUARD_MAX    # pylint: disable=W0602,W0603
+    # a global variable is used since raised conditions are not "directly" recursive (they can be included anywhere),
+    # and therefore there is no obvious method to "pass down" the recursive count variable between those calls
     global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0602,W0603
     RAISE_RECURSIVE_SAFEGUARD_COUNT = RAISE_RECURSIVE_SAFEGUARD_COUNT + 1
     if RAISE_RECURSIVE_SAFEGUARD_COUNT > RAISE_RECURSIVE_SAFEGUARD_MAX:

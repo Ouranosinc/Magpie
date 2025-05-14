@@ -565,10 +565,7 @@ check-security-code-only: mkdir-reports  ## run security checks on source code
 .PHONY: check-docs-only
 check-docs-only: check-doc8-only check-docf-only check-links-only	## run every code documentation checks
 
-# FIXME: temporary workaround (https://github.com/PyCQA/doc8/issues/145 and https://github.com/PyCQA/doc8/issues/147)
-# 		configuration somehow not picked up directly from setup.cfg in python 3.11
-#		setting 'ignore-path-errors' not working without the full path (relative 'docs/changes.rst' fails)
-CHECK_DOC8_XARGS := --ignore-path-errors "$(APP_ROOT)/docs/changes.rst;D000"
+CHECK_DOC8_XARGS ?=
 
 .PHONY: check-doc8-only
 check-doc8-only: mkdir-reports		## run PEP8 documentation style checks
