@@ -1,3 +1,4 @@
 pip
 packaging>=22.0
-setuptools>=71.0.3
+setuptools>=75.3.2; python_version < "3.9"  # pyup: ignore  # noqa
+setuptools>=78.1.1; python_version >= "3.9"

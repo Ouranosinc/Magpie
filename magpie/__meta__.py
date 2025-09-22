@@ -2,7 +2,7 @@
 General meta information on the magpie package.
 """
 
-__version__ = "4.1.1"
+__version__ = "4.2.0"
 __title__ = "Magpie"
 __package__ = "magpie"  # pylint: disable=W0622
 __author__ = "Francois-Xavier Derue, Francis Charette-Migneault"

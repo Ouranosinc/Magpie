@@ -504,6 +504,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                                     # only allow these variants, other should be blocked ("dap4", "wcs", "wms")
                                     - dodsC
                                     - fileServer
+                                    - ncss/grid
                             metadata_type:
                                 prefixes:
                                     # only allow these variants, others should be blocked ("ncml", "uddc", "iso")
@@ -531,7 +532,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         utils.check_val_is_in("data_type", svc_config)
         utils.check_val_is_in("metadata_type", svc_config)
         utils.check_val_equal(svc_config["file_patterns"], [".*\\.ncml", ".*\\.nc"])
-        utils.check_val_equal(svc_config["data_type"]["prefixes"], ["dodsC", "fileServer"])
+        utils.check_val_equal(svc_config["data_type"]["prefixes"], ["dodsC", "fileServer", "ncss/grid"])
         utils.check_val_equal(svc_config["metadata_type"]["prefixes"], [None, "catalog"])
 
         # create resources
@@ -565,7 +566,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         # (same resource because matching '.*.nc' regex, NCML file matched by other '.*.ncml' regex, so other Resource)
         # only accessible via specified data prefixes
         allowed_files = [file_name, file_html_name]
-        known_prefixes = ["dodsC", "fileServer"]
+        known_prefixes = ["dodsC", "fileServer", "ncss/grid"]
         for prefix in known_prefixes:
             for test_file in allowed_files:
                 path = "/ows/proxy/{}/{}/{}/{}".format(svc_name, prefix, dir_name, test_file)
@@ -580,7 +581,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden, msg=msg)
 
         # using unknown prefixes, otherwise allowed file should always be denied
-        unknown_prefixes = ["ncml", "dap4"]  # purposely take normally allowed THREDDS prefixes, validate active config
+        # purposely take normally allowed THREDDS prefixes, validate active config
+        unknown_prefixes = ["ncml", "dap4", "ncss/point", "ncss", "grid"]
         allowed_resources = [dir_name, "{}/{}".format(dir_name, file_name), "{}/{}".format(dir_name, file_html_name)]
         for prefix in unknown_prefixes:
             for target in allowed_resources:

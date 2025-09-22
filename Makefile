@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 4.1.1
+APP_VERSION ?= 4.2.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # guess OS (Linux, Darwin,...)
@@ -470,26 +470,27 @@ docker-push-magpie: docker-build-magpie		## push only built docker image for Mag
 .PHONY: docker-push
 docker-push: docker-push-magpie docker-push-adapter	 ## push built docker images for Magpie application and MagpieAdapter for Twitcher
 
+DOCKER_COMPOSE_CMD ?= docker compose
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test-only
 docker-test-only:	## execute smoke test of the built image for Magpie application (validate that it boots)
 	@echo "Smoke test of built application docker image"
-	docker-compose $(DOCKER_TEST_COMPOSES) up -d
+	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
 	curl localhost:2001 | grep "Magpie Administration"
-	docker-compose $(DOCKER_TEST_COMPOSES) stop
+	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-test
 docker-test: docker-build-magpie docker-test-only	## execute smoke test of the built image for Magpie application (validate that it boots)
 
 .PHONY: docker-test-stop
 docker-test-stop:  ## explicitly stop any running instance that could remain from 'docker-test' target
-	docker-compose $(DOCKER_TEST_COMPOSES) stop
+	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-clean
 docker-clean: 	## remove any leftover images from docker target operations
 	docker rmi $(docker images -f "reference=$(MAGPIE_DOCKER_REPO)" -q)
-	docker-compose $(DOCKER_TEST_COMPOSES) down
+	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) down
 
 ## --- Static code check targets ---
 
@@ -564,10 +565,7 @@ check-security-code-only: mkdir-reports  ## run security checks on source code
 .PHONY: check-docs-only
 check-docs-only: check-doc8-only check-docf-only check-links-only	## run every code documentation checks
 
-# FIXME: temporary workaround (https://github.com/PyCQA/doc8/issues/145 and https://github.com/PyCQA/doc8/issues/147)
-# 		configuration somehow not picked up directly from setup.cfg in python 3.11
-#		setting 'ignore-path-errors' not working without the full path (relative 'docs/changes.rst' fails)
-CHECK_DOC8_XARGS := --ignore-path-errors "$(APP_ROOT)/docs/changes.rst;D000"
+CHECK_DOC8_XARGS ?=
 
 .PHONY: check-doc8-only
 check-doc8-only: mkdir-reports		## run PEP8 documentation style checks
