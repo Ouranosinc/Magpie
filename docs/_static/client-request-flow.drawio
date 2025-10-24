@@ -1,0 +1,136 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:144.0) Gecko/20100101 Firefox/144.0" version="28.2.8">
+  <diagram name="Page-1" id="W0CDRV6xT59wSo7Rxlxb">
+    <mxGraphModel dx="1245" dy="806" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="220" y="127" as="sourcePoint" />
+            <mxPoint x="620" y="127" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;dashed=1;dashPattern=8 8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="220" y="218" as="sourcePoint" />
+            <mxPoint x="620" y="218" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-1" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;Node A&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="40" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-5" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="618" y="177" as="sourcePoint" />
+            <mxPoint x="220" y="177" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="617" y="270" as="sourcePoint" />
+            <mxPoint x="220" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-2" value="&lt;font style=&quot;font-size: 23px;&quot;&gt;Node B&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="559" y="40" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-4" value="Initial request (includes signed JWT)" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="290" y="97" width="250" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-6" value="Request Node A&#39;s public key" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="320" y="147" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-8" value="Node A&#39;s public key" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="320" y="188" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-14" value="&lt;div&gt;Response to initial request (includes signed JWT)&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="290" y="240" width="270" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.75;entryDx=0;entryDy=0;dashed=1;dashPattern=8 8;endArrow=none;endFill=0;startArrow=classic;startFill=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="220" y="344" as="sourcePoint" />
+            <mxPoint x="626" y="344" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;startArrow=classic;startFill=1;endArrow=none;endFill=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="620" y="312" as="sourcePoint" />
+            <mxPoint x="221" y="312" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-18" value="Request Node B&#39;s public key" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="321" y="282" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-19" value="Node B&#39;s public key" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="321" y="314" width="180" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-22" value="" style="endArrow=none;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" target="lrlHQfEvht8Vxehu0hEV-1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="400" as="sourcePoint" />
+            <mxPoint x="450" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-23" value="" style="endArrow=none;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="620" y="400" as="sourcePoint" />
+            <mxPoint x="618.5" y="90" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-25" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="620" y="140" as="sourcePoint" />
+            <mxPoint x="620" y="170" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="680" y="140" />
+              <mxPoint x="680" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-26" value="lookup URL for Node A&#39;s public key" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="679" y="140" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="620" y="230" as="sourcePoint" />
+            <mxPoint x="620" y="260" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="680" y="230" />
+              <mxPoint x="680" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-28" value="verify JWT from initial request" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="679" y="230" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="220" y="277" as="sourcePoint" />
+            <mxPoint x="220" y="305" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="220" y="275" />
+              <mxPoint x="160" y="275" />
+              <mxPoint x="160" y="305" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-30" value="lookup URL for Node B&#39;s public key" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="50" y="278" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="220" y="362" as="sourcePoint" />
+            <mxPoint x="220" y="390" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="220" y="360" />
+              <mxPoint x="160" y="360" />
+              <mxPoint x="160" y="390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lrlHQfEvht8Vxehu0hEV-32" value="verify JWT from the response to initial request" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="50" y="363" width="100" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

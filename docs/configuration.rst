@@ -986,6 +986,134 @@ remain available as described at the start of the :ref:`Configuration` section.
     Name of the :term:`Provider` used for login. This represents the identifier that is set to define how to
     differentiate between a local sign-in procedure and a dispatched one some known :ref:`authn_providers`.
 
+Network Mode Settings
+~~~~~~~~~~~~~~~~~~~~~
+
+The following configuration parameters are related to Magpie's "Network Mode" which allows networked instances of Magpie
+to authenticate users for each other. All variables defined in this section are only used if
+:envvar:`MAGPIE_NETWORK_ENABLED` is enabled.
+
+.. envvar:: MAGPIE_NETWORK_ENABLED
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.38
+
+    Enable "Network Mode" which enables all functionality to authenticate users using other Magpie instances as
+    external authentication providers.
+
+.. envvar:: MAGPIE_NETWORK_INSTANCE_NAME
+
+    [:class:`str`]
+
+    .. versionadded:: 3.38
+
+    The name of this Magpie instance in the network. This variable is used to determine if an authentication token was
+    issued by this instance of Magpie, or another instance in the network.
+
+    This variable is required if :envvar:`MAGPIE_NETWORK_ENABLED` is ``True``.
+
+.. envvar:: MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY
+
+    [:class:`int`]
+    (Default: ``86400``)
+
+    .. versionadded:: 3.38
+
+    The default expiry time (in seconds) for an access token issued for the purpose of network authentication.
+
+.. envvar:: MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY
+
+    [:class:`int`]
+    (Default: ``30``)
+
+    .. versionadded:: 3.38
+
+    The default expiry time (in seconds) for an JSON Web Token issued for the purpose of communication between nodes in
+    the network.
+
+.. envvar:: MAGPIE_NETWORK_TOKEN_NAME
+
+    [|constant|_]
+    (Value: ``"magpie_token"``)
+
+    .. versionadded:: 3.38
+
+    The name of the request parameter key whose value is the authentication token issued for the purpose of network
+    authentication.
+
+.. envvar:: MAGPIE_NETWORK_PROVIDER
+
+    [|constant|_]
+    (Value: ``"magpie_network"``)
+
+    .. versionadded:: 3.38
+
+    The name of the external provider that authenticates users using other Magpie instances as external authentication
+    providers.
+
+.. envvar:: MAGPIE_NETWORK_NAME_PREFIX
+
+    [|constant|_]
+    (Value: ``"anonymous_network_"``)
+
+    .. versionadded:: 3.38
+
+    A prefix added to the anonymous network user and network group names. These names are constructed by prepending the
+    remote Magpie instance name with this prefix. For example, a Magpie instance named ``"example123"`` will have a
+    corresponding user and group named ``"anonymous_network_example123"``.
+
+.. envvar:: MAGPIE_NETWORK_GROUP_NAME
+
+    [|constant|_]
+    (Value: ``"magpie_network"``)
+
+    .. versionadded:: 3.38
+
+    The name of the group created to manage permissions for all users authenticated using Magpie instances as external
+    authentication providers.
+
+.. envvar:: MAGPIE_NETWORK_PEM_FILES
+
+    [:class:`str`]
+    (Default: ``${MAGPIE_ROOT}/key.pem``)
+
+    .. versionadded:: 3.38
+
+    Path to a PEM file containing a public/private key-pair. This is used to sign and verify communication sent between
+    nodes in the network.
+
+    Multiple PEM files can be specified if key rotation is desired. To specify multiple PEM files, separate each file
+    path with a ``:`` character. The first file in the list will contain the primary key and will be used to sign all
+    outgoing communication.
+
+.. envvar:: MAGPIE_NETWORK_PEM_PASSWORDS
+
+    [:class:`str`]
+    (Default: ``None``)
+
+    .. versionadded:: 3.38
+
+    Password used to encrypt the PEM files in :envvar:`MAGPIE_NETWORK_PEM_FILES`.
+
+    If multiple files require passwords, they can be listed as a JSON array. An empty string will be treated the same as
+    no password.
+
+    For example, if you have four files specified in :envvar:`MAGPIE_NETWORK_PEM_FILES` and only the first and third
+    file require a password, set this variable to ``["pass1", "" ,"pass2", ""]`` where ``pass1`` and ``pass2`` are the
+    passwords.
+
+.. envvar:: MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE
+
+    [:class:`bool`]
+    (Default: ``False``)
+
+    .. versionadded:: 3.38
+
+    If enabled *and* there is a single file specified in :envvar:`MAGPIE_NETWORK_PEM_FILES` *and* that file is missing,
+    `Magpie` will generate a new private key file when starting up. If a password is specified for that file in
+    :envvar:`MAGPIE_NETWORK_PEM_PASSWORDS` then the private key file will be encrypted with that password as well.
 
 .. _config_phoenix:
 
