@@ -148,6 +148,13 @@ Glossary
         A unique random string that can be used to authenticate a user as part of the :ref:`Network Mode` authentication
         procedure.
 
+    Network User
+        A reference to a :term:`User` that has an account on an another instance of the Magpie software within a network 
+        of Magpie instances. A :term:`Network User` is associated with a :term:`User` in the current Magpie instance and
+        inherits all :term:`Permission`s associated with the :term:`User`. Note that the associated :term:`User` 
+        can be an anonymous :term:`User`. See the :ref:`Network Mode Authentication Flows` section for an example on 
+        how these are used.
+
     OpenAPI
     OAS
         The |OpenAPI-spec|_ (`OAS`) defines a standard, programming language-agnostic interface description for

@@ -527,11 +527,71 @@ When another `Magpie` instance is registered as a :term:`Network Node`, a few ad
 Here is an example to illustrate this point:
 
 * There are 3 `Magpie` instances in the network named A, B, and C
-* There is a :term:`User` named ``"toto"`` registered on instance A
-* There is no :term:`User` named ``"toto"`` who belongs to the ``"anonymous_network_A"`` group registered on instance B
-* There is a :term:`User` named ``"toto"`` who belongs to the ``"anonymous_network_A"`` group registered on instance C
-* Instance A is registered as a :term:`Network Node` on instances B and C
+* A client has a user account with username ``"toto"`` on instance A
+* A client has a user account with username ``"billina"`` on instance C
+* The user account ``"toto"`` on instance A has been linked with the user account ``"billina"`` on instance C
+* Instance A is registered as a :term:`Network Node` on instances B and C (and vice-versa)
 * when ``"toto"`` gets a personal network token from instance A and uses it to log in on instance B they log in as the
-  the temporary ``"anonymous_network_A"`` user.
+  the temporary ``"anonymous_network_A"`` :term:`User`.
 * when ``"toto"`` gets a personal network token from instance A and uses it to log in on instance C they log in as the
-  ``"toto"`` user on instance C.
+  ``"billina"`` :term:`User`.
+
+.. _Network Mode Authentication Flows: 
+
+Authentication Flows
+~~~~~~~~~~~~~~~~~~~~
+
+The following diagrams describe in detail the request flows that are involved when `Magpie` instances operate in
+a network.
+
+In all the following diagrams, Nodes A and B are assumed to be `Magpie` instances that are part of a linked network.
+The Client is a person who has an account on one or both of the `Magpie` instances in the network. If a diagram shows
+the Client making a request directly to one of the Nodes, it is assumed that the Client is authenticated on that Node
+and authorized to make the request.
+
+Client Request Flow
+^^^^^^^^^^^^^^^^^^^
+
+Whenever two Magpie instances in a network send any request between each other they will use the following request
+flow. Each request will be sent with a JSON Web Token (JWT) that is signed with the sender's private key, the receiver
+can then verify that the token came from the sender using the sender's public key.
+
+Each instance has stored a ``jwks_url`` for every other instance in the network. This is where each instance's public
+key can be found. Note that ``jwks_url`` is not provided as part of the request.
+
+.. raw:: html
+    :file: _static/client-request-flow.html
+
+
+Network Token Request Flow
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following describes how a client can request a :term:`Network Token` for Node B assuming that they have an account
+and are logged in to Node A.
+
+Note that the result of this flow will not actually create a new :term:`User` for the client on Node B but will create
+a new :term:`Network User` (if it doesn't already exist) that is associated with a :term:`User` on Node B.
+
+.. raw:: html
+    :file: _static/network-token-request-flow.html
+
+
+Network Token Request Flow
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following describes how a client can delete a :term:`Network Token` for Node B assuming that they have an account
+and are logged in to Node A.
+
+This flow is almost identical to the Network Token Request Flow.
+
+.. raw:: html
+    :file: _static/network-token-delete-flow.html
+
+
+Account Link Flow
+^^^^^^^^^^^^^^^^^
+
+The following describes how a client can link their account on Node B with their account on Node A.
+
+.. raw:: html
+    :file: _static/account-link-flow.html
