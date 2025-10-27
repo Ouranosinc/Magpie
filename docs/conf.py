@@ -180,8 +180,10 @@ def ignore_down_providers():
     if resp.status_code != 200:
         return []
     body = BeautifulSoup(resp.text)
-    # pylint: disable=not-an-iterable
-    nodes = list(str(item) for item in body.find_all("tr") if any(status in str(item) for status in ["DOWN", "UP"]))
+    nodes = list(
+        str(item) for item in body.find_all("tr")  # pylint: disable=not-an-iterable
+        if any(status in str(item) for status in ["DOWN", "UP"])
+    )
     down_list = []
     for prov_key, prov_cfg in linkcheck_providers.items():
         prov_down = all(
