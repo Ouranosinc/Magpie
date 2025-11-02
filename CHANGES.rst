@@ -9,7 +9,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+* Ignore pylint `not-an-iterable` error in ``docs/conf.py``
 
 .. _changes_4.2.0:
 

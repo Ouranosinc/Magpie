@@ -12,8 +12,16 @@ on:
 
 jobs:
   label:
+    permissions:
+      # see: https://github.com/actions/labeler/issues/870
+      contents: read
+      pull-requests: write
+      issues: write
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: "0"
     - uses: actions/labeler@v4.3.0
       with:
         sync-labels: ''
