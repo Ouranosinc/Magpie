@@ -726,6 +726,13 @@ test-remote-only:		## run only remote tests with the environment Python
 	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
 		-m "remote" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+# note: these tests will only work if network mode is enabled
+.PHONY: test-remote-network-only
+test-remote-network-only:      ## run only remote network tests
+	@echo "Running remote network tests..."
+	@bash -c '$(CONDA_CMD) pytest tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
+		-m "remote and network" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
 # https://docs.pytest.org/en/7.1.x/example/markers.html#mark-examples
 # https://docs.pytest.org/en/7.1.x/example/markers.html#using-k-expr-to-select-tests-based-on-their-name
 .PHONY: test-custom-only
@@ -800,6 +807,8 @@ conda-env: conda-base	## create conda environment if missing and required
 			echo "Creating conda environment at '$(CONDA_ENV_PATH)'..." && \
 		 	"$(CONDA_BIN)" create -y -n "$(CONDA_ENV_NAME)" python=$(PYTHON_VERSION)) \
 		)
+
+## --- Magpie CLI targets --- ##
 
 .PHONY: create-private-key
 create-private-key:  ## create a private key file according to the MAGPIE_NETWORK_PEM_FILES and MAGPIE_NETWORK_PEM_PASSWORDS settings

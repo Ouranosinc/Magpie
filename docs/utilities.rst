@@ -24,6 +24,11 @@ Available helpers:
       - Description
     * - ``magpie_batch_update_users``
       - Register or unregister users using entries provided by batch file or arguments.
+    * - ``magpie_create_private_key``
+      - | Create a private key file used to generate a JSON Web Key.
+        | This file is required when network mode is enabled in order to sign JSON Web Tokens.
+    * - ``magpie_purge_expired_network_tokens``
+      - | Removes expired network tokens from the database.
     * - ``magpie_register_defaults``
       - | Register default users and groups for `Magpie` internal operation.
         | See :ref:`configuration` for details on applicable parameters definitions.

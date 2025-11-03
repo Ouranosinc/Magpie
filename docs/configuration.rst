@@ -989,28 +989,28 @@ remain available as described at the start of the :ref:`Configuration` section.
 Network Mode Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
-The following configuration parameters are related to Magpie's "Network Mode" which allows networked instances of Magpie
-to authenticate users for each other. All variables defined in this section are only used if
-:envvar:`MAGPIE_NETWORK_ENABLED` is enabled.
+The following configuration parameters are related to `Magpie`'s :ref:`network_mode` which allows networked 
+instances of `Magpie` to authenticate users for each other. All variables defined in this section are only used if
+:envvar:`MAGPIE_NETWORK_ENABLED` is ``True``.
 
 .. envvar:: MAGPIE_NETWORK_ENABLED
 
     [:class:`bool`]
     (Default: ``False``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
-    Enable "Network Mode" which enables all functionality to authenticate users using other Magpie instances as
+    Enable :ref:`network_mode` which enables all functionality to authenticate users using other `Magpie` instances as
     external authentication providers.
 
 .. envvar:: MAGPIE_NETWORK_INSTANCE_NAME
 
     [:class:`str`]
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
-    The name of this Magpie instance in the network. This variable is used to determine if an authentication token was
-    issued by this instance of Magpie, or another instance in the network.
+    The name of this `Magpie` instance in the network. This variable is used to determine if a JSON web token was
+    issued by this instance of `Magpie`, or another instance in the network.
 
     This variable is required if :envvar:`MAGPIE_NETWORK_ENABLED` is ``True``.
 
@@ -1019,59 +1019,57 @@ to authenticate users for each other. All variables defined in this section are 
     [:class:`int`]
     (Default: ``86400``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
-    The default expiry time (in seconds) for an access token issued for the purpose of network authentication.
+    The default expiry time (in seconds) for an access token issued for the purpose of network :term:`Authentication`.
 
 .. envvar:: MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY
 
     [:class:`int`]
     (Default: ``30``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
-    The default expiry time (in seconds) for an JSON Web Token issued for the purpose of communication between nodes in
-    the network.
+    The default expiry time (in seconds) for a JSON Web Token issued for the purpose of communication between :term:`Network Node`s.
 
 .. envvar:: MAGPIE_NETWORK_TOKEN_NAME
 
     [|constant|_]
     (Value: ``"magpie_token"``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
-    The name of the request parameter key whose value is the authentication token issued for the purpose of network
-    authentication.
+    The name of the request parameter key whose value is the :term:`Network Token` issued for the purpose of network
+    :term:`Authentication`.
 
 .. envvar:: MAGPIE_NETWORK_PROVIDER
 
     [|constant|_]
     (Value: ``"magpie_network"``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
-    The name of the external provider that authenticates users using other Magpie instances as external authentication
-    providers.
+    The name of the external provider that authenticates users using other `Magpie` instances as :term:`External Providers`.
 
 .. envvar:: MAGPIE_NETWORK_NAME_PREFIX
 
-    [|constant|_]
-    (Value: ``"anonymous_network_"``)
+    [:class:`str`]
+    (Default: ``"magpie_network_"``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
-    A prefix added to the anonymous network user and network group names. These names are constructed by prepending the
-    remote Magpie instance name with this prefix. For example, a Magpie instance named ``"example123"`` will have a
-    corresponding user and group named ``"anonymous_network_example123"``.
+    A prefix added to the anonymous :term:`User` and :term:`Group` names. These names are constructed by prepending the
+    :term:`Network Node` name with this prefix. For example, a :term:`Network Node` named ``"example123"`` will have a
+    corresponding :term:`User` and :term:`Group` named ``"magpie_network_example123"``.
 
 .. envvar:: MAGPIE_NETWORK_GROUP_NAME
 
     [|constant|_]
     (Value: ``"magpie_network"``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
-    The name of the group created to manage permissions for all users authenticated using Magpie instances as external
+    The name of the :term:`Group` created to manage permissions for all users authenticated using :term:`Network Node`s as external
     authentication providers.
 
 .. envvar:: MAGPIE_NETWORK_PEM_FILES
@@ -1079,7 +1077,7 @@ to authenticate users for each other. All variables defined in this section are 
     [:class:`str`]
     (Default: ``${MAGPIE_ROOT}/key.pem``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
     Path to a PEM file containing a public/private key-pair. This is used to sign and verify communication sent between
     nodes in the network.
@@ -1088,12 +1086,21 @@ to authenticate users for each other. All variables defined in this section are 
     path with a ``:`` character. The first file in the list will contain the primary key and will be used to sign all
     outgoing communication.
 
+    A PEM file can be created using the ``magpie_create_private_key`` utility which can be used by running 
+    ``magpie_create_private_key`` from the command line once `Magpie` has been installed as a python package.
+    Run this command with the ``--help`` flag to see usage options.
+
+    Key rotation allows a node to create a new public/private key pair without immediately invalidating an older key pair.
+    For example, you could create a new PEM file that you want to use going forward and set the :term:`MAGPIE_NETWORK_PEM_FILES`
+    variable to ``/path/to/new.pem:/path/to/old.pem``. Now, all outgoing communication will be signed with the new private
+    key but older messages that were signed with the old private key can still be verified.
+
 .. envvar:: MAGPIE_NETWORK_PEM_PASSWORDS
 
     [:class:`str`]
     (Default: ``None``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
     Password used to encrypt the PEM files in :envvar:`MAGPIE_NETWORK_PEM_FILES`.
 
@@ -1104,12 +1111,15 @@ to authenticate users for each other. All variables defined in this section are 
     file require a password, set this variable to ``["pass1", "" ,"pass2", ""]`` where ``pass1`` and ``pass2`` are the
     passwords.
 
+    To create a password protected PEM file, use the ``--password`` flag when calling the 
+    ``magpie_create_private_key`` utility.
+
 .. envvar:: MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE
 
     [:class:`bool`]
     (Default: ``False``)
 
-    .. versionadded:: 3.38
+    .. versionadded:: 5.0
 
     If enabled *and* there is a single file specified in :envvar:`MAGPIE_NETWORK_PEM_FILES` *and* that file is missing,
     `Magpie` will generate a new private key file when starting up. If a password is specified for that file in
@@ -1177,8 +1187,8 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
     :term:`Logged User`.
 
     .. note::
-        Using this parameter to define `Twitcher`_'s path assumes that it resides under the same server domain as the
-        `Magpie` instance being configured (ie: hostname is inferred from resolved value amongst :envvar:`MAGPIE_URL`,
+        Using this parameter to define `Twitcher`_'s path assumes that it resides under the same server domain as the :term:`Network Node` 
+        being configured (ie: hostname is inferred from resolved value amongst :envvar:`MAGPIE_URL`,
         :envvar:`MAGPIE_HOST`, :envvar:`TWITCHER_HOST` and :envvar:`HOSTNAME` settings or environment variables).
 
   .. warning::

@@ -139,20 +139,20 @@ Glossary
         :term:`Authentication` mechanism identifies with token extracted from request :term:`Cookies`.
 
     Network Node
-        A reference to an instance of the Magpie software within a network of Magpie instances. Each Magpie instance
+        A reference to an instance of the `Magpie` software within a network of `Magpie` instances. Each `Magpie` instance
         within the network is registered in the database as a row in the ``network_nodes`` table. Each node is
-        represented by a name that is unique across all nodes in the network, and a url that is used to send http
+        represented by a name that is unique across all nodes in the network, and a URL that is used to send HTTP
         requests to that specific node.
 
     Network Token
-        A unique random string that can be used to authenticate a user as part of the :ref:`Network Mode` authentication
+        A unique random string that can be used to authenticate a :term:`User` as part of the :ref:`network_mode` authentication
         procedure.
 
     Network User
         A reference to a :term:`User` that has an account on an another instance of the Magpie software within a network 
         of Magpie instances. A :term:`Network User` is associated with a :term:`User` in the current Magpie instance and
         inherits all :term:`Permission`s associated with the :term:`User`. Note that the associated :term:`User` 
-        can be an anonymous :term:`User`. See the :ref:`Network Mode Authentication Flows` section for an example on 
+        can be an anonymous :term:`User`. See the :ref:`network_mode_authentication_flows` section for an example on 
         how these are used.
 
     OpenAPI

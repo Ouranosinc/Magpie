@@ -557,9 +557,9 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
 
         Note that this test only runs locally because it requires mocking the expiry time.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete expired network tokens", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete expired network tokens", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -583,9 +583,9 @@ class TestCase_MagpieAPI_AdminAuth_Local(ti.Interface_MagpieAPI_AdminAuth, unitt
         """
         Test raise error when decoding a JSON web token for a different audience.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+        utils.warn_version(self, "Decode a JSON web token", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         with utils.TestSetup.valid_jwt(self) as token:

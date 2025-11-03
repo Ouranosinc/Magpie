@@ -103,7 +103,7 @@ class ConfigTestCase(object):
     test_admin = None                       # type: Optional[Str]
     test_user_name = None                   # type: Optional[Str]  # also used as password when creating test user
     test_group_name = None                  # type: Optional[Str]
-    test_node_host = None                    # type: Optional[Str]
+    test_node_host = None                   # type: Optional[Str]
     test_node_port = None                   # type: Optional[int]
     test_node_name = None                   # type: Optional[Str]
     test_node_jwks_url = None               # type: Optional[Str]
@@ -204,22 +204,23 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
         for res in list(cls.extra_resource_ids):  # copy to update removed ones
             utils.TestSetup.delete_TestResource(cls, res)
             cls.extra_resource_ids.discard(res)
+        test_func = check_network_mode(utils.TestSetup.delete_TestNetworkNode, enable=True)
         for node in list(cls.extra_node_names):
-            check_network_mode(utils.TestSetup.delete_TestNetworkNode,
-                               enable=True)(cls, override_name=node, allow_missing=True)
+            test_func(cls, override_name=node, allow_missing=True)
             cls.extra_node_names.discard(node)
+        test_func = check_network_mode(utils.TestSetup.delete_TestNetworkToken, enable=True)
         for remote_user_name, node_name in list(cls.extra_network_tokens):
-            check_network_mode(utils.TestSetup.delete_TestNetworkToken,
-                               enable=True)(cls,
-                                            override_remote_user_name=remote_user_name,
-                                            override_node_name=node_name,
-                                            allow_missing=True)  # should already be deleted with associated models
+            test_func(cls,
+                      override_remote_user_name=remote_user_name,
+                      override_node_name=node_name,
+                      allow_missing=True)  # should already be deleted with associated models
             cls.extra_network_tokens.discard((remote_user_name, node_name))
+        test_func = check_network_mode(utils.TestSetup.delete_TestNetworkRemoteUser, enable=True)
         for remote_user_name, node_name in list(cls.extra_remote_user_names):
-            check_network_mode(utils.TestSetup.delete_TestNetworkRemoteUser,
-                               enable=True)(cls, override_remote_user_name=remote_user_name,
-                                            override_node_name=node_name,
-                                            allow_missing=True)  # should already be deleted with associated models
+            test_func(cls, 
+                      override_remote_user_name=remote_user_name,
+                      override_node_name=node_name,
+                      allow_missing=True)  # should already be deleted with associated models
             cls.extra_remote_user_names.discard((remote_user_name, node_name))
         for host_port, server in list(cls.extra_remote_servers.items()):
             if server.is_running():
@@ -536,10 +537,10 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         Test different login variations and ensure that users with usernames that start with
         ``MAGPIE_NETWORK_NAME_PREFIX`` are blocked in network mode.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
 
-        utils.warn_version(self, "Login protected usernames explicitly blocked.", "3.38.0", skip=True)
+        utils.warn_version(self, "Login protected usernames explicitly blocked.", "5.0.0", skip=True)
         protected_username = "{}{!s}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), uuid.uuid4())
         data = {
             "user_name": protected_username,
@@ -567,9 +568,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         Test different login variations and ensure that users with emails that start with
         ``MAGPIE_NETWORK_NAME_PREFIX`` are blocked in network mode.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login protected emails explicitly blocked.", "3.38.0", skip=True)
+        utils.warn_version(self, "Login protected emails explicitly blocked.", "5.0.0", skip=True)
         protected_email = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format(uuid.uuid4())
         data = {
             "user_name": protected_email,
@@ -597,9 +598,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         Test different login variations and ensure that users with usernames that start with
         ``MAGPIE_NETWORK_NAME_PREFIX`` are allowed if network mode is not enabled.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login protected usernames explicitly blocked.", "3.38.0", skip=True)
+        utils.warn_version(self, "Login protected usernames explicitly blocked.", "5.0.0", skip=True)
         protected_username = "{}{!s}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), uuid.uuid4())
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
@@ -631,9 +632,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         Test different login variations and ensure that users with emails that start with
         ``MAGPIE_NETWORK_NAME_PREFIX`` are allowed if network mode is not enabled.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login protected emails explicitly blocked.", "3.38.0", skip=True)
+        utils.warn_version(self, "Login protected emails explicitly blocked.", "5.0.0", skip=True)
         protected_email = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT").format(uuid.uuid4())
         user_name = "{!s}".format(uuid.uuid4())
         self.login_admin()
@@ -666,9 +667,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test logging in with a network token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login with a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Login with a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -701,9 +702,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test logging in with a network token associated with an anonymous network user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login with a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Login with a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True,
@@ -737,9 +738,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test logging in with a refreshed network token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login with a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Login with a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -775,9 +776,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test logging in with an incorrectly formatted network token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login with a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Login with a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -809,9 +810,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test logging in with a deleted network token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login with a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Login with a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -845,9 +846,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test logging in with a network token when network mode is not enabled.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login with a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Login with a network token", "5.0.0", skip=True)
 
         headers = {"Accept": CONTENT_TYPE_JSON, "Authorization": "Bearer {}".format(str(uuid.uuid4()))}
         path = s.ProviderSigninAPI.path.format(provider_name=get_constant("MAGPIE_NETWORK_PROVIDER"))
@@ -872,9 +873,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test logging in with a correctly formatted but invalid network token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Login with a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Login with a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1261,9 +1262,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test get a network token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Acquire a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Acquire a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1280,9 +1281,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test creating network token for an anonymous user and check that the anonymous remote user is created as well.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1305,9 +1306,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test do not get a network token if the associated node doesn't exist.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Acquire a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Acquire a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1326,9 +1327,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         Test do not get a network token if the associated node exists but has invalid/missing
         JSON web keys.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Acquire a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Acquire a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1347,9 +1348,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test delete a network token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1366,9 +1367,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test delete a network token but not the associated NetworkRemoteUser.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1389,9 +1390,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test delete a network token for an anonymous user and check that the anonymous remote user is deleted as well.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1409,9 +1410,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test do not delete a network token if the node doesn't match.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1429,9 +1430,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test do not delete a network token if the node doesn't match.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network token", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network token", "5.0.0", skip=True)
         self.login_admin()
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -1450,9 +1451,9 @@ class Interface_MagpieAPI_NoAuth(NoAuthTestCase, BaseTestCase):
         """
         Test get a valid JSON Web Key Set.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Get a valid JSON Web Key Set", "3.38.0", skip=True)
+        utils.warn_version(self, "Get a valid JSON Web Key Set", "5.0.0", skip=True)
         resp = utils.test_request(self, "GET", "/network/jwks")
         utils.check_response_basic_info(resp)
         json_body = utils.get_json_body(resp)
@@ -2379,9 +2380,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test user can view network node names.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network node names", "3.38.0", skip=True)
+        utils.warn_version(self, "View network node names", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test123")
         headers, cookies = self.login_test_user()
@@ -2398,9 +2399,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test can get a token from another node in the network for the current user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Get token from another node", "3.38.0", skip=True)
+        utils.warn_version(self, "Get token from another node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         node_server = utils.TestSetup.remote_node(self)
@@ -2420,9 +2421,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test can delete a token from another node in the network for the current user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete token on another node", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete token on another node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         node_server = utils.TestSetup.remote_node(self)
@@ -2439,9 +2440,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test can create a NetworkRemoteUser associated with another node for the current user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+        utils.warn_version(self, "Link current user with a user on another node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
@@ -2463,9 +2464,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test cannot create a NetworkRemoteUser associated with another node for a user other than the current user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+        utils.warn_version(self, "Link current user with a user on another node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
@@ -2487,9 +2488,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test cannot create a NetworkRemoteUser associated with another node if the user_name claim is missing.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+        utils.warn_version(self, "Link current user with a user on another node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
@@ -2512,9 +2513,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         Test cannot create a NetworkRemoteUser associated with another node if the requesting_user_name claim is
         missing.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+        utils.warn_version(self, "Link current user with a user on another node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
@@ -2536,9 +2537,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test cannot create a NetworkRemoteUser associated with another node if the issuer claim is for a different node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Link current user with a user on another node", "3.38.0", skip=True)
+        utils.warn_version(self, "Link current user with a user on another node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="some_other_name")
@@ -2560,9 +2561,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test redirect to authorization url of the requested node with an appropriate request token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Request a link with a remote node for the current user", "3.38.0", skip=True)
+        utils.warn_version(self, "Request a link with a remote node for the current user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
@@ -2599,9 +2600,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test redirect to authorization url of the requested node if the node doesn't exist.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Request a link with a remote node for the current user", "3.38.0", skip=True)
+        utils.warn_version(self, "Request a link with a remote node for the current user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestUser(self, override_exist=True)
         headers, cookies = self.login_test_user()
@@ -2615,9 +2616,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test get remote user information for currently logged-in user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+        utils.warn_version(self, "Get remote user information", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -2643,9 +2644,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test cannot get remote user information for a user other than the currently logged-in user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+        utils.warn_version(self, "Get remote user information", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -2669,9 +2670,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test delete a remote user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -2694,9 +2695,9 @@ class Interface_MagpieAPI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test get all remote user information for currently logged-in user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+        utils.warn_version(self, "Get remote user information", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8086,9 +8087,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test delete all network tokens.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete all network tokens", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete all network tokens", "5.0.0", skip=True)
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test1")
@@ -8109,9 +8110,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test deleting network tokens does not delete associated non-anonymous network users.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete all network tokens", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete all network tokens", "5.0.0", skip=True)
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test1")
@@ -8136,9 +8137,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test deleting network tokens does delete associated anonymous network users.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete all network tokens", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete all network tokens", "5.0.0", skip=True)
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test1")
@@ -8158,9 +8159,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test decode a JSON web token.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+        utils.warn_version(self, "Decode a JSON web token", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         claims = {"test": 123, "test2": "another value"}
@@ -8181,9 +8182,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test that decoding an empty JSON web token returns an error.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+        utils.warn_version(self, "Decode a JSON web token", "5.0.0", skip=True)
 
         resp = utils.test_request(self, "GET", "/network/decode_jwt", cookies=self.cookies,
                                   headers=self.headers, expect_errors=True)
@@ -8197,9 +8198,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test that decoding an improperly formatted JSON web token returns an error.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+        utils.warn_version(self, "Decode a JSON web token", "5.0.0", skip=True)
 
         resp = utils.test_request(self, "GET", "/network/decode_jwt?token=abc123", cookies=self.cookies,
                                   headers=self.headers, expect_errors=True)
@@ -8213,9 +8214,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test that decoding a JSON web token with an issuer that doesn't exist as a node returns an error.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+        utils.warn_version(self, "Decode a JSON web token", "5.0.0", skip=True)
 
         with utils.TestSetup.valid_jwt(self) as token:
             resp = utils.test_request(self, "GET", "/network/decode_jwt?token={}".format(token), cookies=self.cookies,
@@ -8230,9 +8231,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test raise error when decoding a JSON web token that has expired.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Decode a JSON web token", "3.38.0", skip=True)
+        utils.warn_version(self, "Decode a JSON web token", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         expiry = datetime.datetime.utcnow() - datetime.timedelta(days=365)
@@ -8248,9 +8249,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test admin can view full information of all network nodes.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network node information", "3.38.0", skip=True)
+        utils.warn_version(self, "View network node information", "5.0.0", skip=True)
 
         expected_node_info = {
             "name": "test123",
@@ -8273,9 +8274,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test admin can view full information of a network node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network node information", "3.38.0", skip=True)
+        utils.warn_version(self, "View network node information", "5.0.0", skip=True)
 
         expected_node_info = {
             "name": "test123",
@@ -8297,9 +8298,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test non-existant node returns 404 error.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Can't find non-existant node", "3.38.0", skip=True)
+        utils.warn_version(self, "Can't find non-existant node", "5.0.0", skip=True)
 
         resp = utils.test_request(self, "GET", "/network/nodes/test123", cookies=self.cookies, headers=self.headers,
                                   expect_errors=True)
@@ -8311,9 +8312,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test create a new network node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a network node", "5.0.0", skip=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
 
     @runner.MAGPIE_TEST_NETWORK
@@ -8322,9 +8323,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test create a new network node and check that the associated Group and anonymous User are created.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a network node", "5.0.0", skip=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
 
         anonymous_name = "{}{}".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX"), self.test_node_name)
@@ -8343,9 +8344,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot create a new network node without required parameters.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a network node without required parameters", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a network node without required parameters", "5.0.0", skip=True)
         node_info = {
             "name": "test1",
             "jwks_url": "http://test1.example.com/jwks",
@@ -8366,9 +8367,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot create a new network node with invalid params.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a network node with invalid parameters", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a network node with invalid parameters", "5.0.0", skip=True)
         node_info = {
             "name": "test1",
             "jwks_url": "http://test1.example.com/jwks",
@@ -8389,9 +8390,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test can update attributes of a network node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Update a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Update a network node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         node_info = {
@@ -8417,9 +8418,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test can update attributes of a network node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Update a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Update a network node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         resp = utils.test_request(self, "PATCH", "/network/nodes/{}".format(self.test_node_name), cookies=self.cookies,
@@ -8443,9 +8444,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot update attributes of a network node if another node exists with the same name.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Update a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Update a network node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test123")
@@ -8466,9 +8467,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot update attributes of a network node if the new name is invalid.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Update a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Update a network node", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         node_info = {
@@ -8491,9 +8492,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test can delete a network node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network node", "5.0.0", skip=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         utils.TestSetup.delete_TestNetworkNode(self)
 
@@ -8503,9 +8504,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot delete a network node if the node doesn't exist.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network node", "5.0.0", skip=True)
         resp = utils.TestSetup.delete_TestNetworkNode(self, allow_missing=True)
         utils.check_response_basic_info(resp, expected_method="DELETE", expected_code=404)
 
@@ -8515,9 +8516,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test can delete a network node and the associated User and Group records are removed as well.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Delete a network node", "3.38.0", skip=True)
+        utils.warn_version(self, "Delete a network node", "5.0.0", skip=True)
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         utils.TestSetup.delete_TestNetworkNode(self)
 
@@ -8537,9 +8538,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test get all remote user information.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+        utils.warn_version(self, "Get remote user information", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8559,9 +8560,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test get remote user information for a single user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+        utils.warn_version(self, "Get remote user information", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8585,9 +8586,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test get remote user information for a single user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Get remote user information", "3.38.0", skip=True)
+        utils.warn_version(self, "Get remote user information", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8612,9 +8613,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test create a remote user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8627,9 +8628,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot create a remote user if required params are missing.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8650,9 +8651,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot create a remote user when associated node is not found.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8672,9 +8673,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot create a remote user with the same name for the same node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8698,9 +8699,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test cannot create a remote user with the same associated user for the same node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8722,9 +8723,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test create a remote user with a different name and associated user for the same node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8748,9 +8749,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test create a remote user with the same name and associated user for a different node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8765,9 +8766,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test create a remote user with no user specified gets associated to the node's anonymous user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8800,9 +8801,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         Test create a remote user with no user specified gets associated to the node's anonymous user even when another
         remote user is associated with the anonymous user for that node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Create a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Create a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True,
@@ -8838,9 +8839,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test update a remote user.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Update a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Update a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -8879,9 +8880,9 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test update a remote user so that it is assigned with the anonymous user for the same node.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "Update a remote user", "3.38.0", skip=True)
+        utils.warn_version(self, "Update a remote user", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -9176,9 +9177,9 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test that remote user information is visible in a table
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+        utils.warn_version(self, "View network info.", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         utils.TestSetup.create_TestNetworkRemoteUser(self, override_exist=True)
@@ -9204,9 +9205,9 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test that node information is visible in a table even if there is no remote user for that node
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+        utils.warn_version(self, "View network info.", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
 
@@ -9231,9 +9232,9 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test that node information is not visible when network mode is off.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+        utils.warn_version(self, "View network info.", "5.0.0", skip=True)
 
         self.login_test_user()
         path = "/ui/users/{}".format(get_constant("MAGPIE_LOGGED_USER"))
@@ -9249,9 +9250,9 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test that authorization view is shown if there is a valid token in the request.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+        utils.warn_version(self, "View authorization page.", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
 
@@ -9292,9 +9293,9 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test that authorization view is not shown if the response type is invalid.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+        utils.warn_version(self, "View authorization page.", "5.0.0", skip=True)
 
         with utils.TestSetup.valid_jwt(self, override_jwt_claims={"user_name": "test123"}) as token:
             headers, cookies = self.login_test_user()
@@ -9311,9 +9312,9 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test that authorization view is not shown if the token is missing.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+        utils.warn_version(self, "View authorization page.", "5.0.0", skip=True)
 
         headers, cookies = self.login_test_user()
         path = "/ui/network/authorize?response_type=id_token&redirect_uri={}".format(
@@ -9328,9 +9329,9 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test that authorization view is not shown if the token is missing.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+        utils.warn_version(self, "View authorization page.", "5.0.0", skip=True)
 
         headers, cookies = self.login_test_user()
         path = "/ui/network/authorize?token=123123&response_type=id_token&redirect_uri={}".format(
@@ -9345,9 +9346,9 @@ class Interface_MagpieUI_UsersAuth(UserTestCase, BaseTestCase):
         """
         Test that authorization view is not shown if the response type is invalid.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View authorization page.", "3.38.0", skip=True)
+        utils.warn_version(self, "View authorization page.", "5.0.0", skip=True)
 
         with utils.TestSetup.valid_jwt(self, override_jwt_claims={"user_name": "test123"}) as token:
             headers, cookies = self.login_test_user()
@@ -9442,9 +9443,9 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test that remote user information is visible in a table
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+        utils.warn_version(self, "View network info.", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -9469,9 +9470,9 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         Test that remote user information is not visible when there are no remote users for the given user
         but that the table is still visible.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+        utils.warn_version(self, "View network info.", "5.0.0", skip=True)
 
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
@@ -9489,9 +9490,9 @@ class Interface_MagpieUI_AdminAuth(AdminTestCase, BaseTestCase):
         """
         Test that remote user information and table is not visible when network mode is off.
 
-        .. versionadded:: 3.38
+        .. versionadded:: 5.0
         """
-        utils.warn_version(self, "View network info.", "3.38.0", skip=True)
+        utils.warn_version(self, "View network info.", "5.0.0", skip=True)
         utils.TestSetup.create_TestGroup(self, override_exist=True)
         utils.TestSetup.create_TestUser(self, override_exist=True)
         path = "/ui/users/{}/default".format(self.test_user_name)

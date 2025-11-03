@@ -854,7 +854,7 @@ def get_user_service_resources_permissions_dict(user, service, request,
 
 
 def check_user_info(user_name=None, email=None, password=None, group_name=None,  # required unless disabled explicitly
-                    check_name=True, check_email=True, check_password=True, check_group=True, check_anonymous=True):
+                    check_name=True, check_email=True, check_password=True, check_group=True, check_not_anonymous=True):
     # type: (Str, Str, Str, Str, bool, bool, bool, bool, bool) -> None
     """
     Validates provided user information to ensure they are adequate for user creation.
@@ -887,7 +887,7 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(user_name, param_compare=name_logged, not_equal=True, param_name="user_name",
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
-        if check_anonymous:
+        if check_not_anonymous:
             anonymous_user_name_regex = protected_user_name_regex()
             ax.verify_param(user_name,
                             not_matches=True,
@@ -902,7 +902,7 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
         ax.verify_param(email, matches=True, param_compare=ax.EMAIL_REGEX, param_name="email",
                         http_error=HTTPBadRequest,
                         msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
-        if check_anonymous:
+        if check_not_anonymous:
             anonymous_email_regex = protected_user_email_regex()
             ax.verify_param(email, not_matches=True, param_compare=anonymous_email_regex, param_name="email",
                             http_error=HTTPBadRequest,

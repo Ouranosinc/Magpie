@@ -423,14 +423,14 @@ specify whether administrator approval is required or not. This additional step 
 server managers that use `Magpie` to decide if they desire more control over which individuals can join and access
 their services.
 
-.. _Network Mode:
+.. _network_mode:
 
 Network Mode
 ------------
 
-If the :envvar:`MAGPIE_NETWORK_ENABLED` is enabled, `Magpie` instances can be linked in a network which allows them to
-associate user accounts across the network and provide limited resource access to users who have accounts on other
-`Magpie` instances in the network. Each `Magpie` instance is considered a node in the network.
+If the :envvar:`MAGPIE_NETWORK_ENABLED` is ``True``, `Magpie` instances can be linked in a network which allows them to
+associate :term:`User`` accounts across the network and provide limited :term:`Resource` access to users who have accounts on other
+`Magpie` instances in the network. Each `Magpie` instance is considered a :term:`Network Node` in the network.
 
 Users who have an account on one `Magpie` instance can request an access token from another instance in the network
 which the user can use to access resources protected by the other `Magpie` instance.
@@ -532,11 +532,11 @@ Here is an example to illustrate this point:
 * The user account ``"toto"`` on instance A has been linked with the user account ``"billina"`` on instance C
 * Instance A is registered as a :term:`Network Node` on instances B and C (and vice-versa)
 * when ``"toto"`` gets a personal network token from instance A and uses it to log in on instance B they log in as the
-  the temporary ``"anonymous_network_A"`` :term:`User`.
+  the ``"magpie_network_A"`` :term:`User`.
 * when ``"toto"`` gets a personal network token from instance A and uses it to log in on instance C they log in as the
   ``"billina"`` :term:`User`.
 
-.. _Network Mode Authentication Flows: 
+.. _network_mode_authentication_flows: 
 
 Authentication Flows
 ~~~~~~~~~~~~~~~~~~~~
@@ -576,8 +576,8 @@ a new :term:`Network User` (if it doesn't already exist) that is associated with
     :file: _static/network-token-request-flow.html
 
 
-Network Token Request Flow
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Network Token Delete Flow
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The following describes how a client can delete a :term:`Network Token` for Node B assuming that they have an account
 and are logged in to Node A.
