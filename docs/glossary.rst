@@ -149,10 +149,10 @@ Glossary
         procedure.
 
     Network User
-        A reference to a :term:`User` that has an account on an another instance of the Magpie software within a network 
+        A reference to a :term:`User` that has an account on an another instance of the Magpie software within a network
         of Magpie instances. A :term:`Network User` is associated with a :term:`User` in the current Magpie instance and
-        inherits all :term:`Permission`s associated with the :term:`User`. Note that the associated :term:`User` 
-        can be an anonymous :term:`User`. See the :ref:`network_mode_authentication_flows` section for an example on 
+        inherits all :term:`Permission`s associated with the :term:`User`. Note that the associated :term:`User`
+        can be an anonymous :term:`User`. See the :ref:`network_mode_authentication_flows` section for an example on
         how these are used.
 
     OpenAPI

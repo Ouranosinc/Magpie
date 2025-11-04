@@ -429,8 +429,9 @@ Network Mode
 ------------
 
 If the :envvar:`MAGPIE_NETWORK_ENABLED` is ``True``, `Magpie` instances can be linked in a network which allows them to
-associate :term:`User`` accounts across the network and provide limited :term:`Resource` access to users who have accounts on other
-`Magpie` instances in the network. Each `Magpie` instance is considered a :term:`Network Node` in the network.
+associate :term:`User`` accounts across the network and provide limited :term:`Resource` access to users who have
+accounts on other `Magpie` instances in the network. Each `Magpie` instance is considered a :term:`Network Node`
+in the network.
 
 Users who have an account on one `Magpie` instance can request an access token from another instance in the network
 which the user can use to access resources protected by the other `Magpie` instance.
@@ -536,7 +537,7 @@ Here is an example to illustrate this point:
 * when ``"toto"`` gets a personal network token from instance A and uses it to log in on instance C they log in as the
   ``"billina"`` :term:`User`.
 
-.. _network_mode_authentication_flows: 
+.. _network_mode_authentication_flows:
 
 Authentication Flows
 ~~~~~~~~~~~~~~~~~~~~

@@ -217,7 +217,7 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
             cls.extra_network_tokens.discard((remote_user_name, node_name))
         test_func = check_network_mode(utils.TestSetup.delete_TestNetworkRemoteUser, enable=True)
         for remote_user_name, node_name in list(cls.extra_remote_user_names):
-            test_func(cls, 
+            test_func(cls,
                       override_remote_user_name=remote_user_name,
                       override_node_name=node_name,
                       allow_missing=True)  # should already be deleted with associated models

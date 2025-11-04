@@ -1,4 +1,11 @@
-from pyramid.httpexceptions import HTTPBadRequest, HTTPCreated, HTTPForbidden, HTTPNotFound, HTTPOk, HTTPUnprocessableEntity
+from pyramid.httpexceptions import (
+    HTTPBadRequest,
+    HTTPCreated,
+    HTTPForbidden,
+    HTTPNotFound,
+    HTTPOk,
+    HTTPUnprocessableEntity
+)
 from pyramid.security import Authenticated
 from pyramid.settings import asbool
 from pyramid.view import view_config
@@ -22,11 +29,11 @@ from magpie.constants import protected_user_name_regex
 def get_network_remote_users_view(request):
     query = request.db.query(models.NetworkRemoteUser)
     user_name = request.GET.get("user_name")
-    ax.verify_param(user_name, 
-                    matches=True, 
-                    param_name="user_name", 
-                    param_compare=USERNAME_REGEX, 
-                    http_error=HTTPUnprocessableEntity, 
+    ax.verify_param(user_name,
+                    matches=True,
+                    param_name="user_name",
+                    param_compare=USERNAME_REGEX,
+                    http_error=HTTPUnprocessableEntity,
                     msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
     if user_name is not None:
         query = query.join(models.User).filter(models.User.user_name == user_name)

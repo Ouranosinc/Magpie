@@ -989,7 +989,7 @@ remain available as described at the start of the :ref:`Configuration` section.
 Network Mode Settings
 ~~~~~~~~~~~~~~~~~~~~~
 
-The following configuration parameters are related to `Magpie`'s :ref:`network_mode` which allows networked 
+The following configuration parameters are related to `Magpie`'s :ref:`network_mode` which allows networked
 instances of `Magpie` to authenticate users for each other. All variables defined in this section are only used if
 :envvar:`MAGPIE_NETWORK_ENABLED` is ``True``.
 
@@ -1086,7 +1086,7 @@ instances of `Magpie` to authenticate users for each other. All variables define
     path with a ``:`` character. The first file in the list will contain the primary key and will be used to sign all
     outgoing communication.
 
-    A PEM file can be created using the ``magpie_create_private_key`` utility which can be used by running 
+    A PEM file can be created using the ``magpie_create_private_key`` utility which can be used by running
     ``magpie_create_private_key`` from the command line once `Magpie` has been installed as a python package.
     Run this command with the ``--help`` flag to see usage options.
 
@@ -1111,7 +1111,7 @@ instances of `Magpie` to authenticate users for each other. All variables define
     file require a password, set this variable to ``["pass1", "" ,"pass2", ""]`` where ``pass1`` and ``pass2`` are the
     passwords.
 
-    To create a password protected PEM file, use the ``--password`` flag when calling the 
+    To create a password protected PEM file, use the ``--password`` flag when calling the
     ``magpie_create_private_key`` utility.
 
 .. envvar:: MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE
@@ -1187,7 +1187,7 @@ Following settings define parameters required by `Twitcher`_ (OWS Security Proxy
     :term:`Logged User`.
 
     .. note::
-        Using this parameter to define `Twitcher`_'s path assumes that it resides under the same server domain as the :term:`Network Node` 
+        Using this parameter to define `Twitcher`_'s path assumes that it resides under the same server domain as the :term:`Network Node`
         being configured (ie: hostname is inferred from resolved value amongst :envvar:`MAGPIE_URL`,
         :envvar:`MAGPIE_HOST`, :envvar:`TWITCHER_HOST` and :envvar:`HOSTNAME` settings or environment variables).
 
