@@ -517,13 +517,13 @@ mechanism. This means that a :term:`User` may be logged in as a node-specific "a
 
 When another `Magpie` instance is registered as a :term:`Network Node`, a few additional entities are created:
 
-#. a group used to manage the permissions of all users who authenticate using the new :term:`Network Node`.
-   * this group's name will be the :envvar:`MAGPIE_NETWORK_NAME_PREFIX` followed by the :term:`Network Node` name
-#. a group used to manage the permissions of all users who authenticate using *any* other instance in the network
-   * this group's name will be the :envvar:`MAGPIE_NETWORK_GROUP_NAME`
-   * this group will only be created once, when the first :term:`Network Node` is registered
-#. an anonymous user that belongs to the two groups that were just created.
-   * this user name will be the :envvar:`MAGPIE_NETWORK_NAME_PREFIX` followed by the :term:`Network Node` name
+#. a :term:`Group` used to manage the permissions of all users who authenticate using the new :term:`Network Node`.
+   * this :term:`Group`'s name is the :envvar:`MAGPIE_NETWORK_NAME_PREFIX` followed by the :term:`Network Node` name
+#. a :term:`Group` used to manage the permissions of all users who authenticate using *any* :term:`Network Node`
+   * this :term:`Group`'s name is the :envvar:`MAGPIE_NETWORK_GROUP_NAME`
+   * this :term:`Group` will only be created once, when the first :term:`Network Node` is registered
+#. an anonymous user that belongs to the two :term:`Group`s that were just created.
+   * this user name is the :envvar:`MAGPIE_NETWORK_NAME_PREFIX` followed by the :term:`Network Node` name
 
 Here is an example to illustrate this point:
 

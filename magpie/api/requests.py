@@ -24,12 +24,14 @@ from magpie.permissions import PermissionSet
 from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     # pylint: disable=W0611,unused-import
     from typing import Any, Dict, Iterable, List, Optional, Union
 
     from pyramid.request import Request
 
-    from magpie.typedefs import AnyAccessPrincipalType, AnyRequestType, ServiceOrResourceType, Str
+    from magpie.typedefs import AnyAccessPrincipalType, ServiceOrResourceType, Str
 
 LOGGER = get_logger(__name__)
 
@@ -383,8 +385,9 @@ def get_query_param(request, case_insensitive_key, default=None):
     return default
 
 
+# Note: change annotation to (AnyViewCallable) -> AnyViewCallable once those type definitions are ported from weaver
 def check_network_mode_enabled(view_func):
-    # type: (AnyRequestType) -> AnyRequestType
+    # type: (Callable) -> Callable
     """
     Decorator for views that returns a :class:`HTTPNotImplemented` response if network mode is not enabled.
     This is intended to be used for all views that should only be accessed if network mode is enabled.

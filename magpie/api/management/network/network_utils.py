@@ -1,4 +1,3 @@
-import json
 import os
 from datetime import datetime, timedelta
 from itertools import zip_longest
@@ -31,10 +30,9 @@ LOGGER = get_logger(__name__)
 def pem_files(settings_container=None):
     # type: (Optional[AnySettingsContainer]) -> List[Str]
     pem_files_ = get_constant("MAGPIE_NETWORK_PEM_FILES", settings_container=settings_container)
-    try:
-        return json.loads(pem_files_)
-    except json.decoder.JSONDecodeError:
-        return [pem_files_]
+    if pem_files_:
+        return pem_files_.split(":")
+    return []
 
 
 def _pem_file_content(primary=False, settings_container=None):
@@ -65,14 +63,12 @@ def _pem_file_passwords(primary=False, settings_container=None):
     """
     pem_passwords = get_constant("MAGPIE_NETWORK_PEM_PASSWORDS", settings_container=settings_container,
                                  raise_missing=False, raise_not_set=False)
-    try:
-        passwords = json.loads(pem_passwords or "")
-    except json.decoder.JSONDecodeError:
-        passwords = [pem_passwords]
-    passwords = [p.encode() if p else None for p in passwords]
-    if primary:
-        return passwords[:1]
-    return passwords
+    if pem_passwords:
+        passwords = [p.encode() if p else None for p in pem_passwords.split(":")]
+        if primary:
+            return passwords[:1]
+        return passwords
+    return []
 
 
 def create_private_key(filename, password=None, settings_container=None):

@@ -1104,11 +1104,13 @@ instances of `Magpie` to authenticate users for each other. All variables define
 
     Password used to encrypt the PEM files in :envvar:`MAGPIE_NETWORK_PEM_FILES`.
 
-    If multiple files require passwords, they can be listed as a JSON array. An empty string will be treated the same as
-    no password.
+    If multiple files require passwords, separate each password with the ``:`` character. An empty string will be
+    treated the same as no password.
+
+    Note that this means that ``:`` is not a valid password character.
 
     For example, if you have four files specified in :envvar:`MAGPIE_NETWORK_PEM_FILES` and only the first and third
-    file require a password, set this variable to ``["pass1", "" ,"pass2", ""]`` where ``pass1`` and ``pass2`` are the
+    file require a password, set this variable to ``pass1::pass2:`` where ``pass1`` and ``pass2`` are the
     passwords.
 
     To create a password protected PEM file, use the ``--password`` flag when calling the
