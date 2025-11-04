@@ -25,7 +25,6 @@ from magpie.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
     # pylint: disable=W0611,unused-import
     from typing import Any, Dict, Iterable, List, Optional, Union
 
