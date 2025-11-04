@@ -29,13 +29,13 @@ from magpie.constants import protected_user_name_regex
 def get_network_remote_users_view(request):
     query = request.db.query(models.NetworkRemoteUser)
     user_name = request.GET.get("user_name")
-    ax.verify_param(user_name,
-                    matches=True,
-                    param_name="user_name",
-                    param_compare=USERNAME_REGEX,
-                    http_error=HTTPUnprocessableEntity,
-                    msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
     if user_name is not None:
+        ax.verify_param(user_name,
+                        matches=True,
+                        param_name="user_name",
+                        param_compare=USERNAME_REGEX,
+                        http_error=HTTPUnprocessableEntity,
+                        msg_on_fail=s.Users_CheckInfo_UserNameValue_BadRequestResponseSchema.description)
         query = query.join(models.User).filter(models.User.user_name == user_name)
     nodes = [n.as_dict() for n in query.all()]
     return ax.valid_http(http_success=HTTPOk, detail=s.NetworkRemoteUsers_GET_OkResponseSchema.description,
