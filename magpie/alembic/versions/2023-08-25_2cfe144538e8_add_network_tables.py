@@ -31,6 +31,7 @@ def upgrade():
     op.create_table("network_nodes",
                     sa.Column("id", sa.Integer, primary_key=True, nullable=False, autoincrement=True),
                     sa.Column("name", sa.Unicode(128), nullable=False, unique=True),
+                    sa.Column("base_url", URLType(), nullable=False),
                     sa.Column("jwks_url", URLType(), nullable=False),
                     sa.Column("token_url", URLType(), nullable=False),
                     sa.Column("authorization_url", URLType(), nullable=False),

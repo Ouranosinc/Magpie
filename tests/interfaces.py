@@ -106,6 +106,7 @@ class ConfigTestCase(object):
     test_node_host = None                   # type: Optional[Str]
     test_node_port = None                   # type: Optional[int]
     test_node_name = None                   # type: Optional[Str]
+    test_node_base_url = None               # type: Optional[Str]
     test_node_jwks_url = None               # type: Optional[Str]
     test_node_token_url = None              # type: Optional[Str]
     test_authorization_url = None           # type: Optional[Str]
@@ -288,6 +289,7 @@ class BaseTestCase(ConfigTestCase, unittest.TestCase):
                                           raise_missing=False, raise_not_set=False)
         cls.test_node_port = int(get_constant("MAGPIE_TEST_REMOTE_NODE_SERVER_PORT", default_value=2002,
                                               raise_missing=False, raise_not_set=False))
+        cls.test_node_base_url = "http://{}:{}/network".format(cls.test_node_host, cls.test_node_port)
         cls.test_node_jwks_url = "http://{}:{}/network/jwks".format(cls.test_node_host, cls.test_node_port)
         cls.test_node_token_url = "http://{}:{}/network/token".format(cls.test_node_host, cls.test_node_port)
         cls.test_authorization_url = "http://{}:{}/ui/network/authorize".format(cls.test_node_host, cls.test_node_port)
@@ -8255,6 +8257,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         expected_node_info = {
             "name": "test123",
+            "base_url": "http://test1.example.com",
             "jwks_url": "http://test1.example.com/jwks",
             "token_url": "http://test1.example.com/token",
             "authorization_url": "http://test1.example.com/authorization",
@@ -8280,6 +8283,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         expected_node_info = {
             "name": "test123",
+            "base_url": "http://test1.example.com",
             "jwks_url": "http://test1.example.com/jwks",
             "token_url": "http://test1.example.com/token",
             "authorization_url": "http://test1.example.com/authorization",
@@ -8349,6 +8353,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.warn_version(self, "Create a network node without required parameters", "5.0.0", skip=True)
         node_info = {
             "name": "test1",
+            "base_url": "http://test1.example.com",
             "jwks_url": "http://test1.example.com/jwks",
             "token_url": "http://test1.example.com/token",
             "authorization_url": "http://test1.example.com/authorization",
@@ -8372,6 +8377,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.warn_version(self, "Create a network node with invalid parameters", "5.0.0", skip=True)
         node_info = {
             "name": "test1",
+            "base_url": "http://test1.example.com",
             "jwks_url": "http://test1.example.com/jwks",
             "token_url": "http://test1.example.com/token",
             "authorization_url": "http://test1.example.com/authorization",
@@ -8397,6 +8403,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         node_info = {
             "name": "test123",
+            "base_url": "http://test1.example.com",
             "jwks_url": "http://test1.example.com/jwks",
             "token_url": "http://test1.example.com/token",
             "authorization_url": "http://test1.example.com/authorization",
@@ -8452,6 +8459,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True, override_name="test123")
         node_info = {
             "name": "test123",
+            "base_url": "http://test1.example.com",
             "jwks_url": "http://test1.example.com/jwks",
             "token_url": "http://test1.example.com/token",
             "authorization_url": "http://test1.example.com/authorization",
@@ -8474,6 +8482,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.TestSetup.create_TestNetworkNode(self, override_exist=True)
         node_info = {
             "name": "test123",
+            "base_url": "http://test1.example.com",
             "jwks_url": "http://test1.example.com/jwks",
             "token_url": "http://test1.example.com/token",
             "authorization_url": "http://test1.example.com/authorization",

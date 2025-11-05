@@ -453,6 +453,9 @@ In order to register another `Magpie` instance as part of the same network, an a
 * ``name``:
     * the name of that other `Magpie` instance in the network and should correspond to the same value as the
       :envvar:`MAGPIE_NETWORK_INSTANCE_NAME` value set by the other `Magpie` instance.
+* ``base_url``:
+    * Base URL of the instance. This is mostly used for display purposes.
+    * For example: ``https://nodea.example.com``.
 * ``jwks_url``:
     * URL that provides the instance's public key in the form of a JSON Web Key Set.
     * This is usually ``https://{hostname}/network/jwks`` where ``{hostname}`` is the hostname of the other instance

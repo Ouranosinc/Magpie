@@ -1103,6 +1103,7 @@ class NetworkNode(BaseModel, Base):
 
     id = sa.Column(sa.Integer(), primary_key=True, nullable=False, autoincrement=True)
     name = sa.Column(sa.Unicode(128), nullable=False, unique=True)
+    base_url = sa.Column(URLType(), nullable=False)
     jwks_url = sa.Column(URLType(), nullable=False)
     token_url = sa.Column(URLType(), nullable=False)
     authorization_url = sa.Column(URLType(), nullable=False)

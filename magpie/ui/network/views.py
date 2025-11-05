@@ -50,4 +50,5 @@ class NetworkViews(AdminRequests):
                                             "token": response_token,
                                             "requesting_user_name": requesting_user_name,
                                             "node_name": node_name,
+                                            "node_base_url": node_details["base_url"],
                                             "referrer": urlparse(self.request.referrer).hostname})

@@ -8,7 +8,7 @@
         <tr>
             <td>
                 Magpie is requesting permission to link your account with the ${requesting_user_name} user's account
-                on the Magpie instance named "${node_name}".
+                on the Magpie instance named "${node_name}" located at "${node_base_url}".
             </td>
         </tr>
         <tr>
@@ -33,5 +33,3 @@
         </tr>
     </table>
 </form>
-
-

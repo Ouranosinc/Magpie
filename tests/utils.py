@@ -3010,6 +3010,7 @@ class TestSetup(object):
     @staticmethod
     def create_TestNetworkNode(test_case,                        # type: AnyMagpieTestCaseType
                                override_name=null,               # type: Optional[Str]
+                               override_base_url=null,           # type: Optional[Str]
                                override_jwks_url=null,           # type: Optional[Str]
                                override_token_url=null,          # type: Optional[Str]
                                override_authorization_url=null,  # type: Optional[Str]
@@ -3029,6 +3030,7 @@ class TestSetup(object):
         else:
             data = {
                 "name": override_name if override_name is not null else test_case.test_node_name,
+                "base_url": override_base_url if override_base_url is not null else test_case.test_node_base_url,
                 "jwks_url": override_jwks_url if override_jwks_url is not null else test_case.test_node_jwks_url,
                 "token_url": override_token_url if override_token_url is not null else test_case.test_node_token_url,
                 "authorization_url": (override_authorization_url if override_authorization_url is not null

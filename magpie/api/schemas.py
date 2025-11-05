@@ -3568,6 +3568,13 @@ class NetworkNode_PATCH_RequestBodySchema(colander.MappingSchema):
         example="NodeA",
         missing=colander.drop
     )
+    base_url = colander.SchemaNode(
+        colander.String(),
+        description="Base URL of another Magpie node (instance) in the network.",
+        example="https://nodea.example.com",
+        validator=colander.url,
+        missing=colander.drop
+    )
     jwks_url = colander.SchemaNode(
         colander.String(),
         description="URL that provides the JWKS data for another Magpie node (instance) in the network.",
@@ -3611,6 +3618,12 @@ class NetworkNode_BodySchema(colander.MappingSchema):
         colander.String(),
         description="Name of another Magpie node (instance) in the network.",
         example="NodeA"
+    )
+    base_url = colander.SchemaNode(
+        colander.String(),
+        description="Base URL of another Magpie node (instance) in the network.",
+        example="https://nodea.example.com",
+        validator=colander.url
     )
     jwks_url = colander.SchemaNode(
         colander.String(),

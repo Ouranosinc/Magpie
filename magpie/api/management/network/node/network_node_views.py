@@ -60,7 +60,7 @@ def get_network_node_view(request):
                         response_schemas=s.NetworkNodes_POST_responses)
 @view_config(route_name=s.NetworkNodesAPI.name, request_method="POST", decorator=check_network_mode_enabled)
 def post_network_nodes_view(request):
-    required_params = ("name", "jwks_url", "token_url", "authorization_url")
+    required_params = ("name", "base_url", "jwks_url", "token_url", "authorization_url")
     kwargs = {}
     for param in required_params:
         value = ar.get_multiformat_body(request, param, default=None)
@@ -87,7 +87,7 @@ def patch_network_node_view(request):
         lambda: request.db.query(models.NetworkNode).filter(models.NetworkNode.name == node_name).one(),
         http_error=HTTPNotFound,
         msg_on_fail=s.NetworkNode_NotFoundResponseSchema.description)
-    params = ("name", "jwks_url", "token_url", "authorization_url", "redirect_uris")
+    params = ("name", "base_url", "jwks_url", "token_url", "authorization_url", "redirect_uris")
     kwargs = {}
     for param in params:
         param_value = ar.get_multiformat_body(request, param, default=None)
