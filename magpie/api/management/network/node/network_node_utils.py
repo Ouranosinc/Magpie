@@ -76,9 +76,14 @@ def delete_network_node(request, node):
     request.db.delete(node)
 
 
-def check_network_node_info(db_session=None, name=None, jwks_url=None, token_url=None, authorization_url=None,
-                            redirect_uris=None):
-    # type: (Optional[Session], Optional[Str], Optional[Str], Optional[Str], Optional[Str], Optional[Str]) -> None
+def check_network_node_info(db_session=None,         # type: Optional[Session]
+                            name=None,               # type: Optional[Str]
+                            base_url=None,           # type: Optional[Str]
+                            jwks_url=None,           # type: Optional[Str]
+                            token_url=None,          # type: Optional[Str]
+                            authorization_url=None,  # type: Optional[Str]
+                            redirect_uris=None       # type: Optional[List[Str]]
+                            ):                       # type: (...) -> None
     """
     Check that the parameters used to create a new ``NetworkNode`` or update an existing one are well-formed.
     """
@@ -90,6 +95,10 @@ def check_network_node_info(db_session=None, name=None, jwks_url=None, token_url
                         param_compare=[n.name for n in db_session.query(models.NetworkNode)],
                         http_error=HTTPConflict,
                         msg_on_fail=s.NetworkNodes_CheckInfo_NameValue_ConflictResponseSchema.description)
+    if base_url is not None:
+        ax.verify_param(base_url, matches=True, param_name="base_url", param_compare=URL_REGEX,
+                        http_error=HTTPBadRequest,
+                        msg_on_fail=s.NetworkNodes_CheckInfo_BaseURLValue_BadRequestResponseSchema.description)
     if jwks_url is not None:
         ax.verify_param(jwks_url, matches=True, param_name="jwks_url", param_compare=URL_REGEX,
                         http_error=HTTPBadRequest,

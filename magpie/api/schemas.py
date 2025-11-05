@@ -3695,6 +3695,11 @@ class NetworkNodes_CheckInfo_NameValue_BadRequestResponseSchema(BaseResponseSche
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
+class NetworkNodes_CheckInfo_BaseURLValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "base_url is not a valid URL."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
 class NetworkNodes_CheckInfo_JWKSURLValue_BadRequestResponseSchema(BaseResponseSchemaAPI):
     description = "jwks_url is not a valid URL."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
