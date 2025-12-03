@@ -272,3 +272,48 @@ ${membership_alerts.edit_membership_alerts()}
         %endfor
     </table>
 </form>
+
+%if network_enabled:
+    <h3>Network Account Links</h3>
+    <table class="simple-list" id="network_node_list">
+        <tr>
+            <th>Network Node Name</th>
+            <th>Username</th>
+            <th>Action</th>
+        </tr>
+        %for node_name, remote_user_name in network_nodes:
+            <tr>
+                <td>${node_name}</td>
+                %if remote_user_name is None:
+                    <td></td>
+                    <td>
+                        <form id="create_node_link_${node_name}"
+                              action="${request.route_path(network_routes["create"], node_name=node_name)}"
+                              method="post">
+                            <input type="submit"
+                                   value="Create"
+                                   name="create_node_link_${node_name}"
+                                   class="button theme">
+                        </form>
+                    </td>
+                %else:
+                    <td>${remote_user_name}</td>
+                    <td>
+                        <input type="button"
+                            value="Delete"
+                            name="delete_node_link_${node_name}"
+                            onclick='var msg="This will permanently delete the link to ${node_name}. Are you sure?";
+                            if (confirm(msg)) {
+                                var route = "${request.route_path(network_routes["delete"],
+                                                                  node_name=node_name,
+                                                                  remote_user_name=remote_user_name)}"
+                            $.ajax({url: route,
+                                   type: "delete",
+                                   success: function() { window.location.reload() }})}'
+                            class="button delete">
+                    </td>
+                %endif
+            </tr>
+        %endfor
+    </table>
+%endif

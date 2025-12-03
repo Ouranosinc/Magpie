@@ -11,6 +11,7 @@ settings formatted as ``magpie.[variable_name]`` in the ``magpie.ini`` configura
     constant ``MAGPIE_INI_FILE_PATH`` (or any other `path variable` defined before it - see below) has to be defined
     by environment variable if the default location is not desired (ie: if you want to provide your own configuration).
 """
+import functools
 import logging
 import os
 import re
@@ -23,7 +24,7 @@ from pyramid.settings import asbool
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Optional
+    from typing import Optional, Tuple
 
     from magpie.typedefs import AnySettingsContainer, SettingValue, Str
 
@@ -105,6 +106,14 @@ MAGPIE_USERS_GROUP = os.getenv("MAGPIE_USERS_GROUP", "users")
 MAGPIE_CRON_LOG = os.getenv("MAGPIE_CRON_LOG", "~/magpie-cron.log")
 MAGPIE_DB_MIGRATION = asbool(os.getenv("MAGPIE_DB_MIGRATION", True))            # run db migration on startup
 MAGPIE_DB_MIGRATION_ATTEMPTS = int(os.getenv("MAGPIE_DB_MIGRATION_ATTEMPTS", 5))
+MAGPIE_NETWORK_ENABLED = asbool(os.getenv("MAGPIE_NETWORK_ENABLED", False))
+MAGPIE_NETWORK_INSTANCE_NAME = os.getenv("MAGPIE_NETWORK_INSTANCE_NAME")
+MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY = int(os.getenv("MAGPIE_NETWORK_DEFAULT_TOKEN_EXPIRY", 86400))
+MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY = int(os.getenv("MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY", 30))
+MAGPIE_NETWORK_NAME_PREFIX = os.getenv("MAGPIE_NETWORK_NAME_PREFIX", "magpie_network_")
+MAGPIE_NETWORK_PEM_FILES = os.getenv("MAGPIE_NETWORK_PEM_FILES", os.path.join(MAGPIE_ROOT, "key.pem"))
+MAGPIE_NETWORK_PEM_PASSWORDS = os.getenv("MAGPIE_NETWORK_PEM_PASSWORDS")
+MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE = asbool(os.getenv("MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE", False))
 MAGPIE_LOG_LEVEL = os.getenv("MAGPIE_LOG_LEVEL", _get_default_log_level())      # log level to apply to the loggers
 MAGPIE_LOG_PRINT = asbool(os.getenv("MAGPIE_LOG_PRINT", False))                 # log also forces print to the console
 MAGPIE_LOG_REQUEST = asbool(os.getenv("MAGPIE_LOG_REQUEST", True))              # log detail of every incoming request
@@ -146,6 +155,10 @@ MAGPIE_LOGGED_PERMISSION = "MAGPIE_LOGGED_USER"  # user must be itself (either l
 MAGPIE_CONTEXT_PERMISSION = "MAGPIE_CONTEXT_USER"  # path user must be itself, MAGPIE_LOGGED_USER or unauthenticated
 MAGPIE_LOGGED_USER = "current"
 MAGPIE_DEFAULT_PROVIDER = "ziggurat"
+MAGPIE_NETWORK_TOKEN_NAME = "magpie_token"  # nosec: B105
+MAGPIE_NETWORK_PROVIDER = "magpie_network"
+MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT = "{}{}@mail.com".format(MAGPIE_NETWORK_NAME_PREFIX, "{}")
+MAGPIE_NETWORK_GROUP_NAME = "magpie_network"
 
 # above this length is considered a token,
 # refuse longer username creation
@@ -162,6 +175,9 @@ MAGPIE_CONSTANTS = [
     "MAGPIE_DEFAULT_PROVIDER",
     "MAGPIE_USER_NAME_MAX_LENGTH",
     "MAGPIE_GROUP_NAME_MAX_LENGTH",
+    "MAGPIE_NETWORK_TOKEN_NAME",
+    "MAGPIE_NETWORK_PROVIDER",
+    "MAGPIE_NETWORK_GROUP_NAME"
 ]
 
 # ===========================
@@ -169,6 +185,81 @@ MAGPIE_CONSTANTS = [
 # ===========================
 
 _REGEX_ASCII_ONLY = re.compile(r"\W|^(?=\d)")
+
+
+@functools.lru_cache(maxsize=128)
+def protected_user_name_regex(include_admin=True,
+                              include_anonymous=True,
+                              include_network=True,
+                              additional_patterns=None,
+                              settings_container=None):
+    # type: (bool, bool, bool, Optional[Tuple[Str]], Optional[AnySettingsContainer]) -> re.Pattern
+    """
+    Return a regular expression that matches all user names that are protected, meaning that they are generated
+    by Magpie itself and no regular user account should be created with these user names.
+    """
+    patterns = list(additional_patterns or [])
+    if include_admin:
+        patterns.append(get_constant("MAGPIE_ADMIN_USER", settings_container=settings_container))
+    if include_anonymous:
+        patterns.append(get_constant("MAGPIE_ANONYMOUS_USER", settings_container=settings_container))
+    if include_network and network_enabled(settings_container=settings_container):
+        patterns.append(
+            "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
+        )
+    return re.compile("^({})$".format("|".join(patterns)))
+
+
+@functools.lru_cache(maxsize=128)
+def protected_user_email_regex(include_admin=True,
+                               include_anonymous=True,
+                               include_network=True,
+                               additional_patterns=None,
+                               settings_container=None):
+    # type: (bool, bool, bool, Optional[Tuple[Str]], Optional[AnySettingsContainer]) -> re.Pattern
+    """
+    Return a regular expression that matches all user emails that are protected, meaning that they are generated
+    by Magpie itself and no regular user account should be created with these user emails.
+    """
+    patterns = list(additional_patterns or [])
+    if include_admin:
+        patterns.append(get_constant("MAGPIE_ADMIN_EMAIL", settings_container=settings_container))
+    if include_anonymous:
+        patterns.append(get_constant("MAGPIE_ANONYMOUS_EMAIL", settings_container=settings_container))
+    if include_network and network_enabled(settings_container=settings_container):
+        email_form = get_constant("MAGPIE_NETWORK_ANONYMOUS_EMAIL_FORMAT", settings_container=settings_container)
+        patterns.append(email_form.format(".*"))
+    return re.compile("^({})$".format("|".join(patterns)))
+
+
+@functools.lru_cache(maxsize=128)
+def protected_group_name_regex(include_admin=True,
+                               include_anonymous=True,
+                               include_network=True,
+                               settings_container=None):
+    # type: (bool, bool, bool, Optional[AnySettingsContainer]) -> re.Pattern
+    """
+    Return a regular expression that matches all group names that are protected, meaning that they are generated
+    by Magpie itself and no regular user account should be created with these group names.
+    """
+    patterns = []
+    if include_admin:
+        patterns.append(get_constant("MAGPIE_ADMIN_GROUP", settings_container=settings_container))
+    if include_anonymous:
+        patterns.append(get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=settings_container))
+    if include_network and network_enabled(settings_container=settings_container):
+        patterns.append(
+            "{}.*".format(get_constant("MAGPIE_NETWORK_NAME_PREFIX", settings_container=settings_container))
+        )
+    return re.compile("^({})$".format("|".join(patterns)))
+
+
+def network_enabled(settings_container=None):
+    # type: (Optional[AnySettingsContainer]) -> bool
+    """
+    Return whether network mode is enabled.
+    """
+    return asbool(get_constant("MAGPIE_NETWORK_ENABLED", settings_container=settings_container))
 
 
 def get_constant_setting_name(name):
