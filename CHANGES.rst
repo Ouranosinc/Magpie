@@ -9,6 +9,8 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Add Python 3.13 to CI and project setup.
+* Update docker with `python:3.13.11-alpine3.23`.
 * Ignore pylint `not-an-iterable` error in ``docs/conf.py``
 
 .. _changes_4.2.0:

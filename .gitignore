@@ -20,6 +20,7 @@ Makefile.config
 
 # IDE
 .idea
+.run
 .vscode
 
 # Tests & CI
