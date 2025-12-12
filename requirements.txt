@@ -25,7 +25,8 @@ pyramid_retry==2.1.1
 pyramid_tm>=2.2.1
 python-dotenv
 pyyaml>=5.1
-requests>=2.32.5
+requests>=2.32.3; python_version < "3.9"  # pyup: ignore  # noqa
+requests>=2.32.5; python_version >= "3.9"
 requests_file
 simplejson
 six>=1.12.0
