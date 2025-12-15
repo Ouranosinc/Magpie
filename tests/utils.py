@@ -10,21 +10,27 @@ import unittest
 import uuid
 import warnings
 from copy import deepcopy
+from datetime import datetime, timedelta
 from errno import EADDRINUSE
 from typing import TYPE_CHECKING
 
+import jwt
 import mock
 import pytest
 import requests
 import requests.exceptions
 import six
 from beaker.cache import cache_managers, cache_regions
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
+from jwt.utils import to_base64url_uint
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPException
 from pyramid.response import Response as PyramidResponse
 from pyramid.settings import asbool
 from pyramid.testing import DummyRequest
 from pyramid.testing import setUp as PyramidSetUp
+from pytest_httpserver import HTTPServer
 from requests.cookies import RequestsCookieJar, create_cookie
 from requests.models import Response as RequestsResponse
 from six.moves.urllib.parse import urlparse
@@ -34,6 +40,7 @@ from webtest.forms import Form
 from webtest.response import TestResponse
 
 from magpie import __meta__, app, services
+from magpie.api import schemas
 from magpie.compat import LooseVersion
 from magpie.constants import get_constant
 from magpie.permissions import Access, PermissionSet, Scope
@@ -190,6 +197,7 @@ def make_run_option_decorator(run_option):
 
     All ``<custom_marker>`` definitions should be added to ``setup.cfg`` to allow :mod:`pytest` to reference them.
     """
+
     @functools.wraps(run_option)
     def wrap(test_func, *_, **__):
         # type: (Callable, *Any, **Any) -> Callable
@@ -212,6 +220,7 @@ class RunOptionDecorator(object):
 
         RunOptionDecorator("MAGPIE_TEST_CUSTOM_MARKER")
     """
+
     def __new__(cls, name, description=None):
         # type: (Type[RunOptionDecorator], Str, Optional[Str]) -> RunOptionDecorator
         return make_run_option_decorator(RunOption(name, description=description))
@@ -731,6 +740,50 @@ def mocked_get_settings(test_func=None, settings=None):
     return mocked_get_settings_decorator
 
 
+def check_network_mode(_test_func=None, enable=True):
+    # type: (Optional[Callable[[Callable], Any]], bool) -> Callable
+    """
+    Returns a decorator that checks whether a test function is marked as local or remote according to the
+    :class:`RunOptionDecorator` on the current test.
+    If local, then ensure that the test application has network mode enabled (if :paramref:`enable` is ``True``) or
+    disabled (if :paramref:`enable` is ``False``).
+    If remote, then check whether the network mode is enabled or not for the remote application. If the network mode
+    status does not match the :paramref:`enable` value, then skip the test. For example, if the remote application has
+    network mode enabled but :paramref:`enable` is ``False`` then the test is skipped.
+
+    .. note::
+
+        A test cannot affect the settings of a remote application. For this reason, we skip tests that would fail only
+        because a remote application is not configured in a way that would allow the test to pass.
+
+    :param _test_func: Test function being decorated.
+    :param enable: Boolean value indicating whether ``_test_func`` expects network mode to be enabled in order to pass.
+    """
+    if enable:
+        settings = {"magpie.network_enabled": True}
+    else:
+        settings = {"magpie.network_enabled": False}
+
+    def decorator_func(test_func):
+        @functools.wraps(test_func)
+        def wrapper(*args, **kwargs):
+            test = args[0]
+            if hasattr(test, "pytestmark") and any(mark.name == "remote" for mark in test.pytestmark):
+                resp = test_request(test, "GET", schemas.NetworkJSONWebKeySetAPI.path)
+                remote_enabled = get_json_body(resp).get("code") != 501
+                if enable and not remote_enabled:
+                    test.skipTest("Test requires remote to be running with network mode enabled.")
+                elif not enable and remote_enabled:
+                    test.skipTest("Test requires remote to be running without network mode enabled.")
+                return test_func(*args, **kwargs)
+            # assume local test
+            return mocked_get_settings(settings=settings)(test_func)(*args, **kwargs)
+        return wrapper
+    if _test_func is None:
+        return decorator_func
+    return decorator_func(_test_func)
+
+
 def mock_request(request_path_query="",     # type: Str
                  method="GET",              # type: Str
                  params=None,               # type: Optional[Dict[Str, Str]]
@@ -1146,6 +1199,8 @@ def test_request(test_item,             # type: AnyMagpieTestItemType
 
         # automatically follow the redirect if any and evaluate its response
         max_redirect = kwargs.get("max_redirects", 5)
+        if not allow_redirects:
+            max_redirect = 0
         while 300 <= resp.status_code < 400 and max_redirect > 0:  # noqa
             resp = resp.follow()
             max_redirect -= 1
@@ -1465,6 +1520,27 @@ def check_val_type(val, ref, msg=None):
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 
 
+@contextlib.contextmanager
+def patch_datetime(patches):
+    # type: (Dict[Str, Any]) -> Any
+    """
+    Patch functions in the datetime.datetime module where keys in patches are names of functions and values are their
+    patched return values.
+
+    Note: mocking datetime is complicated because it's implemented in C. The technique used here is inspired by:
+          https://williambert.online/2011/07/how-to-unit-testing-in-django-with-mocking-and-patching/
+    """
+
+    class FakeDatetime(datetime):
+        def __new__(cls, *args, **kwargs):
+            return datetime.__new__(datetime, *args, **kwargs)
+
+    with mock.patch("datetime.datetime", FakeDatetime):
+        for method, return_value in patches.items():
+            setattr(FakeDatetime, method, classmethod(lambda cls: return_value))
+        yield
+
+
 def check_raises(func, exception_type, msg=None):
     # type: (Callable[[], Any], Type[Exception], Optional[Str]) -> Exception
     """
@@ -1700,12 +1776,12 @@ def find_html_body_contents(response_or_body, html_search=None):
             # ignore 'dont care' items like comments
             hasattr(item, "attrs") and
             # filter by class names, any one matched if element as any
-            (len(item.attrs.get("class", [])) and
-             any(str(css_cls) in search_element.get("class", []) for css_cls in item.attrs.get("class", []))) or
-            # filter by html element name
-            (search_element.get("name", "") != "" and str(search_element.get("name")) == item.name) or
-            # filter by html element id
-            (search_element.get("id", "") != "" and str(search_element.get("id")) == item.attrs.get("id", ""))
+            ((len(item.attrs.get("class", [])) and
+              any(str(css_cls) in search_element.get("class", []) for css_cls in item.attrs.get("class", []))) or
+             # filter by html element name
+             (search_element.get("name", "") != "" and str(search_element.get("name")) == item.name) or
+             # filter by html element id
+             (search_element.get("id", "") != "" and str(search_element.get("id")) == item.attrs.get("id", "")))
         ]
         if i + 1 != len(html_search):
             elem_idx = search_element.get("index")
@@ -2930,6 +3006,280 @@ class TestSetup(object):
                                              pending=pending,
                                              accept_terms=accept_terms)
         return check_response_basic_info(create_user_resp, 201, expected_method="POST")
+
+    @staticmethod
+    def create_TestNetworkNode(test_case,                        # type: AnyMagpieTestCaseType
+                               override_name=null,               # type: Optional[Str]
+                               override_base_url=null,           # type: Optional[Str]
+                               override_jwks_url=null,           # type: Optional[Str]
+                               override_token_url=null,          # type: Optional[Str]
+                               override_authorization_url=null,  # type: Optional[Str]
+                               override_redirect_uris=null,      # type: Optional[JSON]
+                               override_headers=null,            # type: Optional[HeadersType]
+                               override_cookies=null,            # type: Optional[CookiesType]
+                               override_exist=False,             # type: bool
+                               override_data=null,               # type: Optional[JSON]
+                               expect_errors=False,              # type: bool
+                               ):                                # type: (...) -> JSON
+        """
+        Creates a Network Node
+        """
+        app_or_url = get_app_or_url(test_case)
+        if override_data is not null:
+            data = override_data
+        else:
+            data = {
+                "name": override_name if override_name is not null else test_case.test_node_name,
+                "base_url": override_base_url if override_base_url is not null else test_case.test_node_base_url,
+                "jwks_url": override_jwks_url if override_jwks_url is not null else test_case.test_node_jwks_url,
+                "token_url": override_token_url if override_token_url is not null else test_case.test_node_token_url,
+                "authorization_url": (override_authorization_url if override_authorization_url is not null
+                                      else test_case.test_authorization_url),
+                "redirect_uris": (override_redirect_uris if override_redirect_uris is not null
+                                  else test_case.test_redirect_uris)
+            }
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+
+        resp = test_request(app_or_url, "POST", "/network/nodes", json=data,
+                            expect_errors=(override_exist or expect_errors), headers=headers, cookies=cookies)
+
+        if data.get("name"):
+            test_case.extra_node_names.add(data["name"])  # indicate potential removal at a later point
+
+        if resp.status_code == 409 and override_exist and data.get("name"):
+            TestSetup.delete_TestNetworkNode(test_case,
+                                             override_name=data["name"],
+                                             override_headers=headers,
+                                             override_cookies=cookies)
+            return TestSetup.create_TestNetworkNode(test_case,
+                                                    override_data=data,
+                                                    override_headers=headers,
+                                                    override_cookies=cookies,
+                                                    override_exist=False,
+                                                    expect_errors=expect_errors)
+
+        if expect_errors:
+            return get_json_body(resp)
+        return check_response_basic_info(resp, 201, expected_method="POST")
+
+    @staticmethod
+    def delete_TestNetworkNode(test_case,              # type: AnyMagpieTestCaseType
+                               override_name=null,     # type: Optional[Str]
+                               override_headers=null,  # type: Optional[HeadersType]
+                               override_cookies=null,  # type: Optional[CookiesType]
+                               allow_missing=False,    # type: bool
+                               ):                      # type: (...) -> Optional[AnyResponseType]
+        """
+        Deletes a Network Node.
+        """
+        app_or_url = get_app_or_url(test_case)
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        name = override_name if override_name is not null else test_case.test_node_name
+        path = "/network/nodes/{}".format(name)
+        resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies, expect_errors=allow_missing)
+        if resp.status_code == 404 and allow_missing:
+            return resp
+        check_response_basic_info(resp, 200, expected_method="DELETE")
+
+    @staticmethod
+    def create_TestNetworkRemoteUser(test_case,                       # type: AnyMagpieTestCaseType
+                                     override_remote_user_name=null,  # type: Optional[Str]
+                                     override_user_name=null,         # type: Optional[Str]
+                                     override_node_name=null,         # type: Optional[Str]
+                                     override_node_host=null,         # type: Optional[Str]
+                                     override_node_port=null,         # type: Optional[int]
+                                     override_headers=null,           # type: Optional[HeadersType]
+                                     override_cookies=null,           # type: Optional[CookiesType]
+                                     override_data=null,              # type: Optional[JSON]
+                                     override_exist=False,            # type: bool
+                                     ):                               # type: (...) -> JSON
+        """
+        Creates a Network Remote User.
+        """
+        app_or_url = get_app_or_url(test_case)
+        if override_data is not null:
+            data = override_data
+        else:
+            data = {
+                "remote_user_name": (override_remote_user_name if override_remote_user_name is not null
+                                     else test_case.test_remote_user_name),
+                "user_name": override_user_name if override_user_name is not null else test_case.test_user_name,
+                "node_name": override_node_name if override_node_name is not null else test_case.test_node_name
+            }
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+
+        resp = test_request(app_or_url, "POST", "/network/remote_users", json=data,
+                            expect_errors=override_exist, headers=headers, cookies=cookies)
+
+        if data.get("remote_user_name") and data.get("node_name"):
+            # indicate potential removal at a later point
+            test_case.extra_remote_user_names.add((data["remote_user_name"], data["node_name"]))
+
+        if resp.status_code == 409 and override_exist and data.get("remote_user_name") and data.get("node_name"):
+            TestSetup.delete_TestNetworkRemoteUser(test_case,
+                                                   override_remote_user_name=data["remote_user_name"],
+                                                   override_node_name=data["node_name"],
+                                                   override_headers=headers,
+                                                   override_cookies=cookies)
+            return TestSetup.create_TestNetworkRemoteUser(test_case,
+                                                          override_remote_user_name=data["remote_user_name"],
+                                                          override_node_name=data["node_name"],
+                                                          override_user_name=override_user_name,
+                                                          override_node_host=override_node_host,
+                                                          override_node_port=override_node_port,
+                                                          override_headers=headers,
+                                                          override_cookies=cookies,
+                                                          override_exist=False)
+
+        return check_response_basic_info(resp, 201, expected_method="POST")
+
+    @staticmethod
+    def delete_TestNetworkRemoteUser(test_case,                       # type: AnyMagpieTestCaseType
+                                     override_remote_user_name=null,  # type: Optional[Str]
+                                     override_node_name=null,         # type: Optional[Str]
+                                     override_headers=null,           # type: Optional[HeadersType]
+                                     override_cookies=null,           # type: Optional[CookiesType]
+                                     allow_missing=False,             # type: bool
+                                     ):                               # type: (...) -> Optional[AnyResponseType]
+        """
+        Deletes a Network Remote User.
+        """
+        app_or_url = get_app_or_url(test_case)
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        name = override_remote_user_name if override_remote_user_name is not null else test_case.test_remote_user_name
+        node_name = override_node_name if override_node_name is not null else test_case.test_node_name
+
+        path = "/network/nodes/{}/remote_users/{}".format(node_name, name)
+        resp = test_request(app_or_url, "DELETE", path, headers=headers, cookies=cookies, expect_errors=allow_missing)
+        if resp.status_code == 404 and allow_missing:
+            return resp
+        check_response_basic_info(resp, 200, expected_method="DELETE")
+
+    @staticmethod
+    def remote_node(test_case, override_node_host=null, override_node_port=null, clear=True):
+        # type: (AnyMagpieTestCaseType, Optional[Str], Optional[int], bool) -> HTTPServer
+        """
+        Starts a :class:`pytest_httpserver.HTTPServer` instance which can be used to generate fake responses
+        from a fake network node.
+        """
+        node_host = override_node_host if override_node_host is not null else test_case.test_node_host
+        node_port = override_node_port if override_node_port is not null else test_case.test_node_port
+        server = test_case.extra_remote_servers.get((node_host, node_port))
+        if server is None:
+            server = HTTPServer(host=node_host, port=node_port)
+            test_case.extra_remote_servers[(node_host, node_port)] = server
+        if not server.is_running():
+            server.start()
+        if clear:
+            server.clear()
+        return server
+
+    @staticmethod
+    @contextlib.contextmanager
+    def valid_jwt(test_case,                  # type: AnyMagpieTestCaseType
+                  override_jwt_claims=null,   # type: Optional[Dict[Str, Str]]
+                  override_jwt_headers=null,  # type: Optional[Dict[Str, Str]]
+                  override_jwt_issuer=null,   # type: Optional[Str]
+                  override_jwt_expiry=null,   # type: Optional[datetime]
+                  override_jwks_url=null,     # type: Optional[Str]
+                  override_node_host=null,    # type: Optional[Str]
+                  override_node_port=null     # type: Optional[int]
+                  ):                          # type: (...) -> Any
+        jwks_url = override_jwks_url if override_jwks_url is not null else test_case.test_node_jwks_url
+        jwks_request_path = urlparse(jwks_url).path
+
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        public_key = private_key.public_key()
+        private_bytes = private_key.private_bytes(Encoding.PEM, PrivateFormat.TraditionalOpenSSL, NoEncryption())
+        public_numbers = public_key.public_numbers()
+        kid = str(uuid.uuid4())
+        jwk = {
+            "kid": kid,
+            "alg": "RS256",
+            "kty": "RSA",
+            "use": "sig",
+            "n": to_base64url_uint(public_numbers.n).decode("ascii"),
+            "e": to_base64url_uint(public_numbers.e).decode("ascii")
+        }
+        jwt_headers = {} if override_jwt_headers is null else override_jwt_headers
+        issuer = test_case.test_node_name if override_jwt_issuer is null else override_jwt_issuer
+        jwt_claims = {} if override_jwt_claims is null else override_jwt_claims
+        if override_jwt_expiry is null:
+            expiry = int(get_constant("MAGPIE_NETWORK_INTERNAL_TOKEN_EXPIRY"))
+            expiry_time = datetime.utcnow() + timedelta(seconds=expiry)
+        else:
+            expiry_time = override_jwt_expiry
+        audience = get_constant("MAGPIE_NETWORK_INSTANCE_NAME")
+        claims = {"iss": issuer, "aud": audience, "exp": expiry_time, **jwt_claims}
+        token = jwt.encode(claims, private_bytes, headers={"kid": jwk["kid"], **jwt_headers}, algorithm="RS256")
+        node_server = TestSetup.remote_node(test_case, override_node_host=override_node_host,
+                                            override_node_port=override_node_port)
+        node_server.expect_request(jwks_request_path, method="GET").respond_with_json({"keys": [jwk]})
+        yield token
+
+    @staticmethod
+    def create_TestNetworkToken(test_case,                       # type: AnyMagpieTestCaseType
+                                override_jwks_url=null,          # type: Optional[Str]
+                                override_node_host=null,         # type: Optional[Str]
+                                override_node_port=null,         # type: Optional[int]
+                                override_node_name=null,         # type: Optional[Str]
+                                override_remote_user_name=null,  # type: Optional[Str]
+                                override_headers=null,           # type: Optional[HeadersType]
+                                override_cookies=null,           # type: Optional[CookiesType]
+                                expect_errors=False,             # type: bool
+                                ):                               # type: (...) -> JSON
+        app_or_url = get_app_or_url(test_case)
+
+        node_name = override_node_name if override_node_name is not null else test_case.test_node_name
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        if override_remote_user_name is null:
+            remote_user_name = test_case.test_remote_user_name
+        else:
+            remote_user_name = override_remote_user_name
+        with TestSetup.valid_jwt(test_case, override_jwt_claims={"user_name": remote_user_name},
+                                 override_jwt_issuer=node_name, override_jwks_url=override_jwks_url,
+                                 override_node_host=override_node_host, override_node_port=override_node_port) as token:
+            resp = test_request(app_or_url, "POST", "/network/token", json={"token": token}, headers=headers,
+                                cookies=cookies, expect_errors=expect_errors)
+        test_case.extra_network_tokens.add((remote_user_name, node_name))
+        if expect_errors:
+            return get_json_body(resp)
+        json_body = check_response_basic_info(resp, 201, expected_method="POST")
+        return json_body
+
+    @staticmethod
+    def delete_TestNetworkToken(test_case,                       # type: AnyMagpieTestCaseType
+                                override_jwks_url=null,          # type: Optional[Str]
+                                override_node_host=null,         # type: Optional[Str]
+                                override_node_port=null,         # type: Optional[int]
+                                override_node_name=null,         # type: Optional[Str]
+                                override_remote_user_name=null,  # type: Optional[Str]
+                                override_headers=null,           # type: Optional[HeadersType]
+                                override_cookies=null,           # type: Optional[CookiesType]
+                                allow_missing=False,             # type: bool
+                                ):                               # type: (...) -> Optional[AnyResponseType]
+        app_or_url = get_app_or_url(test_case)
+
+        node_name = override_node_name if override_node_name is not null else test_case.test_node_name
+        headers = override_headers if override_headers is not null else test_case.json_headers
+        cookies = override_cookies if override_cookies is not null else test_case.cookies
+        if override_remote_user_name is null:
+            remote_user_name = test_case.test_remote_user_name
+        else:
+            remote_user_name = override_remote_user_name
+        with TestSetup.valid_jwt(test_case, override_jwt_claims={"user_name": remote_user_name},
+                                 override_jwt_issuer=node_name, override_jwks_url=override_jwks_url,
+                                 override_node_host=override_node_host, override_node_port=override_node_port) as token:
+            resp = test_request(app_or_url, "DELETE", "/network/token", json={"token": token}, headers=headers,
+                                cookies=cookies, expect_errors=allow_missing)
+        if resp.status_code == 404 and allow_missing:
+            return resp
+        check_response_basic_info(resp, 200, expected_method="DELETE")
 
     @staticmethod
     def delete_TestUser(test_case,                  # type: AnyMagpieTestItemType

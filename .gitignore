@@ -57,3 +57,7 @@ magpie_delete_users*.txt
 requirements-all.txt
 gunicorn.app.wsgiapp
 error_log.txt
+
+# Secrets
+*.pem
+*.key
