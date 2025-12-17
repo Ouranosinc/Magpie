@@ -10,8 +10,10 @@ Changes
 ------------------------------------------------------------------------------------
 
 * Add Python 3.13 to CI and project setup.
-* Update docker with `python:3.13.11-alpine3.23`.
-* Ignore pylint `not-an-iterable` error in ``docs/conf.py``
+* Update docker with ``python:3.13.11-alpine3.23``.
+* Update docker adapter to `birdhouse/twitcher:v0.11.0 <https://github.com/bird-house/twitcher/releases/tag/v0.11.0>`_
+  and corresponding developement requirement ``pyramid-twitcher>=0.11.0`` for security updates and Python 3.13 support.
+* Ignore pylint ``not-an-iterable`` error in ``docs/conf.py``.
 
 .. _changes_4.2.0:
 
