@@ -17,7 +17,7 @@ paste
 pastedeploy
 pluggy
 psycopg2-binary>=2.7.1
-pyramid>=1.10.2,<2
+pyramid>=1.10.2,<3
 pyramid_beaker==0.8
 pyramid_chameleon>=0.3
 pyramid_mako>=1.0.2
@@ -42,6 +42,6 @@ urllib3>=2.6.0; python_version >= "3.9"
 wheel>=0.38
 webob
 ziggurat_foundations==0.9.1
-zope.interface>=4.7.2,<5
-zope.sqlalchemy==1.6
+zope.interface>=4.7.2
+zope.sqlalchemy
 zipp>=3.19.1
