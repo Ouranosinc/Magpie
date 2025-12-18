@@ -25,8 +25,7 @@ pyramid_retry==2.1.1
 pyramid_tm>=2.2.1
 python-dotenv
 pyyaml>=5.1
-requests>=2.32.4; python_version < "3.9"  # pyup: ignore  # noqa
-requests>=2.32.5; python_version >= "3.9"
+requests>=2.32.5
 requests_file
 simplejson
 six>=1.12.0
@@ -37,8 +36,7 @@ sqlalchemy-utils==0.39.0  # pyup: ignore
 threddsclient>=0.4.2
 transaction
 typing_extensions
-urllib3>=2.2.2; python_version < "3.9"  # pyup: ignore  # noqa
-urllib3>=2.6.0; python_version >= "3.9"
+urllib3>=2.6.0
 wheel>=0.38
 webob
 ziggurat_foundations==0.9.1
