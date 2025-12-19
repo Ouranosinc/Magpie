@@ -52,13 +52,13 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Python 3.11+ recommended
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/4.2.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/4.3.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/Magpie/compare/4.2.0...master
+    :target: https://github.com/Ouranosinc/Magpie/compare/4.3.0...master
 
-.. |version| image:: https://img.shields.io/badge/tag-4.2.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-4.3.0-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/Magpie/tree/4.2.0
+    :target: https://github.com/Ouranosinc/Magpie/tree/4.3.0
 
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/Magpie/shield.svg
     :alt: Dependencies Status
@@ -68,9 +68,9 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     :alt: Github Actions CI Build Status (master branch)
     :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3Amaster
 
-.. |github_tagged| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/Magpie/tests.yml?label=4.2.0&branch=4.2.0
+.. |github_tagged| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/Magpie/tests.yml?label=4.3.0&branch=4.3.0
     :alt: Github Actions CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A4.2.0
+    :target: https://github.com/Ouranosinc/Magpie/actions?query=workflow%3ATests+branch%3A4.3.0
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-magpie
     :alt: Readthedocs Build Status (master branch)
@@ -98,7 +98,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
 
 .. |docker_semver_tag| image:: https://img.shields.io/docker/v/pavics/magpie?label=version&sort=semver
     :alt: Docker Version Tag
-    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=4.2.0
+    :target: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=4.3.0
 
 .. end-badges
 
@@ -142,8 +142,8 @@ Following most recent variants are available:
     * - Magpie
       - Twitcher |br|
         (with integrated ``MagpieAdapter``)
-    * - ``pavics/magpie:4.2.0``
-      - ``pavics/twitcher:magpie-4.2.0``
+    * - ``pavics/magpie:4.3.0``
+      - ``pavics/twitcher:magpie-4.3.0``
     * - ``pavics/magpie:latest``
       - ``pavics/twitcher:magpie-latest``
 
