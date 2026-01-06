@@ -116,3 +116,26 @@ jobs:
           files: ./reports/coverage.xml
           fail_ci_if_error: true
           verbose: true
+
+  deploy_pypi:
+    needs: tests
+    if: ${{ success() && (contains(github.ref, 'refs/tags') || github.ref == 'refs/heads/master') }}
+    runs-on: ubuntu-latest
+    env:
+      # override make command to install directly in active python
+      CONDA_COMMAND: ""
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.7"
+      - name: Build Distribution Package
+        run: make install-dev dist
+      - name: Push Package to PyPi
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}

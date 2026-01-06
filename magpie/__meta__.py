@@ -5,6 +5,7 @@ General meta information on the magpie package.
 __version__ = "4.3.0"
 __title__ = "Magpie"
 __package__ = "magpie"  # pylint: disable=W0622
+__distribution__ = "pavics-magpie"  # name for pypi
 __author__ = "Francois-Xavier Derue, Francis Charette-Migneault"
 __maintainer__ = "Francis Charette-Migneault"
 __email__ = "francis.charette-migneault@crim.ca"

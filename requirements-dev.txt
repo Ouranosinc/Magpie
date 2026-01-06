@@ -18,5 +18,6 @@ pyramid-twitcher>=0.11.0
 pytest
 safety
 tox>=3.0
+twine
 webtest
 waitress
