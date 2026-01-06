@@ -206,18 +206,19 @@ setup(
     license=__meta__.__license__,
     keywords=__meta__.__title__ + ", Authentication, AuthN, Birdhouse",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 6 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Topic :: Internet :: WWW/HTTP",
+        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
-    python_requires=">=3.8, <4",
+    python_requires=">=3.10, <4",
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],

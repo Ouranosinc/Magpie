@@ -14,7 +14,7 @@ mock>4
 pylint>=2.11,!=2.12,!=2.15
 pylint-quotes
 # bird-house/twticher, must match version in Dockerfile.adapater
-pyramid-twitcher>=0.10.0
+pyramid-twitcher>=0.11.0
 pytest
 pytest-httpserver==1.0.10
 safety

@@ -29,6 +29,7 @@ share
 
 # PyCharm
 .idea
+.run
 
 # vscode
 .vscode

@@ -18,11 +18,8 @@ paste
 pastedeploy
 pluggy
 psycopg2-binary>=2.7.1
-PyJWT[crypto]==2.8.0; python_version >= "3.8"
-PyJWT[crypto]==2.7.0; python_version == "3.7" # pyup: ignore
-PyJWT[crypto]==2.4.0; python_version == "3.6" # pyup: ignore
-PyJWT[crypto]==2.0.0a1; python_version < "3.6" # pyup: ignore
-pyramid>=1.10.2,<2
+PyJWT[crypto]==2.8.0
+pyramid>=1.10.2,<3
 pyramid_beaker==0.8
 pyramid_chameleon>=0.3
 pyramid_mako>=1.0.2
@@ -30,7 +27,7 @@ pyramid_retry==2.1.1
 pyramid_tm>=2.2.1
 python-dotenv
 pyyaml>=5.1
-requests>=2.32.3
+requests>=2.32.5
 requests_file
 simplejson
 six>=1.12.0
@@ -41,11 +38,10 @@ sqlalchemy-utils==0.39.0  # pyup: ignore
 threddsclient>=0.4.2
 transaction
 typing_extensions
-urllib3>=2.2.2; python_version < "3.9"  # pyup: ignore  # noqa
-urllib3>=2.5.0; python_version >= "3.9"
+urllib3>=2.6.0
 wheel>=0.38
 webob
 ziggurat_foundations==0.9.1
-zope.interface>=4.7.2,<5
-zope.sqlalchemy==1.6
+zope.interface>=4.7.2
+zope.sqlalchemy
 zipp>=3.19.1

@@ -9,10 +9,33 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Ignore pylint `not-an-iterable` error in ``docs/conf.py``
-* Introduce "Network Mode" which allows other Magpie instances to act as external authentication providers using access
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Introduce "*Network Mode*" which allows other Magpie instances to act as external authentication providers using access
   tokens. This allows users registered across multiple Magpie instances in a network to more easily gain access to the
   resources within the network, without requiring the duplication of user credentials across the network.
+
+.. _changes_4.3.0:
+
+`4.3.0 <https://github.com/Ouranosinc/Magpie/tree/4.3.0>`_ (2025-12-18)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Add Python 3.13 to CI and project setup.
+* Drop Python 3.8 and 3.9.
+* Update docker with ``python:3.13.11-alpine3.23``.
+* Update docker adapter to `birdhouse/twitcher:v0.11.0 <https://github.com/bird-house/twitcher/releases/tag/v0.11.0>`_
+  and corresponding developement requirement ``pyramid-twitcher>=0.11.0`` for security updates and Python 3.13 support.
+* Update `requests` and `urllib` for security fixes.
+* Unpin ``pyramid<2`` and its ``zope.sqlalchemy``/``zope.interface`` dependencies to support Python 3.13.
+
+Bug Fixes
+~~~~~~~~~
+
+* Ignore pylint ``not-an-iterable`` error in ``docs/conf.py``.
 
 .. _changes_4.2.0:
 
