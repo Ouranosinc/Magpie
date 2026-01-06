@@ -40,12 +40,12 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - *Recommended*
       - Prefered minimal version to use for latest security updates and performance enhancements.
 
-.. |py_ver_legacy| image:: https://img.shields.io/badge/python%20%28legacy%29-3.5%20%2D%2D%203.7-orange.svg
+.. |py_ver_legacy| image:: https://img.shields.io/badge/python%20%28legacy%29-3.5%20%2D%2D%203.9-orange.svg
     :alt: Python 3.5+ supported (legacy)
     :target: https://www.python.org/getit
 
-.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28supported%29-3.8%2B-yellow.svg
-    :alt: Python 3.8+ supported
+.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28supported%29-3.10%2B-yellow.svg
+    :alt: Python 3.10+ supported
     :target: https://www.python.org/getit
 
 .. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.11%2B-blue.svg
