@@ -85,6 +85,7 @@ class TestCase_MagpieUI_UsersAuth_Local(ti.Interface_MagpieUI_UsersAuth, unittes
                                           raise_missing=False, raise_not_set=False)
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_ui-group-local",
                                            raise_missing=False, raise_not_set=False)
+        cls.setup_network_attrs()
 
 
 @runner.MAGPIE_TEST_UI
@@ -125,6 +126,7 @@ class TestCase_MagpieUI_AdminAuth_Local(ti.Interface_MagpieUI_AdminAuth, unittes
         cls.test_service_parent_resource_name = "magpie-unittest-ui-tree-parent"
         cls.test_service_child_resource_type = Route.resource_type_name
         cls.test_service_child_resource_name = "magpie-unittest-ui-tree-child"
+        cls.setup_network_attrs()
 
     @runner.MAGPIE_TEST_STATUS
     @runner.MAGPIE_TEST_FUNCTIONAL
@@ -826,6 +828,7 @@ class TestCase_MagpieUI_UsersAuth_Remote(ti.Interface_MagpieUI_UsersAuth, unitte
                                           raise_missing=False, raise_not_set=False)
         cls.test_group_name = get_constant("MAGPIE_TEST_GROUP", default_value="unittest-user-auth_ui-group-remote",
                                            raise_missing=False, raise_not_set=False)
+        cls.setup_network_attrs()
 
 
 @runner.MAGPIE_TEST_UI
@@ -855,3 +858,4 @@ class TestCase_MagpieUI_AdminAuth_Remote(ti.Interface_MagpieUI_AdminAuth, unitte
                                            raise_missing=False, raise_not_set=False)
         cls.test_service_type = ServiceAPI.service_type
         cls.test_service_name = "magpie-unittest-ui-admin-remote-service"
+        cls.setup_network_attrs()

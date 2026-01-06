@@ -31,7 +31,7 @@ from magpie.api.webhooks import (
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, Scope
 from magpie.services import ServiceAPI
-from magpie.utils import CONTENT_TYPE_HTML
+from magpie.utils import CONTENT_TYPE_HTML, get_twitcher_protected_service_url
 from tests import interfaces as ti
 from tests import runner, utils
 
@@ -548,7 +548,7 @@ class TestWebhooks(ti.AdminTestCase):
                 else:
                     expected["data"]["group_name"] = self.test_group_name
                     expected["data"]["group_id"] = grp_id
-                url = "https://localhost/twitcher/ows/proxy/{}".format(self.test_service_name)
+                url = get_twitcher_protected_service_url(self.test_service_name)
                 if r_id == res_id:
                     expected["data"]["resource_name"] = self.test_resource_name
                     expected["data"]["resource_type"] = self.test_resource_type

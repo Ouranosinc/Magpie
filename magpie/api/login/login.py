@@ -34,7 +34,7 @@ from magpie.api import requests as ar
 from magpie.api import schemas as s
 from magpie.api.management.user.user_formats import format_user
 from magpie.api.management.user.user_utils import create_user
-from magpie.constants import get_constant
+from magpie.constants import get_constant, network_enabled, protected_user_email_regex, protected_user_name_regex
 from magpie.security import authomatic_setup, get_providers
 from magpie.utils import (
     CONTENT_TYPE_JSON,
@@ -46,15 +46,15 @@ from magpie.utils import (
 )
 
 if TYPE_CHECKING:
-    from magpie.typedefs import Session, Str
+    from magpie.typedefs import AnySettingsContainer, Session, Str
 
 LOGGER = get_logger(__name__)
-
 
 # dictionaries of {'provider_id': 'provider_display_name'}
 MAGPIE_DEFAULT_PROVIDER = get_constant("MAGPIE_DEFAULT_PROVIDER")
 MAGPIE_INTERNAL_PROVIDERS = {MAGPIE_DEFAULT_PROVIDER: MAGPIE_DEFAULT_PROVIDER.capitalize()}
 MAGPIE_EXTERNAL_PROVIDERS = get_providers()
+
 MAGPIE_PROVIDER_KEYS = frozenset(set(MAGPIE_INTERNAL_PROVIDERS) | set(MAGPIE_EXTERNAL_PROVIDERS))
 
 
@@ -77,14 +77,17 @@ def process_sign_in_external(request, username, provider):
     return HTTPTemporaryRedirect(location=external_login_route, headers=request.response.headers)
 
 
-def verify_provider(provider_name):
-    # type: (Str) -> None
+def verify_provider(provider_name, settings_container=None):
+    # type: (Str, AnySettingsContainer) -> None
     """
     Verifies that the specified name is a valid external provider against the login configuration providers.
 
     :raises HTTPNotFound: if provider name is not one of known providers.
     """
-    ax.verify_param(provider_name, param_name="provider_name", param_compare=list(MAGPIE_PROVIDER_KEYS), is_in=True,
+    provider_keys = list(MAGPIE_PROVIDER_KEYS)
+    if network_enabled(settings_container):
+        provider_keys.append(get_constant("MAGPIE_NETWORK_PROVIDER", settings_container))
+    ax.verify_param(provider_name, param_name="provider_name", param_compare=provider_keys, is_in=True,
                     http_error=HTTPNotFound, msg_on_fail=s.ProviderSignin_GET_NotFoundResponseSchema.description)
 
 
@@ -130,12 +133,15 @@ def sign_in_view(request):
     # request handler. Catch that specific exception and return it to bypass the EXCVIEW tween that result in that
     # automatic convert to return 403 directly.
     try:
-        anonymous = get_constant("MAGPIE_ANONYMOUS_USER", request)
-        ax.verify_param(user_name, not_equal=True, param_compare=anonymous, param_name="user_name",
+        if pattern == ax.EMAIL_REGEX:
+            anonymous_regex = protected_user_email_regex(include_admin=False, settings_container=request)
+        else:
+            anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=request)
+        ax.verify_param(user_name, not_matches=True, param_compare=anonymous_regex, param_name="user_name",
                         http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
     except HTTPForbidden as http_error:
         return http_error
-    verify_provider(provider_name)
+    verify_provider(provider_name, request)
 
     if provider_name in MAGPIE_INTERNAL_PROVIDERS:
         # password can be None for external login, validate only here as it is required for internal login
@@ -239,17 +245,12 @@ def new_user_external(external_user_name, external_id, email, provider_name, db_
     return user
 
 
-def login_success_external(request, external_user_name, external_id, email, provider_name):
-    # type: (Request, Str, Str, Str, Str) -> HTTPException
+def login_success_external(request, user):
+    # type: (Request, models.User) -> HTTPException
     """
     Generates the login response in case of successful external provider identification.
     """
-    # find possibly already registered user by external_id/provider
-    user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name, request.db)
-    if user is None:
-        # create new user with an External Identity
-        user = new_user_external(external_user_name=external_user_name, external_id=external_id,
-                                 email=email, provider_name=provider_name, db_session=request.db)
+
     # set a header to remember user (set-cookie)
     headers = remember(request, user.id)
 
@@ -271,10 +272,42 @@ def login_success_external(request, external_user_name, external_id, email, prov
                          http_kwargs={"location": homepage_route, "headers": headers})
 
 
+def network_login(request):
+    # type: (Request) -> HTTPException
+    """
+    Sign in a user authenticating using a `Magpie` network access token.
+    """
+    if "Authorization" in request.headers:
+        token_list = request.headers.get("Authorization").split(maxsplit=1)
+        if len(token_list) != 2:
+            return ax.raise_http(http_error=HTTPUnauthorized,
+                                 detail=s.Signin_POST_UnauthorizedResponseSchema.description, nothrow=True)
+        token_type, token = token_list
+        if token_type != "Bearer":  # nosec: B105
+            return ax.raise_http(http_error=HTTPBadRequest,
+                                 detail=s.ProviderSignin_GET_BadRequestResponseSchema.description, nothrow=True)
+        network_token = models.NetworkToken.by_token(token, db_session=request.db)
+        if network_token is None or network_token.expired():
+            return ax.raise_http(http_error=HTTPUnauthorized,
+                                 detail=s.Signin_POST_UnauthorizedResponseSchema.description, nothrow=True)
+        authenticated_user = network_token.network_remote_user.user
+        if authenticated_user is None:
+            authenticated_user = network_token.network_remote_user.network_node.anonymous_user(request.db)
+        # We should never create a token for protected users but just in case
+        # Note that we *should* create tokens for anonymous network users
+        anonymous_regex = protected_user_name_regex(include_admin=False, include_network=False,
+                                                    settings_container=request)
+        ax.verify_param(authenticated_user.user_name, not_matches=True, param_compare=anonymous_regex,
+                        http_error=HTTPForbidden, msg_on_fail=s.Signin_POST_ForbiddenResponseSchema.description)
+        return login_success_external(request, authenticated_user)
+    ax.raise_http(http_error=HTTPBadRequest,
+                  detail=s.ProviderSignin_GET_BadRequestResponseSchema.description)
+
+
 @s.ProviderSigninAPI.get(schema=s.ProviderSignin_GET_RequestSchema, tags=[s.SessionTag],
                          response_schemas=s.ProviderSignin_GET_responses)
 @view_config(route_name=s.ProviderSigninAPI.name, permission=NO_PERMISSION_REQUIRED)
-def authomatic_login_view(request):
+def external_login_view(request):
     """
     Signs in a user session using an external provider.
     """
@@ -282,8 +315,9 @@ def authomatic_login_view(request):
     response = Response()
     verify_provider(provider_name)
     try:
+        if provider_name == get_constant("MAGPIE_NETWORK_PROVIDER", request):
+            return network_login(request)
         authomatic_handler = authomatic_setup(request)
-
         # if we directly have the Authorization header, bypass authomatic login and retrieve 'userinfo' to signin
         if "Authorization" in request.headers and "authomatic" not in request.cookies:
             provider_config = authomatic_handler.config.get(provider_name, {})
@@ -292,7 +326,8 @@ def authomatic_login_view(request):
             # provide the token user data, let the external provider update it on login afterwards
             token_type, access_token = request.headers.get("Authorization").split()
             data = {"access_token": access_token, "token_type": token_type}
-            cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type, provider=provider)
+            cred = Credentials(authomatic_handler.config, token=access_token, token_type=token_type,
+                               provider=provider)
             provider.credentials = cred
             result = LoginResult(provider)
             # pylint: disable=W0212
@@ -329,11 +364,16 @@ def authomatic_login_view(request):
                         ax.raise_http(http_error=HTTPUnauthorized,
                                       detail=s.ProviderSignin_GET_UnauthorizedResponseSchema.description)
                 # create/retrieve the user using found details from login provider
-                return login_success_external(request,
-                                              external_id=result.user.username or result.user.id,
-                                              email=result.user.email,
-                                              provider_name=result.provider.name,
-                                              external_user_name=result.user.name)
+                # find possibly already registered user by external_id/provider
+                external_id = result.user.username or result.user.id
+                user = ExternalIdentityService.user_by_external_id_and_provider(external_id, provider_name,
+                                                                                request.db)
+                if user is None:
+                    # create new user with an External Identity
+                    user = new_user_external(external_user_name=result.user.name, external_id=external_id,
+                                             email=result.user.email, provider_name=result.provider.name,
+                                             db_session=request.db)
+                return login_success_external(request, user)
     except Exception as exc:
         exc_msg = "Unhandled error during external provider '{}' login. [{!s}]".format(provider_name, exc)
         LOGGER.exception(exc_msg, exc_info=True)

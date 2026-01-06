@@ -51,6 +51,7 @@ MAGPIE_TEST_PERFORMANCE = RunOptionDecorator("MAGPIE_TEST_PERFORMANCE", "perform
 MAGPIE_TEST_AUTH_ADMIN = RunOptionDecorator("MAGPIE_TEST_AUTH_ADMIN", "operations that require admin-level access")
 MAGPIE_TEST_AUTH_USERS = RunOptionDecorator("MAGPIE_TEST_AUTH_USERS", "operations that require user-level access")
 MAGPIE_TEST_AUTH_PUBLIC = RunOptionDecorator("MAGPIE_TEST_AUTH_PUBLIC", "operations that are publicly accessible")
+MAGPIE_TEST_NETWORK = RunOptionDecorator("MAGPIE_TEST_NETWORK", "operations that are enabled in network mode")
 
 
 def test_suite():

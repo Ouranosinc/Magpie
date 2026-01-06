@@ -6,7 +6,7 @@ from pyramid.settings import asbool
 from pyramid.view import view_config
 
 from magpie.api import schemas
-from magpie.constants import get_constant
+from magpie.constants import get_constant, network_enabled
 from magpie.models import UserGroupStatus
 from magpie.ui.utils import BaseViews, check_response, handle_errors, request_api
 from magpie.utils import get_json, get_logger
@@ -89,6 +89,19 @@ class UserViews(BaseViews):
                                                                default_value=False, print_missing=True,
                                                                raise_missing=False, raise_not_set=False))
         user_info["user_with_error"] = schemas.UserStatuses.get(user_info["status"]) != schemas.UserStatuses.OK
+        # add network information
+        if network_enabled(self.request):
+            node_resp = request_api(self.request, schemas.NetworkNodesAPI.path, "GET")
+            check_response(node_resp)
+            nodes = {node["name"]: None for node in get_json(node_resp)["nodes"]}
+            user_resp = request_api(self.request, schemas.NetworkRemoteUsersCurrentAPI.path, "GET")
+            check_response(user_resp)
+            for info in get_json(user_resp)["remote_users"]:
+                nodes[info["node_name"]] = info["remote_user_name"]
+            user_info["network_enabled"] = True
+            user_info["network_nodes"] = list(nodes.items())
+            user_info["network_routes"] = {"create": schemas.NetworkNodeLinkAPI.name,
+                                           "delete": schemas.NetworkRemoteUserAPI.name}
         # reset error messages/flags
         user_info["error_message"] = ""
         for field in ["password", "user_email", "user_name"]:

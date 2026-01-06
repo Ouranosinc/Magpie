@@ -22,7 +22,7 @@ from magpie import register
 from magpie.api import schemas
 from magpie.cli.sync_resources import OUT_OF_SYNC, fetch_single_service, get_last_sync, merge_local_and_remote_resources
 from magpie.cli.sync_services import SYNC_SERVICES_TYPES
-from magpie.constants import get_constant
+from magpie.constants import get_constant, network_enabled
 # FIXME: remove (REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT), implement getters via API
 from magpie.models import REMOTE_RESOURCE_TREE_SERVICE, RESOURCE_TYPE_DICT, UserGroupStatus, UserStatuses
 from magpie.permissions import Permission, PermissionSet
@@ -160,6 +160,17 @@ class ManagementViews(AdminRequests, BaseViews):
         for field in param_fields:
             user_info["invalid_{}".format(field)] = False
             user_info["reason_{}".format(field)] = ""
+
+        # add network information
+        if network_enabled(self.request):
+            request_uri = "{}?user_name={}".format(schemas.NetworkRemoteUsersAPI.path, user_name)
+            resp = request_api(self.request, request_uri, "GET")
+            check_response(resp)
+            user_info["network_enabled"] = True
+            user_info["network_nodes"] = [(n["node_name"], n["remote_user_name"]) for n in
+                                          get_json(resp)["remote_users"]]
+            user_info["network_routes"] = {"create": schemas.NetworkRemoteUsersAPI.name,
+                                           "delete": schemas.NetworkRemoteUserAPI.name}
 
         if self.request.method == "POST":
             res_id = self.request.POST.get("resource_id")

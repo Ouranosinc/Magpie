@@ -16,6 +16,7 @@ pylint-quotes
 # bird-house/twticher, must match version in Dockerfile.adapater
 pyramid-twitcher>=0.11.0
 pytest
+pytest-httpserver==1.0.10
 safety
 tox>=3.0
 webtest

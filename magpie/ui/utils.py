@@ -1,4 +1,5 @@
 import json
+import re
 from secrets import compare_digest  # noqa 'python2-secrets'
 from typing import TYPE_CHECKING
 
@@ -20,7 +21,7 @@ from magpie import __meta__
 from magpie.api import schemas
 from magpie.api.generic import get_exception_info, get_request_info
 from magpie.api.requests import get_logged_user
-from magpie.constants import get_constant
+from magpie.constants import get_constant, network_enabled, protected_group_name_regex, protected_user_name_regex
 from magpie.models import UserGroupStatus
 from magpie.security import mask_credentials
 from magpie.utils import CONTENT_TYPE_JSON, get_header, get_json, get_logger, get_magpie_url
@@ -175,39 +176,61 @@ def handle_errors(func):
     return wrap
 
 
+class _ReContainsWrapper(object):
+    """
+    Class that wraps the re.search function with the __contains__ method.
+
+    Used in BaseViews so that code in mako templates can continue to use syntax like:
+
+    .. code-block:: python
+
+        user_name in MAGPIE_FIXED_USERS
+    """
+
+    def __init__(self, regex="x^"):  # Note that the default "x^" matches nothing
+        self.regex = regex
+
+    def __contains__(self, item):
+        # type: (Any) -> bool
+        try:
+            return bool(re.search(self.regex, item))
+        except TypeError:
+            return False
+
+
 @view_defaults(decorator=handle_errors)
 class BaseViews(object):
     """
     Base methods for Magpie UI pages.
     """
-    MAGPIE_FIXED_GROUP_MEMBERSHIPS = []
+    MAGPIE_FIXED_GROUP_MEMBERSHIPS = _ReContainsWrapper()
     """
     Special :term:`Group` memberships that cannot be edited.
     """
 
-    MAGPIE_FIXED_GROUP_EDITS = []
+    MAGPIE_FIXED_GROUP_EDITS = _ReContainsWrapper()
     """
     Special :term:`Group` details that cannot be edited.
     """
 
-    MAGPIE_FIXED_USERS = []
+    MAGPIE_FIXED_USERS = _ReContainsWrapper()
     """
     Special :term:`User` details that cannot be edited.
     """
 
-    MAGPIE_FIXED_USERS_REFS = []
+    MAGPIE_FIXED_USERS_REFS = _ReContainsWrapper()
     """
     Special :term:`User` that cannot have any relationship edited.
 
     This includes both :term:`Group` memberships and :term:`Permission` references.
     """
 
-    MAGPIE_USER_PWD_LOCKED = []
+    MAGPIE_USER_PWD_LOCKED = _ReContainsWrapper()
     """
     Special :term:`User` that *could* self-edit themselves, but is disabled since conflicting with other policies.
     """
 
-    MAGPIE_USER_PWD_DISABLED = []
+    MAGPIE_USER_PWD_DISABLED = _ReContainsWrapper()
     """
     Special :term:`User` where password cannot be edited (managed by `Magpie` configuration settings).
     """
@@ -223,22 +246,29 @@ class BaseViews(object):
         self.ui_theme = get_constant("MAGPIE_UI_THEME", self.request)
         self.logged_user = get_logged_user(self.request)
 
-        anonym_grp = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=self.request)
-        admin_grp = get_constant("MAGPIE_ADMIN_GROUP", settings_container=self.request)
-        self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = [anonym_grp]
-        self.__class__.MAGPIE_FIXED_GROUP_EDITS = [anonym_grp, admin_grp]
-        # special users that cannot be deleted
-        anonym_usr = get_constant("MAGPIE_ANONYMOUS_USER", self.request)
-        admin_usr = get_constant("MAGPIE_ADMIN_USER", self.request)
-        self.__class__.MAGPIE_FIXED_USERS_REFS = [anonym_usr]
-        self.__class__.MAGPIE_FIXED_USERS = [admin_usr, anonym_usr]
-        self.__class__.MAGPIE_USER_PWD_LOCKED = [admin_usr]
-        self.__class__.MAGPIE_USER_PWD_DISABLED = [anonym_usr, admin_usr]
+        self.__class__.MAGPIE_FIXED_GROUP_MEMBERSHIPS = _ReContainsWrapper(
+            protected_group_name_regex(include_admin=False, include_network=False, settings_container=self.request)
+        )
+        self.__class__.MAGPIE_FIXED_GROUP_EDITS = _ReContainsWrapper(
+            protected_group_name_regex(settings_container=self.request)
+        )
+        self.__class__.MAGPIE_FIXED_USERS_REFS = _ReContainsWrapper(
+            protected_user_name_regex(include_admin=False, settings_container=self.request)
+        )
+        self.__class__.MAGPIE_FIXED_USERS = _ReContainsWrapper(
+            protected_user_name_regex(settings_container=self.request)
+        )
+        self.__class__.MAGPIE_USER_PWD_LOCKED = _ReContainsWrapper(
+            protected_user_name_regex(include_anonymous=False, include_network=False, settings_container=self.request)
+        )
+        self.__class__.MAGPIE_USER_PWD_DISABLED = _ReContainsWrapper(
+            protected_user_name_regex(settings_container=self.request)
+        )
         self.__class__.MAGPIE_USER_REGISTRATION_ENABLED = asbool(
             get_constant("MAGPIE_USER_REGISTRATION_ENABLED", self.request,
                          default_value=False, print_missing=True, raise_missing=False, raise_not_set=False)
         )
-        self.__class__.MAGPIE_ANONYMOUS_GROUP = anonym_grp
+        self.__class__.MAGPIE_ANONYMOUS_GROUP = get_constant("MAGPIE_ANONYMOUS_GROUP", settings_container=self.request)
 
     def add_template_data(self, data=None):
         # type: (Optional[Dict[Str, Any]]) -> Dict[Str, Any]
@@ -562,8 +592,11 @@ class AdminRequests(BaseViews):
         if (user_email or "").lower() in [usr["email"].lower() for usr in user_details]:
             data["invalid_user_email"] = True
             data["reason_user_email"] = "Conflict"
-        if user_email == "":
-            data["invalid_user_email"] = True
+        if network_enabled(self.request):
+            anonymous_regex = protected_user_name_regex(include_admin=False, settings_container=self.request)
+            if re.match(anonymous_regex, user_name):
+                data["invalid_user_name"] = True
+                data["reason_user_name"] = "Conflict"
         if len(user_name) > get_constant("MAGPIE_USER_NAME_MAX_LENGTH", self.request):
             data["invalid_user_name"] = True
             data["reason_user_name"] = "Too Long"

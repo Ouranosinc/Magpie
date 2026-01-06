@@ -62,11 +62,18 @@ jobs:
             python-version: "3.10"
             allow-failure: false
             test-case: check
-          # remote test
+          # remote test (note that network tests are skipped since the remote server won't have network mode enabled)
           - os: ubuntu-latest
             python-version: "3.11"
             allow-failure: true
             test-case: start test-remote
+          # remote network tests using a remote server with network mode enabled
+          - os: ubuntu-latest
+            python-version: "3.12"
+            allow-failure: true
+            test-case: start test-remote-network
+            test-option: >-
+              MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True MAGPIE_NETWORK_ENABLED=on MAGPIE_NETWORK_INSTANCE_NAME=example
           # coverage test
           - os: ubuntu-latest
             python-version: "3.11"
@@ -105,6 +112,9 @@ jobs:
         run: |
           hash -r
           env | sort
+      - name: Create private key for network testing
+        if: ${{ matrix.test-case == 'test-local' }}
+        run: ${{ matrix.test-option }} make create-private-key
       # run '-only' test variations since dependencies are preinstalled, skip some resolution time
       - name: Run Tests
         run: ${{ matrix.test-option }} make stop ${{ matrix.test-case }}-only
