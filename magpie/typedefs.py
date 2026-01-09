@@ -10,7 +10,6 @@ if TYPE_CHECKING:
     from typing import Any, AnyStr, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
     from typing_extensions import Literal, NotRequired, TypeAlias, TypedDict
 
-    import six
     from pyramid.config import Configurator
     from pyramid.httpexceptions import HTTPException
     from pyramid.registry import Registry
@@ -28,16 +27,12 @@ if TYPE_CHECKING:
     from ziggurat_foundations.permissions import PermissionTuple  # noqa
 
     from magpie import models
-    from magpie.api.webhooks import WEBHOOK_TEMPLATE_PARAMS, WebhookAction, WebhookActionNames
-    from magpie.permissions import Permission, PermissionSet
+    from magpie.api.webhooks import WebhookAction, WebhookActionNames
+    from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
 
     # pylint: disable=W0611,unused-import  # following definitions provided to be employed elsewhere in the code
 
-    if six.PY2:
-        # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
-        Str = Union[AnyStr, unicode]  # noqa: E0602,F405,F821
-    else:
-        Str = str
+    Str = str  # type: TypeAlias
 
     Number = Union[int, float]
     SettingValue = Union[Str, Number, bool, None]
@@ -142,7 +137,26 @@ if TYPE_CHECKING:
     WebhookPayload = Union[JSON, Str]
     # items that are substituted dynamically in the payload during webhook handling (eg: {{user.name}})
     WebhookTemplateParameters = TypedDict("WebhookTemplateParameters", {
-        param: AnyValue for param in WEBHOOK_TEMPLATE_PARAMS
+        # WEBHOOK_TEMPLATE_PARAMS
+        "group.name": NotRequired[str],
+        "group.id": NotRequired[int],
+        "user.name": NotRequired[str],
+        "user.id": NotRequired[int],
+        "user.email": NotRequired[str],
+        "user.status": NotRequired[str],
+        "resource.id": NotRequired[int],
+        "resource.type": NotRequired[str],
+        "resource.name": NotRequired[str],
+        "resource.display_name": NotRequired[str],
+        "service.name": NotRequired[str],
+        "service.type": NotRequired[str],
+        "service.public_url": NotRequired[str],
+        "service.sync_type": NotRequired[str],
+        "permission.name": NotRequired[PermissionType],
+        "permission.access": NotRequired[Access],
+        "permission.scope": NotRequired[Scope],
+        "permission": NotRequired[PermissionDict],
+        "callback_url": Str,
     })
     WebhookConfigItem = TypedDict("WebhookConfigItem", {
         "name": Str,
@@ -166,8 +180,9 @@ if TYPE_CHECKING:
     }, total=False)
     GroupConfigItem = TypedDict("GroupConfigItem", {
         "name": Str,
-        "description": Optional[Str],
-        "discoverable": bool,  # must use 'asbool' since technically a bool-like string from config
+        "description": NotRequired[Str],
+        "discoverable": NotRequired[bool],  # must use 'asbool' since technically a bool-like string from config
+        "terms": NotRequired[Str],
     }, total=False)
     UserConfigItem = TypedDict("UserConfigItem", {
         "username": Str,

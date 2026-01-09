@@ -64,11 +64,24 @@ WEBHOOK_KEYS = WEBHOOK_KEYS_REQUIRED | WEBHOOK_KEYS_OPTIONAL
 # These are *potential* parameters permitted to use the template form in the webhook payload.
 # Each parameter transferred to any given webhook are provided distinctively for each case.
 WEBHOOK_TEMPLATE_PARAMS = [
-    "group.name", "group.id",
-    "user.name", "user.id", "user.email", "user.status",
-    "resource.id", "resource.type", "resource.name", "resource.display_name",
-    "service.name", "service.type", "service.public_url", "service.sync_type",
-    "permission.name", "permission.access", "permission.scope", "permission",
+    "group.name",
+    "group.id",
+    "user.name",
+    "user.id",
+    "user.email",
+    "user.status",
+    "resource.id",
+    "resource.type",
+    "resource.name",
+    "resource.display_name",
+    "service.name",
+    "service.type",
+    "service.public_url",
+    "service.sync_type",
+    "permission.name",
+    "permission.access",
+    "permission.scope",
+    "permission",
     "callback_url"
 ]
 
