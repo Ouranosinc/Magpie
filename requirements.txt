@@ -36,7 +36,7 @@ sqlalchemy-utils==0.39.0  # pyup: ignore
 threddsclient>=0.4.2
 transaction
 typing_extensions
-urllib3>=2.6.0
+urllib3>=2.6.3
 wheel>=0.38
 webob
 ziggurat_foundations==0.9.1
