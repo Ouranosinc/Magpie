@@ -905,7 +905,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         return action_resp
 
     def _apply_session(_usr_name=None, _grp_name=None):
-        # type: (Optional[Str], Optional[Str]) -> AnyResponseType
+        # type: (Optional[Str], Optional[Str]) -> Optional[AnyResponseType]
         """
         Apply operation using db session.
         """
@@ -933,7 +933,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
                                                                     db_session=cookies_or_session)
 
     def _apply_profile(_usr_name=None, _grp_name=None):
-        # type: (Optional[Str], Optional[Str]) -> AnyResponseType
+        # type: (Optional[Str], Optional[Str]) -> Optional[AnyResponseType]
         """
         Creates the user/group profile as required.
         """
