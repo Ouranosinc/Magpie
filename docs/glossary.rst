@@ -33,6 +33,17 @@ Glossary
         .. seealso::
             :ref:`Allowed Permissions <allowed-permissions>` section for details.
 
+    Anonymous
+        Refers to a :term:`User` that has not been authenticated, essentially representing :term:`Public` access.
+        In `Magpie`, this corresponds to the special :term:`User` defined
+        by :py:data:`magpie.constants.MAGPIE_ANONYMOUS_USER` and automatically a member
+        of :py:data:`magpie.constants.MAGPIE_ANONYMOUS_GROUP`.
+        The term *anonymous* refers to the default value of these parameters, and is employed to represent
+        an "unidentified" individual, but the actual name can be customized.
+
+        .. seealso::
+            See the :ref:`Public Access` section for more details.
+
     Application Programming Interface
     API
         Most typically, referring to the use of HTTP requests following an :ref:`OpenAPI` specification,
@@ -129,6 +140,15 @@ Glossary
         fo rather than dispatched to an external user-identity. For the moment, this consists uniquely of
         :py:data:`magpie.constants.MAGPIE_DEFAULT_PROVIDER` constant.
 
+    JSON Web Token
+    JWT
+        Compact representation of a JSON object with claims to be transferred between two parties.
+
+        In the context of `Magpie`, this is notably employed for :ref:`network_mode` :term:`Authentication`.
+
+        .. seealso::
+            See `jwt.io <https://jwt.io/>`_ and :rfc:`7519` for further details.
+
     Logged User
         More specific use-case of :term:`Request User` that simultaneously corresponds to the active request session
         :term:`User` as well at the referenced :term:`Context User` from the path variable. This :term:`User` can be
@@ -139,21 +159,23 @@ Glossary
         :term:`Authentication` mechanism identifies with token extracted from request :term:`Cookies`.
 
     Network Node
-        A reference to an instance of the `Magpie` software within a network of `Magpie` instances. Each `Magpie` instance
-        within the network is registered in the database as a row in the ``network_nodes`` table. Each node is
+        A reference to an instance of the `Magpie` software within a network of `Magpie` instances. Each `Magpie`
+        instance within the network is registered in the database as a row in the ``network_nodes`` table. Each node is
         represented by a name that is unique across all nodes in the network, and a URL that is used to send HTTP
         requests to that specific node.
 
     Network Token
-        A unique random string that can be used to authenticate a :term:`User` as part of the :ref:`network_mode` authentication
-        procedure.
+        A unique random string that can be used to authenticate a :term:`User` as part of the :ref:`network_mode`
+        authentication procedure.
 
     Network User
-        A reference to a :term:`User` that has an account on an another instance of the Magpie software within a network
-        of Magpie instances. A :term:`Network User` is associated with a :term:`User` in the current Magpie instance and
-        inherits all :term:`Permission`s associated with the :term:`User`. Note that the associated :term:`User`
-        can be an anonymous :term:`User`. See the :ref:`network_mode_authentication_flows` section for an example on
-        how these are used.
+        A reference to a :term:`User` that has an account on an another instance of the `Magpie` software within
+        a network of `Magpie` instances. A :term:`Network User` is associated with a :term:`User` in the current
+        `Magpie` instance and inherits all :term:`Permission`s associated with the :term:`User`.
+        Note that the associated :term:`User` can be an  :term:`Anonymous` :term:`User`.
+
+        .. seealso::
+            See the :ref:`network_mode_authentication_flows` section for an example on how these are used.
 
     OpenAPI
     OAS
@@ -217,7 +239,7 @@ Glossary
         to make them available to anyone including even unauthenticated sessions.
 
         .. seealso::
-            :ref:`Public Access` section for implementation details to achieve this result.
+            See the :ref:`Public Access` section for implementation details to achieve this result.
 
     Request User
         Active HTTP request session :term:`User` that can be retrieved by calling ``request.user`` with resolution of
