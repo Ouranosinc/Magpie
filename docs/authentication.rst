@@ -525,7 +525,7 @@ When another `Magpie` instance is registered as a :term:`Network Node`, a few ad
 #. a :term:`Group` used to manage the permissions of all users who authenticate using *any* :term:`Network Node`
     * this :term:`Group`'s name is the :envvar:`MAGPIE_NETWORK_GROUP_NAME`
     * this :term:`Group` will only be created once, when the first :term:`Network Node` is registered
-#. an :term:`Anonymous` user that belongs to the two :term:`Group`s that were just created.
+#. an :term:`Anonymous` user that belongs to the two :term:`Groups <Group>` that were just created.
     * this user name is the :envvar:`MAGPIE_NETWORK_NAME_PREFIX` followed by the :term:`Network Node` name
 
 Here is an example to illustrate this point:
