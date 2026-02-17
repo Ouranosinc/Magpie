@@ -7,6 +7,12 @@ on:
   - release
   - workflow_dispatch
 
+# cancel the current workflow if another commit was pushed on the same PR or reference
+# uses the GitHub workflow name to avoid collision with other workflows running on the same PR/reference
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # see: https://github.com/fkirc/skip-duplicate-actions
   skip_duplicate:
@@ -19,9 +25,8 @@ jobs:
         uses: fkirc/skip-duplicate-actions@master
         with:
           concurrent_skipping: "same_content_newer"
-          skip_after_successful_duplicate: "true"
-          cancel_others: "true"
-          do_not_skip: '["workflow_dispatch", "schedule", "release", "pull_request"]'
+          skip_after_successful_duplicate: "false"
+          do_not_skip: '["workflow_dispatch", "schedule", "release"]'
 
   # see: https://github.com/actions/setup-python
   tests:
