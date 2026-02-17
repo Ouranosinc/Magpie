@@ -17,9 +17,8 @@ formats:
 python:
   install:
     - requirements: requirements-sys.txt
+    - requirements: requirements.txt    # required for OpenAPI generation
     - requirements: requirements-doc.txt
-    # required for OpenAPI generation
-    - requirements: requirements.txt
 #    - method: pip
 #      path: .
 #      extra_requirements:
