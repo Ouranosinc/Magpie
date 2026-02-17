@@ -4,6 +4,8 @@ name: Tests
 on:
   - pull_request
   - push
+  - release
+  - workflow_dispatch
 
 jobs:
   # see: https://github.com/fkirc/skip-duplicate-actions
@@ -18,7 +20,8 @@ jobs:
         with:
           concurrent_skipping: "same_content_newer"
           skip_after_successful_duplicate: "true"
-          do_not_skip: '["workflow_dispatch", "schedule", "release"]'
+          cancel_others: "true"
+          do_not_skip: '["workflow_dispatch", "schedule", "release", "pull_request"]'
 
   # see: https://github.com/actions/setup-python
   tests:
