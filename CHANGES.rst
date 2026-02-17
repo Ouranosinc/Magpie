@@ -13,6 +13,7 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
 * Remove ``wheel`` from dependencies.
+* Pin ``setuptools<82`` for ``pkg_resources`` required by ``pyramid``.
 * Pin ``cryptography>=46.0.5`` for security fix.
 
 .. _changes_5.0.0:
