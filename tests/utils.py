@@ -235,6 +235,7 @@ class TestVersion(LooseVersion):
         even new features above the last tagged version.
     """
     __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
+    _version = None
 
     def __init__(self, vstring):
         # type: (AnyTestVersion) -> None
@@ -247,6 +248,7 @@ class TestVersion(LooseVersion):
             self.version = vstring  # noqa
             return
         super(TestVersion, self).__init__(vstring)
+        self._version = super(TestVersion, self)._version
 
     def _cmp(self, other):
         # type: (Any) -> int

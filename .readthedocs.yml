@@ -3,7 +3,7 @@ version: 2
 build:
   os: ubuntu-22.04
   tools:
-    python: "3.10"
+    python: "3.12"
 sphinx:
   configuration: docs/conf.py
 # note:
@@ -17,9 +17,8 @@ formats:
 python:
   install:
     - requirements: requirements-sys.txt
+    - requirements: requirements.txt    # required for OpenAPI generation
     - requirements: requirements-doc.txt
-    # required for OpenAPI generation
-    - requirements: requirements.txt
 #    - method: pip
 #      path: .
 #      extra_requirements:
