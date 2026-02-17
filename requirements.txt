@@ -7,6 +7,7 @@ beaker @ https://github.com/crim-ca/beaker/archive/0ac88bcd8cca063a571fc385ffbe9
 colander
 cornice
 cornice_swagger>=0.7.0
+cryptography>=46.0.5
 dicttoxml
 gunicorn>=22
 humanize
