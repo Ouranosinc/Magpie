@@ -3,7 +3,6 @@
 # we actually need to install all requirements during docs build because of OpenAPI generation
 # (see 'docs/conf.py')
 -r requirements.txt
-astroid>=4.1
 pycodestyle>=2.6.0,<3
 sphinx-autoapi>=3.7.0
 sphinx-paramlinks>=0.4.1
