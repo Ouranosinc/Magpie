@@ -12,7 +12,7 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
-* Pin `cryptography>=46.0.5` for security fix.
+* Pin ``cryptography>=46.0.5`` for security fix.
 
 .. _changes_5.0.0:
 
