@@ -9,7 +9,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
 * Remove ``wheel`` from dependencies.
+* Pin ``cryptography>=46.0.5`` for security fix.
 
 .. _changes_5.0.0:
 
