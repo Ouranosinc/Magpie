@@ -9,7 +9,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+* Remove ``wheel`` from dependencies.
 
 .. _changes_5.0.0:
 
