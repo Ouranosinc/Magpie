@@ -27,9 +27,10 @@ class VersionInterface(object):
 
 
 try:
+    from typing import NamedTuple, Tuple
+
     from packaging.version import InvalidVersion  # pylint: disable=unused-import
     from packaging.version import Version as BaseVersion  # pylint: disable=unused-import
-    from typing import NamedTuple, Tuple
 
     class TupleVersion(NamedTuple):
         epoch: int
