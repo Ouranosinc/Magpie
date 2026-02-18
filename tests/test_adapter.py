@@ -16,6 +16,7 @@ from requests.structures import CaseInsensitiveDict
 from six.moves.urllib.parse import urlparse
 
 from magpie import __meta__
+from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden
 from magpie.constants import get_constant
 from magpie.models import Route
 from magpie.permissions import Access, Permission, PermissionSet, Scope
@@ -25,9 +26,6 @@ from tests import interfaces as ti
 from tests import runner, utils
 
 from twitcher.__version__ import __version__ as twitcher_version  # noqa
-
-if six.PY3:
-    from magpie.adapter.magpieowssecurity import MagpieOWSSecurity, OWSAccessForbidden  # noqa: F401
 
 if TYPE_CHECKING:
     from typing import Any, Callable, Tuple

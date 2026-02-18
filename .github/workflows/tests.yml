@@ -4,6 +4,14 @@ name: Tests
 on:
   - pull_request
   - push
+  - release
+  - workflow_dispatch
+
+# cancel the current workflow if another commit was pushed on the same PR or reference
+# uses the GitHub workflow name to avoid collision with other workflows running on the same PR/reference
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # see: https://github.com/fkirc/skip-duplicate-actions
@@ -11,19 +19,20 @@ jobs:
     continue-on-error: true
     runs-on: ubuntu-latest
     outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip && ! contains(github.ref, 'refs/tags') && ! contains(github.ref, 'refs/heads/master') }}
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@master
         with:
-          concurrent_skipping: "same_content"
+          concurrent_skipping: "same_content_newer"
           skip_after_successful_duplicate: "true"
+          cancel_others: "true"
           do_not_skip: '["workflow_dispatch", "schedule", "release"]'
 
   # see: https://github.com/actions/setup-python
   tests:
     needs: skip_duplicate
-    if: ${{ needs.skip_duplicate.outputs.should_skip != 'true' }}
+    if: ${{ needs.skip_duplicate.outputs.should_skip != 'true' && ! contains(github.ref, 'refs/tags') && ! contains(github.ref, 'refs/heads/master') }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow-failure }}
     env:
@@ -59,7 +68,7 @@ jobs:
             # FIXME:
             #   Not using 3.11 because of problems with pylint false-positives about missing builtin references.
             #   https://github.com/PyCQA/pylint/issues/6535
-            python-version: "3.10"
+            python-version: "3.12"
             allow-failure: false
             test-case: check
           # remote test (note that network tests are skipped since the remote server won't have network mode enabled)
@@ -85,11 +94,11 @@ jobs:
             allow-failure: true
             test-case: test-docker
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
         with:
           fetch-depth: "0"
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v6
         if: ${{ matrix.python-version != 'none' }}
         with:
           python-version: ${{ matrix.python-version }}

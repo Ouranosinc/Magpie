@@ -36,7 +36,7 @@ def upgrade():
             unique=True,
         )
     except sa.exc.IntegrityError as e:
-        raise Exception("{}\nPlease manually update conflicting user_names and try again".format(e)) from e
+        raise RuntimeError("{}\nPlease manually update conflicting user_names and try again".format(e)) from e
     session = Session(bind=op.get_bind())
     for user in session.execute(sa.select([users])):
         lower_user_name = user.user_name.lower()

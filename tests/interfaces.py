@@ -21,6 +21,7 @@ from six.moves.urllib.parse import parse_qs, urlparse
 from webtest.app import TestApp
 
 from magpie import __meta__
+from magpie.adapter import MagpieAdapter
 from magpie.api import schemas as s
 from magpie.api.webhooks import webhook_update_error_status
 from magpie.constants import MAGPIE_ROOT, get_constant
@@ -52,10 +53,6 @@ from magpie.utils import (
 )
 from tests import runner, utils
 from tests.utils import TestVersion, check_network_mode
-
-if six.PY3:
-    # WARNING: Twitcher does not support Python 2 since 0.4.0, adapter cannot work without it
-    from magpie.adapter import MagpieAdapter
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import

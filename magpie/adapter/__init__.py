@@ -248,7 +248,7 @@ class MagpieAdapter(AdapterInterface):
         .. versionadded:: 3.18
             Available only in ``Twitcher >= 0.6.x``.
         """
-        return OWSRegistry(self.servicestore_factory(request))
+        return OWSRegistry(self.servicestore_factory(request))  # pylint: disable=E0606
 
     def owssecurity_factory(self, request=None):  # noqa  # pylint: disable=W0221  # diff between Twitcher 0.5.x/0.6.x
         # type: (Optional[AnySettingsContainer]) -> MagpieOWSSecurity

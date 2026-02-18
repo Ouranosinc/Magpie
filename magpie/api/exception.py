@@ -58,7 +58,7 @@ else:
     Pattern = type(re.compile(""))
 
 
-def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
+def verify_param(  # noqa: E126  # pylint: disable=R0913,R0917
                  # --- verification values ---      # noqa: E126
                  param,                             # type: Any
                  param_compare=None,                # type: Optional[Union[Any, List[Any]]]

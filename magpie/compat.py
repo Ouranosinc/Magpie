@@ -3,7 +3,7 @@ import inspect
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Tuple, Union
+    from typing import Union
 
 
 class VersionInterface(object):
@@ -27,18 +27,18 @@ class VersionInterface(object):
 
 
 try:
+    from typing import NamedTuple, Tuple
+
     from packaging.version import InvalidVersion  # pylint: disable=unused-import
     from packaging.version import Version as BaseVersion  # pylint: disable=unused-import
-    from typing import NamedTuple, Tuple
 
     class TupleVersion(NamedTuple):
         epoch: int
-        release: tuple[int, ...]
-        dev: tuple[str, int] | None
-        pre: tuple[str, int] | None
-        post: tuple[str, int] | None
+        release: Tuple[int, ...]
+        dev: Tuple[str, int] | None
+        pre: Tuple[str, int] | None
+        post: Tuple[str, int] | None
         local: Tuple[int | str, ...] | None
-
 
     class LooseVersion(BaseVersion, VersionInterface):
         # override '_version' explicitly with the equivalent procedure of previous versions
