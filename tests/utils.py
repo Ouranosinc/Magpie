@@ -566,7 +566,7 @@ def get_test_webhook_app(webhook_url):
         except OSError as exception:
             if exception.errno == EADDRINUSE:
                 # The app is already running, we just need to reset the webhook status and saved payload for a new test.
-                resp = requests.post(webhook_url + "/reset")
+                resp = requests.post(webhook_url + "/reset", timeout=10)
                 check_response_basic_info(resp, 200, expected_type=CONTENT_TYPE_HTML, expected_method="POST")
                 return
             raise
@@ -1249,7 +1249,7 @@ def get_session_user(app_or_url, headers=None):
     if isinstance(app_or_url, TestApp):
         resp = app_or_url.get("/session", headers=headers)
     else:
-        resp = requests.get("{}/session".format(app_or_url), headers=headers)
+        resp = requests.get("{}/session".format(app_or_url), headers=headers, timeout=10)
     if resp.status_code != 200:
         raise Exception("cannot retrieve logged-in user information")
     return resp
@@ -1305,7 +1305,7 @@ def check_or_try_login_user(test_item,                      # type: AnyMagpieTes
                 resp = app_or_url.post_json("/signin", data, headers=headers)
                 resp_cookies = app_or_url.cookies  # automatically set by TestApp processing
         else:
-            resp = requests.post("{}/signin".format(app_or_url), json=data, headers=headers)
+            resp = requests.post("{}/signin".format(app_or_url), json=data, headers=headers, timeout=10)
             resp_cookies = resp.cookies
 
         # response OK (200) if directly from API /signin

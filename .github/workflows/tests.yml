@@ -68,7 +68,7 @@ jobs:
             # FIXME:
             #   Not using 3.11 because of problems with pylint false-positives about missing builtin references.
             #   https://github.com/PyCQA/pylint/issues/6535
-            python-version: "3.10"
+            python-version: "3.12"
             allow-failure: false
             test-case: check
           # remote test (note that network tests are skipped since the remote server won't have network mode enabled)
@@ -94,11 +94,11 @@ jobs:
             allow-failure: true
             test-case: test-docker
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
         with:
           fetch-depth: "0"
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v6
         if: ${{ matrix.python-version != 'none' }}
         with:
           python-version: ${{ matrix.python-version }}
