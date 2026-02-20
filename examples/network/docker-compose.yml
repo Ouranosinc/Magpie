@@ -1,0 +1,119 @@
+x-host-extras: &extra-hosts
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+x-magpie: &magpie
+  <<: *extra-hosts
+  image: pavics/magpie:latest
+  entrypoint: /magpie-entrypoint.sh
+  volumes:
+    - ./magpie-entrypoint.sh:/magpie-entrypoint.sh
+  healthcheck:
+    test: ["CMD", "wget", "-qO-", "http://0.0.0.0:2001"]
+    interval: 60s
+    timeout: 5s
+    retries: 3
+    start_period: 30s
+    start_interval: 5s
+
+x-magpie-admin-credentials-env: &magpie-admin-credentials
+  MAGPIE_ADMIN_USER: admin
+  MAGPIE_ADMIN_PASSWORD: qwertyqwerty!
+
+x-magpie-env: &magpie-env
+  <<: *magpie-admin-credentials
+  HOSTNAME: localhost
+  FORWARDED_ALLOW_IPS: "*"
+  MAGPIE_SECRET: itzaseekrit
+  MAGPIE_ADMIN_GROUP: administrators
+  MAGPIE_USER_GROUP: users
+  MAGPIE_ANONYMOUS_USER: anonymous
+  MAGPIE_PORT: 2001
+  MAGPIE_LOG_LEVEL: DEBUG
+  TWITCHER_PROTECTED_PATH: /twitcher/ows/proxy
+  MAGPIE_POSTGRES_USERNAME: magpie
+  MAGPIE_POSTGRES_PASSWORD: qwerty
+  MAGPIE_POSTGRES_DB: magpie
+  MAGPIE_POSTGRES_PORT: 5432
+  MAGPIE_NETWORK_ENABLED: True
+  MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE: True
+
+x-postgres: &postgres
+  <<: *extra-hosts
+  image: postgres:latest
+  environment:
+    POSTGRES_PASSWORD: qwerty
+    POSTGRES_DB: magpie
+    POSTGRES_USER: magpie
+    POSTGRES_PORT : 5432
+  
+
+services:
+  magpie1:
+    <<: *magpie
+    depends_on:
+      - postgres1
+    environment:
+      <<: *magpie-env
+      MAGPIE_POSTGRES_HOST: postgres1
+      MAGPIE_PREFIX: /magpie1
+      MAGPIE_URL: http://host.docker.internal/magpie1/
+      MAGPIE_NETWORK_INSTANCE_NAME: magpie1
+  postgres1:
+    <<: *postgres
+  magpie2:
+    <<: *magpie
+    depends_on:
+      - postgres2
+    environment:
+      <<: *magpie-env
+      MAGPIE_POSTGRES_HOST: postgres2
+      MAGPIE_PREFIX: /magpie2
+      MAGPIE_URL: http://host.docker.internal/magpie2/
+      MAGPIE_NETWORK_INSTANCE_NAME: magpie2
+  postgres2:
+    <<: *postgres
+  magpie3:
+    <<: *magpie
+    depends_on:
+      - postgres3
+    environment:
+      <<: *magpie-env
+      MAGPIE_POSTGRES_HOST: postgres3
+      MAGPIE_PREFIX: /magpie3
+      MAGPIE_URL: http://host.docker.internal/magpie3/
+      MAGPIE_NETWORK_INSTANCE_NAME: magpie3
+  postgres3:
+    <<: *postgres
+  nginx:
+    <<: *extra-hosts
+    image: nginx:1.23.4
+    depends_on:
+      magpie1:
+        condition: service_healthy
+      magpie2:
+        condition: service_healthy
+      magpie3:
+        condition: service_healthy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://0.0.0.0/magpie1/"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 5s
+    ports:
+      - 80:80
+  initializer:
+    <<: *extra-hosts
+    image: alpine/curl:latest
+    depends_on:
+      nginx:
+        condition: service_healthy
+    volumes:
+      - ./init.sh:/init.sh
+    environment:
+      <<: *magpie-admin-credentials
+    command: ["/init.sh"]
