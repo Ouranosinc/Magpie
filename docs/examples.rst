@@ -8,8 +8,8 @@ This section contains example configurations for Magpie that further illustrate 
 Network
 -------
 
-This example contains a docker compose configuration to create 3 local magpie deployments, all of which are networked together
-using the Magpie :ref:`network_mode` feature.
+This example contains a docker compose configuration to create 3 local magpie deployments, all of which are networked
+together using the Magpie :ref:`network_mode` feature.
 
 Start by copying the files below into a directory and then running:
 
@@ -24,8 +24,8 @@ Once the stack has started then 3 magpie instance will be available on the host 
 * http://host.docker.internal/magpie2
 * http://host.docker.internal/magpie3
 
-Note that this will run on port 80 on the host machine so we recommend not running this on a machine that exposes port 80
-to your network.
+Note that this will run on port 80 on the host machine so we recommend not running this on a machine that exposes port
+80 to your network.
 
 Each instance is created with 3 users:
 
@@ -72,5 +72,5 @@ nginx.conf
 
 magpie-entrypoint.sh
 ^^^^^^^^^^^^^^^^^^^^
-.. literalinclude:: _examples/network/magpie-entrypoint.sh    
+.. literalinclude:: _examples/network/magpie-entrypoint.sh
     :language: shell
