@@ -7,6 +7,7 @@ beaker @ https://github.com/crim-ca/beaker/archive/0ac88bcd8cca063a571fc385ffbe9
 colander
 cornice
 cornice_swagger>=0.7.0
+cryptography>=46.0.5
 dicttoxml
 gunicorn>=22
 humanize
@@ -19,6 +20,11 @@ pastedeploy
 pluggy
 psycopg2-binary>=2.7.1
 PyJWT[crypto]==2.8.0
+# FIXME: setuptools/pkg_resources deprecated dependency
+#   (https://github.com/Pylons/pyramid/issues/3731, https://github.com/pypa/setuptools/pull/5007)
+# below setuptools pin is placed here purposely instead of 'requirements-sys.txt' in order to keep it
+# aligned with its upstream 'pyramid' dependency expecting 'pkg_resources' that has official been removed
+setuptools<82
 pyramid>=1.10.2,<3
 pyramid_beaker==0.8
 pyramid_chameleon>=0.3
@@ -39,7 +45,6 @@ threddsclient>=0.4.2
 transaction
 typing_extensions
 urllib3>=2.6.3
-wheel>=0.38
 webob
 ziggurat_foundations==0.9.1
 zope.interface>=4.7.2

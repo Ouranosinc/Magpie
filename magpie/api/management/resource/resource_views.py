@@ -335,7 +335,7 @@ def update_permissions(request):
             resource_full_type += "/" + resource_type
         if permission:
             cfg_entry = {
-                "service": service_name,  # noqa
+                "service": service_name,  # noqa  # pylint: disable=E0606  # set on 1st iteration, service must be 1st
                 "resource": resource_full_path,
                 "type": resource_type if resource_type == "service" else resource_full_type,
                 "permission": permission,

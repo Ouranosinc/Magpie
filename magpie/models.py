@@ -379,7 +379,7 @@ class UserStatuses(IntFlag, FlexibleNameEnum):
         for _status in status:
             _status = cls._get_one(_status)
             if combined is not None and _status is not None:
-                combined = (combined | _status)
+                combined = combined | _status
             else:
                 combined = combined or _status
         return UserStatuses(combined)

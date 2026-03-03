@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     _JsonObjectItem = Dict[str, Union[AnyValue, _JSON, _JsonObjectItemAlias, _JsonListItemAlias]]
     _JsonListItem = List[Union[AnyValue, _JSON, _JsonObjectItem, _JsonListItemAlias]]
     _JsonItem = Union[AnyValue, _JSON, _JsonObjectItem, _JsonListItem]
-    JSON = Union[Dict[str, Union[_JSON, _JsonItem]], List[Union[_JSON, _JsonItem]], AnyValue]
+    JSON = Union[Dict[str, Union[_JSON, _JsonItem]], List[Union[_JSON, _JsonItem]], AnyValue]  # pylint: disable=C0103
 
     GroupPriority = Union[int, Type[math.inf]]
     UserServicesType = Union[Dict[Str, Dict[Str, Any]], List[Dict[Str, Any]]]

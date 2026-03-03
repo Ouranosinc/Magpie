@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := magpie
-APP_VERSION ?= 5.0.0
+APP_VERSION ?= 5.0.1
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 
 # guess OS (Linux, Darwin,...)
@@ -528,7 +528,6 @@ check-lint-only: mkdir-reports		## run linting code style checks
 	@-rm -fr "$(REPORTS_DIR)/check-lint.txt"
 	@bash -c '$(CONDA_CMD) \
 		pylint \
-			--load-plugins pylint_quotes \
 			--rcfile="$(APP_ROOT)/.pylintrc" \
 			--reports y \
 			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/$(APP_NAME)/alembic" "$(APP_ROOT)/docs" "$(APP_ROOT)/tests" \

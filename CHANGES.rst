@@ -11,6 +11,19 @@ Changes
 
 * Nothing new for the moment.
 
+.. _changes_5.0.1:
+
+`5.0.1 <https://github.com/Ouranosinc/Magpie/tree/5.0.1>`_ (2026-02-17)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Pin ``packaging>=26.0`` and apply corresponding ``magpie.compat`` fixes for versioning classes.
+* Remove ``wheel`` from dependencies.
+* Pin ``setuptools<82`` for ``pkg_resources`` required by ``pyramid``.
+* Pin ``cryptography>=46.0.5`` for security fix.
+
 .. _changes_5.0.0:
 
 `5.0.0 <https://github.com/Ouranosinc/Magpie/tree/5.0.0>`_ (2026-01-17)

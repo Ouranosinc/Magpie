@@ -19,6 +19,7 @@ import six
 from sqlalchemy import inspect as sa_inspect
 
 from magpie import __meta__, models, owsrequest
+from magpie.adapter.magpieowssecurity import OWSAccessForbidden  # noqa  # defined via Twitcher
 from magpie.constants import get_constant
 from magpie.permissions import Access, Permission, PermissionSet, PermissionType, Scope
 from magpie.services import (
@@ -33,9 +34,6 @@ from magpie.services import (
 from magpie.utils import CONTENT_TYPE_FORM, CONTENT_TYPE_JSON, CONTENT_TYPE_TXT_XML
 from tests import interfaces as ti
 from tests import runner, utils
-
-if six.PY3:
-    from magpie.adapter.magpieowssecurity import OWSAccessForbidden  # noqa  # defined via Twitcher
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
