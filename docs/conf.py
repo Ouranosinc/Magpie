@@ -217,7 +217,7 @@ linkcheck_ignore = [
     "https://wso2.com/",  # sporadic broken (probably robots or similar)
     "https://docs.wso2.com/*",
     "https://pcmdi.llnl.gov/",  # works, but very often causes false-positive 'broken' links
-    "http://host.docker.internal/*", # for examples that refer to magpie on the host machine
+    "http://host.docker.internal/*",  # for examples that refer to magpie on the host machine
 ] + ignore_down_providers()
 linkcheck_anchors_ignore = [
     r".*issuecomment.*",  # GitHub issue comment anchors not resolved
