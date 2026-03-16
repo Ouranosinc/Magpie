@@ -23,4 +23,5 @@
     changes
     security
     glossary
+    examples
     references_page
