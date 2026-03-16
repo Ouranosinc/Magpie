@@ -12,14 +12,14 @@ dicttoxml
 gunicorn>=22
 humanize
 jsonschema>=4
-jwcrypto==1.5.6
+jwcrypto>=1.5.6,<2
 lxml>=3.7
 mako  # controlled by pyramid_mako
 paste
 pastedeploy
 pluggy
 psycopg2-binary>=2.7.1
-PyJWT[crypto]==2.8.0
+PyJWT[crypto]>=2.12.0,<3
 # FIXME: setuptools/pkg_resources deprecated dependency
 #   (https://github.com/Pylons/pyramid/issues/3731, https://github.com/pypa/setuptools/pull/5007)
 # below setuptools pin is placed here purposely instead of 'requirements-sys.txt' in order to keep it

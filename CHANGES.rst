@@ -9,7 +9,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Pin ``jwcrypto>=1.5.6,<2`` and ``PyJWT[crypto]>=2.12.0,<3`` to address related
+  `CVE-2025-59420 <https://nvd.nist.gov/vuln/detail/CVE-2025-59420>`_ security vulnerability.
 
 .. _changes_5.0.1:
 
