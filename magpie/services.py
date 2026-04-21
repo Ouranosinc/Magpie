@@ -1300,7 +1300,7 @@ class ServiceGeoserverWFS(ServiceGeoserverBase, ServiceWFS):  # order important 
     Service that represents a `Web Feature Service` endpoint with functionalities specific to `Geoserver`.
 
     .. seealso::
-        https://docs.geoserver.org/latest/en/user/services/wfs/reference.html
+        https://docs.geoserver.org/latest/en/user/services/wfs/reference/
     """
     service_base = "wfs"
     service_type = "geoserverwfs"
