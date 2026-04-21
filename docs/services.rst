@@ -403,7 +403,7 @@ ServiceGeoserverWFS
 
 .. seealso::
 
-    - https://docs.geoserver.org/latest/en/user/services/wfs/reference.html
+    - https://docs.geoserver.org/latest/en/user/services/wfs/reference/
     - Consider using `ServiceGeoserver`_ for multi-:term:`OWS` implementation support under a common
       endpoint representing a `GeoServer`_ instance.
 
@@ -442,7 +442,7 @@ ServiceGeoserverWMS
 .. seealso::
 
     - Base class: `ServiceBaseWMS`_
-    - https://docs.geoserver.org/latest/en/user/services/wms/reference.html
+    - https://docs.geoserver.org/latest/en/user/services/wms/reference/
     - Consider using `ServiceGeoserver`_ for multi-:term:`OWS` implementation support under a common
       endpoint representing a `GeoServer`_ instance.
 

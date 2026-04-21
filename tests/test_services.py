@@ -492,7 +492,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                         # custom configuration definition
                         configuration:
                             file_patterns:
-                                # note: 
+                                # note:
                                 #   following patterns should have only one-double backslash escape each,
                                 #   but needs quadruple in this case because of 2-steps (dump to YAML, read from YAML)
                                 - ".*\\\\.ncml"   # matched before plain '.nc', will correspond to another resource
@@ -846,12 +846,12 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
 
         # evaluate parsing of POST-formatted Execute requests
-        # (source: https://docs.geoserver.org/stable/en/user/services/wps/operations.html)
+        # (source: https://docs.geoserver.org/latest/en/user/services/wps/operations/)
         wps_xml_post_body_template = inspect.cleandoc("""
         <?xml version="1.0" encoding="UTF-8"?>
         <wps:Execute version="1.0.0" service="WPS"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wps/1.0.0" 
-         xmlns:wfs="http://www.opengis.net/wfs" xmlns:wps="http://www.opengis.net/wps/1.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/wps/1.0.0"
+         xmlns:wfs="http://www.opengis.net/wfs" xmlns:wps="http://www.opengis.net/wps/1.0.0"
          xmlns:ows="http://www.opengis.net/ows/1.1" xmlns:gml="http://www.opengis.net/gml"
          xmlns:ogc="http://www.opengis.net/ogc" xmlns:wcs="http://www.opengis.net/wcs/1.1.1"
          xmlns:xlink="http://www.w3.org/1999/xlink" xsi:schemaLocation="http://www.opengis.net/wps/1.0.0

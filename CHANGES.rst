@@ -486,7 +486,7 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add missing ``ServiceWFS`` permissions according to `OGC WFS standard <https://www.ogc.org/standards/wfs>`_.
 * Add missing ``DescribeLayer`` permission to ``ServiceGeoserverWMS`` according
-  to `GeoServer WMS implementation <https://docs.geoserver.org/latest/en/user/services/wms/reference.html>`_.
+  to `GeoServer WMS implementation <https://docs.geoserver.org/latest/en/user/services/wms/reference/>`_.
 * Add support of specific hierarchy of ``Resource`` type ``Layer`` nested under ``Workspace``
   for ``ServiceGeoserverWMS``.
 * Add support of ``Resource`` type ``Layer`` under ``ServiceWFS``.
