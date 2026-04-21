@@ -9,7 +9,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Fix incorrect message employed in error response when validating reserved user names.
 
 .. _changes_5.0.2:
 

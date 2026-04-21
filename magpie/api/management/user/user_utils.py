@@ -410,9 +410,9 @@ def handle_user_group_terms_confirmation(tmp_token, request):
         request.db.delete(token)
 
     msg = cleandoc("""
-        You have accepted the terms and conditions of the '{grp_name}' group. 
+        You have accepted the terms and conditions of the '{grp_name}' group.
 
-        User '{user_name}' has now been successfully added to the '{grp_name}' group. 
+        User '{user_name}' has now been successfully added to the '{grp_name}' group.
         """.format(grp_name=tmp_token.group.group_name, user_name=tmp_token.user.user_name))
 
     return BaseViews(request).render("magpie.ui.home:templates/message.mako", {"message": msg})
@@ -894,7 +894,7 @@ def check_user_info(user_name=None, email=None, password=None, group_name=None, 
                             param_compare=anonymous_user_name_regex,
                             param_name="user_name",
                             http_error=HTTPBadRequest,
-                            msg_on_fail=s.Users_CheckInfo_Email_BadRequestResponseSchema.description)
+                            msg_on_fail=s.Users_CheckInfo_ReservedKeyword_BadRequestResponseSchema.description)
     if check_email:
         ax.verify_param(email, not_none=True, not_empty=True, param_name="email",
                         http_error=HTTPBadRequest,
