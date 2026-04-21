@@ -16,6 +16,13 @@ Features / Changes
 * Replace ``magpie.api.management.user.user_utils.check_user_info`` parameter ``check_not_anonymous``
   to ``check_not_reserved`` to better reflect that it valides reserved user names and emails for both
   the ``MAGPIE_ANONYMOUS_USER`` and ``MAGPIE_ADMIN_USER`` special users.
+* Fix self-induced error on reserved keywords (special `Users`) when resolving `Permission` registrations.
+  Notably, when a `Webhook` request is provided with a `Permission` batch to generate or when loading registration
+  configurations, both methods employ the ``magpie.register`` functions. These perform an automatic creation
+  of `User`/`Group`/`Permission` definitions as needed to make a seamless integration of referenced resources.
+  However, if a reserved `User` is referenced for a `Permission` creation on it, while that creation is itself valid,
+  the auto-creation procedure of the `User` would yield a distinct HTTP error that was not handled properly by the
+  registration process.
 
 .. _changes_5.0.2:
 

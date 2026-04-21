@@ -886,7 +886,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
     or db session accordingly to arguments.
     """
 
-    def _apply_request(_usr_name=None, _grp_name=None):
+    def _apply_perm_request(_usr_name=None, _grp_name=None):
         # type: (Optional[Str], Optional[Str]) -> Optional[AnyResponseType]
         """
         Apply operation using HTTP request.
@@ -904,7 +904,7 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
         action_resp = action_func(action_path, json=action_body, cookies=cookies_or_session, timeout=5)
         return action_resp
 
-    def _apply_session(_usr_name=None, _grp_name=None):
+    def _apply_perm_session(_usr_name=None, _grp_name=None):
         # type: (Optional[Str], Optional[Str]) -> Optional[AnyResponseType]
         """
         Apply operation using db session.
@@ -995,10 +995,15 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
                     "{} already exists.".format(item_type.capitalize()), entry_index,
                     level=logging.INFO
                 )
-            elif _resp.status_code in [400, 403] and item_type != "permission" and "reserved keyword" in _resp.text:
+            elif (
+                # avoid error on auto-created user/group if it happens to be a protected resource
+                _resp.status_code in [400, 403] and
+                item_type != "permission" and
+                "reserved keyword" in _resp.json["detail"]
+            ):
                 _handle_permission(
-                    "{} protected creation ignored.".format(item_type.capitalize()), entry_index,
-                    level=logging.INFO
+                    "{} protected creation detected.".format(item_type.capitalize()), entry_index,
+                    level=logging.INFO, raise_errors=False,
                 )
             else:
                 _handle_permission(
@@ -1033,11 +1038,11 @@ def _apply_permission_entry(permission_config_entry,    # type: PermissionConfig
     _validate_response(lambda: _apply_profile(None, grp_name), is_create=True, item_type="group")
     _validate_response(lambda: _apply_profile(usr_name, None), is_create=True, item_type="user")
     if _use_request(cookies_or_session):
-        _validate_response(lambda: _apply_request(None, grp_name), is_create=create_perm)
-        _validate_response(lambda: _apply_request(usr_name, None), is_create=create_perm)
+        _validate_response(lambda: _apply_perm_request(None, grp_name), is_create=create_perm)
+        _validate_response(lambda: _apply_perm_request(usr_name, None), is_create=create_perm)
     else:
-        _validate_response(lambda: _apply_session(None, grp_name), is_create=create_perm)
-        _validate_response(lambda: _apply_session(usr_name, None), is_create=create_perm)
+        _validate_response(lambda: _apply_perm_session(None, grp_name), is_create=create_perm)
+        _validate_response(lambda: _apply_perm_session(usr_name, None), is_create=create_perm)
 
 
 def magpie_register_permissions_from_config(
