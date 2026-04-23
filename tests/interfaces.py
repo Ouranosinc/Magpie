@@ -5514,7 +5514,8 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
 
         # the following specific contents are important as they are relied upon by the permissions 'magpie.register'
         # procedures that handle these special 'reserved keywords' cases to bypass user profile auto-creation errors
-        utils.check_val_is_in("reserved keyword", resp.json["detail"],
+        json_body = utils.get_json_body(resp)
+        utils.check_val_is_in("reserved keyword", json_body["detail"],
                               msg="Specific cause of bad request should be indicated in the error response.")
 
     @runner.MAGPIE_TEST_USERS
