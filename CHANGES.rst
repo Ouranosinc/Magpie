@@ -14,7 +14,7 @@ Features / Changes
 
 * Fix incorrect message employed in error response when validating reserved user names.
 * Replace ``magpie.api.management.user.user_utils.check_user_info`` parameter ``check_not_anonymous``
-  to ``check_not_reserved`` to better reflect that it valides reserved user names and emails for both
+  to ``check_not_reserved`` to better reflect that it validates reserved user names and emails for both
   the ``MAGPIE_ANONYMOUS_USER`` and ``MAGPIE_ADMIN_USER`` special users.
 
 .. _changes_5.0.2:
