@@ -1144,7 +1144,7 @@ class ServiceGeoserverWMS(ServiceGeoserverBase, ServiceBaseWMS):  # order import
     Service that represents a `Web Map Service` endpoint with functionalities specific to `Geoserver`.
 
     .. seealso::
-        https://docs.geoserver.org/latest/en/user/services/wms/reference.html
+        https://docs.geoserver.org/latest/en/user/services/wms/reference/
     """
     service_base = "wms"
     service_type = "geoserverwms"
@@ -1300,7 +1300,7 @@ class ServiceGeoserverWFS(ServiceGeoserverBase, ServiceWFS):  # order important 
     Service that represents a `Web Feature Service` endpoint with functionalities specific to `Geoserver`.
 
     .. seealso::
-        https://docs.geoserver.org/latest/en/user/services/wfs/reference.html
+        https://docs.geoserver.org/latest/en/user/services/wfs/reference/
     """
     service_base = "wfs"
     service_type = "geoserverwfs"
@@ -1496,7 +1496,7 @@ class ServiceGeoserver(ServiceGeoserverBase):
     Service that encapsulates the multiple :term:`OWS` endpoints from `Geoserver` services.
 
     .. seealso::
-        https://docs.geoserver.org/stable/en/user/services/index.html
+        https://docs.geoserver.org/latest/en/user/services/
     """
     service_base = None  # use 'service_map' and 'service_ows'
     service_type = "geoserver"
