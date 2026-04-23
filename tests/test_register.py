@@ -167,6 +167,86 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in(str(res4_perm), body["permission_names"])
 
+    def test_register_permissions_reserved_keyword_user_create_entries(self):
+        """
+        Validates that permissions can be registered for a reserved keyword user (admin) without raising errors.
+
+        When attempting to create permissions for a reserved user such as the admin user, the system would
+        normally return a 400 error when trying to auto-create the user profile. This test ensures that such
+        errors are handled transparently, allowing the permission registration to proceed successfully despite
+        the user creation failure. The test verifies that all configured permissions are properly created for
+        the reserved user across service and resource levels.
+        """
+        utils.TestSetup.create_TestService(self,
+                                           override_service_name=self.test_perm_svc_name,
+                                           override_service_type=ServiceAPI.service_type)
+        session = get_db_session_from_settings(self.app.app.registry.settings)
+
+        admin_user = get_constant("MAGPIE_ADMIN_USER")
+        svc_perm_dict = {
+            "name": Permission.READ.value,
+            "scope": Scope.MATCH.value,
+            "access": Access.ALLOW.value,
+        }
+        svc_perm_set = PermissionSet(svc_perm_dict)
+        res1_perm = Permission.READ
+        res2_perm = Permission.WRITE
+        res1_name = "test-resource"
+        res2_name = "sub-test-resource"
+        perm_config = {
+            "permissions": [
+                {
+                    "service": self.test_perm_svc_name,
+                    "permission": svc_perm_dict,
+                    "action": "create",
+                    "user": admin_user,
+                },
+                {
+                    "service": self.test_perm_svc_name,
+                    "resource": res1_name,
+                    "permission": res1_perm.value,
+                    "action": "create",
+                    "user": admin_user,
+                },
+                {
+                    "service": self.test_perm_svc_name,
+                    "resource": res1_name + "/" + res2_name,
+                    "permission": res2_perm.value,
+                    "action": "create",
+                    "user": admin_user,
+                }
+            ]
+        }
+        utils.check_no_raise(
+            lambda: register.magpie_register_permissions_from_config(perm_config, db_session=session),
+            msg="Registration should handle the reserved keyworkd 'admin' user creation by avoiding the raised error."
+        )
+
+        services = utils.TestSetup.get_RegisteredServicesList(self)
+        utils.check_val_is_in(self.test_perm_svc_name, [s["service_name"] for s in services])
+        resp = utils.test_request(self.app, "GET", "/services/{}/resources".format(self.test_perm_svc_name))
+        body = utils.check_response_basic_info(resp)
+        svc_res = body[self.test_perm_svc_name]["resources"]
+        svc_res_id = body[self.test_perm_svc_name]["resource_id"]
+        utils.check_val_is_in(res1_name, [svc_res[r]["resource_name"] for r in svc_res])
+        res1_id = [svc_res[r]["resource_id"] for r in svc_res if svc_res[r]["resource_name"] == res1_name][0]
+        res1_sub = svc_res[str(res1_id)]["children"]
+        utils.check_val_is_in(res2_name, [res1_sub[r]["resource_name"] for r in res1_sub])
+        res2_id = [res1_sub[r]["resource_id"] for r in res1_sub if res1_sub[r]["resource_name"] == res2_name][0]
+
+        path = "/users/{}/resources/{}/permissions".format(admin_user, svc_res_id)
+        resp = utils.test_request(self.app, "GET", path)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_true(all(svc_perm_set.like(p) for p in body["permission_names"]))
+        path = "/users/{}/resources/{}/permissions".format(admin_user, res1_id)
+        resp = utils.test_request(self.app, "GET", path)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in(res1_perm.value, body["permission_names"])
+        path = "/users/{}/resources/{}/permissions".format(admin_user, res2_id)
+        resp = utils.test_request(self.app, "GET", path)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in(res2_perm.value, body["permission_names"])
+
     def test_register_permissions_existing_group_create_some_entries(self):
         utils.TestSetup.create_TestService(self,
                                            override_service_name=self.test_perm_svc_name,
