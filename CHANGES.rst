@@ -23,6 +23,9 @@ Features / Changes
   However, if a reserved `User` is referenced for a `Permission` creation on it, while that creation is itself valid,
   the auto-creation procedure of the `User` would yield a distinct HTTP error that was not handled properly by the
   registration process.
+* Pin ``python-dotenv>=1.2.2``.
+* Pin ``lxml>=6.1.0``.
+* Pin ``mako>=1.3.11``.
 
 .. _changes_5.0.2:
 
