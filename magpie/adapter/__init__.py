@@ -1,4 +1,5 @@
 import copy
+import functools
 import inspect
 import re
 import warnings
@@ -116,10 +117,13 @@ if TYPE_CHECKING:
         JSON,
         AnyResponseType,
         AnySettingsContainer,
+        Callable,
+        Iterable,
         ServiceConfigItem,
         ServiceHookConfigItem,
         ServiceHookType,
-        Str
+        Str,
+        Tuple,
     )
 
     from twitcher.models.service import ServiceConfig  # noqa  # pylint: disable=E0611  # Twitcher >= 0.6.3
@@ -302,11 +306,10 @@ class MagpieAdapter(AdapterInterface):
 
         return config
 
-    def _apply_hooks(self, instance, service_name, hook_type, method, path, query):
-        # type: (Union[Request, Response], Str, ServiceHookType, Str, Str, Str) -> Union[Request, Response]
-        """
-        Executes the hooks processing chain.
-        """
+    def _discover_hooks(self, instance, service_name, hook_type, method, path, query):
+        # type: (Union[Request, Response], Str, ServiceHookType, Str, Str, Str, bool) -> Iterable[Tuple[Callable, Str, Str]]
+        """Yields hook functions."""
+
         svc_config = self.settings.get("magpie.services", {}).get(service_name, {})
         svc_hooks = svc_config.get("hooks", [])
         # copy to avoid (un)intentional modifications to configurations
@@ -338,13 +341,33 @@ class MagpieAdapter(AdapterInterface):
                 for key, val in [("service", svc_config), ("hook", hook), ("context", ctx)]:
                     if key in signature.parameters:
                         kwargs[key] = val
+            yield functools.partial(hook_target, **kwargs), hook_qs, hook_cfg["target"]
+
+    def _apply_proxy_hooks(self, instance, service_name, hook_type, method, path, query):
+        # type: (Union[Request, Response], Str, ServiceHookType, Str, Str, Str, bool) -> Union[Request, Response]
+        """Executes the hooks processing chain for request and response hooks."""
+        for hook_target, hook_qs, target in self._discover_hooks(instance, service_name, hook_type, method, path, query):
             try:
-                instance = hook_target(instance, **kwargs)
+                instance = hook_target(instance)
             except Exception as exc:
                 LOGGER.error("Hook failed %s (%s %s%s) [%s]",
-                             hook_type, method, path, hook_qs, hook_cfg["target"], exc_info=exc)
+                             hook_type, method, path, hook_qs, target, exc_info=exc)
                 raise exc
         return instance
+
+    def _apply_verify_hooks(self, instance, service_name, hook_type, method, path, query):
+        # type: (Union[Request, Response], Str, ServiceHookType, Str, Str, Str, bool) -> bool
+        """Executes the hooks processing chain for verify hooks."""
+        for hook_target, hook_qs, target in self._discover_hooks(instance, service_name, hook_type, method, path, query):
+            try:
+                verified = hook_target(instance)
+            except Exception as exc:
+                LOGGER.error("Hook failed %s (%s %s%s) [%s]",
+                             hook_type, method, path, hook_qs, target, exc_info=exc)
+                raise exc
+            if not verified:
+                return False
+        return True
 
     @staticmethod
     def _proxied_service_path(request):
@@ -373,7 +396,7 @@ class MagpieAdapter(AdapterInterface):
         This method can modified those members to adapt the request for specific service logic.
         """
         request_path = self._proxied_service_path(request)
-        request = self._apply_hooks(
+        request = self._apply_proxy_hooks(
             request, service["name"], "request",
             request.method, request_path, request.query_string
         )
@@ -391,11 +414,29 @@ class MagpieAdapter(AdapterInterface):
         This method can modify the response to adapt it for specific service logic.
         """
         request_path = self._proxied_service_path(response.request)
-        response = self._apply_hooks(
+        response = self._apply_proxy_hooks(
             response, service["name"], "response",
             response.request.method, request_path, response.request.query_string
         )
         return response
+
+    def verify_hook(self, request, service):
+        # type: (Request, ServiceConfig) -> bool
+        """
+        Apply hook that can apply additional logic used to verify whether a request should be rejected.
+
+        .. versionadded:: 5.0.3
+            Requires ``Twitcher >= 0.11.2``.
+
+        Return False to indicate that the verify endpoint should return a "forbidden"
+        response regardless of whether the request is verified.
+        """
+
+        request_path = self._proxied_service_path(request)
+        return self._apply_verify_hooks(
+            request, service["name"], "verify",
+            request.method, request_path, request.query_string, fail_fast=True
+        )
 
     def send_request(self, request, service):
         # type: (Request, ServiceConfig) -> Response
