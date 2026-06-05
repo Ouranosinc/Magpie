@@ -206,8 +206,9 @@ setup(
     license=__meta__.__license__,
     keywords=__meta__.__title__ + ", Authentication, AuthN, Birdhouse",
     classifiers=[
-        "Development Status :: 6 - Production/Stable",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
