@@ -30,7 +30,7 @@
 .. _ESGF: https://esgf-node.llnl.gov
 .. _DKRZ: https://esgf-data.dkrz.de
 .. _IPSL: https://www.lsce.ipsl.fr
-.. _BADC: http://data.ceda.ac.uk/badc
+.. _BADC: https://esgf.ceda.ac.uk
 .. _CEDA: https://esgf-index1.ceda.ac.uk
 .. _LLNL: https://www.llnl.gov/
 .. _PCMDI: https://pcmdi.llnl.gov/
