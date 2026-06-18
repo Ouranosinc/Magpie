@@ -7,19 +7,19 @@ beaker @ https://github.com/crim-ca/beaker/archive/0ac88bcd8cca063a571fc385ffbe9
 colander
 cornice
 cornice_swagger>=0.7.0
-cryptography>=46.0.5
+cryptography>=48.0.1
 dicttoxml
 gunicorn>=22
 humanize
 jsonschema>=4
 jwcrypto>=1.5.7,<2
 lxml>=6.1.0
-mako>=1.3.11
+mako>=1.3.12
 paste
 pastedeploy
 pluggy
 psycopg2-binary>=2.7.1
-PyJWT[crypto]>=2.12.0,<3
+PyJWT[crypto]>=2.13.0,<3
 # FIXME: setuptools/pkg_resources deprecated dependency
 #   (https://github.com/Pylons/pyramid/issues/3731, https://github.com/pypa/setuptools/pull/5007)
 # below setuptools pin is placed here purposely instead of 'requirements-sys.txt' in order to keep it
@@ -35,6 +35,7 @@ python-dotenv>=1.2.2
 pyyaml>=5.1
 requests>=2.32.5
 requests_file
+idna>=3.15.0
 simplejson
 six>=1.12.0
 # see also: safety 51668, https://github.com/sqlalchemy/sqlalchemy/pull/8563
@@ -44,8 +45,8 @@ sqlalchemy-utils==0.39.0  # pyup: ignore
 threddsclient>=0.4.2
 transaction
 typing_extensions
-urllib3>=2.6.3
-webob
+urllib3>=2.7.0
+webob>=1.8.10
 ziggurat_foundations==0.9.1
 zope.interface>=4.7.2
 zope.sqlalchemy

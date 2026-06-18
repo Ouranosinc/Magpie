@@ -1,4 +1,4 @@
-FROM python:3.13.11-alpine3.23
+FROM python:3.13-alpine3.23
 LABEL Description="Runs Magpie AuthN/AuthZ service for REST-API and UI interfaces."
 LABEL Maintainer="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
 LABEL Vendor="CRIM"
@@ -18,18 +18,19 @@ RUN chmod 0644 $CRON_DIR/magpie-cron
 # install dependencies
 COPY magpie/__init__.py magpie/__meta__.py $MAGPIE_DIR/magpie/
 COPY requirements* setup.py README.rst CHANGES.rst $MAGPIE_DIR/
-RUN apk update \
-    && apk add \
-    bash \
-    postgresql-libs \
-    libxslt-dev \
-    && apk add --virtual .build-deps \
-    gcc \
-    libffi-dev \
-    python3-dev \
-    py-pip \
-    musl-dev \
-    postgresql-dev \
+RUN apk upgrade --no-cache \
+    && apk add --no-cache \
+        bash \
+        openssl \
+        postgresql-libs \
+        sqlite-libs \
+        libxslt-dev \
+    && apk add --no-cache --virtual .build-deps \
+        gcc \
+        libffi-dev \
+        python3-dev \
+        musl-dev \
+        postgresql-dev \
     && pip install --no-cache-dir --upgrade -r requirements-sys.txt \
     && pip install --no-cache-dir -e $MAGPIE_DIR \
     && apk --purge del .build-deps

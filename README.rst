@@ -38,7 +38,7 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - *Supported*
       - Tested by the CI and maintained for backward compatibility.
     * - *Recommended*
-      - Prefered minimal version to use for latest security updates and performance enhancements.
+      - Preferred minimal version to use for latest security updates and performance enhancements.
 
 .. |py_ver_legacy| image:: https://img.shields.io/badge/python%20%28legacy%29-3.5%20%2D%2D%203.9-orange.svg
     :alt: Python 3.5+ supported (legacy)
