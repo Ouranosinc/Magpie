@@ -22,7 +22,6 @@ import sys
 
 import requests
 import requests.adapters
-from bs4 import BeautifulSoup
 from pyramid.config import Configurator
 from urllib3 import Retry
 
@@ -176,24 +175,37 @@ def ignore_down_providers():
     adapter = requests.adapters.HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1))
     session = requests.Session()
     session.mount("https://", adapter)
-    resp = session.get("https://esgf-node.llnl.gov/status/")
+    resp = session.get("https://esgf-node.ornl.gov/proxy/status", timeout=5)
+    if resp.status_code != 200:
+        resp = session.get("https://esgf-node.llnl.gov/proxy/status", timeout=5)
     if resp.status_code != 200:
         return []
-    body = BeautifulSoup(resp.text)
-    nodes = list(
-        str(item) for item in body.find_all("tr")  # pylint: disable=not-an-iterable
-        if any(status in str(item) for status in ["DOWN", "UP"])
-    )
+    try:
+        body = resp.json()
+    except ValueError:
+        return []
+    result = body.get("data", {}).get("result", [])
+    if not isinstance(result, list):
+        return []
+
     down_list = []
     for prov_key, prov_cfg in linkcheck_providers.items():
-        prov_down = all(
-            "DOWN" in node
-            for node in nodes
-            if any(
-                prov in node
-                for prov in [prov_cfg["hostname"], prov_cfg["display_name"]] + prov_cfg["locations"]
-            )
-        )
+        provider_names = [prov_cfg["hostname"], prov_cfg["display_name"]] + prov_cfg["locations"]
+        provider_names = [name.lower() for name in provider_names]
+        provider_probes = []
+        for probe in result:
+            metric = probe.get("metric", {})
+            if not isinstance(metric, dict):
+                continue
+            instance = str(metric.get("instance", "")).lower()
+            target = str(metric.get("target", "")).lower()
+            if not any(name in instance or name in target for name in provider_names):
+                continue
+            value = probe.get("value", [])
+            status = str(value[1]) if isinstance(value, list) and len(value) > 1 else ""
+            provider_probes.append(status == "1")
+
+        prov_down = bool(provider_probes) and not any(provider_probes)
         if prov_down:
             print(f"Ignoring provider [{prov_key}] detected as all instances down for link-check.")
             locations = set([prov_cfg["hostname"]] + prov_cfg["locations"])
