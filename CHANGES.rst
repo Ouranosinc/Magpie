@@ -9,6 +9,13 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing new for the moment.
+
+.. _changes_5.1.1:
+
+`5.1.1 <https://github.com/Ouranosinc/Magpie/tree/5.1.1>`_ (2026-06-18)
+------------------------------------------------------------------------------------
+
 * Security updates to Python and Docker dependencies.
 
 .. _changes_5.1.0:
