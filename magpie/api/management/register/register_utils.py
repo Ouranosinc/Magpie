@@ -201,7 +201,7 @@ def register_pending_user(user_name, email, password, request):
                      msg_on_fail="Error occurred during user registration when trying to send "
                                  "email to pending user for confirmation of its submitted email.")
 
-    user_content = rf.format_pending_user(tmp_user)
+    user_content = rf.format_pending_user(tmp_user, basic_info=True)
     return ax.valid_http(http_success=HTTPCreated, detail=s.Users_POST_CreatedResponseSchema.description,
                          content={"registration": user_content})
 
