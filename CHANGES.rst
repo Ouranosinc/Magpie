@@ -9,7 +9,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing new for the moment.
+Bug Fixes
+~~~~~~~~~
+
+* Don't report confirm URL in registration reponse to ensure that email is actually verified.
 
 .. _changes_5.1.1:
 
