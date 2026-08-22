@@ -145,7 +145,7 @@ linkcheck_providers = {
     },
     # former "badc"
     "ceda": {
-        "hostname": "esgf-index1.ceda.ac.uk",
+        "hostname": "https://esgf.ceda.ac.uk",
         "display_name": "CEDA",
         "locations": [
             "esgf.ceda.ac.uk",
@@ -230,6 +230,8 @@ linkcheck_ignore = [
     "https://docs.wso2.com/*",
     "https://pcmdi.llnl.gov/",  # works, but very often causes false-positive 'broken' links
     "http://host.docker.internal/*",  # for examples that refer to magpie on the host machine
+    # ignore stackoverflow redirects causing failures (https://github.com/orgs/sphinx-doc/discussions/12032)
+    r"https://stackoverflow\.com/.*",
 ] + ignore_down_providers()
 linkcheck_anchors_ignore = [
     r".*issuecomment.*",  # GitHub issue comment anchors not resolved
