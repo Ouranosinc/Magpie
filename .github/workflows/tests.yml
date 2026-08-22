@@ -68,24 +68,24 @@ jobs:
             # FIXME:
             #   Not using 3.11 because of problems with pylint false-positives about missing builtin references.
             #   https://github.com/PyCQA/pylint/issues/6535
-            python-version: "3.12"
+            python-version: "3.13"
             allow-failure: false
             test-case: check
           # remote test (note that network tests are skipped since the remote server won't have network mode enabled)
           - os: ubuntu-latest
-            python-version: "3.11"
+            python-version: "3.13"
             allow-failure: true
             test-case: start test-remote
           # remote network tests using a remote server with network mode enabled
           - os: ubuntu-latest
-            python-version: "3.12"
+            python-version: "3.13"
             allow-failure: true
             test-case: start test-remote-network
             test-option: >-
               MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True MAGPIE_NETWORK_ENABLED=on MAGPIE_NETWORK_INSTANCE_NAME=example
           # coverage test
           - os: ubuntu-latest
-            python-version: "3.11"
+            python-version: "3.13"
             allow-failure: false
             test-case: coverage
           # smoke test of Docker image
