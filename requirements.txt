@@ -12,7 +12,7 @@ dicttoxml
 gunicorn>=22
 humanize
 jsonschema>=4
-jwcrypto>=1.5.7,<2
+jwcrypto>=1.5.8,<2
 lxml>=6.1.0
 mako>=1.3.12
 paste
