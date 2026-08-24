@@ -1,44 +1,70 @@
 # label rules used by .github/workflows/label.yml
+# reference: https://github.com/actions/labeler (v5+ format)
+# migration guide: https://github.com/actions/labeler/releases/tag/v5.0.0
 
-api:
-  - magpie/api/**/*
+## CI
+# all automation-related steps and files
 
-cli:
-  - magpie/cli/**/*
-
-# label 'ci' all automation-related steps and files
 ci:
-  - .*  # all '.<>' files
-  - .github/**/*
-  - ci/**/*
-  - hooks/**/*
-  - Makefile
-  - Dockerfile*
-  - setup.cfg
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.*'  # all '.<>' files
+      - '.github/**'
+      - 'ci/**/*'
+      - 'hooks/**/*'
+      - 'Makefile'
+      - 'Dockerfile*'
+      - 'setup.cfg'
 
 doc:
-  - "*.rst"
-  - "*.example"
-  - doc/**/*
-  - requirements-doc.txt
-
-db:
-  - magpie/db.py
-  - magpie/models.py
-
-plugin:
-  - magpie/adapter/**/*
-
-security:
-  - magpie/security.py
+  - changed-files:
+    - any-glob-to-any-file:
+      - '*.rst'
+      - '*.example'
+      - 'doc/**/*'
+      - 'requirements-doc.txt'
 
 tests:
-  - tests/**/*
-  - requirements-dev.txt
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tests/**/*'
+      - 'requirements-dev.txt'
+
+## Features
+
+api:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'magpie/api/**/*'
+
+cli:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'magpie/cli/**/*'
+
+db:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'magpie/db.py'
+      - 'magpie/models.py'
+
+plugin:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'magpie/adapter/**/*'
+
+security:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'magpie/security.py'
 
 ui:
-  - magpie/ui/**/*
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'magpie/ui/**/*'
 
 webhook:
-  - magpie/api/webhooks/**/*
-  - tests/test_webhooks.py
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'magpie/api/webhooks/**/*'
+      - 'tests/test_webhooks.py'
