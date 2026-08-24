@@ -6,13 +6,15 @@
 # https://github.com/actions/labeler/blob/master/README.md
 
 name: Pull Request Labeler
-on: 
+on:
   # https://github.com/actions/labeler#recommended-permissions
   pull_request_target:
     types: [opened, edited, synchronize, reopened]
 
 jobs:
   label:
+    # Skip for Dependabot - labels are already applied via dependabot.yml config
+    if: github.actor != 'dependabot[bot]'
     permissions:
       # see: https://github.com/actions/labeler/issues/870
       contents: read
@@ -20,10 +22,11 @@ jobs:
       issues: write
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with:
         fetch-depth: "0"
-    - uses: actions/labeler@v4.3.0
+    - uses: actions/labeler@v7.0.0
       with:
-        sync-labels: ''
+        sync-labels: false
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        configuration-path: .github/labeler.yml

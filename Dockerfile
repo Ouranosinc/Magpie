@@ -1,3 +1,4 @@
+# version pin defined via '.github/dependabot.yml'
 FROM python:3.13-alpine3.23
 LABEL Description="Runs Magpie AuthN/AuthZ service for REST-API and UI interfaces."
 LABEL Maintainer="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"

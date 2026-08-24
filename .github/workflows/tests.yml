@@ -32,7 +32,16 @@ jobs:
   # see: https://github.com/actions/setup-python
   tests:
     needs: skip_duplicate
-    if: ${{ needs.skip_duplicate.outputs.should_skip != 'true' || contains(github.ref, 'refs/tags') || contains(github.ref, 'refs/heads/master') }}
+
+    # Skip when there is a concurrent PR run of same contents, except if on main branch/release.
+    # Dependabot is allowed here; an early guard step below keeps only the coverage matrix case.
+    if: |
+      ${{
+        needs.skip_duplicate.outputs.should_skip != 'true' ||
+        contains(github.ref, 'refs/tags') ||
+        contains(github.ref, 'refs/heads/master')
+      }}
+
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow-failure }}
     env:
@@ -68,24 +77,24 @@ jobs:
             # FIXME:
             #   Not using 3.11 because of problems with pylint false-positives about missing builtin references.
             #   https://github.com/PyCQA/pylint/issues/6535
-            python-version: "3.12"
+            python-version: "3.13"
             allow-failure: false
             test-case: check
           # remote test (note that network tests are skipped since the remote server won't have network mode enabled)
           - os: ubuntu-latest
-            python-version: "3.11"
+            python-version: "3.13"
             allow-failure: true
             test-case: start test-remote
           # remote network tests using a remote server with network mode enabled
           - os: ubuntu-latest
-            python-version: "3.12"
+            python-version: "3.13"
             allow-failure: true
             test-case: start test-remote-network
             test-option: >-
               MAGPIE_NETWORK_CREATE_MISSING_PEM_FILE=True MAGPIE_NETWORK_ENABLED=on MAGPIE_NETWORK_INSTANCE_NAME=example
           # coverage test
           - os: ubuntu-latest
-            python-version: "3.11"
+            python-version: "3.13"
             allow-failure: false
             test-case: coverage
           # smoke test of Docker image
@@ -94,42 +103,57 @@ jobs:
             allow-failure: true
             test-case: test-docker
     steps:
-      - uses: actions/checkout@v6
+      - name: Evaluate matrix execution guard
+        id: execution_guard
+        shell: bash
+        run: |
+          if [[ "${{ github.actor }}" == "dependabot[bot]" && "${{ matrix.test-case }}" != "coverage" ]]; then
+            echo "Skpping Dependabot coverage test..."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         with:
           fetch-depth: "0"
       - name: Setup Python
-        uses: actions/setup-python@v6
-        if: ${{ matrix.python-version != 'none' }}
+        uses: actions/setup-python@v7
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.python-version != 'none' }}
         with:
           python-version: ${{ matrix.python-version }}
       # run 'install-sys' by itself first even if other targets depend on it to setup pip
       # this ensures that the auto-resolved PIP_XARGS will match the active pip version for following installs
       - name: Install Package Managers
-        if: ${{ matrix.python-version != 'none' }}
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.python-version != 'none' }}
         run: make install-sys
       - name: Install Dependencies
-        if: ${{ matrix.python-version != 'none' }}
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.python-version != 'none' }}
         run: make install-pkg install-req install-dev version
       - name: Display Packages
-        if: ${{ matrix.python-version != 'none' }}
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.python-version != 'none' }}
         run: pip freeze
       - name: Setup Environment Variables
-        uses: c-py/action-dotenv-to-setenv@v2
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
+        uses: c-py/action-dotenv-to-setenv@v5
         with:
           env-file: ./ci/magpie.env
       - name: Display Environment Variables
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: |
           hash -r
           env | sort
       - name: Create private key for network testing
-        if: ${{ matrix.test-case == 'test-local' }}
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.test-case == 'test-local' }}
         run: ${{ matrix.test-option }} make create-private-key
       # run '-only' test variations since dependencies are preinstalled, skip some resolution time
       - name: Run Tests
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: ${{ matrix.test-option }} make stop ${{ matrix.test-case }}-only
       - name: Upload coverage report
-        uses: codecov/codecov-action@v2
-        if: ${{ success() && matrix.test-case == 'coverage' }}
+        uses: codecov/codecov-action@v7
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' && success() && matrix.test-case == 'coverage' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./reports/coverage.xml

@@ -31,7 +31,7 @@
 .. _DKRZ: https://esgf-data.dkrz.de
 .. _IPSL: https://www.lsce.ipsl.fr
 .. _BADC: https://esgf.ceda.ac.uk
-.. _CEDA: https://esgf-index1.ceda.ac.uk
+.. _CEDA: https://esgf.ceda.ac.uk
 .. _LLNL: https://www.llnl.gov/
 .. _PCMDI: https://pcmdi.llnl.gov/
 .. _SMHI: https://www.smhi.se

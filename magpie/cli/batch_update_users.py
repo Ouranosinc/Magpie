@@ -109,7 +109,7 @@ def make_output(user_results, is_delete, output_location=None):
     """
 
     cols_space = 5
-    cols_width = {"username": 8, "password": 8, "result": 8}
+    cols_width = {"username": 8, "password": 8, "result": 8}  # nosec: B105
     for user in user_results:
         cols_width["username"] = max(cols_width["username"], len(user["username"]))
         cols_width["result"] = max(cols_width["result"], len(user["result"]))

@@ -12,7 +12,7 @@ dicttoxml
 gunicorn>=22
 humanize
 jsonschema>=4
-jwcrypto>=1.5.7,<2
+jwcrypto>=1.5.8,<2
 lxml>=6.1.0
 mako>=1.3.12
 paste
@@ -26,11 +26,11 @@ PyJWT[crypto]>=2.13.0,<3
 # aligned with its upstream 'pyramid' dependency expecting 'pkg_resources' that has official been removed
 setuptools<82
 pyramid>=1.10.2,<3
-pyramid_beaker==0.8
+pyramid_beaker==0.9
 pyramid_chameleon>=0.3
-pyramid_mako>=1.0.2
+pyramid_mako>=1.1.0
 pyramid_retry==2.1.1
-pyramid_tm>=2.2.1
+pyramid_tm>=2.6
 python-dotenv>=1.2.2
 pyyaml>=5.1
 requests>=2.32.5
@@ -41,8 +41,8 @@ six>=1.12.0
 # see also: safety 51668, https://github.com/sqlalchemy/sqlalchemy/pull/8563
 sqlalchemy>=1.4.44,<2  # pyup: ignore
 # see also: safety 42194, https://github.com/kvesteri/sqlalchemy-utils/issues/166, not fixed since 2015
-sqlalchemy-utils==0.39.0  # pyup: ignore
-threddsclient>=0.4.2
+sqlalchemy-utils==0.42.1  # pyup: ignore
+threddsclient>=0.4.7
 transaction
 typing_extensions
 urllib3>=2.7.0

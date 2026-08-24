@@ -335,7 +335,7 @@ class AdminRequests(BaseViews):
             "reason_user_name": "Invalid",
             "reason_group_name": "Invalid",
             "reason_user_email": "Invalid",
-            "reason_password": "Invalid",
+            "reason_password": "Invalid",  # nosec: B105
             "form_user_name": "",
             "form_user_email": "",
             "user_groups": [],          # group selector for auto-assign on creation
