@@ -26,7 +26,7 @@ PyJWT[crypto]>=2.13.0,<3
 # aligned with its upstream 'pyramid' dependency expecting 'pkg_resources' that has official been removed
 setuptools<82
 pyramid>=1.10.2,<3
-pyramid_beaker==0.8
+pyramid_beaker==0.9
 pyramid_chameleon>=0.3
 pyramid_mako>=1.0.2
 pyramid_retry==2.1.1
@@ -41,7 +41,7 @@ six>=1.12.0
 # see also: safety 51668, https://github.com/sqlalchemy/sqlalchemy/pull/8563
 sqlalchemy>=1.4.44,<2  # pyup: ignore
 # see also: safety 42194, https://github.com/kvesteri/sqlalchemy-utils/issues/166, not fixed since 2015
-sqlalchemy-utils==0.39.0  # pyup: ignore
+sqlalchemy-utils==0.42.1  # pyup: ignore
 threddsclient>=0.4.2
 transaction
 typing_extensions
