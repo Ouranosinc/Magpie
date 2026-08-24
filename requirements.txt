@@ -28,7 +28,7 @@ setuptools<82
 pyramid>=1.10.2,<3
 pyramid_beaker==0.9
 pyramid_chameleon>=0.3
-pyramid_mako>=1.0.2
+pyramid_mako>=1.1.0
 pyramid_retry==2.1.1
 pyramid_tm>=2.6
 python-dotenv>=1.2.2
