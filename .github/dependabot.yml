@@ -77,6 +77,14 @@ updates:
     commit-message:
       prefix: "docker"
       include: "scope"
+    ignore:
+      # Isolate the 'python' base image exactly (i.e.: still allow Twitcher updates)
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+        versions:
+          - ">= 3.14.0"  # limit to Python 3.13.x, but allow any extra OS version tag
 
   # NPM dependencies
   - package-ecosystem: "npm"
