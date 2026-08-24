@@ -40,7 +40,7 @@ jobs:
         needs.skip_duplicate.outputs.should_skip != 'true' ||
         contains(github.ref, 'refs/tags') ||
         contains(github.ref, 'refs/heads/master') ||
-        ( github.actor == 'dependabot[bot]' && matrix.test-case != 'coverage' )
+        ( github.actor == 'dependabot[bot]' && matrix.test-case == 'coverage' )
       }}
 
     runs-on: ${{ matrix.os }}
