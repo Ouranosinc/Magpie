@@ -20,10 +20,10 @@ jobs:
       issues: write
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with:
         fetch-depth: "0"
-    - uses: actions/labeler@v4.3.0
+    - uses: actions/labeler@v7.0.0
       with:
         sync-labels: ''
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
