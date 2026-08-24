@@ -9,6 +9,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Update ``sqlalchemy>=2``.
+* Security updates to Python and Docker dependencies.
+
 Bug Fixes
 ~~~~~~~~~
 
