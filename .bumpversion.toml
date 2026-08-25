@@ -1,0 +1,58 @@
+[tool.bumpversion]
+current_version = "5.1.1"
+commit = true
+tag = true
+tag_name = "{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "Dockerfile"
+search = "LABEL org.opencontainers.image.version=\"{current_version}\""
+replace = "LABEL org.opencontainers.image.version=\"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "Dockerfile"
+search = "LABEL org.opencontainers.image.created=\"\\d{{4}}-\\d{{2}}-\\d{{2}}T\\d{{2}}:\\d{{2}}:\\d{{2}}Z\""
+replace = "LABEL org.opencontainers.image.created=\"{utcnow:%Y-%m-%dT%H:%M:%SZ}\""
+regex = true
+
+[[tool.bumpversion.files]]
+filename = "Dockerfile.adapter"
+search = "LABEL org.opencontainers.image.version=\"{current_version}\""
+replace = "LABEL org.opencontainers.image.version=\"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "Dockerfile.adapter"
+search = "LABEL org.opencontainers.image.created=\"\\d{{4}}-\\d{{2}}-\\d{{2}}T\\d{{2}}:\\d{{2}}:\\d{{2}}Z\""
+replace = "LABEL org.opencontainers.image.created=\"{utcnow:%Y-%m-%dT%H:%M:%SZ}\""
+regex = true
+
+[[tool.bumpversion.files]]
+filename = "README.rst"
+search = "{current_version}"
+replace = "{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "Makefile"
+search = "APP_VERSION ?= {current_version}"
+replace = "APP_VERSION ?= {new_version}"
+
+[[tool.bumpversion.files]]
+filename = "magpie/__meta__.py"
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "CHANGES.rst"
+search = """
+	`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
+	------------------------------------------------------------------------------------"""
+replace = """
+	`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
+	------------------------------------------------------------------------------------
+	
+	* Nothing new for the moment.
+	
+	.. _changes_{new_version}:
+	
+	`{new_version} <https://github.com/Ouranosinc/Magpie/tree/{new_version}>`_ ({now:%%Y-%%m-%%d})
+	------------------------------------------------------------------------------------"""
