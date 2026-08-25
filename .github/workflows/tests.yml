@@ -107,7 +107,7 @@ jobs:
         id: execution_guard
         shell: bash
         run: |
-          if [[ "${{ github.actor }}" == "dependabot[bot]" && "${{ matrix.test-case }}" != "coverage" ]]; then
+          if [[ "${{ github.actor }}" == "dependabot[bot]" && "${{ matrix.test-case }}" == "coverage" ]]; then
             echo "Skpping Dependabot coverage test..."
             echo "should_run=false" >> "$GITHUB_OUTPUT"
           else
