@@ -13,6 +13,7 @@ Bug Fixes
 ~~~~~~~~~
 
 * Don't report confirm URL in registration reponse to ensure that email is actually verified.
+* Resolve approval URL properly when approving pending users.
 
 .. _changes_5.1.1:
 
