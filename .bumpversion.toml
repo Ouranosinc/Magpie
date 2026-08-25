@@ -44,15 +44,15 @@ replace = "__version__ = \"{new_version}\""
 [[tool.bumpversion.files]]
 filename = "CHANGES.rst"
 search = """
-	`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
-	------------------------------------------------------------------------------------"""
+`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
+------------------------------------------------------------------------------------"""
 replace = """
-	`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
-	------------------------------------------------------------------------------------
+`Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
+------------------------------------------------------------------------------------
 	
-	* Nothing new for the moment.
-	
-	.. _changes_{new_version}:
-	
-	`{new_version} <https://github.com/Ouranosinc/Magpie/tree/{new_version}>`_ ({now:%%Y-%%m-%%d})
-	------------------------------------------------------------------------------------"""
+* Nothing new for the moment.
+
+.. _changes_{new_version}:
+
+`{new_version} <https://github.com/Ouranosinc/Magpie/tree/{new_version}>`_ ({now:%%Y-%%m-%%d})
+------------------------------------------------------------------------------------"""
