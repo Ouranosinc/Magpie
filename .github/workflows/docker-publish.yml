@@ -23,6 +23,8 @@ jobs:
   build-publish-magpie:
     name: Build and publish (Magpie)
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: "pavics/magpie"
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -30,22 +32,11 @@ jobs:
           disable-sudo: true
           egress-policy: audit
 
-      - name: Checkout Repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
       - name: Gather Docker metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: pavics/magpie
-          labels: |
-            org.opencontainers.image.authors=Francis Charette-Migneault <francis.charette-migneault@crim.ca>
-            org.opencontainers.image.description=Runs Magpie AuthN/AuthZ service for REST-API and UI interfaces.
-            org.opencontainers.image.licenses=Apache-2.0
-            org.opencontainers.image.title=Magpie
-            org.opencontainers.image.vendor=CRIM and Ouranosinc
+          images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
@@ -68,9 +59,15 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
 
+      - name: Inspect labels
+        run: |
+          docker inspect --format='{{json .Config.Labels}}' ${{ env.IMAGE_NAME }}:latest
+
   build-publish-twitcher:
     name: Build and publish (twitcher w/MagpieAdapter)
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: "pavics/twitcher"
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -78,16 +75,11 @@ jobs:
           disable-sudo: true
           egress-policy: audit
 
-      - name: Checkout Repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
       - name: Gather Docker metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: pavics/twitcher
+          images: ${{ env.IMAGE_NAME }}
           labels: |
             org.opencontainers.image.authors=Francis Charette-Migneault <francis.charette-migneault@crim.ca>
             org.opencontainers.image.description=Configures MagpieAdapter on top of Twitcher application.
@@ -115,3 +107,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Inspect labels
+        run: |
+          docker inspect --format='{{json .Config.Labels}}' ${{ env.IMAGE_NAME }}:magpie-latest
