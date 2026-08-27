@@ -45,3 +45,7 @@ jobs:
           load: true
           push: false
           tags: ${{ env.TEST_TAG }}
+
+      - name: Inspect labels
+        run: |
+          docker inspect --format='{{json .Config.Labels}}' ${{ env.TEST_TAG }}
