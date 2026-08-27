@@ -49,9 +49,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           context: .
+          labels: ${{ steps.meta.outputs.labels }}
           load: true
           push: false
-          tags: ${{ env.IMAGE_NAME }}:test
+          tags: ${{ steps.meta.outputs.tags }}
 
       - name: Inspect labels
         run: |
