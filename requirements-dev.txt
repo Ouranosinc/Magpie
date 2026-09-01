@@ -1,5 +1,7 @@
 -r requirements-sys.txt
 -r requirements-doc.txt
+# pin authlib to patch broken safety dependency chain
+authlib<1.8.0
 autopep8>=1.5.4
 bandit==1.9.4
 bump-my-version==1.5.1
