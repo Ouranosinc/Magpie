@@ -29,6 +29,12 @@ with it directly.
 
     pip install git+https://github.com/Ouranosinc/Magpie.git
 
+To use the PyPI package, employ the following command instead:
+
+.. code-block:: console
+
+    pip install pavics-magpie
+
 If you desire to develop code features or fixes with `Magpie`, consider using the ``-e`` option to install a reference
 to your local installation, avoiding distinct instances locally and in ``site-packages``. For example:
 
@@ -42,7 +48,7 @@ If you have ``conda`` installed, you can create an environment and activate it a
 
     conda create -n magpie
     conda activate magpie
-    pip install magpie
+    pip install -e <local-magpie-directory>
 
 All above operations is done automatically with the following command executed from within a local `Magpie` directory:
 

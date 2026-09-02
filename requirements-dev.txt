@@ -20,5 +20,6 @@ pytest
 pytest-httpserver==1.1.5
 safety
 tox>=3.0
+twine
 webtest
 waitress
