@@ -9,6 +9,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Update docker adapter to `birdhouse/twitcher:v0.11.2 <https://github.com/bird-house/twitcher/releases/tag/v0.11.2>`_
+  and corresponding developement requirement ``pyramid-twitcher>=0.11.2`` for flexible ``sqlalchemy`` dependency range.
+
 Bug Fixes
 ~~~~~~~~~
 
