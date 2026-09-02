@@ -5,9 +5,16 @@
 #   using config 'twitcher.adapter = magpie.adapter.MagpieAdapter'
 #
 FROM birdhouse/twitcher:v0.11.2
-LABEL Description="Configures MagpieAdapter on top of Twitcher application."
-LABEL Maintainer="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
-LABEL Vendor="CRIM"
+ARG DEBIAN_FRONTEND=noninteractive
+ENV PIP_ROOT_USER_ACTION=ignore
+LABEL org.opencontainers.image.authors="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
+LABEL org.opencontainers.image.created="2026-07-30T20:37:38Z"
+LABEL org.opencontainers.image.description="Configures MagpieAdapter on top of Twitcher application."
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/Ouranosinc/Magpie"
+LABEL org.opencontainers.image.title="Twitcher with MagpieAdapter"
+LABEL org.opencontainers.image.vendor="CRIM and Ouranosinc"
+LABEL org.opencontainers.image.version="5.1.1"
 
 ENV MAGPIE_DIR=/opt/local/src/magpie
 COPY magpie/__init__.py magpie/__meta__.py $MAGPIE_DIR/magpie/

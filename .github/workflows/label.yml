@@ -9,7 +9,14 @@ name: Pull Request Labeler
 on:
   # https://github.com/actions/labeler#recommended-permissions
   pull_request_target:
-    types: [opened, edited, synchronize, reopened]
+    types: 
+      - edited
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
 
 jobs:
   label:
@@ -17,15 +24,16 @@ jobs:
     if: github.actor != 'dependabot[bot]'
     permissions:
       # see: https://github.com/actions/labeler/issues/870
-      contents: read
       pull-requests: write
       issues: write
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v7
+    - name: Check out Repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
         fetch-depth: "0"
-    - uses: actions/labeler@v7.0.0
+    - name: Label
+      uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
       with:
         sync-labels: false
         repo-token: "${{ secrets.GITHUB_TOKEN }}"

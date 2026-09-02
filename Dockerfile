@@ -1,8 +1,15 @@
 # version pin defined via '.github/dependabot.yml'
 FROM python:3.13-alpine3.23
-LABEL Description="Runs Magpie AuthN/AuthZ service for REST-API and UI interfaces."
-LABEL Maintainer="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
-LABEL Vendor="CRIM"
+ARG DEBIAN_FRONTEND=noninteractive
+ENV PIP_ROOT_USER_ACTION=ignore
+LABEL org.opencontainers.image.authors="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
+LABEL org.opencontainers.image.created="2026-07-30T20:37:38Z"
+LABEL org.opencontainers.image.description="Runs Magpie AuthN/AuthZ service for REST-API and UI interfaces."
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/Ouranosinc/Magpie"
+LABEL org.opencontainers.image.title="Magpie"
+LABEL org.opencontainers.image.vendor="CRIM and Ouranosinc"
+LABEL org.opencontainers.image.version="5.1.1"
 
 # the cron service depends on the $MAGPIE_DIR environment variable
 ENV MAGPIE_DIR=/opt/local/src/magpie
@@ -40,6 +47,7 @@ RUN apk upgrade --no-cache \
 COPY ./config/magpie.ini $MAGPIE_CONFIG_DIR/magpie.ini
 COPY ./env/*.env.example $MAGPIE_ENV_DIR/
 COPY ./magpie $MAGPIE_DIR/magpie/
+
 # equivalent of `make install` without conda env and pre-installed packages
 RUN pip install --no-dependencies -e $MAGPIE_DIR
 
