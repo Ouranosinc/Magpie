@@ -346,8 +346,8 @@ endif
 bump:	## bump version using VERSION specified as user input (make VERSION=<X.Y.Z> bump)
 	@-echo "Updating package version ..."
 	@[ "${VERSION}" ] || ( echo ">> 'VERSION' is not set"; exit 1 )
-	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump2version" || pip install $(PIP_XARGS) bump2version'
-	@-bash -c '$(CONDA_CMD) bump2version $(BUMP_XARGS) --new-version "${VERSION}" patch;'
+	@-bash -c '$(CONDA_CMD) test -f "$(CONDA_ENV_PATH)/bin/bump-my-version" || pip install $(PIP_XARGS) bump-my-version'
+	@-bash -c '$(CONDA_CMD) bump-my-version bump $(BUMP_XARGS) --new-version "${VERSION}" patch;'
 
 ## --- Installation targets --- ##
 
@@ -606,7 +606,7 @@ check-imports-only: mkdir-reports	## run imports code checks
 	@echo "Running import checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-imports.txt"
 	@bash -c '$(CONDA_CMD) \
-	 	isort --check-only --diff --recursive $(APP_ROOT) \
+	 	isort --check-only --diff $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
 .PHONY: check-css-only
@@ -639,7 +639,7 @@ fix-imports-only: 	## fix import code checks corrections automatically
 	@echo "Fixing flagged import checks..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
 	@bash -c '$(CONDA_CMD) \
-		isort --recursive $(APP_ROOT) \
+		isort $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
 
 .PHONY: fix-lint-only

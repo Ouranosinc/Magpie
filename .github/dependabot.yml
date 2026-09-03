@@ -29,6 +29,8 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
+    cooldown:
+      default-days: 7
 
   # Python dependencies (pip)
   # Group patch/minor updates to reduce PR count; major updates get individual PRs
@@ -58,6 +60,8 @@ updates:
     commit-message:
       prefix: "pip"
       include: "scope"
+    cooldown:
+      default-days: 7
 
   # Docker dependencies
   # No grouping for Docker dependencies - all updates need manual review
@@ -85,6 +89,8 @@ updates:
           - "version-update:semver-minor"
         versions:
           - ">= 3.14.0"  # limit to Python 3.13.x, but allow any extra OS version tag
+    cooldown:
+      default-days: 7
 
   # NPM dependencies
   - package-ecosystem: "npm"
@@ -106,3 +112,5 @@ updates:
     commit-message:
       prefix: "npm"
       include: "scope"
+    cooldown:
+      default-days: 7

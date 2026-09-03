@@ -13,6 +13,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # see: https://github.com/fkirc/skip-duplicate-actions
   skip_duplicate:
@@ -107,19 +110,21 @@ jobs:
         id: execution_guard
         shell: bash
         run: |
-          if [[ "${{ github.actor }}" == "dependabot[bot]" && "${{ matrix.test-case }}" != "coverage" ]]; then
+          if [[ "${{ github.actor }}" == "dependabot[bot]" && "${{ matrix.test-case }}" == "coverage" ]]; then
             echo "Skpping Dependabot coverage test..."
             echo "should_run=false" >> "$GITHUB_OUTPUT"
           else
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v7
+      - name: Check out Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         with:
           fetch-depth: "0"
+
       - name: Setup Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.python-version != 'none' }}
         with:
           python-version: ${{ matrix.python-version }}
@@ -128,31 +133,38 @@ jobs:
       - name: Install Package Managers
         if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.python-version != 'none' }}
         run: make install-sys
+
       - name: Install Dependencies
         if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.python-version != 'none' }}
         run: make install-pkg install-req install-dev version
+
       - name: Display Packages
         if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.python-version != 'none' }}
         run: pip freeze
+
       - name: Setup Environment Variables
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         uses: c-py/action-dotenv-to-setenv@v5
         with:
           env-file: ./ci/magpie.env
+
       - name: Display Environment Variables
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: |
           hash -r
           env | sort
+
       - name: Create private key for network testing
         if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.test-case == 'test-local' }}
         run: ${{ matrix.test-option }} make create-private-key
       # run '-only' test variations since dependencies are preinstalled, skip some resolution time
+
       - name: Run Tests
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: ${{ matrix.test-option }} make stop ${{ matrix.test-case }}-only
+
       - name: Upload coverage report
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f  # v7.0.0
         if: ${{ steps.execution_guard.outputs.should_run == 'true' && success() && matrix.test-case == 'coverage' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

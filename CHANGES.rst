@@ -14,11 +14,14 @@ Features / Changes
 
 * Update ``sqlalchemy>=2``.
 * Security updates to Python and Docker dependencies.
+* Update docker adapter to `birdhouse/twitcher:v0.11.2 <https://github.com/bird-house/twitcher/releases/tag/v0.11.2>`_
+  and corresponding developement requirement ``pyramid-twitcher>=0.11.2`` for flexible ``sqlalchemy`` dependency range.
 
 Bug Fixes
 ~~~~~~~~~
 
 * Don't report confirm URL in registration reponse to ensure that email is actually verified.
+* Resolve approval URL properly when approving pending users.
 
 .. _changes_5.1.1:
 

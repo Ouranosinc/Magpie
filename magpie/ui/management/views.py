@@ -339,7 +339,9 @@ class ManagementViews(AdminRequests, BaseViews):
 
         # approval must be done with the explicit URL, user should exist afterwards
         if "approve" in self.request.POST and data["approve_url"]:
-            path = data["approve_url"]
+            # request_api expects a relative path and data["approve_url"] is an absolute URL
+            # removeprefix is necessary to extract the relative path from the URL.
+            path = data["approve_url"].removeprefix(self.request.application_url)
             resp = request_api(self.request, path, "GET")
             check_response(resp)
             return HTTPFound(self.request.route_url("edit_user", user_name=user_name, cur_svc_type="default"))
