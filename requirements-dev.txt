@@ -10,7 +10,7 @@ coverage>=5.5
 doc8>=1.1.2
 docformatter
 flake8
-isort!=5.11.0,>=9.0.0
+isort>=9.0.0
 mock>4
 # FIXME: use temporary unofficial version working with pylint>3 (https://github.com/edaniszewski/pylint-quotes/pull/30)
 pylint>=3
