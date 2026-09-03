@@ -61,6 +61,7 @@ jobs:
         with:
           file: Dockerfile
           labels: ${{ steps.meta.outputs.labels }}
+          load: true  # needed so the image is available locally for the "Inspect labels" step below
           push: true
           tags: ${{ steps.meta.outputs.tags }}
 
@@ -109,6 +110,7 @@ jobs:
         with:
           file: Dockerfile.adapter
           labels: ${{ steps.meta.outputs.labels }}
+          load: true  # needed so the image is available locally for the "Inspect labels" step below
           push: true
           tags: ${{ steps.meta.outputs.tags }}
 
