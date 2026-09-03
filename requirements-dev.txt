@@ -1,3 +1,4 @@
+# -*- mode: pip-requirements -*-
 -r requirements-sys.txt
 -r requirements-doc.txt
 # pin authlib to patch broken safety dependency chain
@@ -10,10 +11,10 @@ coverage>=5.5
 doc8>=1.1.2
 docformatter
 flake8
-isort>5.5,!=5.11.0
+isort>=9.0.0
 mock>4
-# FIXME: use temporary unofficial version working with pylint>3 (https://github.com/edaniszewski/pylint-quotes/pull/30)
 pylint>=3
+# FIXME: use temporary unofficial version working with pylint>3 (https://github.com/edaniszewski/pylint-quotes/pull/30)
 pylint_quotes @ git+https://github.com/marekhanus/pylint-quotes.git@0.3.0a2
 pylint-per-file-ignores
 # bird-house/twticher, must match version in Dockerfile.adapater
