@@ -37,6 +37,7 @@ requests>=2.32.5
 requests_file
 idna>=3.15.0
 simplejson
+six>=1.17.0
 sqlalchemy>=2.0.52,<3
 # see also: safety 42194, https://github.com/kvesteri/sqlalchemy-utils/issues/166, not fixed since 2015
 sqlalchemy-utils==0.42.1  # pyup: ignore
