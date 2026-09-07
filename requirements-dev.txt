@@ -13,7 +13,7 @@ docformatter
 flake8
 isort>=9.0.0
 mock>4
-pylint>=3
+pylint>=4.0.8
 # FIXME: use temporary unofficial version working with pylint>3 (https://github.com/edaniszewski/pylint-quotes/pull/30)
 pylint_quotes @ git+https://github.com/marekhanus/pylint-quotes.git@0.3.0a2
 pylint-per-file-ignores
