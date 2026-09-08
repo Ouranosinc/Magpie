@@ -50,4 +50,4 @@ webob>=1.8.11
 ziggurat_foundations==0.9.1
 zope.interface>=4.7.2
 zope.sqlalchemy
-zipp>=3.19.1
+zipp>=4.1.0
