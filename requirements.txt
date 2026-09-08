@@ -6,13 +6,13 @@ bcrypt>=3.1.6
 beaker @ https://github.com/crim-ca/beaker/archive/0ac88bcd8cca063a571fc385ffbe9bcc8acaa690.zip
 colander
 cornice
-cornice_swagger>=0.7.0
+cornice_swagger>=1.0.1
 cryptography>=48.0.1
 dicttoxml
 gunicorn>=22
 humanize
 jsonschema>=4
-jwcrypto>=1.5.8,<2
+jwcrypto>=1.5.9,<2
 lxml>=6.1.0
 mako>=1.4.1
 paste
