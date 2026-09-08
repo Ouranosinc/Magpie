@@ -90,8 +90,6 @@ def get_engine(container=None, prefix="sqlalchemy.", **kwargs):
     settings = get_settings(container or {})
     settings[prefix + "url"] = get_db_url(settings=settings)
     settings.setdefault(prefix + "pool_pre_ping", True)
-    kwargs = kwargs or {}
-    kwargs["convert_unicode"] = True
     return engine_from_config(settings, prefix, **kwargs)
 
 
