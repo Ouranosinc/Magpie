@@ -11,6 +11,7 @@ cryptography>=48.0.1
 dicttoxml
 gunicorn>=22
 humanize
+importlib_metadata>=9.0.0
 jsonschema>=4
 jwcrypto>=1.5.9,<2
 lxml>=6.1.0
@@ -50,4 +51,3 @@ webob>=1.8.11
 ziggurat_foundations==0.9.1
 zope.interface>=4.7.2
 zope.sqlalchemy
-zipp>=3.19.1
