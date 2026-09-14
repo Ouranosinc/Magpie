@@ -9,7 +9,7 @@ cornice
 cornice_swagger>=1.0.1
 cryptography>=48.0.1
 dicttoxml
-gunicorn>=22
+gunicorn>=26.2.0
 humanize
 importlib_metadata>=9.0.0
 jsonschema>=4
