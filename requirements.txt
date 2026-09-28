@@ -19,7 +19,7 @@ mako>=1.4.1
 paste
 pastedeploy
 pluggy
-psycopg2-binary>=2.7.1
+psycopg2-binary>=2.9.13
 PyJWT[crypto]>=2.13.0,<3
 # FIXME: setuptools/pkg_resources deprecated dependency
 #   (https://github.com/Pylons/pyramid/issues/3731, https://github.com/pypa/setuptools/pull/5007)
