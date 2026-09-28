@@ -1,0 +1,4 @@
+# CI updates
+.github/workflows/*.yml     @fmigneault
+Dockerfile*                 @fmigneault
+requirements*.txt           @fmigneault
