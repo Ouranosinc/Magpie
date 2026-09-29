@@ -42,13 +42,13 @@ def upgrade():
         op.add_column("resources", sa.Column("root_service_id", sa.Integer(), nullable=True))
 
         # add existing resource references to their root service, loop through reference tree chain
-        query = session.execute(sa.select([resources.c.resource_id, resources.c.parent_id]))
+        query = session.execute(sa.select(resources.c.resource_id, resources.c.parent_id))
 
         for resource_id, parent_id in query:
             root_resource_id = resource_id
             while parent_id is not None:
                 parent_resource = session.execute(
-                    sa.select([resources.c.resource_id, resources.c.parent_id])
+                    sa.select(resources.c.resource_id, resources.c.parent_id)
                     .where(resources.c.resource_id == parent_id)
                 ).fetchone()
                 root_resource_id, parent_id = parent_resource
