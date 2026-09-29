@@ -8,6 +8,13 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
+	
+* Nothing new for the moment.
+
+.. _changes_5.1.2:
+
+`5.1.2 <https://github.com/Ouranosinc/Magpie/tree/5.1.2>`_ (%Y-%m-%d)
+------------------------------------------------------------------------------------
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~

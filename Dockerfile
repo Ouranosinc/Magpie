@@ -3,13 +3,13 @@ FROM python:3.13.15-alpine3.24
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
 LABEL org.opencontainers.image.authors="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"
-LABEL org.opencontainers.image.created="2026-07-30T20:37:38Z"
+LABEL org.opencontainers.image.created="2026-09-29T17:41:28Z"
 LABEL org.opencontainers.image.description="Runs Magpie AuthN/AuthZ service for REST-API and UI interfaces."
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.source="https://github.com/Ouranosinc/Magpie"
 LABEL org.opencontainers.image.title="Magpie"
 LABEL org.opencontainers.image.vendor="CRIM and Ouranosinc"
-LABEL org.opencontainers.image.version="5.1.1"
+LABEL org.opencontainers.image.version="5.1.2"
 
 # the cron service depends on the $MAGPIE_DIR environment variable
 ENV MAGPIE_DIR=/opt/local/src/magpie
