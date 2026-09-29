@@ -1,5 +1,5 @@
 # version pin defined via '.github/dependabot.yml'
-FROM python:3.13-alpine3.23
+FROM python:3.13.15-alpine3.24
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
 LABEL org.opencontainers.image.authors="Francis Charette-Migneault <francis.charette-migneault@crim.ca>"

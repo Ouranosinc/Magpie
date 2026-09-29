@@ -12,8 +12,11 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
+* Pin Dockerfile ``python:3.13.15-alpine3.24`` to address OpenSSL CVE-2026-31789.
+* Update docker adapter to `birdhouse/twitcher:v0.11.3 <https://github.com/bird-house/twitcher/releases/tag/v0.11.3>`_
+  for corresponding Docker reference of OpenSSL CVE-2026-31789.
 * Update docker adapter to `birdhouse/twitcher:v0.11.2 <https://github.com/bird-house/twitcher/releases/tag/v0.11.2>`_
-  and corresponding developement requirement ``pyramid-twitcher>=0.11.2`` for flexible ``sqlalchemy`` dependency range.
+  and corresponding developement requirement ``pyramid-twitcher>=0.11.3`` for flexible ``sqlalchemy`` dependency range.
 
 Bug Fixes
 ~~~~~~~~~
