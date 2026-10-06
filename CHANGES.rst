@@ -9,7 +9,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 	
-* Nothing new for the moment.
+* Add ``CHECKS_EXCLUDE`` variable in ``Makefile`` to omit specific checks from the ``check-all`` target variants.
+* Run the documentation link check in a dedicated CI job allowed to fail, since external links sporadically fail
+  for reasons unrelated to the code (timeout, SSL, server down, etc.), such that other tests can complete.
 
 .. _changes_5.1.2:
 

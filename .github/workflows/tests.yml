@@ -50,6 +50,8 @@ jobs:
     env:
       # override make command to install directly in active python
       CONDA_COMMAND: ""
+      # globally excluded 'checks', to be re-executed by dedicated job
+      CHECKS_EXCLUDE: "links"
     services:
       # Label used to access the service container
       postgres:
@@ -83,6 +85,12 @@ jobs:
             python-version: "3.13"
             allow-failure: false
             test-case: check
+          # check links separately as they tend to sporadically fail from external factors (timeout, ssl, down, etc.)
+          # avoid wasting a lot of CI test time because one of them doesn't respond
+          - os: ubuntu-latest
+            python-version: "3.13"
+            allow-failure: true
+            test-case: check-links
           # remote test (note that network tests are skipped since the remote server won't have network mode enabled)
           - os: ubuntu-latest
             python-version: "3.13"
