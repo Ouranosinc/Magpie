@@ -498,9 +498,15 @@ docker-clean: 	## remove any leftover images from docker target operations
 mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
+# checks to be omitted from the 'check-all' variants, which should be executed by dedicated targets/jobs
+# note: use multiple 'filter-out' variants to filter transparently with/without 'check-' prefix
+CHECKS_EXCLUDE ?=
+
 # autogen check variants with pre-install of dependencies using the '-only' target references
 CHECKS := pep8 lint security security-code security-deps doc8 links imports css
+CHECKS := $(filter-out $(CHECKS_EXCLUDE), $(CHECKS))
 CHECKS := $(addprefix check-, $(CHECKS))
+CHECKS := $(filter-out $(CHECKS_EXCLUDE), $(CHECKS))
 
 $(CHECKS): check-%: install-dev check-%-only
 
