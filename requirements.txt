@@ -32,7 +32,7 @@ pyramid_chameleon>=0.3
 pyramid_mako>=1.1.0
 pyramid_retry==2.1.1
 pyramid_tm>=2.6
-python-dotenv>=1.2.2
+python-dotenv>=1.2.4
 pyyaml>=6.0.3
 requests>=2.34.2
 requests_file
