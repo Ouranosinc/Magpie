@@ -757,17 +757,27 @@ test-docker-only: docker-test-only	## run test with docker (alias for 'docker-te
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
 COVERAGE_HTML_DIR := $(REPORTS_DIR)/coverage
 COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html
-$(COVERAGE_FILE): install-dev
+
+.PHONY: coverage-run
+coverage-run: | mkdir-reports	## run all tests using coverage analysis
 	@echo "Running coverage analysis..."
-	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
-		`which pytest` tests $(TEST_VERBOSITY) $(TEST_LOG_LEVEL) -m "not remote" || true'
-	@bash -c '$(CONDA_CMD) coverage xml -i -o "$(REPORTS_DIR)/coverage.xml"'
-	@bash -c '$(CONDA_CMD) coverage report -m'
-	@bash -c '$(CONDA_CMD) coverage html -d "$(COVERAGE_HTML_DIR)"'
+	@bash -c '$(CONDA_CMD) coverage run \
+		--rcfile="$(APP_ROOT)/setup.cfg" \
+		"$$(which pytest)" "$(APP_ROOT)/tests" \
+		$(TEST_VERBOSITY) $(TEST_LOG_LEVEL) \
+		--junitxml="$(REPORTS_DIR)/coverage-junit.xml" \
+		-m "not remote" || true'
+
+.PHONY: coverage-reports
+coverage-reports: | mkdir-reports	## generate coverage reports
+	@echo "Generate coverage reports..."
+	@bash -c '$(CONDA_CMD) coverage xml --rcfile="$(APP_ROOT)/setup.cfg" -i -o "$(REPORTS_DIR)/coverage.xml"'
+	@bash -c '$(CONDA_CMD) coverage report --rcfile="$(APP_ROOT)/setup.cfg" -i -m'
+	@bash -c '$(CONDA_CMD) coverage html --rcfile="$(APP_ROOT)/setup.cfg" -d "$(COVERAGE_HTML_DIR)"'
 	@-echo "Coverage report available: file://$(COVERAGE_HTML_IDX)"
 
 .PHONY: coverage-only
-coverage-only: $(COVERAGE_FILE)
+coverage-only: coverage-run coverage-reports
 
 .PHONY: coverage
 coverage: install-dev install coverage-only		## run tests with code coverage and generate an analysis report
