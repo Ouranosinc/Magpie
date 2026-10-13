@@ -20,7 +20,7 @@ pylint-per-file-ignores
 # bird-house/twticher, must match version in Dockerfile.adapater
 pyramid-twitcher>=0.11.2
 pytest
-pytest-httpserver==1.1.5
+pytest-httpserver==1.2.0
 safety
 tox>=4.64.4
 webtest
