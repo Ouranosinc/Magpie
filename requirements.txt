@@ -49,5 +49,5 @@ typing_extensions
 urllib3>=2.8.0
 webob>=1.8.11
 ziggurat_foundations==0.9.1
-zope.interface>=4.7.2
+zope.interface>=8.6
 zope.sqlalchemy
