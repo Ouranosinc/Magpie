@@ -8,7 +8,11 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
-	
+
+* Run ``safety`` dependency checks using its ``ghcr.io/pyupio/safety`` Docker image in the Makefile and CI.
+  Move vulnerability exclusions and their reasons into ``.safety-policy.yml``.
+  Remove the Python development dependency and its ``authlib`` compatibility pin causing security problems
+  with dependabot (relates to `pyupio/safety#822 <https://github.com/pyupio/safety/issues/822>`_).
 * Add ``CHECKS_EXCLUDE`` variable in ``Makefile`` to omit specific checks from the ``check-all`` target variants.
 * Run the documentation link check in a dedicated CI job allowed to fail, since external links sporadically fail
   for reasons unrelated to the code (timeout, SSL, server down, etc.), such that other tests can complete.
