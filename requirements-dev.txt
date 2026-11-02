@@ -1,8 +1,6 @@
 # -*- mode: pip-requirements -*-
 -r requirements-sys.txt
 -r requirements-doc.txt
-# pin authlib to patch broken safety dependency chain
-authlib<1.8.0
 autopep8>=2.3.2
 bandit==1.9.4
 bump-my-version==1.6.3
@@ -21,7 +19,6 @@ pylint-per-file-ignores
 pyramid-twitcher>=0.11.3
 pytest
 pytest-httpserver==1.2.0
-safety
 tox>=4.65.0
 webtest
 waitress

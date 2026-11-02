@@ -542,21 +542,30 @@ check-lint-only: mkdir-reports		## run linting code style checks
 .PHONY: check-security-only
 check-security-only: check-security-code-only check-security-deps-only  ## run security checks
 
-# ignored codes:
-#	42194: https://github.com/kvesteri/sqlalchemy-utils/issues/166  # not fixed since 2015
-#	51668: https://github.com/sqlalchemy/sqlalchemy/pull/8563  # still in beta + major version change sqlalchemy 2.0.0b1
+SAFETY_IMAGE ?= ghcr.io/pyupio/safety:latest
+# CLI --ignore flag override the policy's vulnerability exclusions. Use only for quick checks.
+SAFETY_IGNORE ?=
+
+.PHONY: check-security-deps
+check-security-deps: check-security-deps-only  ## run dependency security checks
+
 .PHONY: check-security-deps-only
 check-security-deps-only: mkdir-reports  ## run security checks on package dependencies
 	@echo "Running security checks of dependencies..."
 	@-rm -fr "$(REPORTS_DIR)/check-security-deps.txt"
-	@bash -c '$(CONDA_CMD) \
-		safety check \
+	@bash -c '\
+		docker run --rm \
+			-v "$(APP_ROOT):$(APP_ROOT):ro" \
+			-w "$(APP_ROOT)" \
+			"$(SAFETY_IMAGE)" check \
+			--full-report \
+			--policy-file "$(APP_ROOT)/.safety-policy.yml" \
 			-r "$(APP_ROOT)/requirements.txt" \
 			-r "$(APP_ROOT)/requirements-dev.txt" \
 			-r "$(APP_ROOT)/requirements-doc.txt" \
 			-r "$(APP_ROOT)/requirements-sys.txt" \
-			-i 42194 \
-			-i 51668 \
+			$(SAFETY_IGNORE) \
+			$(foreach id,$(SAFETY_IGNORE),-i $(id)) \
 		1> >(tee "$(REPORTS_DIR)/check-security-deps.txt")'
 
 .PHONY: check-security-code-only
