@@ -9,9 +9,19 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
 * Add Python 3.14 support.
 * Remove EOL Python 3.10.
 * Update Docker `MagpieAdapter` with Twitcher to 0.12.1 (security dependency updates and remove EOL Python).
+
+Bug Fixes
+~~~~~~~~~
+
+* Use `multiprocessing.pool.ThreadPool` for asynchronous webhook requests to avoid Python 3.14
+  process startup overhead. This also ensures better concurrency between webhooks invocations
+  without blocking the triggering request.
 
 .. _changes_5.1.3:
 

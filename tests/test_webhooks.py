@@ -12,9 +12,12 @@ import inspect
 import os
 import tempfile
 import unittest
+from threading import Event
 from time import sleep
 from typing import TYPE_CHECKING
 
+import mock
+import pytest
 import requests
 import six
 import yaml
@@ -24,6 +27,7 @@ from magpie.api.schemas import UserStatuses
 from magpie.api.webhooks import (
     WEBHOOK_KEYS,
     WebhookAction,
+    process_webhook_requests,
     replace_template,
     setup_webhooks,
     webhook_update_error_status
@@ -44,6 +48,41 @@ if TYPE_CHECKING:
     from magpie.api.webhooks import WebhookSettings
 
 WEBHOOK_TEST_DELAY = 0.25  # small delay to let webhook being processed before resuming tests
+
+
+@runner.MAGPIE_TEST_WEBHOOKS
+@runner.MAGPIE_TEST_LOCAL
+@pytest.mark.parametrize("update_user_status_on_error", [False, True])
+def test_webhook_requests_async(update_user_status_on_error):
+    # type: (bool) -> None
+    """
+    Tests that all webhooks start concurrently without blocking the triggering request.
+    """
+    webhooks = [{"name": "first"}, {"name": "second"}]
+    params = {"user.name": "test"}
+    settings = {"magpie.webhooks": {WebhookAction.CREATE_USER: webhooks}}
+    started = {webhook["name"]: Event() for webhook in webhooks}
+    finished = {webhook["name"]: Event() for webhook in webhooks}
+    release = Event()
+
+    def send_request(webhook, _webhook_params, _update_status):
+        # type: (dict, dict, bool) -> None
+        started[webhook["name"]].set()
+        release.wait(10)
+        finished[webhook["name"]].set()
+
+    with mock.patch("magpie.api.webhooks.send_webhook_request", side_effect=send_request) as send:
+        try:
+            process_webhook_requests(WebhookAction.CREATE_USER, params, update_user_status_on_error, settings)
+            assert all(event.wait(5) for event in started.values()), "All webhooks must start before any completes."
+            assert not any(event.is_set() for event in finished.values())
+        finally:
+            release.set()
+            assert all(event.wait(5) for event in finished.values()), "Webhook workers did not finish."
+        send.assert_has_calls([
+            mock.call(webhook, params, update_user_status_on_error) for webhook in webhooks
+        ], any_order=True)
+        assert send.call_count == len(webhooks)
 
 
 @runner.MAGPIE_TEST_WEBHOOKS
