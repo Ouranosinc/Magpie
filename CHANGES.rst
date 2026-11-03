@@ -8,6 +8,13 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
+	
+* Nothing new for the moment.
+
+.. _changes_5.1.3:
+
+`5.1.3 <https://github.com/Ouranosinc/Magpie/tree/5.1.3>`_ (%Y-%m-%d)
+------------------------------------------------------------------------------------
 
 * Run ``safety`` dependency checks using its ``ghcr.io/pyupio/safety`` Docker image in the Makefile and CI.
   Move vulnerability exclusions and their reasons into ``.safety-policy.yml``.
