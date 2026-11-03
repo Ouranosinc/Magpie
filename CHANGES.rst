@@ -8,7 +8,9 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
-	
+
+* Add Python 3.14 support.
+* Remove EOL Python 3.10.
 * Update Docker `MagpieAdapter` with Twitcher to 0.12.1 (security dependency updates and remove EOL Python).
 
 .. _changes_5.1.3:
