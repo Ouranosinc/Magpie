@@ -9,7 +9,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 	
-* Nothing new for the moment.
+* Update Docker `MagpieAdapter` with Twitcher to 0.12.1 (security dependency updates and remove EOL Python).
 
 .. _changes_5.1.3:
 
