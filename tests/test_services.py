@@ -1134,7 +1134,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             )
             for name in ("admin", "spawn", "access"):
                 resp_permissions = resp.json["permissions"]
-                msg = f"Permission '{name}' should {"" if is_allowed else "not"} be allowed in {resp_permissions}"
+                neg = "" if is_allowed else "not"
+                msg = f"Permission '{name}' should {neg} be allowed in {resp_permissions}"
                 if is_allowed:
                     assert any(r["name"] == name and r["access"] == "allow" for r in resp_permissions), msg
                 else:
@@ -1153,7 +1154,8 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             is_allowed = Access.ALLOW in user_permissions or Access.ALLOW in group_permissions
             for name in ("read", "write"):
                 resp_permissions = resource_info[str(resource_id)]["permissions"]
-                msg = f"Permission '{name}' should {"" if is_allowed else "not"} be allowed in {resp_permissions}"
+                neg = "" if is_allowed else "not"
+                msg = f"Permission '{name}' should {neg} be allowed in {resp_permissions}"
                 if is_allowed:
                     assert any(r["name"] == name and r["access"] == "allow" for r in resp_permissions), msg
                 else:
