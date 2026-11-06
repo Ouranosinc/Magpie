@@ -1193,6 +1193,51 @@ class ServiceAccess(ServiceInterface):
         return Permission.ACCESS
 
 
+class ServiceJupyter(ServiceInterface):
+    """
+    Service that provides resources for a JupyterHub server.
+    """
+    service_type = "jupyter"
+    permissions = [Permission.ACCESS, Permission.ADMIN, Permission.SPAWN]
+
+    resource_types_permissions = {
+        models.Directory: [Permission.READ, Permission.WRITE]
+    }
+
+    child_structure_allowed = {
+        models.Service: [models.Directory]
+    }
+
+    def resource_requested(self):
+        # type: () -> TargetResourceRequested
+        dir_path = self._get_request_path_parts()
+        if not dir_path:
+            return self.service, True
+        if len(dir_path) == 1:
+            # only allow access at the top level directory
+            # allowing users to simultaneously access/edit subdirectories will result in a lot of potential
+            # conflict (e.g. if a user tries to rename a directory that is mounted for another user)
+            dir_name = dir_path[0]
+            session = get_connected_session(self.request)
+            dir_resource = models.find_children_by_name(
+                dir_name,
+                parent_id=self.service.resource_id,
+                db_session=session
+            )
+            if dir_resource:
+                return dir_resource, True
+
+    def permission_requested(self):
+        # type: () -> PermissionRequested
+        """
+        When requesting permissions directly with a URL only check access permission.
+
+        All other permissions should be queried through the /users/{user}/resources endpoint
+        by a JupyterHub Authenticator and converted to the appropriate roles/scopes.
+        """
+        return Permission.ACCESS
+
+
 class ServiceAPI(ServiceInterface):
     """
     Service that provides resources per individual request path segments.
@@ -1678,6 +1723,7 @@ SERVICE_TYPES = frozenset([
     ServiceGeoserverWFS,
     ServiceGeoserverWMS,
     ServiceGeoserverWPS,
+    ServiceJupyter,
     # purposely omit 'ServiceGeoserverAPI' since it is just like base 'ServiceAPI' on its own
     # no value to duplicate it outside its use within 'ServiceGeoserver'
     ServiceNCWMS2,
