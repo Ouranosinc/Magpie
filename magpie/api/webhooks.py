@@ -1,6 +1,6 @@
 import logging
-import multiprocessing
 from collections import defaultdict
+from multiprocessing.pool import ThreadPool
 from typing import TYPE_CHECKING
 
 import requests
@@ -217,12 +217,13 @@ def process_webhook_requests(action, params, update_user_status_on_error=False, 
         # Execute all webhook requests
         LOGGER.info("Found %s webhook%s to apply for '%s' operation.",
                     n_webhooks, "s" if n_webhooks > 1 else "", action)
-        pool = multiprocessing.Pool(processes=n_webhooks)  # pylint: disable=R1732
+        pool = ThreadPool(processes=n_webhooks)
         args = [(webhook, params, update_user_status_on_error) for webhook in action_webhooks]
         if LOGGER.isEnabledFor(logging.DEBUG):
             for func_args in args:
                 LOGGER.debug("Will call webhook: %s", signature_with_args(send_webhook_request, *func_args))
         pool.starmap_async(send_webhook_request, args)
+        pool.close()
 
 
 def generate_callback_url(operation, db_session, user=None, group=None):
