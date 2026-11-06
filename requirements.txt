@@ -42,7 +42,7 @@ six>=1.17.0
 # see also: safety 51668, https://github.com/sqlalchemy/sqlalchemy/pull/8563
 sqlalchemy>=1.4.44,<2  # pyup: ignore
 # see also: safety 42194, https://github.com/kvesteri/sqlalchemy-utils/issues/166, not fixed since 2015
-sqlalchemy-utils==0.42.1  # pyup: ignore
+sqlalchemy-utils==0.43.0  # pyup: ignore
 threddsclient>=0.4.7
 transaction
 typing_extensions
