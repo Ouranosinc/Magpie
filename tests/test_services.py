@@ -28,6 +28,7 @@ from magpie.services import (
     ServiceGeoserver,
     ServiceGeoserverWMS,
     ServiceInterface,
+    ServiceJupyter,
     ServiceTHREDDS,
     ServiceWPS
 )
@@ -978,6 +979,187 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
         utils.check_no_raise(lambda: self.ows.check_request(req))
         req = self.mock_request("/ows/proxy/{}".format(svc6_name), method="GET")
         utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+
+    @utils.mocked_get_settings
+    def test_ServiceJupyter_effective_permissions(self):
+        """
+        Evaluates functionality of :class:`ServiceJupyter` against a mocked `Magpie` adapter for `Twitcher`.
+
+        The :class:`ServiceJupyter` implementation allows ``ADMIN``, ``ACCESS``,  and ``SPAWN`` permissions at the
+        service level. It also allows a single level of child resources (directories).
+
+        Validate that the service allows the three permission types listed above and does not allow creation of 
+        children resources beyond a single level and that access is granted or refused to these child resources
+        according to :class:`Read` or :class:`Write` modifiers of the resolved permission. 
+
+        The :class:`Scope` modifier has no effect due to forbidden creation of children resources beyond a single level.
+
+        Legend::
+
+            d: admin        
+            a: access       (permission `name`, not to be confused with `access` permission modifier)
+            s: spawn
+            r: read
+            w: write
+            A: allow
+            D: deny
+            M: match        (doesn't matter because service always directly referenced)
+            R: recursive    (doesn't matter because service always directly referenced)
+
+        Permissions Applied::
+                                        user        group               effective (reason)
+            Service1                    (d-A-R)                         d-A
+                                        (a-A-R)                         a-A
+                                        (s-A-R)                         s-A
+            Service2                                (d-A-M)             d-A
+                                                    (a-A-M)             a-A
+                                                    (s-A-M)             s-A
+            Service3                    (d-D-M)                         d-D
+                                        (a-D-M)                         a-D
+                                        (s-D-M)                         s-D
+            Service4                                (d-D-R)             d-D
+                                                    (a-D-R)             a-D
+                                                    (s-D-R)             s-D 
+            Service5                    (d-A-R)     (d-D-M)             d-A (user > group)
+                                        (a-A-R)     (a-D-M)             a-A (user > group)
+                                        (s-A-R)     (s-D-M)             s-A (user > group)
+            Service6                                                    d-D (nothing defaults like explicit deny)
+                                                                        a-D (nothing defaults like explicit deny)
+                                                                        s-D (nothing defaults like explicit deny)
+            Resource1                   (r-A-R)                         r-A
+                                        (w-A-R)                         w-A
+            Resource2                               (r-A-M)             r-A
+                                                    (w-A-M)             w-A
+            Resource3                   (r-D-M)                         r-D
+                                        (w-D-M)                         w-D
+            Resource4                               (r-D-R)             r-D
+                                                    (w-D-R)             w-D
+            Resource5                   (r-A-R)     (r-D-M)             r-A (user > group)
+                                        (w-A-R)     (w-D-M)             w-A (user > group)
+            Resource6                                                   r-D (nothing defaults like explicit deny)
+                                                                        w-D (nothing defaults like explicit deny)
+
+        """
+        # create services
+        svc_type = ServiceJupyter.service_type
+        svc_name_fmt = "unittest-service-jupyter-{}"
+        rsc_name_fmt = "unittest-resource-jupyter-{}"
+        permission_set = [
+            ((Access.ALLOW, Scope.RECURSIVE), ()),
+            ((), (Access.ALLOW, Scope.MATCH)),
+            ((Access.DENY, Scope.MATCH), ()),
+            ((), (Access.DENY, Scope.RECURSIVE)),
+            ((Access.ALLOW, Scope.RECURSIVE), (Access.DENY, Scope.MATCH)),
+            ((), ())
+        ]
+        svc_info = []
+        for i in range(1, 7):
+            svc_name = svc_name_fmt.format(i)
+            utils.TestSetup.delete_TestService(self, override_service_name=svc_name)
+            body = utils.TestSetup.create_TestService(
+                self,
+                override_service_name=svc_name,
+                override_service_type=svc_type
+            )
+            info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+            svc_info.append((svc_name, info["resource_id"]))
+            for perm in (Permission.ADMIN, Permission.ACCESS, Permission.SPAWN):
+                user_permissions, group_permissions = permission_set[i - 1]
+                if user_permissions:
+                    utils.TestSetup.create_TestUserResourcePermission(
+                        self,
+                        override_resource_id=info["resource_id"],
+                        override_permission=PermissionSet(perm, *user_permissions)
+                    )
+                if group_permissions:
+                    utils.TestSetup.create_TestGroupResourcePermission(
+                        self,
+                        override_resource_id=info["resource_id"],
+                        override_permission=PermissionSet(perm, *group_permissions)
+                    )
+
+        # create resources
+        rsc_info = []
+        for i in range(1, 7):
+            rsc_name = rsc_name_fmt.format(i)
+            body = utils.TestSetup.create_TestResource(
+                self,
+                parent_resource_id=svc_info[-1][-1],
+                override_resource_name=rsc_name,
+                override_resource_type="directory"
+            )
+            info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+            rsc_info.append((rsc_name, info["resource_id"]))
+            for perm in (Permission.READ, Permission.WRITE):
+                user_permissions, group_permissions = permission_set[i - 1]
+                if user_permissions:
+                    utils.TestSetup.create_TestUserResourcePermission(
+                        self,
+                        override_resource_id=info["resource_id"],
+                        override_permission=PermissionSet(perm, *user_permissions)
+                    )
+                if group_permissions:
+                    utils.TestSetup.create_TestGroupResourcePermission(
+                        self,
+                        override_resource_id=info["resource_id"],
+                        override_permission=PermissionSet(perm, *group_permissions)
+                    )
+
+        # validate forbidden child resource creation
+        data = {
+            "resource_type": "directory", 
+            "resource_name": "unittest-service-jupyter-forbidden-child-resource", 
+            "parent_id": rsc_info[-1][-1]
+        }
+        resp = utils.test_request(self, "POST", path="/resources", json=data, expect_errors=True,
+                                  headers=self.json_headers, cookies=self.cookies)
+        utils.check_response_basic_info(resp, 422, expected_method="POST")
+
+        self.login_test_user()
+
+        # check service permissions
+        for (user_permissions, group_permissions), (service_name, _) in zip(permission_set, svc_info):
+            # ACCESS permissions can be checked directly though the proxy
+            req = self.mock_request(f"/ows/proxy/{service_name}", method="GET")
+            is_allowed = Access.ALLOW in user_permissions or Access.ALLOW in group_permissions
+            if is_allowed:
+                utils.check_no_raise(lambda: self.ows.check_request(req))
+            else:
+                utils.check_raises(lambda: self.ows.check_request(req), OWSAccessForbidden)
+            # Other permissions must be checked through the API
+            resp = utils.test_request(
+                self,
+                "GET",
+                path=f"/users/current/services/{service_name}/permissions?resolve=true"
+            )
+            for name in ("admin", "spawn", "access"):
+                resp_permissions = resp.json["permissions"]
+                neg = "" if is_allowed else "not"
+                msg = f"Permission '{name}' should {neg} be allowed in {resp_permissions}"
+                if is_allowed:
+                    assert any(r["name"] == name and r["access"] == "allow" for r in resp_permissions), msg
+                else:
+                    assert (
+                        any(r["name"] == name and r["access"] == "deny" for r in resp_permissions) or
+                        all(r["name"] != name for r in resp_permissions)
+                    ), msg
+
+        # check resource permission
+        resp = utils.test_request(self, "GET", path=f"/users/current/services/{svc_name}/resources?resolve=true")
+        resource_info = resp.json["service"]["resources"]
+        for (user_permissions, group_permissions), (_, resource_id) in zip(permission_set, rsc_info):
+            if not user_permissions and not group_permissions:
+                assert str(resource_id) not in resource_info
+                continue
+            is_allowed = Access.ALLOW in user_permissions or Access.ALLOW in group_permissions
+            for name in ("read", "write"):
+                resp_permissions = resource_info[str(resource_id)]["permissions"]
+                neg = "" if is_allowed else "not"
+                msg = f"Permission '{name}' should {neg} be allowed in {resp_permissions}"
+                if is_allowed:
+                    assert any(r["name"] == name and r["access"] == "allow" for r in resp_permissions), msg
+                else:
+                    assert any(r["name"] == name and r["access"] == "deny" for r in resp_permissions), msg
 
     @unittest.skip("impl")
     @pytest.mark.skip

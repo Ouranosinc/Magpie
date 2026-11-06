@@ -9,7 +9,8 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 	
-* Nothing new for the moment.
+* Add ``ServiceJupyter`` service type to manage ``JupyterHub`` and ``JupyterLab`` permissions.
+* Fix unserializable JSON output in error message when checking valid service resources.
 
 .. _changes_5.2.0:
 

@@ -602,6 +602,35 @@ the :term:`WFS` to :term:`WMS` request handlers.
     or by providing the ``configuration`` field directly within the :term:`API` request body during
     :term:`Service` creation.
 
+Service Jupyter
+~~~~~~~~~~~~~~~
+
+.. versionadded:: 5.2.0
+
+The implementation of this :term:`Service` is handled by class :class:`magpie.services.ServiceJupyter`.
+This :term:`Service` supports :ref:`Permissions` at the :term:`Service` level and also supports non-nested
+:class:`Directory` :ref:`Resources`.
+
+The :ref:`Permissions` set for this :term:`Service` are intended to be queried by a `JupyterHub` service and used to
+set scopes and provide shared directory access when spawning `JupyterLab` servers.
+
+The intended interpretation of each :ref:`Permission` at the :term:`Service` level is as follows. A user who has
+resolved :attr:`Access.ALLOW` for each of the given permissions:
+
+* :attr:`Permission.ACCESS`: can log in to `JupyterHub`
+* :attr:`Permission.ADMIN`: gets admin permissions (as defined by `JupyterHub` scopes)
+* :attr:`Permission.SPAWN`: can spawn a `JupyterLab` server
+
+The intended interpretation of each :ref:`Permission` at the :term:`Resource` level for a :class:`Directory`
+is as follows. A user who has resolved :attr:`Access.ALLOW` for each of the given permissions:
+
+* :attr:`Permission.READ`: can read the content of a shared directory (with the same name as the :class:`Directory`)
+* :attr:`Permission.WRITE`: can read and write to the shared directory (with the same name as the :class:`Directory`)
+
+.. note::
+    :attr:`Permission.WRITE` access implies :attr:`Permission.READ` access so if a user is allowed to write to a shared
+    directory they should also be allowed to read that directory regardless of the :class:`Access` value for
+    :attr:`Permission.READ`
 
 Service Synchronization
 ------------------------
