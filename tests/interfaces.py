@@ -7774,7 +7774,7 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_SERVICES
     def test_GetResourceTypes_ServiceJupyter(self):
-        utils.warn_version(self, "validate allowed nested children resource types structure", "3.21.0", skip=True)
+        utils.warn_version(self, "service jupyter", "5.3.0", skip=True)
 
         utils.TestSetup.delete_TestService(self)
         body = utils.TestSetup.create_TestService(self, override_service_type=ServiceJupyter.service_type)

@@ -1195,15 +1195,17 @@ class ServiceAccess(ServiceInterface):
 
 class ServiceJupyter(ServiceInterface):
     """
-    Service that provides resources for a JupyterHub server.
+    Service that provides resources for a JupyterHub servers and the 
+    JupyterLab instances spawned by those servers.
     """
     service_type = "jupyter"
     permissions = [Permission.ACCESS, Permission.ADMIN, Permission.SPAWN]
 
     resource_types_permissions = {
-        models.Directory: [Permission.READ, Permission.WRITE]
+        models.Directory: [Permission.READ, Permission.READ_WRITE]
     }
 
+    # Permissions on nested directories are not permitted
     child_structure_allowed = {
         models.Service: [models.Directory]
     }

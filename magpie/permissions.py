@@ -61,6 +61,7 @@ class Permission(ExtendedEnum):
     # Jupyterhub permissions
     ADMIN = "admin"
     SPAWN = "spawn"
+    READ_WRITE = "readwrite"
 
 
 class PermissionType(ExtendedEnum):

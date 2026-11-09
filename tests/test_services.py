@@ -990,7 +990,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
 
         Validate that the service allows the three permission types listed above and does not allow creation of 
         children resources beyond a single level and that access is granted or refused to these child resources
-        according to :class:`Read` or :class:`Write` modifiers of the resolved permission. 
+        according to :attr:`READ` or :attr:`READ_WRITE` modifiers of the resolved permission. 
 
         The :class:`Scope` modifier has no effect due to forbidden creation of children resources beyond a single level.
 
@@ -1000,7 +1000,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             a: access       (permission `name`, not to be confused with `access` permission modifier)
             s: spawn
             r: read
-            w: write
+            w: read_write
             A: allow
             D: deny
             M: match        (doesn't matter because service always directly referenced)
@@ -1090,7 +1090,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             )
             info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
             rsc_info.append((rsc_name, info["resource_id"]))
-            for perm in (Permission.READ, Permission.WRITE):
+            for perm in (Permission.READ, Permission.READ_WRITE):
                 user_permissions, group_permissions = permission_set[i - 1]
                 if user_permissions:
                     utils.TestSetup.create_TestUserResourcePermission(
@@ -1138,11 +1138,16 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                 msg = f"Permission '{name}' should {neg} be allowed in {resp_permissions}"
                 if is_allowed:
                     assert any(r["name"] == name and r["access"] == "allow" for r in resp_permissions), msg
+                    assert any(r.startswith(f"{name}-allow-") for r in resp.json["permission_names"])
                 else:
                     assert (
                         any(r["name"] == name and r["access"] == "deny" for r in resp_permissions) or
                         all(r["name"] != name for r in resp_permissions)
                     ), msg
+                    assert (
+                        any(r.startswith(f"{name}-deny-") for r in resp.json["permission_names"]) or
+                        not resp.json["permission_names"]
+                    )
 
         # check resource permission
         resp = utils.test_request(self, "GET", path=f"/users/current/services/{svc_name}/resources?resolve=true")
@@ -1152,14 +1157,20 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
                 assert str(resource_id) not in resource_info
                 continue
             is_allowed = Access.ALLOW in user_permissions or Access.ALLOW in group_permissions
-            for name in ("read", "write"):
+            for name in ("read", "readwrite"):
                 resp_permissions = resource_info[str(resource_id)]["permissions"]
+                resp_names = resource_info[str(resource_id)]["permission_names"]
                 neg = "" if is_allowed else "not"
                 msg = f"Permission '{name}' should {neg} be allowed in {resp_permissions}"
                 if is_allowed:
                     assert any(r["name"] == name and r["access"] == "allow" for r in resp_permissions), msg
+                    assert any(r.startswith(f"{name}-allow-") for r in resp_names)
                 else:
                     assert any(r["name"] == name and r["access"] == "deny" for r in resp_permissions), msg
+                    assert (
+                        any(r.startswith(f"{name}-deny-") for r in resp_names) or
+                        not resp_names
+                    )
 
     @unittest.skip("impl")
     @pytest.mark.skip
