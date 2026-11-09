@@ -625,13 +625,14 @@ The intended interpretation of each :ref:`Permission` at the :term:`Resource` le
 is as follows. A user who has resolved :attr:`Access.ALLOW` for each of the given permissions:
 
 * :attr:`Permission.READ`: can read the content of a shared directory (with the same name as the :class:`Directory`)
-* :attr:`Permission.READ_WRITE`: can read and write to the shared directory (with the same name as the :class:`Directory`)
+* :attr:`Permission.READ_WRITE`: can read and write to the shared directory (with the same name as the
+  :class:`Directory`)
 
 .. note::
     :attr:`Permission.READ_WRITE` access implies :attr:`Permission.READ` access so if a user is allowed to write to a shared
-    directory they should also be allowed (as defined by the `JupyterHub` configuration) to read that directory regardless 
-    of the :class:`Access` value for :attr:`Permission.READ`. Magpie will not prevent you from setting 
-    :class:`Access.DENY` for :attr:`Permission.READ` and :attr:`Access.ALLOW` for :attr:`Permission.READ_WRITE` but it 
+    directory they should also be allowed (as defined by the `JupyterHub` configuration) to read that directory regardless
+    of the :class:`Access` value for :attr:`Permission.READ`. Magpie will not prevent you from setting
+    :class:`Access.DENY` for :attr:`Permission.READ` and :attr:`Access.ALLOW` for :attr:`Permission.READ_WRITE` but it
     is not recommended.
 
 Service Synchronization
