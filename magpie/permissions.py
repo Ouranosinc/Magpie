@@ -58,6 +58,10 @@ class Permission(ExtendedEnum):
     DROP_STORED_QUERY = "dropstoredquery"
     LIST_STORED_QUERIES = "liststoredqueries"
     DESCRIBE_STORED_QUERIES = "describestoredqueries"
+    # Jupyterhub permissions
+    ADMIN = "admin"
+    SPAWN = "spawn"
+    READ_WRITE = "readwrite"
 
 
 class PermissionType(ExtendedEnum):

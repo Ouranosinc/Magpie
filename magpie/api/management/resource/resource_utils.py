@@ -87,9 +87,9 @@ def check_valid_service_resource(parent_resource, resource_type, db_session):
     ax.verify_param(
         root_svc_cls.validate_nested_resource_type(parent_resource, resource_type), is_true=True,
         param_content={
-            "resource_structure_allowed": root_svc_cls.child_structure_allowed,
+            "resource_structure_allowed": repr(root_svc_cls.child_structure_allowed),
             "resource_types_allowed": [
-                res.resource_type for res in root_svc_cls.nested_resource_allowed(parent_resource)
+                repr(res.resource_type) for res in root_svc_cls.nested_resource_allowed(parent_resource)
             ]
         },
         http_error=HTTPUnprocessableEntity,

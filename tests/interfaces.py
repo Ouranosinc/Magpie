@@ -41,6 +41,7 @@ from magpie.services import (
     ServiceAccess,
     ServiceAPI,
     ServiceGeoserver,
+    ServiceJupyter,
     ServiceNCWMS2,
     ServiceTHREDDS
 )
@@ -7769,6 +7770,45 @@ class Interface_MagpieAPI_AdminAuth(AdminTestCase, BaseTestCase):
         utils.check_val_equal(body["root_service_id"], svc_id)
         utils.check_val_equal(body["root_service_name"], self.test_service_name)
         utils.check_val_equal(body["root_service_type"], ServiceAccess.service_type)
+
+    @runner.MAGPIE_TEST_RESOURCES
+    @runner.MAGPIE_TEST_SERVICES
+    def test_GetResourceTypes_ServiceJupyter(self):
+        utils.warn_version(self, "service jupyter", "5.3.0", skip=True)
+
+        utils.TestSetup.delete_TestService(self)
+        body = utils.TestSetup.create_TestService(self, override_service_type=ServiceJupyter.service_type)
+        info = utils.TestSetup.get_ResourceInfo(self, override_body=body)
+        svc_id = info["resource_id"]
+
+        path = "/services/{}".format(self.test_service_name)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        svc = body["service"]
+        utils.check_val_is_in("resource_child_allowed", svc)
+        utils.check_val_is_in("resource_types_allowed", svc)
+        utils.check_val_is_in("resource_structure_allowed", svc)
+        utils.check_val_equal(svc["resource_child_allowed"], True)
+        utils.check_val_equal(svc["resource_types_allowed"], ["directory"])
+        utils.check_val_equal(svc["resource_structure_allowed"], {"service": ["directory"]})
+
+        path = "/resources/{}/types".format(svc_id)
+        resp = utils.test_request(self, "GET", path, headers=self.json_headers, cookies=self.cookies)
+        body = utils.check_response_basic_info(resp)
+        utils.check_val_is_in("resource_name", body)
+        utils.check_val_is_in("resource_type", body)
+        utils.check_val_is_in("children_resource_types", body)
+        utils.check_val_is_in("children_resource_allowed", body)
+        utils.check_val_is_in("root_service_id", body)
+        utils.check_val_is_in("root_service_name", body)
+        utils.check_val_is_in("root_service_type", body)
+        utils.check_val_equal(body["resource_name"], self.test_service_name)
+        utils.check_val_equal(body["resource_type"], "service")
+        utils.check_val_equal(body["children_resource_types"], ["directory"])
+        utils.check_val_equal(body["children_resource_allowed"], True)
+        utils.check_val_equal(body["root_service_id"], svc_id)
+        utils.check_val_equal(body["root_service_name"], self.test_service_name)
+        utils.check_val_equal(body["root_service_type"], ServiceJupyter.service_type)
 
     @runner.MAGPIE_TEST_RESOURCES
     @runner.MAGPIE_TEST_SERVICES

@@ -8,6 +8,11 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
+	
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Add ``ServiceJupyter`` service type to manage ``JupyterHub`` and ``JupyterLab`` permissions.
 
 Bug Fixes
 ~~~~~~~~~
@@ -15,6 +20,7 @@ Bug Fixes
 * Patch documentation NCWMS references due to broken links
   (see `Reading-eScience-Centre/ncwms#108 <https://github.com/Reading-eScience-Centre/ncwms/issues/108>`_).
   The directly source Markdown are used as workaround of the unreachabled rendered HTML.
+* Fix unserializable JSON output in error message when checking valid service resources.
 
 .. _changes_5.2.0:
 
