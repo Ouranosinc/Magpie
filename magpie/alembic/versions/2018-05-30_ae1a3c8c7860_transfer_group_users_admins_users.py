@@ -68,7 +68,7 @@ def upgrade():
 
                 # create new group if missing
                 if not new_group:
-                    session.execute(groups.insert().value(group_name=new_group_name, member_count=0))
+                    session.execute(groups.insert().values(group_name=new_group_name, member_count=0))
                     query = sa.select(groups).where(groups.c.group_name == new_group_name)
                     new_group = session.execute(query).fetchone()
 

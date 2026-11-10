@@ -163,9 +163,9 @@ class Resource(ResourceMixin, Base):
         User or group that owns a resource are granted full access to it.
         """
         acl = []
-        if self.owner_user_id:
+        if self.owner_user_id is not None:
             acl.append((Allow, self.owner_user_id, ALL_PERMISSIONS))
-        if self.owner_group_id:
+        if self.owner_group_id is not None:
             acl.append((Allow, "group:%s" % self.owner_group_id, ALL_PERMISSIONS))
         return acl
 

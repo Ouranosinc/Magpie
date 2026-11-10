@@ -110,7 +110,7 @@ def downgrade_migrate(old_group, old_user, new_group, old_name, db_session):
     """
     if old_group is None:
         # create missing group
-        db_session.execute(groups.insert().value(group_name=old_name, member_count=0))
+        db_session.execute(groups.insert().values(group_name=old_name, member_count=0))
     if old_group is not None and new_group is not None:
         # transfer user-group references
         all_usr_grp = db_session.execute(sa.select(users_groups))

@@ -61,14 +61,22 @@ def duplicate_browse(resource_id, session):
         if not perm.perm_name.startswith("read"):  # must consider any variant with [access]-[scope]
             continue
         perm_name = perm.perm_name.replace("read", "browse")
-        query = sa.insert(grp_res_perms, (perm.group_id, resource_id, perm_name))
+        query = sa.insert(grp_res_perms).values(
+            group_id=perm.group_id,
+            resource_id=resource_id,
+            perm_name=perm_name,
+        )
         session.execute(query)
 
     for perm in usr_perms:
         if not perm.perm_name.startswith("read"):  # must consider any variant with [access]-[scope]
             continue
         perm_name = perm.perm_name.replace("read", "browse")
-        query = sa.insert(usr_res_perms, (perm.user_id, resource_id, perm_name))
+        query = sa.insert(usr_res_perms).values(
+            user_id=perm.user_id,
+            resource_id=resource_id,
+            perm_name=perm_name,
+        )
         session.execute(query)
 
 
