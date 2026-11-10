@@ -831,7 +831,7 @@ class ServiceNCWMS2(ServiceBaseWMS):
     Service that represents a ``Web Map Service`` endpoint with functionalities specific to ``ncWMS2`` .
 
     .. seealso::
-        https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/04-usage.html
+        https://github.com/Reading-eScience-Centre/ncwms/blob/master/docs/04-usage.md
     """
     service_type = "ncwms"
 

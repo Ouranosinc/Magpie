@@ -9,8 +9,37 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 	
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
 * Add ``ServiceJupyter`` service type to manage ``JupyterHub`` and ``JupyterLab`` permissions.
+
+Bug Fixes
+~~~~~~~~~
+
+* Patch documentation NCWMS references due to broken links
+  (see `Reading-eScience-Centre/ncwms#108 <https://github.com/Reading-eScience-Centre/ncwms/issues/108>`_).
+  The directly source Markdown are used as workaround of the unreachabled rendered HTML.
 * Fix unserializable JSON output in error message when checking valid service resources.
+
+.. _changes_5.2.0:
+
+`5.2.0 <https://github.com/Ouranosinc/Magpie/tree/5.2.0>`_ (%Y-%m-%d)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Add Python 3.14 support.
+* Remove EOL Python 3.10.
+* Update Docker `MagpieAdapter` with Twitcher to 0.12.1 (security dependency updates and remove EOL Python).
+
+Bug Fixes
+~~~~~~~~~
+
+* Use `multiprocessing.pool.ThreadPool` for asynchronous webhook requests to avoid Python 3.14
+  process startup overhead. This also ensures better concurrency between webhooks invocations
+  without blocking the triggering request.
 
 .. _changes_5.1.3:
 
