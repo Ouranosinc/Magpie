@@ -12,7 +12,8 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
-* Update SQLAlchemy to v2 and use the SQLAlchemy 2-compatible Ziggurat Foundations release.
+* Update ``sqlalchemy>=2.0.52,<2.1``, ``sqlalchemy-utils==0.43.0``, ``alembic>=1.20.1``, and
+  ``ziggurat_foundations==1.0.1``.
 
 .. _changes_5.3.0:
 
