@@ -54,5 +54,5 @@ replace = """
 
 .. _changes_{new_version}:
 
-`{new_version} <https://github.com/Ouranosinc/Magpie/tree/{new_version}>`_ ({now:%%Y-%%m-%%d})
+`{new_version} <https://github.com/Ouranosinc/Magpie/tree/{new_version}>`_ ({utcnow:%Y-%m-%d})
 ------------------------------------------------------------------------------------"""

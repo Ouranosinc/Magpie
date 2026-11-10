@@ -24,7 +24,7 @@ Bug Fixes
 
 .. _changes_5.2.0:
 
-`5.2.0 <https://github.com/Ouranosinc/Magpie/tree/5.2.0>`_ (%Y-%m-%d)
+`5.2.0 <https://github.com/Ouranosinc/Magpie/tree/5.2.0>`_ (2026-11-06)
 ------------------------------------------------------------------------------------
 
 Features / Changes
@@ -43,7 +43,7 @@ Bug Fixes
 
 .. _changes_5.1.3:
 
-`5.1.3 <https://github.com/Ouranosinc/Magpie/tree/5.1.3>`_ (%Y-%m-%d)
+`5.1.3 <https://github.com/Ouranosinc/Magpie/tree/5.1.3>`_ (2026-11-02)
 ------------------------------------------------------------------------------------
 
 * Run ``safety`` dependency checks using its ``ghcr.io/pyupio/safety`` Docker image in the Makefile and CI.
