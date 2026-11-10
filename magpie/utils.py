@@ -318,8 +318,9 @@ def cleanup_session(handler, _):
     def cleanup(request):
         # type: (Request) -> Response
         response = handler(request)
-        if request.db.transaction.is_active:
-            request.db.transaction.close()
+        db_transaction = request.db.get_transaction()
+        if db_transaction is not None and db_transaction.is_active:
+            db_transaction.close()
         return response
     return cleanup
 
