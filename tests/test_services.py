@@ -1000,7 +1000,7 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             a: access       (permission `name`, not to be confused with `access` permission modifier)
             s: spawn
             r: read
-            w: read_write
+            w: readwrite
             A: allow
             D: deny
             M: match        (doesn't matter because service always directly referenced)
@@ -1026,17 +1026,17 @@ class TestServices(ti.SetupMagpieAdapter, ti.UserTestCase, ti.BaseTestCase):
             Service6                                                    d-D (nothing defaults like explicit deny)
                                                                         a-D (nothing defaults like explicit deny)
                                                                         s-D (nothing defaults like explicit deny)
-            Resource1                   (r-A-R)                         r-A
+                Resource1               (r-A-R)                         r-A
                                         (w-A-R)                         w-A
-            Resource2                               (r-A-M)             r-A
+                Resource2                           (r-A-M)             r-A
                                                     (w-A-M)             w-A
-            Resource3                   (r-D-M)                         r-D
+                Resource3               (r-D-M)                         r-D
                                         (w-D-M)                         w-D
-            Resource4                               (r-D-R)             r-D
+                Resource4                           (r-D-R)             r-D
                                                     (w-D-R)             w-D
-            Resource5                   (r-A-R)     (r-D-M)             r-A (user > group)
+                Resource5               (r-A-R)     (r-D-M)             r-A (user > group)
                                         (w-A-R)     (w-D-M)             w-A (user > group)
-            Resource6                                                   r-D (nothing defaults like explicit deny)
+                Resource6                                               r-D (nothing defaults like explicit deny)
                                                                         w-D (nothing defaults like explicit deny)
 
         """
