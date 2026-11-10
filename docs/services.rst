@@ -463,7 +463,7 @@ ServiceNCWMS2
 .. seealso::
 
     - Base class: `ServiceBaseWMS`_
-    - https://reading-escience-centre.gitbooks.io/ncwms-user-guide/content/04-usage.html
+    - https://github.com/Reading-eScience-Centre/ncwms/blob/master/docs/04-usage.md
 
 This implementation is defined by :class:`magpie.services.ServiceNCWMS2`. It extends the base class by using
 children :term:`Resource` defined as :class:`magpie.models.Directory` and :class:`magpie.models.File` instances but,

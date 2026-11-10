@@ -8,8 +8,13 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
-	
-* Nothing new for the moment.
+
+Bug Fixes
+~~~~~~~~~
+
+* Patch documentation NCWMS references due to broken links
+  (see `Reading-eScience-Centre/ncwms#108 <https://github.com/Reading-eScience-Centre/ncwms/issues/108>`_).
+  The directly source Markdown are used as workaround of the unreachabled rendered HTML.
 
 .. _changes_5.2.0:
 
