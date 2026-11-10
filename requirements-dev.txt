@@ -19,6 +19,6 @@ pylint-per-file-ignores
 pyramid-twitcher>=0.12.1
 pytest
 pytest-httpserver==1.2.0
-tox>=4.65.0
+tox>=4.67.5
 webtest
 waitress
