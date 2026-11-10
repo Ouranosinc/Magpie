@@ -56,20 +56,20 @@ def upgrade():
     context.connection.engine.dialect.supports_sane_multi_rowcount = False
 
     if isinstance(context.connection.engine.dialect, PGDialect):
-        all_groups = session.execute(sa.select([groups]))
-        all_user_group_refs = session.execute(sa.select([users_groups]))
+        all_groups = session.execute(sa.select(groups))
+        all_user_group_refs = session.execute(sa.select(users_groups))
         map_groups = {OLD_GROUP_ADMIN: NEW_GROUP_ADMIN, OLD_GROUP_USERS: NEW_GROUP_USERS}
 
         for group in all_groups:
             if group.group_name in map_groups:
                 new_group_name = map_groups[group.group_name]
-                query = sa.select([groups]).where(groups.c.group_name == new_group_name)
+                query = sa.select(groups).where(groups.c.group_name == new_group_name)
                 new_group = session.execute(query).fetchone()
 
                 # create new group if missing
                 if not new_group:
                     session.execute(groups.insert().value(group_name=new_group_name, member_count=0))
-                    query = sa.select([groups]).where(groups.c.group_name == new_group_name)
+                    query = sa.select(groups).where(groups.c.group_name == new_group_name)
                     new_group = session.execute(query).fetchone()
 
                 old_group_perms = GroupService.resources_with_possible_perms(group, db_session=session)
@@ -88,7 +88,7 @@ def upgrade():
                 diff_group_users = set(old_group_users) - set(new_group_users)
 
                 for user_name in diff_group_users:
-                    user = session.execute(sa.select([users]).where(users.c.user_name == user_name)).fetchone()
+                    user = session.execute(sa.select(users).where(users.c.user_name == user_name)).fetchone()
                     session.execute(users_groups.insert().values(group_id=new_group.id, user_id=user.id))
 
                 session.delete(group)

@@ -82,8 +82,12 @@ def upgrade():
                                                        onupdate="CASCADE",
                                                        ondelete="SET NULL")))
     # update the data
-    op.execute("update resources set owner_user_id = (select id from users where users.user_name=owner_user_name)")
-    op.execute("update resources set owner_group_id = (select id from users where users.user_name=owner_group_name)")
+    op.execute(sa.text("""
+        update resources set owner_user_id = (select id from users where users.user_name=owner_user_name)
+    """))
+    op.execute(sa.text("""
+        update resources set owner_group_id = (select id from users where users.user_name=owner_group_name)
+    """))
 
     # mysql is stupid as usual so we cant create FKEY and add PKEY later,
     # need to set PKEY first and then set FKEY
@@ -95,10 +99,10 @@ def upgrade():
                                                                     onupdate="CASCADE",
                                                                     ondelete="CASCADE")))
 
-    op.execute("""
-        update groups_permissions set group_id = 
+    op.execute(sa.text("""
+        update groups_permissions set group_id =
         (select id from groups where groups.group_name=groups_permissions.group_name)
-    """)
+    """))
 
     op.drop_constraint(groups_permissions_pkey, "groups_permissions",
                        type_="primary")
@@ -118,10 +122,10 @@ def upgrade():
                                 sa.ForeignKey("groups.id", onupdate="CASCADE",
                                               ondelete="CASCADE")))
 
-    op.execute("""
-        update groups_resources_permissions set group_id = 
+    op.execute(sa.text("""
+        update groups_resources_permissions set group_id =
         (select id from groups where groups.group_name=groups_resources_permissions.group_name)
-    """)
+    """))
     op.drop_constraint(groups_resources_permissions_pkey,
                        "groups_resources_permissions",
                        type_="primary")
@@ -142,10 +146,10 @@ def upgrade():
                                                 sa.ForeignKey("groups.id",
                                                               onupdate="CASCADE",
                                                               ondelete="CASCADE")))
-    op.execute("""
-        update users_groups set group_id = 
+    op.execute(sa.text("""
+        update users_groups set group_id =
         (select id from groups where groups.group_name=users_groups.group_name)
-    """)
+    """))
 
     if isinstance(c.connection.engine.dialect, MySQLDialect):
         op.add_column("users_groups", sa.Column("user_id", sa.Integer()))
@@ -154,10 +158,10 @@ def upgrade():
                                                 sa.ForeignKey("users.id",
                                                               onupdate="CASCADE",
                                                               ondelete="CASCADE")))
-    op.execute("""
-        update users_groups set user_id = 
+    op.execute(sa.text("""
+        update users_groups set user_id =
         (select id from users where users.user_name=users_groups.user_name)
-    """)
+    """))
     op.drop_constraint(users_groups_pkey, "users_groups", type_="primary")
     op.create_primary_key(users_groups_pkey, "users_groups", ["user_id", "group_id"])
     if isinstance(c.connection.engine.dialect, MySQLDialect):
@@ -177,10 +181,10 @@ def upgrade():
                                                      sa.ForeignKey("users.id",
                                                                    onupdate="CASCADE",
                                                                    ondelete="CASCADE")))
-    op.execute("""
-        update users_permissions set user_id = 
+    op.execute(sa.text("""
+        update users_permissions set user_id =
         (select id from groups where groups.group_name=users_permissions.user_name)
-    """)
+    """))
     op.drop_constraint(users_permissions_pkey, "users_permissions", type_="primary")
     op.create_primary_key(users_permissions_pkey, "users_permissions", ["user_id", "perm_name"])
     if isinstance(c.connection.engine.dialect, MySQLDialect):
@@ -198,10 +202,10 @@ def upgrade():
                                 sa.ForeignKey("users.id", onupdate="CASCADE",
                                               ondelete="CASCADE")))
 
-    op.execute("""
-        update users_resources_permissions set user_id = 
+    op.execute(sa.text("""
+        update users_resources_permissions set user_id =
         (select id from users where users.user_name=users_resources_permissions.user_name)
-    """)
+    """))
     op.drop_constraint(users_resources_permissions_pkey,
                        "users_resources_permissions",
                        type_="primary")

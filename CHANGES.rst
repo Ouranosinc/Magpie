@@ -8,8 +8,11 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
-	
-* Nothing new for the moment.
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Update SQLAlchemy to v2 and use the SQLAlchemy 2-compatible Ziggurat Foundations release.
 
 .. _changes_5.3.0:
 
