@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, overload
 
 import requests
 import six
+import transaction
 import yaml
 from pyramid.httpexceptions import HTTPException
 from sqlalchemy.orm.session import Session
@@ -312,9 +313,7 @@ def sync_services_phoenix(services, services_as_dicts=False):
 
     :param services:
         An iterable of :class:`models.Service` by default, or a dictionary of ``{svc-name: {<service-info>}}`` JSON
-        objects containing each service's information if :paramref:`services_as_dicts` is ``True``. Dictionary values
-        can use either the provider configuration keys ``url``, ``type`` and optional ``title``, or the keys
-        ``public_url``, ``service_name`` and ``service_type``.
+        objects containing each service's information if :paramref:`services_ad_dicts` is ``True``.
 
         where ``<service-info>`` is defined as::
 
@@ -326,16 +325,8 @@ def sync_services_phoenix(services, services_as_dicts=False):
     for svc in services:
         if services_as_dicts:
             svc_dict = services[svc]  # type: JSON
-            if "url" in svc_dict:
-                service_url = svc_dict["url"]
-                service_name = svc_dict.get("title") or svc
-                service_type = svc_dict["type"]
-            else:
-                service_url = svc_dict["public_url"]
-                service_name = svc_dict["service_name"]
-                service_type = svc_dict["service_type"]
-            services_dict[svc] = {"url": service_url, "title": service_name,
-                                  "type": service_type, "c4i": False, "public": True}
+            services_dict[svc] = {"url": svc_dict["public_url"], "title": svc_dict["service_name"],
+                                  "type": svc_dict["service_type"], "c4i": False, "public": True}
         else:
             services_dict[svc.resource_name] = {"url": svc.url, "title": svc.resource_name,
                                                 "type": svc.type, "c4i": False, "public": True}
@@ -489,6 +480,7 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
     .. seealso::
         :func:`magpie_register_services_from_config`
     """
+    db_session.begin_nested()
     existing_services_names = [n[0] for n in db_session.query(models.Service.resource_name)]
     magpie_anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER")
     anonymous_user = UserService.by_user_name(magpie_anonymous_user, db_session=db_session)
@@ -550,6 +542,8 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
                     resource_id=svc.resource_id
                 )
                 db_session.add(svc_perm_getcapabilities)
+
+    transaction.commit()
 
     if push_to_phoenix:
         return _phoenix_update_services(services_dict)
@@ -691,9 +685,7 @@ def magpie_register_services_from_config(service_config_path, push_to_phoenix=Fa
         be reached on the provided `url`. Once validated, this permission is applied to `anonymous` group to make its
         entrypoint accessible by anyone.
         Services that cannot have `GetCapabilities` permission are ignored regardless.
-    :param db_session:
-        Use a pre-established database session for registration. The caller owns its transaction and must commit or
-        abort it. Otherwise, API requests are employed.
+    :param db_session: Use a pre-established database connection for registration. Otherwise, API requests are employed.
     :returns: loaded service configurations.
     """
     LOGGER.info("Starting services processing.")
@@ -1066,9 +1058,7 @@ def magpie_register_permissions_from_config(
     :param settings: Magpie settings to resolve an instance session when using requests instead of DB session.
         Will look for ``magpie.url``, ``magpie.admin_user`` and ``magpie.admin_password`` by default, or any
         corresponding environment variable resolution if omitted in the settings.
-    :param db_session:
-        db session to use instead of requests to directly create/remove permissions with config. The caller owns its
-        transaction and must commit or abort it.
+    :param db_session: db session to use instead of requests to directly create/remove permissions with config.
     :param raise_errors: raises errors related to permissions, instead of just logging the info.
 
     .. seealso::
@@ -1203,6 +1193,7 @@ def _process_permissions(
             service_json = get_json(svc_resp)
             service_info = service_json.get(svc_name) or service_json.get("service")  # format depends on magpie version
         else:
+            transaction.commit()    # force any pending transaction to be applied to find possible dependencies
             svc = models.Service.by_service_name(svc_name, db_session=cookies_or_session)
             if not svc:
                 _handle_permission("Unknown service [{!s}]. Can't edit permissions without service.".format(svc_name),
@@ -1220,6 +1211,8 @@ def _process_permissions(
             _apply_permission_entry(perm_cfg, i, resource_id, cookies_or_session, magpie_url, users, groups,
                                     raise_errors)
 
+    if not _use_request(cookies_or_session):
+        transaction.commit()
     LOGGER.info("Done processing permissions configuration.")
 
 

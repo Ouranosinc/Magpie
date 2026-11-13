@@ -7,7 +7,6 @@ Magpie is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 import logging
 from typing import TYPE_CHECKING
 
-import transaction
 from pyramid.events import NewRequest
 from pyramid.settings import asbool
 from pyramid.tweens import EXCVIEW, MAIN
@@ -25,11 +24,7 @@ from magpie.api.webhooks import setup_webhooks as setup_webhooks_config
 from magpie.cli.register_defaults import register_defaults
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini, run_database_migration_when_ready, set_sqlalchemy_log_level
-from magpie.register import (
-    magpie_register_permissions_from_config,
-    magpie_register_services_from_config,
-    sync_services_phoenix
-)
+from magpie.register import magpie_register_permissions_from_config, magpie_register_services_from_config
 from magpie.security import get_auth_config
 from magpie.utils import (
     fully_qualified_name,
@@ -61,7 +56,6 @@ def setup_magpie_configs(settings, db_session=None,
     # type: (SettingsType, Optional[Session], bool, bool, bool, bool) -> None
     """
     Resolve known configuration file paths from settings or environment variables and process them for the application.
-    Database-backed provider and permission configuration are committed in separate transaction-manager scopes.
 
     .. seealso::
         - https://pavics-magpie.readthedocs.io/en/latest/configuration.html#file-providers-cfg
@@ -83,36 +77,16 @@ def setup_magpie_configs(settings, db_session=None,
                                            raise_missing=False, raise_not_set=False, print_missing=True))
         prov_cfg = combined_config or get_constant("MAGPIE_PROVIDERS_CONFIG_PATH", settings, default_value="",
                                                    raise_missing=False, raise_not_set=False, print_missing=True)
-        if db_session is None:
-            svc_cfg = magpie_register_services_from_config(
-                prov_cfg,
-                skip_registration=skip_registration,
-                push_to_phoenix=push_phoenix,
-                force_update=True,
-                disable_getcapabilities=True,
-            )
-        else:
-            with transaction.manager:
-                svc_cfg = magpie_register_services_from_config(
-                    prov_cfg,
-                    skip_registration=skip_registration,
-                    force_update=True,
-                    disable_getcapabilities=True,
-                    db_session=db_session,
-                )
-            if push_phoenix and not skip_registration:
-                sync_services_phoenix(svc_cfg, services_as_dicts=True)
+        svc_cfg = magpie_register_services_from_config(prov_cfg, skip_registration=skip_registration,
+                                                       push_to_phoenix=push_phoenix, force_update=True,
+                                                       disable_getcapabilities=True, db_session=db_session)
         settings["magpie.services"] = svc_cfg
 
     if setup_permissions:
         print_log("Register configuration permissions...", LOGGER)
         perm_cfg = combined_config or get_constant("MAGPIE_PERMISSIONS_CONFIG_PATH", settings, default_value="",
                                                    raise_missing=False, raise_not_set=False, print_missing=True)
-        if db_session is None:
-            magpie_register_permissions_from_config(perm_cfg)
-        else:
-            with transaction.manager:
-                magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
+        magpie_register_permissions_from_config(perm_cfg, db_session=db_session)
 
     if setup_webhooks:
         print_log("Register webhook configurations...", LOGGER)
