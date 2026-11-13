@@ -91,7 +91,7 @@ class TestUtils(unittest.TestCase):
         cls.version = __meta__.__version__  # only local test
 
     def test_cleanup_session_closes_active_transaction(self):
-        """Tests [cleanup_session] close active request transactions using SQLAlchemy's public session API."""
+        """Tests ``cleanup_session`` close active request transactions using SQLAlchemy's public session API."""
         engine = sa.create_engine("sqlite:///:memory:")
         with Session(engine) as db_session:
             request = mock.Mock(db=db_session)
