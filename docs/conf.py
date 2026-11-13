@@ -19,6 +19,7 @@ import json
 import os
 import re
 import sys
+import warnings
 
 import requests
 import requests.adapters
@@ -175,10 +176,22 @@ def ignore_down_providers():
     adapter = requests.adapters.HTTPAdapter(max_retries=Retry(total=3, backoff_factor=1))
     session = requests.Session()
     session.mount("https://", adapter)
-    resp = session.get("https://esgf-node.ornl.gov/proxy/status", timeout=5)
-    if resp.status_code != 200:
-        resp = session.get("https://esgf-node.llnl.gov/proxy/status", timeout=5)
-    if resp.status_code != 200:
+    resp = None
+    probe_error = None
+    for status_url in (
+        "https://esgf-node.ornl.gov/proxy/status",
+        "https://esgf-node.llnl.gov/proxy/status",
+    ):
+        try:
+            resp = session.get(status_url, timeout=5)
+        except requests.exceptions.RequestException as exc:
+            probe_error = exc
+            continue
+        if resp.status_code == 200:
+            break
+    if resp is None or resp.status_code != 200:
+        if probe_error is not None:
+            warnings.warn(f"Unable to query ESGF status endpoints: {probe_error}", RuntimeWarning)
         return []
     try:
         body = resp.json()

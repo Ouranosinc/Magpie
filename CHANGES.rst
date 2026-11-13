@@ -19,6 +19,7 @@ Bug Fixes
 ~~~~~~~~~
 
 * Let application and CLI transaction scopes commit database-backed configuration registration.
+* Keep documentation configuration working when the ESGF status probe encounters a network error.
 
 .. _changes_5.3.0:
 
