@@ -6,10 +6,12 @@ Magpie helpers for service providers registration.
 import argparse
 from typing import TYPE_CHECKING
 
+import transaction
+
 from magpie.cli.utils import make_logging_options, setup_logger_from_options
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_config_ini
-from magpie.register import magpie_register_services_from_config
+from magpie.register import magpie_register_services_from_config, sync_services_phoenix
 from magpie.utils import get_logger
 
 if TYPE_CHECKING:
@@ -59,9 +61,20 @@ def main(args=None, parser=None, namespace=None):
     db_session = None
     if args.use_db_session:
         db_session = get_db_session_from_config_ini(args.ini_config)
-    return magpie_register_services_from_config(args.providers_config,
-                                                push_to_phoenix=args.phoenix_push, force_update=args.force_update,
-                                                disable_getcapabilities=args.no_getcapabilities, db_session=db_session)
+    if db_session is None:
+        return magpie_register_services_from_config(args.providers_config,
+                                                    push_to_phoenix=args.phoenix_push,
+                                                    force_update=args.force_update,
+                                                    disable_getcapabilities=args.no_getcapabilities)
+
+    with transaction.manager:
+        services = magpie_register_services_from_config(args.providers_config,
+                                                        force_update=args.force_update,
+                                                        disable_getcapabilities=args.no_getcapabilities,
+                                                        db_session=db_session)
+    if args.phoenix_push:
+        sync_services_phoenix(services, services_as_dicts=True)
+    return services
 
 
 if __name__ == "__main__":

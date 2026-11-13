@@ -17,8 +17,9 @@ from typing import TYPE_CHECKING
 
 import mock
 import six
+import transaction
 
-from magpie import register
+from magpie import app, register
 from magpie.constants import get_constant
 from magpie.db import get_db_session_from_settings
 from magpie.models import Directory
@@ -67,6 +68,10 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
 
     def tearDown(self):
         self.cleanup()
+
+    def register_permissions(self, permissions_config, db_session):
+        with transaction.manager:
+            register.magpie_register_permissions_from_config(permissions_config, db_session=db_session)
 
     def test_register_providers(self):
         # TODO
@@ -126,7 +131,7 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
                 }
             ]
         }
-        utils.check_no_raise(lambda: register.magpie_register_permissions_from_config(perm_config, db_session=session))
+        utils.check_no_raise(lambda: self.register_permissions(perm_config, session))
 
         # check that all service, resources, group are created correctly
         services = utils.TestSetup.get_RegisteredServicesList(self)
@@ -218,7 +223,7 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
             ]
         }
         utils.check_no_raise(
-            lambda: register.magpie_register_permissions_from_config(perm_config, db_session=session),
+            lambda: self.register_permissions(perm_config, session),
             msg="Registration should handle the reserved keyworkd 'admin' user creation by avoiding the raised error."
         )
 
@@ -292,7 +297,7 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
                 },
             ]
         }
-        utils.check_no_raise(lambda: register.magpie_register_permissions_from_config(perm_config, db_session=session))
+        utils.check_no_raise(lambda: self.register_permissions(perm_config, session))
 
         # check that all service, resources, group are created correctly
         services = utils.TestSetup.get_RegisteredServicesList(self)
@@ -352,7 +357,7 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
                 },
             ]
         }
-        utils.check_no_raise(lambda: register.magpie_register_permissions_from_config(perm_config, db_session=session))
+        utils.check_no_raise(lambda: self.register_permissions(perm_config, session))
 
         # check that all service, resources, group are created correctly
         services = utils.TestSetup.get_RegisteredServicesList(self)
@@ -420,7 +425,7 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
             ]
         }
         utils.check_no_raise(
-            lambda: register.magpie_register_permissions_from_config(perm_config, db_session=session))
+            lambda: self.register_permissions(perm_config, session))
 
         # check that all service, resources, group are created correctly
         services = utils.TestSetup.get_RegisteredServicesList(self)
@@ -451,7 +456,7 @@ class TestRegister(interfaces.AdminTestCase, unittest.TestCase):
         missing_type_perm_config["permissions"][0].pop("type")
         missing_type_perm_config["permissions"][0]["resource"] = res_missing_type_path
         utils.check_no_raise(
-            lambda: register.magpie_register_permissions_from_config(missing_type_perm_config, db_session=session))
+            lambda: self.register_permissions(missing_type_perm_config, session))
         resp = utils.test_request(self.app, "GET", "/resources/{}".format(res2_id))
         body = utils.check_response_basic_info(resp)
         res_children = body["resource"]["children"]
@@ -617,8 +622,70 @@ def test_register_process_permissions_from_multiple_files():
     assert perms == cfg1["permissions"]
     assert users == expect_users
     assert groups == expect_groups
-
     perms, _, _, users, groups, _, _ = mock_process_perms.call_args_list[1].args
     assert perms == cfg2["permissions"]
     assert users == expect_users
     assert groups == expect_groups
+
+
+class TestRegisterTransactionOwnership(unittest.TestCase):
+    def test_setup_magpie_configs_owns_database_transaction_phases(self):
+        """Tests [config setup transactions] commits provider and permission phases from the application layer."""
+        settings = {}
+        config_values = {
+            "MAGPIE_CONFIG_PATH": None,
+            "PHOENIX_PUSH": False,
+            "MAGPIE_PROVIDERS_CONFIG_PATH": "providers.yml",
+            "MAGPIE_PERMISSIONS_CONFIG_PATH": "permissions.yml",
+            "MAGPIE_WEBHOOKS_CONFIG_PATH": None,
+        }
+        events = []
+
+        def resolve_constant(name, *args, **kwargs):
+            return config_values.get(name)
+
+        def register_services(*args, **kwargs):
+            events.append("services")
+            return {}
+
+        def register_permissions(*args, **kwargs):
+            events.append("permissions")
+
+        with mock.patch("magpie.app.transaction.manager") as transaction_manager, \
+                mock.patch("magpie.app.get_constant", side_effect=resolve_constant), \
+                mock.patch("magpie.app.magpie_register_services_from_config", side_effect=register_services), \
+                mock.patch("magpie.app.magpie_register_permissions_from_config", side_effect=register_permissions), \
+                mock.patch("magpie.app.setup_webhooks_config"):
+            transaction_manager.__enter__.side_effect = lambda: events.append("begin")
+            transaction_manager.__exit__.side_effect = lambda *args: events.append("end")
+
+            app.setup_magpie_configs(settings, db_session=mock.Mock())
+
+        self.assertEqual(events, ["begin", "services", "end", "begin", "permissions", "end"])
+
+    def test_service_registration_does_not_commit_ambient_transaction(self):
+        """Tests [service registration transaction ownership] leaves commit decisions to its caller."""
+        db_session = mock.Mock()
+        db_session.query.return_value = []
+        with mock.patch("magpie.register.get_all_configs", return_value=[]), \
+                mock.patch("magpie.register.validate_services_config", return_value={}), \
+                mock.patch("magpie.register.get_constant", return_value="anonymous"), \
+                mock.patch("magpie.register.UserService.by_user_name", return_value=None), \
+                mock.patch("transaction.commit") as commit:
+            register.magpie_register_services_from_config("", db_session=db_session)
+        commit.assert_not_called()
+
+    def test_sync_services_phoenix_accepts_provider_config(self):
+        """Tests [provider configuration sync] preserves the service data when pushing to Phoenix."""
+        services = {"example": {"url": "https://example.test/ows", "type": "WMS"}}
+        with mock.patch("magpie.register._phoenix_update_services") as update_services:
+            register.sync_services_phoenix(services, services_as_dicts=True)
+        update_services.assert_called_once_with({
+            "example": {
+                "url": "https://example.test/ows",
+                "title": "example",
+                "type": "WMS",
+                "c4i": False,
+                "public": True,
+            },
+        })
