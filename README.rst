@@ -40,19 +40,19 @@ Behind the scene, it uses `Ziggurat-Foundations`_ and `Authomatic`_.
     * - *Recommended*
       - Preferred minimal version to use for latest security updates and performance enhancements.
 
-.. |py_ver_legacy| image:: https://img.shields.io/badge/python%20%28legacy%29-3.5%20%2D%2D%203.9-orange.svg
+.. |py_ver_legacy| image:: https://img.shields.io/badge/python%20%28legacy%29-3.5%20%2D%2D%203.10-orange.svg?
     :alt: Python 3.5+ supported (legacy)
     :target: https://www.python.org/getit
 
-.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28supported%29-3.10%2B-yellow.svg
-    :alt: Python 3.10+ supported
+.. |py_ver_support| image:: https://img.shields.io/badge/python%20%28supported%29-3.11%2B-yellow.svg?
+    :alt: Python 3.11+ supported
     :target: https://www.python.org/getit
 
-.. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.11%2B-blue.svg
-    :alt: Python 3.11+ recommended
+.. |py_ver_recommend| image:: https://img.shields.io/badge/python%20%28recommended%29-3.13%2B-blue.svg?
+    :alt: Python 3.13+ recommended
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/5.3.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/Magpie/5.3.0.svg?
     :alt: Commits since latest release
     :target: https://github.com/Ouranosinc/Magpie/compare/5.3.0...master
 
