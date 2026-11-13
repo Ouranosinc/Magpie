@@ -480,7 +480,7 @@ def _magpie_register_services_with_db_session(services_dict, db_session, push_to
     .. seealso::
         :func:`magpie_register_services_from_config`
     """
-    db_session.begin(subtransactions=True)
+    db_session.begin_nested()
     existing_services_names = [n[0] for n in db_session.query(models.Service.resource_name)]
     magpie_anonymous_user = get_constant("MAGPIE_ANONYMOUS_USER")
     anonymous_user = UserService.by_user_name(magpie_anonymous_user, db_session=db_session)

@@ -9,6 +9,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Update ``sqlalchemy>=2.0.52,<2.1``, ``sqlalchemy-utils==0.43.0``, ``alembic>=1.20.1``, and
+  ``ziggurat_foundations==1.0.1``.
+
 Bug Fixes
 ~~~~~~~~~
 

@@ -39,7 +39,7 @@ def change_project_api_resource_type(new_type_name):
     if isinstance(context.connection.engine.dialect, PGDialect):
         # obtain service 'project-api'
         session = Session(bind=op.get_bind())
-        query = sa.select([services.c.resource_id]).where(services.c.type == "project-api")
+        query = sa.select(services.c.resource_id).where(services.c.type == "project-api")
         project_api_svc = session.execute(query).fetchone()
 
         # nothing to edit if it doesn't exist, otherwise change resource types name

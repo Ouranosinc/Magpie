@@ -48,19 +48,23 @@ def upgrade():
     session = Session(bind=op.get_bind())
     anon_usr_name = get_constant("MAGPIE_ANONYMOUS_USER")
     anon_grp_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
-    anon_usr = session.execute(sa.select([users]).where(users.c.user_name == anon_usr_name)).fetchone()
-    anon_grp = session.execute(sa.select([groups]).where(groups.c.group_name == anon_grp_name)).fetchone()
+    anon_usr = session.execute(sa.select(users).where(users.c.user_name == anon_usr_name)).fetchone()
+    anon_grp = session.execute(sa.select(groups).where(groups.c.group_name == anon_grp_name)).fetchone()
     # in case of first-time db creation, both are undefined
     # ignore case where only group exists, since it is expected they come together and cannot be modified by API
     # if this happens, it is because admin modified db manually, up to them to patch things accordingly
     if anon_usr is None or anon_grp is None:
         return
-    anon_usr_res_perms = session.execute(sa.select([usr_res_perms]).where(usr_res_perms.c.user_id == anon_usr.id))
-    anon_grp_res_perms = session.execute(sa.select([grp_res_perms]).where(grp_res_perms.c.group_id == anon_grp.id))
+    anon_usr_res_perms = session.execute(sa.select(usr_res_perms).where(usr_res_perms.c.user_id == anon_usr.id))
+    anon_grp_res_perms = session.execute(sa.select(grp_res_perms).where(grp_res_perms.c.group_id == anon_grp.id))
     for urp in anon_usr_res_perms:
         # prioritize existing permission on group over user, regardless of permission name
         if not any(grp.resource_id == urp.resource_id for grp in anon_grp_res_perms):
-            sa.insert(grp_res_perms, (anon_grp.id, urp.resource_id, urp.perm_name))
+            session.execute(sa.insert(grp_res_perms).values(
+                group_id=anon_grp.id,
+                resource_id=urp.resource_id,
+                perm_name=urp.perm_name,
+            ))
         session.execute(sa.delete(usr_res_perms).where(
             usr_res_perms.c.user_id == urp.user_id and
             usr_res_perms.c.resource_id == urp.resource_id and

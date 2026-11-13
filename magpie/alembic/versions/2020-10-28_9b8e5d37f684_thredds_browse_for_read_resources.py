@@ -52,23 +52,31 @@ usr_res_perms = sa.table(
 
 
 def duplicate_browse(resource_id, session):
-    grp_query = sa.select([grp_res_perms]).where(grp_res_perms.c.resource_id == resource_id)
+    grp_query = sa.select(grp_res_perms).where(grp_res_perms.c.resource_id == resource_id)
     grp_perms = session.execute(grp_query)
-    usr_query = sa.select([usr_res_perms]).where(usr_res_perms.c.resource_id == resource_id)
+    usr_query = sa.select(usr_res_perms).where(usr_res_perms.c.resource_id == resource_id)
     usr_perms = session.execute(usr_query)
 
     for perm in grp_perms:
         if not perm.perm_name.startswith("read"):  # must consider any variant with [access]-[scope]
             continue
         perm_name = perm.perm_name.replace("read", "browse")
-        query = sa.insert(grp_res_perms, (perm.group_id, resource_id, perm_name))
+        query = sa.insert(grp_res_perms).values(
+            group_id=perm.group_id,
+            resource_id=resource_id,
+            perm_name=perm_name,
+        )
         session.execute(query)
 
     for perm in usr_perms:
         if not perm.perm_name.startswith("read"):  # must consider any variant with [access]-[scope]
             continue
         perm_name = perm.perm_name.replace("read", "browse")
-        query = sa.insert(usr_res_perms, (perm.user_id, resource_id, perm_name))
+        query = sa.insert(usr_res_perms).values(
+            user_id=perm.user_id,
+            resource_id=resource_id,
+            perm_name=perm_name,
+        )
         session.execute(query)
 
 
@@ -78,14 +86,14 @@ def upgrade():
     """
     session = Session(bind=op.get_bind())
 
-    query = sa.select([services]).where(services.c.type == "thredds")
+    query = sa.select(services).where(services.c.type == "thredds")
     thredds_services = session.execute(query)
 
     for svc in thredds_services:
         svc_id = svc.resource_id
         duplicate_browse(svc_id, session)
 
-        query = sa.select([resources]).where(resources.c.root_service_id == svc_id)
+        query = sa.select(resources).where(resources.c.root_service_id == svc_id)
         child_resources = session.execute(query)
         for res in child_resources:
             duplicate_browse(res.resource_id, session)

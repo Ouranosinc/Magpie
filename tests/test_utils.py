@@ -15,15 +15,17 @@ import unittest
 
 import mock
 import six
+import sqlalchemy as sa
 from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPInternalServerError, HTTPOk
 from pyramid.settings import asbool
+from sqlalchemy.orm import Session
 
 from magpie import __meta__, constants
 from magpie.api import exception as ax
 from magpie.api import generic as ag
 from magpie.api import requests as ar
 from magpie.compat import LooseVersion
-from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header, get_magpie_url, import_target
+from magpie.utils import CONTENT_TYPE_JSON, ExtendedEnum, cleanup_session, get_header, get_magpie_url, import_target
 from tests import runner, utils
 
 if six.PY2:
@@ -87,6 +89,22 @@ class TestUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.version = __meta__.__version__  # only local test
+
+    def test_cleanup_session_closes_active_transaction(self):
+        """Tests ``cleanup_session`` close active request transactions using SQLAlchemy's public session API."""
+        engine = sa.create_engine("sqlite:///:memory:")
+        with Session(engine) as db_session:
+            request = mock.Mock(db=db_session)
+
+            def handler(request):
+                request.db.execute(sa.text("SELECT 1"))
+                return "response"
+
+            response = cleanup_session(handler, None)(request)
+
+            assert response == "response"
+            assert db_session.get_transaction() is None
+        engine.dispose()
 
     def test_magpie_prefix_direct_request(self):
         base_url = "http://localhost"

@@ -65,10 +65,10 @@ def upgrade():
     context = get_context()
     session = Session(bind=op.get_bind())
     if isinstance(context.connection.engine.dialect, PGDialect):
-        all_users = session.execute(sa.select([users]))
-        all_groups = session.execute(sa.select([groups]))
-        all_user_group_refs = session.execute(sa.select([users_groups]))
-        all_grp_res_perms = session.execute(sa.select([groups_resources_permissions]))
+        all_users = session.execute(sa.select(users))
+        all_groups = session.execute(sa.select(groups))
+        all_user_group_refs = session.execute(sa.select(users_groups))
+        all_grp_res_perms = session.execute(sa.select(groups_resources_permissions))
 
         ignore_groups = {
             get_constant("MAGPIE_ADMIN_GROUP"),
@@ -83,7 +83,7 @@ def upgrade():
             if group_name in user_names and group_name not in ignore_groups:
 
                 # get the real user
-                query = sa.select([users]).where(users.c.user_name == group_name)
+                query = sa.select(users).where(users.c.user_name == group_name)
                 user = session.execute(query).fetchone()
 
                 # transfer permissions from 'personal' group to user

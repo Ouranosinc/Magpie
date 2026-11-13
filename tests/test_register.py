@@ -7,6 +7,7 @@ test_register
 
 Tests for `magpie.register` operations.
 """
+import contextlib
 import copy
 import json
 import os
@@ -622,3 +623,21 @@ def test_register_process_permissions_from_multiple_files():
     assert perms == cfg2["permissions"]
     assert users == expect_users
     assert groups == expect_groups
+
+
+class TestRegisterSqlAlchemy2Transactions(unittest.TestCase):
+    def test_database_service_registration_begins_nested_transaction(self):
+        """Tests database-backed registration begins a nested transaction and preserves its commit."""
+        db_session = mock.Mock()
+        db_session.query.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("magpie.register.get_constant", return_value="anonymous"))
+            stack.enter_context(mock.patch("magpie.register.UserService.by_user_name", return_value=None))
+            commit = stack.enter_context(mock.patch("magpie.register.transaction.commit"))
+            register._magpie_register_services_with_db_session(  # pylint: disable=W0212  # noqa: W0212
+                {}, db_session
+            )
+
+        db_session.begin_nested.assert_called_once_with()
+        commit.assert_called_once_with()

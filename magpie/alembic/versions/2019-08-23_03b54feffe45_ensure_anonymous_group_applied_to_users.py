@@ -61,17 +61,17 @@ def upgrade():
     context.connection.engine.dialect.supports_sane_multi_rowcount = False
 
     if isinstance(context.connection.engine.dialect, PGDialect):
-        all_user_ids = set(session.execute(sa.select([users.c.id])))
+        all_user_ids = set(session.execute(sa.select(users.c.id)))
 
         # make sure group exists, then get it
         anonym_name = get_constant("MAGPIE_ANONYMOUS_GROUP")
-        query = sa.select([groups]).where(groups.c.group_name == anonym_name)
+        query = sa.select(groups).where(groups.c.group_name == anonym_name)
         anonym_group = session.execute(query).fetchone()
         if not anonym_group:
             session.execute(groups.insert().values(group_name=anonym_name, member_count=len(all_user_ids)))
             anonym_group = session.execute(query).fetchone()
 
-        query = sa.select([users_groups.c.user_id]).where(users_groups.c.group_id == anonym_group.id)
+        query = sa.select(users_groups.c.user_id).where(users_groups.c.group_id == anonym_group.id)
         users_with_anonym = session.execute(query)
         users_with_anonym = set(users_with_anonym or [])  # handle if None
         missing_grp_users = all_user_ids - users_with_anonym
