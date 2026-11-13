@@ -8,8 +8,11 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
-	
-* Nothing new for the moment.
+
+Bug Fixes
+~~~~~~~~~
+
+* Keep documentation configuration working when the ESGF status probe encounters a network error.
 
 .. _changes_5.3.0:
 
