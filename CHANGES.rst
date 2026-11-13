@@ -15,6 +15,11 @@ Features / Changes
 * Update ``sqlalchemy>=2.0.52,<2.1``, ``sqlalchemy-utils==0.43.0``, ``alembic>=1.20.1``, and
   ``ziggurat_foundations==1.0.1``.
 
+Bug Fixes
+~~~~~~~~~
+
+* Keep documentation configuration working when the ESGF status probe encounters a network error.
+
 .. _changes_5.3.0:
 
 `5.3.0 <https://github.com/Ouranosinc/Magpie/tree/5.3.0>`_ (2026-11-10)
