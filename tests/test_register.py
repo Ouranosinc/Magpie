@@ -7,6 +7,7 @@ test_register
 
 Tests for `magpie.register` operations.
 """
+import contextlib
 import copy
 import json
 import os
@@ -630,10 +631,13 @@ class TestRegisterSqlAlchemy2Transactions(unittest.TestCase):
         db_session = mock.Mock()
         db_session.query.return_value = []
 
-        with mock.patch("magpie.register.get_constant", return_value="anonymous"), \
-                mock.patch("magpie.register.UserService.by_user_name", return_value=None), \
-                mock.patch("magpie.register.transaction.commit") as commit:
-            register._magpie_register_services_with_db_session({}, db_session)
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("magpie.register.get_constant", return_value="anonymous"))
+            stack.enter_context(mock.patch("magpie.register.UserService.by_user_name", return_value=None))
+            commit = stack.enter_context(mock.patch("magpie.register.transaction.commit"))
+            register._magpie_register_services_with_db_session(  # pylint: disable=W0212  # noqa: W0212
+                {}, db_session
+            )
 
         db_session.begin_nested.assert_called_once_with()
         commit.assert_called_once_with()
