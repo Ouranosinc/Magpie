@@ -11,7 +11,7 @@ cryptography>=50.0.2
 dicttoxml
 gunicorn>=26.2.0
 humanize
-importlib_metadata>=9.0.1
+importlib_metadata>=10.1.0
 jsonschema>=4.26.0
 jwcrypto>=1.6.1,<2
 lxml>=6.1.3
