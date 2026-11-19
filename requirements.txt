@@ -40,7 +40,7 @@ idna>=3.20
 simplejson
 six>=1.17.0
 # SQLAlchemy 2.1 defaults to psycopg3, while Magpie currently uses psycopg2.
-sqlalchemy>=2.0.52,<2.1
+sqlalchemy>=2.1.8,<2.2
 # see also: safety 42194, https://github.com/kvesteri/sqlalchemy-utils/issues/166, not fixed since 2015
 sqlalchemy-utils==0.43.0  # pyup: ignore
 threddsclient>=0.4.7
