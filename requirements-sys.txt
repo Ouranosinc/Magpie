@@ -1,4 +1,4 @@
 # -*- mode: pip-requirements -*-
-pip>=26.2.2
+pip>=26.3
 packaging>=26.3
 setuptools
