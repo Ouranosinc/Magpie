@@ -13,6 +13,7 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
 * Use ``gunicorn[fast]`` to leverage the faster HTTP C parser instead of Python native implementation.
+* Add ``Makefile`` targets ``docker-pull[-magpie|adater]`` counterparts to the push targets.
 
 Bug Fixes
 ~~~~~~~~~

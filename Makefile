@@ -470,6 +470,17 @@ docker-push-magpie: docker-build-magpie		## push only built docker image for Mag
 .PHONY: docker-push
 docker-push: docker-push-magpie docker-push-adapter	 ## push built docker images for Magpie application and MagpieAdapter for Twitcher
 
+.PHONY: docker-pull-adapter
+docker-pull-adapter:  ## pull only docker image of MagpieAdapter for Twitcher
+    docker pull "$(TWITCHER_DOCKER_TAG)"
+
+.PHONY: docker-pull-magpie
+docker-pull-magpie:  ## pull only docker image for Magpie application
+    docker pull "$(MAGPIE_DOCKER_TAG)"
+
+.PHONY: docker-pull
+docker-pull: docker-pull-magpie docker-pull-adapter  ## pull docker images for Magpie application and MagpieAdapter for Twitcher
+
 # WARNING:
 #	running 'make docker-test-only' by itself will use whichever 'latest' image is available
 #	if the intent is to run the "current" code base, ensure to use 'make docker-test' or pre-build it beforehand
