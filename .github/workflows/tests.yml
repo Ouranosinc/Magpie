@@ -167,6 +167,12 @@ jobs:
         run: ${{ matrix.test-option }} make create-private-key
       # run '-only' test variations since dependencies are preinstalled, skip some resolution time
 
+      - name: Prepare Docker
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.test-case == 'test-docker' }}
+        run: |
+            make docker-pull  # in case no changes to requirements, can save build time with cached layers
+            make docker-build-magpie  # if new requirements apply, ensure they are built and employed for smoke test
+
       - name: Run Tests
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: ${{ matrix.test-option }} make stop ${{ matrix.test-case }}-only

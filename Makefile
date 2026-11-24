@@ -470,10 +470,13 @@ docker-push-magpie: docker-build-magpie		## push only built docker image for Mag
 .PHONY: docker-push
 docker-push: docker-push-magpie docker-push-adapter	 ## push built docker images for Magpie application and MagpieAdapter for Twitcher
 
+# WARNING:
+#	running 'make docker-test-only' by itself will use whichever 'latest' image is available
+#	if the intent is to run the "current" code base, ensure to use 'make docker-test' or pre-build it beforehand
 DOCKER_COMPOSE_CMD ?= docker compose
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test-only
-docker-test-only:	## execute smoke test of the built image for Magpie application (validate that it boots)
+docker-test-only:	## execute smoke test of the 'latest' image (built or pulled) for Magpie application (validate that it boots)
 	@echo "Smoke test of built application docker image"
 	$(DOCKER_COMPOSE_CMD) $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5

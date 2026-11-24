@@ -14,6 +14,12 @@ Features / Changes
 
 * Use ``gunicorn[fast]`` to leverage the faster HTTP C parser instead of Python native implementation.
 
+Bug Fixes
+~~~~~~~~~
+
+* Ensure that the CI ``test-docker`` smoke-test employs the ``pavics/magpie:latest`` corresponding to the current code
+  base instead of the "latest" pushed remote to synchronize and test against newly evaluted dependency requirements.
+
 .. _changes_5.4.0:
 
 `5.4.0 <https://github.com/Ouranosinc/Magpie/tree/5.4.0>`_ (2026-11-13)
