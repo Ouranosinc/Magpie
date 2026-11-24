@@ -9,7 +9,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 	
-* Nothing new for the moment.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Use ``gunicorn[fast]`` to leverage the faster HTTP C parser instead of Python native implementation.
 
 .. _changes_5.4.0:
 
