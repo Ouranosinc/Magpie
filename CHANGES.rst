@@ -9,7 +9,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 	
-* Nothing new for the moment.
+* Update ``sqlalchemy>=2.1.9`` and replace ``psycopg2-binary`` with ``psycopg[binary,pool]>=3.3.9``.
 
 .. _changes_5.4.0:
 
