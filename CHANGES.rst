@@ -8,10 +8,11 @@ Changes
 
 `Unreleased <https://github.com/Ouranosinc/Magpie/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
-	
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
+* Update ``sqlalchemy>=2.1.9`` and replace ``psycopg2-binary`` with ``psycopg[binary,pool]>=3.3.9``.
 * Use ``gunicorn[fast]`` to leverage the faster HTTP C parser instead of Python native implementation.
 * Add ``Makefile`` targets ``docker-pull[-magpie|adater]`` counterparts to the push targets.
 
